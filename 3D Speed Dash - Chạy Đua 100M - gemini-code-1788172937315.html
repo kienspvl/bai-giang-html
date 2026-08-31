@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Speed Dash - Chạy Đua 100M</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #111;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #controls-prompt {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            pointer-events: auto;
+            cursor: pointer;
+            border: 2px solid #ffeb3b;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .highlight {
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+    </style>
+    <!-- Nhúng thư viện Three.js từ CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="hud-panel">
+            <div>Khoảng cách: <span id="distance" class="highlight">0.0</span>m / 100m</div>
+            <div>Trạng thái: <span id="status" class="highlight">Chờ bắt đầu</span></div>
+        </div>
+
+        <div id="controls-prompt">
+            NHẤN LIÊN TỤC <span class="highlight">[SPACE]</span> HOẶC <span class="highlight">[CHẠM MÀN HÌNH]</span> ĐỂ CHẠY!
+        </div>
+    </div>
+
+    <script>
+        const TRACK_LENGTH_M = 100;
+        const TOTAL_RUNNERS = 11; // 1 người chơi + 10 bot
+        const LANE_WIDTH = 1.2;
+
+        let gameStarted = false;
+        let gameOver = false;
+        let playerDistance = 0;
+        let playerSpeed = 0;
+        
+        let runners = [];
+        let scene, camera, renderer;
+        
+        const distanceEl = document.getElementById('distance');
+        const statusEl = document.getElementById('status');
+        const promptEl = document.getElementById('controls-prompt');
+
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb); // Màu trời xanh
+            scene.fog = new THREE.Fog(0x87ceeb, 30, 150);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Ánh sáng
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Tạo Đường Chạy
+            createTrack();
+
+            // Tạo các vận động viên
+            createRunners();
+
+            // Thiết lập vị trí camera ban đầu (nhìn từ sau lưng người chơi)
+            updateCameraPosition(0);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createTrack() {
+            // Sân cỏ xung quanh
+            const grassGeo = new THREE.PlaneGeometry(200, 250);
+            const grassMat = new THREE.MeshLambertMaterial({ color: 0x3a9d23 });
+            const grass = new THREE.Mesh(grassGeo, grassMat);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.set(0, -0.05, TRACK_LENGTH_M / 2);
+            scene.add(grass);
+
+            // Đường chạy chính (Màu đỏ đất nện)
+            const trackWidth = TOTAL_RUNNERS * LANE_WIDTH + 1;
+            const trackGeo = new THREE.PlaneGeometry(trackWidth, TRACK_LENGTH_M + 10);
+            const trackMat = new THREE.MeshLambertMaterial({ color: 0xb54527 });
+            const track = new THREE.Mesh(trackGeo, trackMat);
+            track.rotation.x = -Math.PI / 2;
+            track.position.set(0, 0, TRACK_LENGTH_M / 2);
+            scene.add(track);
+
+            // Vạch chia làn đua
+            for (let i = 0; i <= TOTAL_RUNNERS; i++) {
+                const lineX = -trackWidth / 2 + i * LANE_WIDTH;
+                const lineGeo = new THREE.PlaneGeometry(0.08, TRACK_LENGTH_M + 10);
+                const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const line = new THREE.Mesh(lineGeo, lineMat);
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(lineX, 0.01, TRACK_LENGTH_M / 2);
+                scene.add(line);
+            }
+
+            // Vạch đích 100m (Kiẻu bàn cờ đen trắng mô phỏng)
+            for (let i = 0; i < TOTAL_RUNNERS; i++) {
+                const lineX = -trackWidth / 2 + i * LANE_WIDTH + LANE_WIDTH / 2;
+                const finishGeo = new THREE.PlaneGeometry(LANE_WIDTH, 1);
+                // Tạo vạch đích đơn giản màu vàng rực
+                const finishMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+                const finish = new THREE.Mesh(finishGeo, finishMat);
+                finish.rotation.x = -Math.PI / 2;
+                finish.position.set(lineX, 0.02, TRACK_LENGTH_M);
+                scene.add(finish);
+            }
+        }
+
+        function createRunners() {
+            const trackWidth = TOTAL_RUNNERS * LANE_WIDTH;
+            const colors = [
+                0x00bcd4, // Người chơi (Xanh dương sáng)
+                0xe91e63, 0x9c27b0, 0x673ab7, 0x3f51b5, 
+                0x009688, 0x4caf50, 0xff9800, 0x795548, 0x607d8b, 0xff5722
+            ];
+
+            for (let i = 0; i < TOTAL_RUNNERS; i++) {
+                const laneX = -trackWidth / 2 + i * LANE_WIDTH + LANE_WIDTH / 2;
+                
+                // Nhóm chứa các bộ phận của nhân vật (Thân, Đầu, Chân)
+                const runnerGroup = new THREE.Group();
+
+                // Thân người (Hình trụ)
+                const bodyGeo = new THREE.CylinderGeometry(0.25, 0.2, 0.9, 8);
+                const bodyMat = new THREE.MeshLambertMaterial({ color: colors[i] });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = 0.6;
+                body.castShadow = true;
+                runnerGroup.add(body);
+
+                // Đầu (Hình cầu)
+                const headGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const headMat = new THREE.MeshLambertMaterial({ color: 0xffdbac });
+                const head = new THREE.Mesh(headGeo, headMat);
+                head.position.y = 1.25;
+                runnerGroup.add(head);
+
+                runnerGroup.position.set(laneX, 0, 0);
+                scene.add(runnerGroup);
+
+                runners.push({
+                    id: i,
+                    isPlayer: (i === 0),
+                    mesh: runnerGroup,
+                    distance: 0,
+                    maxSpeed: i === 0 ? 0 : 8.5 + Math.random() * 1.5,
+                    speed: 0
+                });
+            }
+        }
+
+        function updateCameraPosition(playerDist) {
+            // Camera đặt phía sau và hơi cao hơn người chơi
+            camera.position.set(0, 3.5, playerDist - 5.5);
+            camera.lookAt(0, 1.2, playerDist + 8);
+        }
+
+        // Xử lý thao tác nhấn tăng tốc
+        function handleAction(e) {
+            if (e) e.preventDefault();
+
+            if (gameOver) {
+                resetGame();
+                return;
+            }
+
+            if (!gameStarted) {
+                gameStarted = true;
+                statusEl.textContent = "Đang chạy...";
+                promptEl.textContent = "NHẤN LIÊN TỤC ĐỂ TĂNG TỐC!";
+            }
+
+            playerSpeed += 1.6;
+            if (playerSpeed > 11.2) playerSpeed = 11.2;
+        }
+
+        // Sự kiện điều khiển
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') handleAction(e);
+        });
+
+        window.addEventListener('pointerdown', handleAction);
+
+        let lastTime = performance.now();
+
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            if (gameStarted && !gameOver) {
+                // 1. Cập nhật người chơi
+                playerSpeed -= 3.2 * deltaTime;
+                if (playerSpeed < 0) playerSpeed = 0;
+
+                playerDistance += playerSpeed * deltaTime;
+                if (playerDistance > TRACK_LENGTH_M) playerDistance = TRACK_LENGTH_M;
+
+                const player = runners[0];
+                player.distance = playerDistance;
+                player.mesh.position.z = playerDistance;
+
+                // Hiệu ứng nhún nhảy nhẹ khi chạy
+                if (playerSpeed > 0) {
+                    player.mesh.position.y = Math.abs(Math.sin(currentTime * 0.02 * playerSpeed)) * 0.15;
+                }
+
+                distanceEl.textContent = playerDistance.toFixed(1);
+                updateCameraPosition(playerDistance);
+
+                // 2. Cập nhật các Bot
+                let finishedCount = 0;
+                for (let i = 1; i < runners.length; i++) {
+                    let bot = runners[i];
+                    if (bot.distance < TRACK_LENGTH_M) {
+                        let targetSpeed = bot.maxSpeed + Math.sin(currentTime * 0.005 + i) * 0.4;
+                        if (bot.distance > TRACK_LENGTH_M * 0.9) targetSpeed *= 1.05; // Nước rút
+
+                        bot.distance += targetSpeed * deltaTime;
+                        if (bot.distance > TRACK_LENGTH_M) bot.distance = TRACK_LENGTH_M;
+
+                        bot.mesh.position.z = bot.distance;
+                        bot.mesh.position.y = Math.abs(Math.sin(currentTime * 0.02 * targetSpeed)) * 0.15;
+                    }
+
+                    if (bot.distance >= TRACK_LENGTH_M) finishedCount++;
+                }
+
+                // 3. Kiểm tra kết thúc
+                if (playerDistance >= TRACK_LENGTH_M || finishedCount === runners.length - 1) {
+                    gameOver = true;
+                    checkRanking();
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function checkRanking() {
+            let sorted = [...runners].sort((a, b) => b.distance - a.distance);
+            let rank = sorted.findIndex(r => r.isPlayer) + 1;
+
+            if (rank === 1) {
+                statusEl.textContent = "🏆 VÔ ĐỊCH (Hạng 1)! Xuất sắc!";
+            } else if (rank <= 3) {
+                statusEl.textContent = `🥉 Đạt Hạng ${rank}! Rất cố gắng!`;
+            } else {
+                statusEl.textContent = `😢 Về đích ở Hạng ${rank}. Thử lại nhé!`;
+            }
+            promptEl.textContent = "CHẠM HOẶC NHẤN [SPACE] ĐỂ CHƠI LẠI";
+        }
+
+        function resetGame() {
+            gameStarted = false;
+            gameOver = false;
+            playerDistance = 0;
+            playerSpeed = 0;
+            lastTime = performance.now();
+
+            statusEl.textContent = "Chờ bắt đầu";
+            distanceEl.textContent = "0.0";
+            promptEl.innerHTML = 'NHẤN LIÊN TỤC <span class="highlight">[SPACE]</span> HOẶC <span class="highlight">[CHẠM MÀN HÌNH]</span> ĐỂ CHẠY!';
+
+            runners.forEach((r, i) => {
+                r.distance = 0;
+                r.mesh.position.z = 0;
+                r.mesh.position.y = 0;
+                if (!r.isPlayer) {
+                    r.maxSpeed = 8.5 + Math.random() * 1.5;
+                }
+            });
+
+            updateCameraPosition(0);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Khởi động game
+        initThree();
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
