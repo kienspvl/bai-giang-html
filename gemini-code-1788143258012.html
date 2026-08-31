@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ Đồ Cây Tư Duy Hóa Học Tiếng Việt (Double-click để xem thông tin)</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --border: #cbd5e1;
+            --line-color: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        p.instructions {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .tree-wrapper {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .root-node {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            width: fit-content;
+        }
+
+        .level2-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            padding-left: 20px;
+            border-left: 3px dashed var(--line-color);
+            margin-left: 20px;
+        }
+
+        .branch-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            border-left: 6px solid var(--secondary);
+        }
+
+        .branch-card.ionic { border-left-color: var(--secondary); }
+        .branch-card.covalent { border-left-color: var(--accent); }
+        .branch-card.properties { border-left-color: var(--danger); }
+        .branch-card.foundation { border-left-color: var(--primary); }
+
+        .level2-title {
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .level3-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-left: 25px;
+            border-left: 2px solid #e2e8f0;
+            margin-left: 5px;
+        }
+
+        .sub-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .level3-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .level4-nodes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-left: 15px;
+        }
+
+        .keyword-node {
+            background-color: var(--light);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--dark);
+            display: inline-block;
+            user-select: none;
+        }
+
+        .keyword-node:hover {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Modal hiển thị thông tin khi double click */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 550px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        .modal-body p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .en-tag {
+            font-size: 0.85rem;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .modal-footer {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-img-search {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .btn-img-search:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Sơ Đồ Cây Tư Duy Hóa Học (Tiếng Việt)</h1>
+    <p class="instructions">🖱️🖱️ <b>Double-click (nhấp đúp chuột)</b> vào bất kỳ từ khóa nào để mở bảng chi tiết thông tin và tra cứu hình ảnh.</p>
+
+    <div class="tree-wrapper">
+        <!-- CẤP 1 -->
+        <div class="root-node">🌐 Hệ Thống Liên Kết Hóa Học & Cấu Hình Electron</div>
+
+        <!-- CẤP 2 -->
+        <div class="level2-container">
+
+            <!-- NHÁNH 1 -->
+            <div class="branch-card foundation">
+                <div class="level2-title">⚡ Nền Tảng Cấu Hình Electron & Quy Tắc Octet</div>
+                <div class="level3-container">
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Sơ đồ vỏ nguyên tử & Tổng quan</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Sơ đồ vỏ electron nguyên tử', 'atomic electron shell diagram', 'Mô tả cấu trúc phân bố các lớp electron quay quanh hạt nhân nguyên tử theo các mức năng lượng.')">Sơ đồ vỏ electron nguyên tử</div>
+                            <div class="keyword-node" ondblclick="showInfo('Khái niệm liên kết hóa học', 'chemical bonding concept', 'Tổng quan về lực tương tác giữ các nguyên tử hoặc ion để tạo thành phân tử hoặc tinh thể bền vững hơn.')">Khái niệm liên kết hóa học</div>
+                            <div class="keyword-node" ondblclick="showInfo('Hình minh họa giáo dục liên kết', 'chemical bonds educational illustration', 'Tài liệu đồ họa trực quan phục vụ giảng dạy và minh họa cấu trúc liên kết hạt nhân/electron.')">Hình minh họa giáo dục liên kết</div>
+                            <div class="keyword-node" ondblclick="showInfo('Sơ đồ điểm electron (Lewis)', 'electron dot diagram chemical bonding', 'Biểu diễn các electron hóa trị bằng các dấu chấm xung quanh ký hiệu nguyên tố hóa học.')">Sơ đồ điểm electron (Lewis)</div>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Quy tắc ổn định & Khí hiếm</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Cấu hình electron bền vững & Quy tắc Octet', 'stable electron configuration octet rule', 'Nguyên tắc các nguyên tử có xu hướng đạt 8 electron ở lớp ngoài cùng (giống khí hiếm) để đạt trạng thái bền vững.')">Cấu hình electron bền vững & Quy tắc Octet</div>
+                            <div class="keyword-node" ondblclick="showInfo('Cấu hình electron khí hiếm', 'noble gas electron configuration', 'Cấu hình bão hòa cực kỳ bền vững của nhóm khí hiếm (He, Ne, Ar...), làm chuẩn mực cho sự liên kết.')">Cấu hình electron khí hiếm</div>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Vỏ electron các nguyên tử cụ thể</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Vỏ electron nguyên tử Heli', 'helium atom electron shell', 'Heli (He) có 2 electron ở lớp vỏ duy nhất, đạt trạng thái bão hòa ổn định đặc biệt.')">Vỏ electron nguyên tử Heli</div>
+                            <div class="keyword-node" ondblclick="showInfo('Vỏ electron nguyên tử Neon', 'neon atom electron shell', 'Neon (Ne) có tổng cộng 10 electron, lớp ngoài cùng có đủ 8 electron cực kỳ bền vững.')">Vỏ electron nguyên tử Neon</div>
+                            <div class="keyword-node" ondblclick="showInfo('Vỏ electron nguyên tử Argon', 'argon atom electron shell', 'Argon (Ar) có 18 electron, với lớp ngoài cùng chứa 8 electron theo quy tắc octet.')">Vỏ electron nguyên tử Argon</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NHÁNH 2 -->
+            <div class="branch-card ionic">
+                <div class="level2-title">⚛️ Liên Kết Ion (Ionic Bonding)</div>
+                <div class="level3-container">
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Cơ chế tổng quan & Tương tác</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Sơ đồ liên kết ion', 'ionic bond diagram', 'Sơ đồ minh họa quá trình hình thành liên kết thông qua sự cho và nhận electron hoàn toàn.')">Sơ đồ liên kết ion</div>
+                            <div class="keyword-node" ondblclick="showInfo('Sự hút tĩnh điện ion âm và dương', 'positive and negative ions attraction', 'Lực hút Coulomb mạnh giữa các ion mang điện tích trái dấu tạo nên hợp chất ion.')">Sự hút tĩnh điện ion âm và dương</div>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Quá trình chuyển electron (Natri - Clo)</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Sự chuyển electron của Natri', 'sodium atom electron transfer', 'Nguyên tử Na nhường 1 electron hóa trị ở lớp ngoài cùng để trở thành ion dương.')">Sự chuyển electron của Natri</div>
+                            <div class="keyword-node" ondblclick="showInfo('Sự chuyển electron của Clo', 'chlorine atom electron transfer', 'Nguyên tử Cl nhận 1 electron từ nguyên tử khác để đạt cấu hình bát tử bền vững.')">Sự chuyển electron của Clo</div>
+                            <div class="keyword-node" ondblclick="showInfo('Ion Natri (Na+)', 'sodium ion Na+', 'Ion dương hình thành khi nguyên tử natri mất đi 1 electron.')">Ion Natri (Na+)</div>
+                            <div class="keyword-node" ondblclick="showInfo('Ion Clorua (Cl-)', 'chloride ion Cl-', 'Ion âm hình thành khi nguyên tử clo nhận thêm 1 electron.')">Ion Clorua (Cl-)</div>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Mạng tinh thể & Hợp chất khác (MgO)</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc tinh thể Natri Clorua', 'sodium chloride crystal structure', 'Mô hình không gian ba chiều sắp xếp xen kẽ đều đặn giữa ion Na+ và Cl-.')">Cấu trúc tinh thể Natri Clorua</div>
+                            <div class="keyword-node" ondblclick="showInfo('Mạng lưới tinh thể muối ăn', 'table salt ionic lattice', 'Mạng lưới tinh thể ion đặc trưng của muối ăn trong tự nhiên.')">Mạng lưới tinh thể muối ăn</div>
+                            <div class="keyword-node" ondblclick="showInfo('Liên kết ion trong Magie Oxit', 'magnesium oxide ionic bonding', 'Liên kết ion giữa ion Mg2+ và O2- với lực hút rất mạnh do điện tích lớn.')">Liên kết ion trong Magie Oxit</div>
+                            <div class="keyword-node" ondblclick="showInfo('Ion Magie (Mg2+)', 'magnesium ion Mg2+', 'Ion dương hóa trị II hình thành khi nguyên tử Magie nhường 2 electron.')">Ion Magie (Mg2+)</div>
+                            <div class="keyword-node" ondblclick="showInfo('Ion Oxit (O2-)', 'oxide ion O2-', 'Ion âm hóa trị II hình thành khi nguyên tử Oxi nhận thêm 2 electron.')">Ion Oxit (O2-)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NHÁNH 3 -->
+            <div class="branch-card covalent">
+                <div class="level2-title">🧪 Liên Kết Cộng Hóa Trị (Covalent Bonding)</div>
+                <div class="level3-container">
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Bản chất & Cấu trúc chung</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Sơ đồ liên kết cộng hóa trị', 'covalent bond diagram', 'Mô tả liên kết hình thành do sự góp chung cặp electron giữa các phi kim.')">Sơ đồ liên kết cộng hóa trị</div>
+                            <div class="keyword-node" ondblclick="showInfo('Cặp electron dùng chung', 'shared electron pair', 'Cặp electron thuộc về chung cả hai nguyên tử tham gia liên kết.')">Cặp electron dùng chung</div>
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc phân tử hợp chất cộng hóa trị', 'covalent compound molecular structure', 'Mô hình không gian biểu diễn hình học của các phân tử cộng hóa trị.')">Cấu trúc phân tử hợp chất cộng hóa trị</div>
+                            <div class="keyword-node" ondblclick="showInfo('Hoạt hình mô phỏng liên kết phân tử', 'molecular bonding animation', 'Video hoặc ảnh động mô tả quá trình hình thành liên kết và chuyển động của electron.')">Hoạt hình mô phỏng liên kết phân tử</div>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Cấu trúc Lewis phân tử đơn chất</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc Lewis phân tử Hydro (H2)', 'hydrogen molecule H2 Lewis structure', 'Hai nguyên tử H góp chung 1 cặp electron để đạt cấu hình lớp vỏ bền vững của Heli.')">Cấu trúc Lewis phân tử Hydro (H2)</div>
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc Lewis phân tử Oxi (O2)', 'oxygen molecule O2 Lewis structure', 'Liên kết đôi gồm 2 cặp electron dùng chung giữa hai nguyên tử Oxi.')">Cấu trúc Lewis phân tử Oxi (O2)</div>
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc Lewis phân tử Clo (Cl2)', 'chlorine molecule Cl2 Lewis structure', 'Liên kết đơn do 1 cặp electron góp chung giữa hai nguyên tử Clo.')">Cấu trúc Lewis phân tử Clo (Cl2)</div>
+                            <div class="keyword-node" ondblclick="showInfo('Liên kết ba trong phân tử Nitơ (N2)', 'nitrogen molecule N2 triple bond', 'Liên kết ba cực kỳ bền vững được tạo thành bởi 3 cặp electron dùng chung giữa hai nguyên tử N.')">Liên kết ba trong phân tử Nitơ (N2)</div>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Cấu trúc Lewis phân tử hợp chất</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc Lewis phân tử Nước (H2O)', 'water molecule H2O Lewis structure', 'Phân tử góc gồm 2 liên kết đơn O-H và các cặp electron tự do trên nguyên tử Oxi.')">Cấu trúc Lewis phân tử Nước (H2O)</div>
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc Lewis phân tử Amoniac (NH3)', 'ammonia molecule NH3 Lewis structure', 'Phân tử chóp tam giác với nguyên tử N liên kết với 3 nguyên tử H.')">Cấu trúc Lewis phân tử Amoniac (NH3)</div>
+                            <div class="keyword-node" ondblclick="showInfo('Cấu trúc Lewis phân tử Carbon dioxide (CO2)', 'carbon dioxide molecule CO2 Lewis structure', 'Phân tử thẳng gồm hai liên kết đôi C=O ở hai bên nguyên tử Carbon trung tâm.')">Cấu trúc Lewis phân tử Carbon dioxide (CO2)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NHÁNH 4 -->
+            <div class="branch-card properties">
+                <div class="level2-title">📊 Tính Chất & So Sánh Hợp Chất</div>
+                <div class="level3-container">
+                    <div class="sub-group">
+                        <div class="level3-title">📌 Tính chất hợp chất ion & Dung dịch</div>
+                        <div class="level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('Tính chất của hợp chất ion', 'ionic compound properties', 'Thường ở thể rắn, nhiệt độ nóng chảy/sôi cao, giòn và dễ tan trong nước.')">Tính chất của hợp chất ion</div>
+                            <div class="keyword-node" ondblclick="showInfo('Tính dẫn điện của dung dịch ion', 'electrical conductivity ionic solution', 'Dung dịch hoặc chất nóng chảy của hợp chất ion dẫn điện tốt do chứa các ion tự do di chuyển.')">Tính dẫn điện của dung dịch ion</div>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <div class="level3-title">📌 So sánh các loại liên kết & Vật liệu</div>
+                        <div class="nodes-level3 level4-nodes">
+                            <div class="keyword-node" ondblclick="showInfo('So sánh hợp chất ion và cộng hóa trị', 'ionic vs covalent compounds', 'Phân biệt dựa trên bản chất lực hút, trạng thái tồn tại, tính dẫn điện và nhiệt độ nóng chảy.')">So sánh hợp chất ion và cộng hóa trị</div>
+                            <div class="keyword-node" ondblclick="showInfo('So sánh tinh thể muối ăn và đường', 'salt crystal and sugar crystal comparison', 'Muối ăn (hợp chất ion) khác biệt rõ rệt về cấu trúc và tính chất so với đường (hợp chất cộng hóa trị).')">So sánh tinh thể muối ăn và đường</div>
+                            <div class="keyword-node" ondblclick="showInfo('So sánh nhiệt độ nóng chảy nước đá và đường', 'water ice sugar melting comparison', 'Ví dụ thực tế về sự khác biệt điểm nóng chảy giữa các loại liên kết phân tử và tinh thể.')">So sánh nhiệt độ nóng chảy nước đá và đường</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal hiển thị thông tin -->
+    <div class="modal" id="infoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Tiêu đề</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="en-tag" id="modalEnTag">English keyword</div>
+                <p id="modalDesc">Nội dung mô tả chi tiết...</p>
+            </div>
+            <div class="modal-footer">
+                <a id="modalSearchLink" href="#" target="_blank" class="btn-img-search">🔍 Tìm kiếm hình ảnh Google</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showInfo(viTitle, enQuery, description) {
+            document.getElementById('modalTitle').innerText = viTitle;
+            document.getElementById('modalEnTag').innerText = "Từ khóa gốc: " + enQuery;
+            document.getElementById('modalDesc').innerText = description;
+            document.getElementById('modalSearchLink').href = `https://www.google.com/search?q=${encodeURIComponent(enQuery)}&tbm=isch`;
+            
+            document.getElementById('infoModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('infoModal').style.display = 'none';
+        }
+
+        // Đóng modal khi bấm ra ngoài vùng nội dung
+        window.onclick = function(event) {
+            const modal = document.getElementById('infoModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
