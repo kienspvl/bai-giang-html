@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chạy Đua 100M - Speed Mash</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            background: #2b2b2b;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #header {
+            padding: 15px 20px;
+            background: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #444;
+        }
+        #track-container {
+            position: relative;
+            background: #4caf50;
+            height: 450px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border-bottom: 4px solid #fff;
+        }
+        /* Tùy chỉnh thanh cuộn cho track */
+        #track-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #track-container::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+        }
+        .lane {
+            position: relative;
+            height: 35px;
+            border-bottom: 1px dashed rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+        }
+        .lane-number {
+            position: absolute;
+            left: 5px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.6);
+        }
+        .runner {
+            position: absolute;
+            left: 0px;
+            font-size: 20px;
+            transition: transform 0.1s;
+            will-change: left;
+        }
+        .finish-line {
+            position: absolute;
+            left: 2000px; /* Chiều dài đường chạy tượng trưng cho 100m */
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            background: repeating-linear-gradient(
+                45deg,
+                #000,
+                #000 10px,
+                #fff 10px,
+                #fff 20px
+            );
+        }
+        #controls-prompt {
+            padding: 20px;
+            background: #222;
+            text-align: center;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #controls-prompt:hover {
+            background: #2a2a2a;
+        }
+        .highlight {
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="header">
+            <div>Khoảng cách: <span id="distance" class="highlight">0.0</span>m / 100m</div>
+            <div>Trạng thái: <span id="status" class="highlight">Chờ bắt đầu</span></div>
+        </div>
+        
+        <div id="track-container">
+            <div id="track" style="width: 2100px; position: relative; height: 385px;">
+                <div class="finish-line"></div>
+                </div>
+        </div>
+
+        <div id="controls-prompt">
+            NHẤN LIÊN TỤC <span class="highlight">[SPACE]</span> HOẶC <span class="highlight">[CHẠM MÀN HÌNH]</span> ĐỂ CHẠY!
+        </div>
+    </div>
+
+    <script>
+        const TRACK_LENGTH_M = 100; // 100 mét thực tế
+        const PIXEL_PER_METER = 20; // 1 mét = 20 pixel -> Vạch đích ở 2000px
+        const TOTAL_RUNNERS = 11; // Người chơi + 10 bot
+
+        let gameStarted = false;
+        let gameOver = false;
+        let playerDistance = 0; // tính bằng mét
+        let playerSpeed = 0; // m/s
+        
+        // Mảng lưu thông số của các bot
+        let bots = [];
+        
+        const trackEl = document.getElementById('track');
+        const trackContainer = document.getElementById('track-container');
+        const distanceEl = document.getElementById('distance');
+        const statusEl = document.getElementById('status');
+        const promptEl = document.getElementById('controls-prompt');
+
+        let runnersElements = [];
+
+        // Khởi tạo các làn đua và nhân vật
+        function initGame() {
+            trackEl.innerHTML = '<div class="finish-line" style="left: ' + (TRACK_LENGTH_M * PIXEL_PER_METER) + 'px;"></div>';
+            runnersElements = [];
+            bots = [];
+
+            const emojis = ['🏃‍♂️', '🏃‍♀️', '🏃', '🥷', '🤖', '🦊', '🐱', '🐶', '🦁', '🐯', '🐼'];
+
+            for (let i = 0; i < TOTAL_RUNNERS; i++) {
+                const lane = document.createElement('div');
+                lane.className = 'lane';
+                lane.style.top = (i * 35) + 'px';
+                
+                const num = document.createElement('span');
+                num.className = 'lane-number';
+                num.textContent = i + 1;
+                lane.appendChild(num);
+
+                const runner = document.createElement('div');
+                runner.className = 'runner';
+                runner.textContent = emojis[i];
+                lane.appendChild(runner);
+                trackEl.appendChild(lane);
+
+                runnersElements.getItem = runner; // Lưu reference
+
+                if (i > 0) {
+                    // Cấu hình chỉ số cho bot (tốc độ tối đa ngẫu nhiên từ 8.5 m/s đến 9.8 m/s)
+                    bots.push({
+                        id: i,
+                        distance: 0,
+                        maxSpeed: 8.5 + Math.random() * 1.3,
+                        acceleration: 2 + Math.random() * 1,
+                        element: runner
+                    });
+                } else {
+                    // Người chơi ở làn 0
+                    playerRunnerElement = runner;
+                }
+            }
+        }
+
+        let playerRunnerElement;
+
+        // Xử lý thao tác tăng tốc của người chơi
+        function handlePlayerAction(e) {
+            if (e) e.preventDefault(); // Ngăn cuộn trang mặc định trên mobile khi bấm space/touch
+            
+            if (gameOver) {
+                resetGame();
+                return;
+            }
+
+            if (!gameStarted) {
+                gameStarted = true;
+                statusEl.textContent = "Đang chạy...";
+                promptEl.textContent = "NHẤN LIÊN TỤC ĐỂ TĂNG TỐC!";
+            }
+
+            // Mỗi lần bấm cộng thêm tốc độ cho người chơi
+            playerSpeed += 1.8;
+            if (playerSpeed > 11.5) playerSpeed = 11.5; // Giới hạn tốc độ tối đa người chơi
+        }
+
+        // Sự kiện bàn phím (PC)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                handlePlayerAction(e);
+            }
+        });
+
+        // Sự kiện chạm màn hình / Click chuột (Mobile & PC)
+        promptEl.addEventListener('touchstart', handlePlayerAction);
+        promptEl.addEventListener('click', handlePlayerAction);
+        trackContainer.addEventListener('touchstart', handlePlayerAction);
+
+        let lastTime = performance.now();
+
+        // Vòng lặp game chính (Game Loop)
+        function update(currentTime) {
+            const deltaTime = (currentTime - lastTime) / 1000; // thời gian trôi qua tính bằng giây
+            lastTime = currentTime;
+
+            if (gameStarted && !gameOver) {
+                // 1. Cập nhật người chơi
+                // Giảm tốc độ tự nhiên theo thời gian nếu không bấm
+                playerSpeed -= 3.5 * deltaTime;
+                if (playerSpeed < 0) playerSpeed = 0;
+
+                playerDistance += playerSpeed * deltaTime;
+                if (playerDistance > TRACK_LENGTH_M) playerDistance = TRACK_LENGTH_M;
+
+                // Cập nhật hiển thị vị trí người chơi
+                playerRunnerElement.style.left = (playerDistance * PIXEL_PER_METER) + 'px';
+                distanceEl.textContent = playerDistance.toFixed(1);
+
+                // Tự động cuộn màn hình theo người chơi trên PC/Mobile
+                const targetScrollLeft = (playerDistance * PIXEL_PER_METER) - 150;
+                trackContainer.scrollLeft = targetScrollLeft;
+
+                // 2. Cập nhật các Bot
+                let activeRunnersFinished = 0;
+                bots.forEach(bot => {
+                    if (bot.distance < TRACK_LENGTH_M) {
+                        // Bot tăng tốc dần đến tốc độ tối đa của nó
+                        let targetSpeed = bot.maxSpeed;
+                        // Thêm chút ngẫu nhiên mô phỏng phong độ dao động
+                        targetSpeed += Math.sin(currentTime * 0.005 + bot.id) * 0.5;
+                        
+                        if (bot.distance < TRACK_LENGTH_M * 0.9) {
+                            bot.distance += targetSpeed * deltaTime;
+                        } else {
+                            // Nước rút cuối chặng
+                            bot.distance += (targetSpeed * 1.1) * deltaTime;
+                        }
+
+                        if (bot.distance > TRACK_LENGTH_M) bot.distance = TRACK_LENGTH_M;
+                        bot.element.style.left = (bot.distance * PIXEL_PER_METER) + 'px';
+                    }
+
+                    if (bot.distance >= TRACK_LENGTH_M) {
+                        activeRunnersFinished++;
+                    }
+                });
+
+                // 3. Kiểm tra điều kiện kết thúc game
+                if (playerDistance >= TRACK_LENGTH_M || activeRunnersFinished === bots.length) {
+                    gameOver = true;
+                    checkRank();
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // Tính toán thứ hạng khi về đích
+        function checkRank() {
+            // Gom tất cả lại xếp hạng
+            let allParticipants = [{ isPlayer: true, distance: playerDistance }];
+            bots.forEach(b => allParticipants.push({ isPlayer: false, distance: b.distance }));
+
+            // Sắp xếp theo quãng đường giảm dần (ai xa nhất là về trước)
+            allParticipants.sort((a, b) => b.distance - a.distance);
+
+            let rank = allParticipants.findIndex(p => p.isPlayer) + 1;
+            
+            let rankText = "";
+            if (rank === 1) rankText = "🏆 VÔ ĐỊCH (Hạng 1)! Xuất sắc!";
+            else if (rank <= 3) rankText = `🥉 Đạt Hạng ${rank}! Rất cố gắng!`;
+            else rankText = `😢 Về đích ở Hạng ${rank}. Thử lại nhé!`;
+
+            statusEl.textContent = rankText;
+            promptEl.textContent = "CHẠM HOẶC NHẤN [SPACE] ĐỂ CHƠI LẠI";
+        }
+
+        // Reset lại trò chơi
+        function resetGame() {
+            gameStarted = false;
+            gameOver = false;
+            playerDistance = 0;
+            playerSpeed = 0;
+            lastTime = performance.now();
+            statusEl.textContent = "Chờ bắt đầu";
+            distanceEl.textContent = "0.0";
+            promptEl.innerHTML = 'NHẤN LIÊN TỤC <span class="highlight">[SPACE]</span> HOẶC <span class="highlight">[CHẠM MÀN HÌNH]</span> ĐỂ CHẠY!';
+            trackContainer.scrollLeft = 0;
+            initGame();
+        }
+
+        // Khởi tạo lần đầu
+        initGame();
+        requestAnimationFrame(update);
+    </script>
+</body>
+</html>
