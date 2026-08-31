@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brawl Stars Pro - Revive, Audio & Detailed Sprites</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #090d16 0%, #1e1b4b 100%);
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            text-align: center;
+        }
+        canvas {
+            border: 6px solid #6366f1;
+            background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            cursor: crosshair;
+            border-radius: 12px;
+        }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 900px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            background: rgba(30, 41, 59, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #4f46e5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .team-blue { color: #38bdf8; text-shadow: 0 0 10px rgba(56,189,248,0.4); }
+        .team-red { color: #f87171; text-shadow: 0 0 10px rgba(248,113,113,0.4); }
+        .gem-info { color: #10b981; text-shadow: 0 0 10px rgba(16,185,129,0.4); }
+        
+        #menu, #modal-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(9, 13, 22, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+        }
+        #modal-overlay { display: none; z-index: 20; }
+        
+        .menu-section {
+            margin: 10px 0;
+            text-align: center;
+        }
+        .menu-section label {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-right: 10px;
+        }
+        select {
+            background: #1e293b;
+            color: white;
+            border: 2px solid #4f46e5;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .brawler-selection {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .brawler-card {
+            background: #1e293b;
+            border: 3px solid #475569;
+            border-radius: 12px;
+            padding: 15px;
+            width: 210px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: center;
+        }
+        .brawler-card:hover {
+            border-color: #6366f1;
+            transform: translateY(-5px);
+            background: #283548;
+        }
+        .brawler-card h3 { margin: 8px 0 3px 0; color: #facc15; font-size: 18px; }
+        .brawler-card p { margin: 3px 0; font-size: 12px; color: #94a3b8; }
+        
+        .modal-box {
+            background: #1e293b;
+            border: 3px solid #6366f1;
+            border-radius: 16px;
+            padding: 30px 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            max-width: 450px;
+            width: 90%;
+        }
+        .modal-box h2 { margin-top: 0; font-size: 28px; color: #facc15; }
+        .modal-box p { font-size: 16px; color: #cbd5e1; margin-bottom: 25px; }
+        .modal-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white; border: none; padding: 12px 30px; font-size: 16px;
+            font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        .modal-btn:hover { transform: scale(1.05); background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%); }
+        .controls-hint {
+            margin-top: 15px; font-size: 12px; color: #64748b;
+            background: rgba(15,23,42,0.6); padding: 8px 15px; border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h1 style="color: #facc15; margin-bottom: 5px; font-size: 30px; text-shadow: 0 0 15px rgba(250,204,21,0.4);">BRAWL STARS PRO ARENA</h1>
+        
+        <div class="menu-section">
+            <label>Chế độ chơi:</label>
+            <select id="gameModeSelect">
+                <option value="bounty">Hạ gục đối thủ (Đạt 5 mạng)</option>
+                <option value="gemgrab">Nhặt Gem (Thu thập 10 Viên Ngọc)</option>
+            </select>
+            
+            <label style="margin-left: 20px;">Độ khó AI:</label>
+            <select id="aiDifficultySelect">
+                <option value="easy">Dễ (Ngờ nghệch)</option>
+                <option value="normal" selected>Thường (Cân bằng)</option>
+                <option value="hard">Khó (Né đạn pro)</option>
+            </select>
+        </div>
+
+        <p style="margin: 5px 0; color: #94a3b8; font-size: 15px;">Chọn Brawler của bạn:</p>
+        <div class="brawler-selection">
+            <div class="brawler-card" onclick="startSession('Shelly')">
+                <div style="font-size: 30px;">🧢💜</div>
+                <h3>Shelly</h3>
+                <p><b>HP:</b> 4200 | <b>Sát thương:</b> 450</p>
+                <p>Bắn chụm 3 tia đạn lan rộng.</p>
+            </div>
+            <div class="brawler-card" onclick="startSession('Colt')">
+                <div style="font-size: 30px;">🧢💙</div>
+                <h3>Colt</h3>
+                <p><b>HP:</b> 2900 | <b>Sát thương:</b> 380</p>
+                <p>Xạ thủ liên thanh tầm xa.</p>
+            </div>
+            <div class="brawler-card" onclick="startSession('El Primo')">
+                <div style="font-size: 30px;">🦹‍♂️❤️</div>
+                <h3>El Primo</h3>
+                <p><b>HP:</b> 6800 | <b>Sát thương:</b> 650</p>
+                <p>Đấu sĩ cận chiến trâu bò.</p>
+            </div>
+        </div>
+        <div class="controls-hint">
+            💡 Điều khiển: <b>W, A, S, D</b> di chuyển | <b>Click chuột</b> hoặc phím <b>SPACE</b> bắn | Bot và người chơi tự động <b>hồi sinh sau 3 giây</b>!
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div class="modal-box">
+            <h2 id="modal-title">KẾT QUẢ</h2>
+            <p id="modal-desc">Trận đấu kết thúc.</p>
+            <button class="modal-btn" onclick="location.reload()">Chơi Lại</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div class="hud">
+            <span class="team-blue" id="score-left">💙 Xanh: 0</span>
+            <span class="gem-info" id="gem-hud" style="display:none;">💎 Ngọc giữa map: <span id="gems-collected">0</span>/10</span>
+            <span id="match-timer">⏱️ 00:00</span>
+            <span class="team-red" id="score-right">🔴 Đỏ: 0</span>
+        </div>
+        <canvas id="gameCanvas" width="900" height="520"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Hệ thống âm thanh Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            let osc = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            let now = audioCtx.currentTime;
+            if (type === 'shoot') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+                gainNode.gain.setValueAtTime(0.15, now);
+                gainNode.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'hit') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now); osc.stop(now + 0.12);
+            } else if (type === 'gem') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+                gainNode.gain.setValueAtTime(0.15, now);
+                gainNode.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+            } else if (type === 'revive') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.3);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            }
+        }
+
+        let gameStarted = false;
+        let player = null;
+        let entities = [];
+        let bullets = [];
+        let obstacles = [];
+        let gems = [];
+        let keys = {};
+        let blueScore = 0;
+        let redScore = 0;
+        let gameTime = 0;
+        let timerInterval = null;
+        
+        let settings = { mode: 'bounty', difficulty: 'normal' };
+
+        const brawlerTypes = {
+            'Shelly': { hp: 4200, maxHp: 4200, speed: 3.3, radius: 18, color: '#a855f7', rangeType: 'spread', damage: 450, weapon: 'shotgun' },
+            'Colt': { hp: 2900, maxHp: 2900, speed: 3.7, radius: 16, color: '#38bdf8', rangeType: 'sniper', damage: 380, weapon: 'pistols' },
+            'El Primo': { hp: 6800, maxHp: 6800, speed: 3.1, radius: 20, color: '#ef4444', rangeType: 'melee', damage: 650, weapon: 'fists' }
+        };
+
+        function generateRandomMap() {
+            obstacles = [];
+            const mapStyles = ['symmetric', 'labyrinth', 'open_arena'];
+            let chosenStyle = mapStyles[Math.floor(Math.random() * mapStyles.length)];
+
+            if (chosenStyle === 'symmetric') {
+                obstacles.push({ x: 410, y: 160, w: 80, h: 200, color: '#475569' });
+                obstacles.push({ x: 220, y: 100, w: 50, h: 90, color: '#334155' });
+                obstacles.push({ x: 220, y: 330, w: 50, h: 90, color: '#334155' });
+                obstacles.push({ x: 630, y: 100, w: 50, h: 90, color: '#334155' });
+                obstacles.push({ x: 630, y: 330, w: 50, h: 90, color: '#334155' });
+            } else if (chosenStyle === 'labyrinth') {
+                obstacles.push({ x: 300, y: 100, w: 60, h: 60, color: '#4f46e5' });
+                obstacles.push({ x: 540, y: 360, w: 60, h: 60, color: '#4f46e5' });
+                obstacles.push({ x: 420, y: 80, w: 60, h: 80, color: '#334155' });
+                obstacles.push({ x: 420, y: 360, w: 60, h: 80, color: '#334155' });
+                obstacles.push({ x: 180, y: 220, w: 70, h: 80, color: '#64748b' });
+                obstacles.push({ x: 650, y: 220, w: 70, h: 80, color: '#64748b' });
+            } else {
+                for (let i = 0; i < 6; i++) {
+                    let rx = 200 + Math.random() * 500;
+                    let ry = 100 + Math.random() * 300;
+                    obstacles.push({ x: rx, y: ry, w: 50, h: 50, color: '#475569' });
+                }
+            }
+        }
+
+        function startSession(brawlerName) {
+            settings.mode = document.getElementById("gameModeSelect").value;
+            settings.difficulty = document.getElementById("aiDifficultySelect").value;
+
+            document.getElementById("menu").style.display = "none";
+            if (settings.mode === 'gemgrab') {
+                document.getElementById("gem-hud").style.display = "inline";
+                document.getElementById("score-left").innerText = "💙 Xanh (Gem): 0";
+                document.getElementById("score-right").innerText = "🔴 Đỏ (Gem): 0";
+            }
+
+            generateRandomMap();
+
+            let stats = brawlerTypes[brawlerName];
+            player = {
+                x: 100, y: canvas.height / 2,
+                origX: 100, origY: canvas.height / 2,
+                ...stats,
+                team: 'blue',
+                isPlayer: true,
+                name: brawlerName,
+                cooldown: 0,
+                gems: 0,
+                respawnTimer: 0,
+                facing: 0
+            };
+            entities.push(player);
+
+            entities.push(createAI('Colt', 120, 160, 'blue'));
+            entities.push(createAI('El Primo', 120, 360, 'blue'));
+
+            entities.push(createAI('Shelly', 780, 150, 'red'));
+            entities.push(createAI('Colt', 780, 260, 'red'));
+            entities.push(createAI('El Primo', 780, 370, 'red'));
+
+            if (settings.mode === 'gemgrab') {
+                spawnGemCluster();
+                setInterval(() => {
+                    if (gameStarted && gems.length < 5) spawnGemCluster();
+                }, 4000);
+            }
+
+            gameStarted = true;
+            timerInterval = setInterval(() => { if(gameStarted) gameTime++; }, 1000);
+            loop();
+        }
+
+        function createAI(type, x, y, team) {
+            let stats = brawlerTypes[type];
+            return {
+                x: x, y: y,
+                origX: x, origY: y,
+                ...stats,
+                team: team,
+                isPlayer: false,
+                name: type,
+                cooldown: 0,
+                gems: 0,
+                respawnTimer: 0,
+                facing: team === 'blue' ? 0 : Math.PI
+            };
+        }
+
+        function spawnGemCluster() {
+            let cx = canvas.width / 2 + (Math.random() * 100 - 50);
+            let cy = canvas.height / 2 + (Math.random() * 100 - 50);
+            gems.push({ x: cx, y: cy, radius: 8 });
+        }
+
+        window.addEventListener("keydown", (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.code === 'Space' && gameStarted && player && player.hp > 0) {
+                autoShootSpace(player);
+            }
+        });
+        window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+
+        canvas.addEventListener("click", (e) => {
+            if (!gameStarted || !player || player.hp <= 0) return;
+            const rect = canvas.getBoundingClientRect();
+            shoot(player, e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        function shoot(ent, targetX, targetY) {
+            if (ent.cooldown > 0 || ent.hp <= 0) return;
+            let angle = Math.atan2(targetY - ent.y, targetX - ent.x);
+            ent.facing = angle;
+            playSound('shoot');
+
+            if (ent.rangeType === 'spread') {
+                for (let i = -1; i <= 1; i++) {
+                    let a = angle + i * 0.18;
+                    bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(a) * 6, dy: Math.sin(a) * 6, damage: ent.damage, team: ent.team, radius: 4, life: 35 });
+                }
+                ent.cooldown = 42;
+            } else if (ent.rangeType === 'sniper') {
+                bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(angle) * 8.5, dy: Math.sin(angle) * 8.5, damage: ent.damage, team: ent.team, radius: 3.5, life: 48 });
+                ent.cooldown = 24;
+            } else if (ent.rangeType === 'melee') {
+                bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(angle) * 5, dy: Math.sin(angle) * 5, damage: ent.damage, team: ent.team, radius: 11, life: 16 });
+                ent.cooldown = 48;
+            }
+        }
+
+        function autoShootSpace(ent) {
+            let nearest = null;
+            let minDist = Infinity;
+            for (let other of entities) {
+                if (other.team !== ent.team && other.hp > 0) {
+                    let dist = Math.hypot(other.x - ent.x, other.y - ent.y);
+                    if (dist < minDist) { minDist = dist; nearest = other; }
+                }
+            }
+            if (nearest) shoot(ent, nearest.x, nearest.y);
+            else shoot(ent, ent.x + (ent.team === 'blue' ? 100 : -100), ent.y);
+        }
+
+        function checkObstacleCollision(nx, ny, radius) {
+            for (let obs of obstacles) {
+                let closestX = Math.max(obs.x, Math.min(nx, obs.x + obs.w));
+                let closestY = Math.max(obs.y, Math.min(ny, obs.y + obs.h));
+                let dist = Math.hypot(nx - closestX, ny - closestY);
+                if (dist < radius) return true;
+            }
+            return false;
+        }
+
+        function update() {
+            // Xử lý Hồi sinh (Respawn)
+            for (let ent of entities) {
+                if (ent.hp <= 0) {
+                    ent.respawnTimer--;
+                    if (ent.respawnTimer <= 0) {
+                        ent.hp = ent.maxHp;
+                        ent.x = ent.origX;
+                        ent.y = ent.origY;
+                        playSound('revive');
+                    }
+                    continue;
+                }
+
+                if (ent.cooldown > 0) ent.cooldown--;
+
+                if (ent.isPlayer && ent.hp > 0) {
+                    let dx = 0, dy = 0;
+                    if (keys['w'] || keys['arrowup']) dy = -1;
+                    if (keys['s'] || keys['arrowdown']) dy = 1;
+                    if (keys['a'] || keys['arrowleft']) dx = -1;
+                    if (keys['d'] || keys['arrowright']) dx = 1;
+
+                    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+                    let nextX = ent.x + dx * ent.speed;
+                    let nextY = ent.y + dy * ent.speed;
+
+                    nextX = Math.max(ent.radius, Math.min(canvas.width - ent.radius, nextX));
+                    nextY = Math.max(ent.radius, Math.min(canvas.height - ent.radius, nextY));
+
+                    if (!checkObstacleCollision(nextX, nextY, ent.radius)) {
+                        ent.x = nextX;
+                        ent.y = nextY;
+                    }
+                    if (dx !== 0 || dy !== 0) ent.facing = Math.atan2(dy, dx);
+                } else if (!ent.isPlayer && ent.hp > 0) {
+                    let target = null;
+                    let minDist = Infinity;
+                    let targetGem = null;
+                    if (settings.mode === 'gemgrab' && gems.length > 0) {
+                        let minGemDist = Infinity;
+                        for (let g of gems) {
+                            let gDist = Math.hypot(g.x - ent.x, g.y - ent.y);
+                            if (gDist < minGemDist) { minGemDist = gDist; targetGem = g; }
+                        }
+                    }
+
+                    for (let other of entities) {
+                        if (other.team !== ent.team && other.hp > 0) {
+                            let dist = Math.hypot(other.x - ent.x, other.y - ent.y);
+                            if (dist < minDist) { minDist = dist; target = other; }
+                        }
+                    }
+
+                    let moveX = 0, moveY = 0;
+                    let incomingBullet = null;
+                    if (settings.difficulty !== 'easy') {
+                        for (let b of bullets) {
+                            if (b.team !== ent.team && Math.hypot(b.x - ent.x, b.y - ent.y) < (settings.difficulty === 'hard' ? 90 : 60)) {
+                                incomingBullet = b; break;
+                            }
+                        }
+                    }
+
+                    if (incomingBullet) {
+                        let bAngle = Math.atan2(incomingBullet.dy, incomingBullet.dx);
+                        moveX = Math.cos(bAngle + Math.PI / 2) * ent.speed;
+                        moveY = Math.sin(bAngle + Math.PI / 2) * ent.speed;
+                    } else if (target && (minDist < 200 || !targetGem)) {
+                        let angle = Math.atan2(target.y - ent.y, target.x - ent.x);
+                        let preferredDist = ent.rangeType === 'melee' ? 25 : 160;
+                        if (minDist > preferredDist + 20) {
+                            moveX = Math.cos(angle) * (ent.speed * 0.8);
+                            moveY = Math.sin(angle) * (ent.speed * 0.8);
+                        } else {
+                            moveX = -Math.sin(angle) * (ent.speed * 0.7);
+                            moveY = Math.cos(angle) * (ent.speed * 0.7);
+                        }
+                        ent.facing = angle;
+                        if (Math.random() < (settings.difficulty === 'hard' ? 0.12 : 0.05) && minDist < 260) {
+                            shoot(ent, target.x, target.y);
+                        }
+                    } else if (targetGem) {
+                        let gAngle = Math.atan2(targetGem.y - ent.y, targetGem.x - ent.x);
+                        moveX = Math.cos(gAngle) * (ent.speed * 0.8);
+                        moveY = Math.sin(gAngle) * (ent.speed * 0.8);
+                        ent.facing = gAngle;
+                    }
+
+                    let nextAiX = ent.x + moveX;
+                    let nextAiY = ent.y + moveY;
+                    nextAiX = Math.max(ent.radius, Math.min(canvas.width - ent.radius, nextAiX));
+                    nextAiY = Math.max(ent.radius, Math.min(canvas.height - ent.radius, nextAiY));
+
+                    if (!checkObstacleCollision(nextAiX, nextAiY, ent.radius)) {
+                        ent.x = nextAiX; ent.y = nextAiY;
+                    }
+                }
+            }
+
+            // Nhặt ngọc
+            if (settings.mode === 'gemgrab') {
+                for (let i = gems.length - 1; i >= 0; i--) {
+                    let g = gems[i];
+                    for (let ent of entities) {
+                        if (ent.hp > 0 && Math.hypot(ent.x - g.x, ent.y - g.y) < ent.radius + g.radius) {
+                            ent.gems++;
+                            gems.splice(i, 1);
+                            playSound('gem');
+                            
+                            let totalBlueGems = entities.filter(e => e.team === 'blue').reduce((sum, e) => sum + e.gems, 0);
+                            let totalRedGems = entities.filter(e => e.team === 'red').reduce((sum, e) => sum + e.gems, 0);
+                            document.getElementById("score-left").innerText = `💙 Xanh (Gem): ${totalBlueGems}`;
+                            document.getElementById("score-right").innerText = `🔴 Đỏ (Gem): ${totalRedGems}`;
+
+                            if (totalBlueGems >= 10 || totalRedGems >= 10) {
+                                gameStarted = false;
+                                clearInterval(timerInterval);
+                                showModal(totalBlueGems >= 10 ? "💎 THẮNG LỚN!" : "💀 THẤT BẠI!", totalBlueGems >= 10 ? "Đội Xanh đã thu thập đủ 10 viên ngọc chiến thắng!" : "Đội Đỏ đã gom đủ 10 viên ngọc!");
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Đạn & va chạm
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.dx; b.y += b.dy; b.life--;
+
+                let hitObstacle = false;
+                for (let obs of obstacles) {
+                    if (b.x >= obs.x && b.x <= obs.x + obs.w && b.y >= obs.y && b.y <= obs.y + obs.h) {
+                        hitObstacle = true; break;
+                    }
+                }
+
+                if (hitObstacle || b.life <= 0 || b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1); continue;
+                }
+
+                let hit = false;
+                for (let ent of entities) {
+                    if (ent.team !== b.team && ent.hp > 0) {
+                        if (Math.hypot(ent.x - b.x, ent.y - b.y) < ent.radius + b.radius) {
+                            ent.hp -= b.damage;
+                            hit = true;
+                            playSound('hit');
+                            if (ent.hp <= 0) {
+                                ent.respawnTimer = 180; // 3 giây (60fps * 3)
+                                if (settings.mode === 'gemgrab' && ent.gems > 0) {
+                                    for(let g=0; g<ent.gems; g++) {
+                                        gems.push({ x: ent.x + (Math.random()*40-20), y: ent.y + (Math.random()*40-20), radius: 8 });
+                                    }
+                                    ent.gems = 0;
+                                }
+
+                                if (settings.mode === 'bounty') {
+                                    if (ent.team === 'red') blueScore++;
+                                    else redScore++;
+                                    document.getElementById("score-left").innerText = `💙 Xanh: ${blueScore}`;
+                                    document.getElementById("score-right").innerText = `🔴 Đỏ: ${redScore}`;
+
+                                    if (blueScore >= 5 || redScore >= 5) {
+                                        gameStarted = false;
+                                        clearInterval(timerInterval);
+                                        showModal(blueScore >= 5 ? "🎉 CHIẾN THẮNG!" : "💀 THẤT BẠI!", blueScore >= 5 ? "Đội Xanh đạt 5 điểm hạ gục trước!" : "Đội Đỏ đã giành chiến thắng!");
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (hit) bullets.splice(i, 1);
+            }
+
+            let mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            let secs = (gameTime % 60).toString().padStart(2, '0');
+            document.getElementById("match-timer").innerText = `⏱️ ${mins}:${secs}`;
+        }
+
+        function showModal(title, desc) {
+            document.getElementById("modal-title").innerText = title;
+            document.getElementById("modal-desc").innerText = desc;
+            document.getElementById("modal-overlay").style.display = "flex";
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Vẽ vật cản
+            for (let obs of obstacles) {
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#334155';
+                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+            }
+
+            // Vẽ Ngọc
+            for (let g of gems) {
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // Vẽ Nhân vật chi tiết (đầu, thân, chân tay, vũ khí)
+            for (let ent of entities) {
+                if (ent.hp <= 0) continue;
+
+                ctx.save();
+                ctx.translate(ent.x, ent.y);
+
+                // Chân (vẽ dạng thanh di chuyển đơn giản phía sau thân)
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(-8, -4, 6, 12);
+                ctx.fillRect(2, -4, 6, 12);
+
+                // Thân nhân vật
+                ctx.fillStyle = ent.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, ent.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.lineWidth = ent.isPlayer ? 3.5 : 2;
+                ctx.strokeStyle = ent.team === 'blue' ? '#38bdf8' : '#f87171';
+                ctx.stroke();
+
+                // Đầu & hướng nhìn
+                ctx.rotate(ent.facing || 0);
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(6, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Vũ khí / Súng / Nắm đấm chi tiết theo loại brawler
+                if (ent.weapon === 'shotgun') {
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillRect(4, 4, 16, 5);
+                } else if (ent.weapon === 'pistols') {
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.fillRect(4, 6, 12, 3);
+                } else if (ent.weapon === 'fists') {
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(14, 6, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+
+                // Số lượng gem giữ
+                if (ent.gems > 0) {
+                    ctx.fillStyle = '#10b981';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.fillText(`💎${ent.gems}`, ent.x - 12, ent.y + ent.radius + 18);
+                }
+
+                // Thanh máu
+                let barW = ent.radius * 2;
+                let hpPercent = Math.max(0, ent.hp / ent.maxHp);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(ent.x - barW/2, ent.y - ent.radius - 14, barW, 5);
+                ctx.fillStyle = ent.team === 'blue' ? '#38bdf8' : '#f87171';
+                ctx.fillRect(ent.x - barW/2, ent.y - ent.radius - 14, barW * hpPercent, 5);
+            }
+
+            // Vẽ Đạn
+            for (let b of bullets) {
+                ctx.fillStyle = b.team === 'blue' ? '#38bdf8' : '#fca5a5';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function loop() {
+            if (!gameStarted) return;
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+    </script>
+</body>
+</html>
