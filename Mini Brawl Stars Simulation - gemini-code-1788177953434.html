@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Brawl Stars Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            text-align: center;
+        }
+        canvas {
+            border: 4px solid #f39c12;
+            background-color: #27ae60;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            cursor: crosshair;
+        }
+        .ui {
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #menu {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .brawler-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        .brawler-btn:hover {
+            background-color: #c0392b;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h1>CHỌN BRAWLER CỦA BẠN</h1>
+        <div>
+            <button class="brawler-btn" onclick="startGame('Shelly')">Shelly (Cận chiến / Tầm trung)</button>
+            <button class="brawler-btn" onclick="startGame('Colt')">Colt (Tốc độ / Tầm xa)</button>
+            <button class="brawler-btn" onclick="startGame('Poco')">Poco (Máu trâu / Tầm rộng)</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div class="ui">
+            <span id="score-board">Hạ gục: 0</span> | 
+            <span id="hp-board">Máu: 100</span>
+        </div>
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let gameStarted = false;
+        let score = 0;
+        let player = {};
+        let bullets = [];
+        let enemies = [];
+        let keys = {};
+
+        // Cấu hình chỉ số Brawlers
+        const brawlerStats = {
+            'Shelly': { hp: 100, speed: 3, color: '#9b59b6', damage: 25, range: 15 },
+            'Colt': { hp: 80, speed: 4, color: '#3498db', damage: 15, range: 25 },
+            'Poco': { hp: 140, speed: 2.5, color: '#f1c40f', damage: 20, range: 20 }
+        };
+
+        function startGame(brawlerName) {
+            document.getElementById("menu").style.display = "none";
+            let stats = brawlerStats[brawlerName];
+            
+            player = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                radius: 15,
+                color: stats.color,
+                hp: stats.hp,
+                maxHp: stats.hp,
+                speed: stats.speed,
+                damage: stats.damage,
+                name: brawlerName
+            };
+
+            gameStarted = true;
+            loop();
+        }
+
+        // Lắng nghe sự kiện bàn phím
+        window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
+        window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+
+        // Bắn đạn khi click chuột
+        canvas.addEventListener("click", (e) => {
+            if (!gameStarted) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                dx: Math.cos(angle) * 7,
+                dy: Math.sin(angle) * 7,
+                damage: player.damage,
+                radius: 5,
+                color: '#fff'
+            });
+        });
+
+        // Tạo Bot địch tự động
+        function spawnEnemy() {
+            if (!gameStarted) return;
+            let edge = Math.floor(Math.random() * 4);
+            let ex, ey;
+            if (edge === 0) { ex = Math.random() * canvas.width; ey = -20; }
+            else if (edge === 1) { ex = Math.random() * canvas.width; ey = canvas.height + 20; }
+            else if (edge === 2) { ex = -20; ey = Math.random() * canvas.height; }
+            else { ex = canvas.width + 20; ey = Math.random() * canvas.height; }
+
+            enemies.push({
+                x: ex,
+                y: ey,
+                radius: 12,
+                color: '#e74c3c',
+                speed: 1.5,
+                hp: 30
+            });
+        }
+
+        setInterval(spawnEnemy, 1500);
+
+        // Cập nhật trạng thái game
+        function update() {
+            // Di chuyển Player
+            if ((keys['w'] || keys['arrowup']) && player.y > player.radius) player.y -= player.speed;
+            if ((keys['s'] || keys['arrowdown']) && player.y < canvas.height - player.radius) player.y += player.speed;
+            if ((keys['a'] || keys['arrowleft']) && player.x > player.radius) player.x -= player.speed;
+            if ((keys['d'] || keys['arrowright']) && player.x < canvas.width - player.radius) player.x += player.speed;
+
+            // Cập nhật Đạn
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].x += bullets[i].dx;
+                bullets[i].y += bullets[i].dy;
+
+                // Xóa đạn khi ra ngoài màn hình
+                if (bullets[i].x < 0 || bullets[i].x > canvas.width || bullets[i].y < 0 || bullets[i].y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Cập nhật Địch
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                let angle = Math.atan2(player.y - e.y, player.x - e.x);
+                e.x += Math.cos(angle) * e.speed;
+                e.y += Math.sin(angle) * e.speed;
+
+                // Va chạm địch với Player
+                let distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
+                if (distToPlayer < player.radius + e.radius) {
+                    player.hp -= 0.5; // Gây sát thương liên tục khi chạm
+                    if (player.hp <= 0) {
+                        alert("Thua cuộc! Bạn đã bị hạ gục. Tổng điểm: " + score);
+                        location.reload();
+                    }
+                }
+
+                // Va chạm đạn với Địch
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    let b = bullets[j];
+                    let distToBullet = Math.hypot(b.x - e.x, b.y - e.y);
+                    if (distToBullet < b.radius + e.radius) {
+                        e.hp -= b.damage;
+                        bullets.splice(j, 1);
+                        if (e.hp <= 0) {
+                            enemies.splice(i, 1);
+                            score += 10;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Cập nhật giao diện HTML
+            document.getElementById("score-board").innerText = "Hạ gục: " + score;
+            document.getElementById("hp-board").innerText = "Máu: " + Math.max(0, Math.floor(player.hp));
+        }
+
+        // Vẽ đồ họa lên Canvas
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Vẽ Player
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#fff";
+            ctx.stroke();
+
+            // Vẽ Đạn
+            for (let b of bullets) {
+                ctx.fillStyle = b.color;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Vẽ Địch
+            for (let e of enemies) {
+                ctx.fillStyle = e.color;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "#000";
+                ctx.stroke();
+            }
+        }
+
+        // Vòng lặp chính của Game
+        function loop() {
+            if (!gameStarted) return;
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+    </script>
+</body>
+</html>
