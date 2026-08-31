@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Speed Dash - Thanh Trượt Độ Khó & Động Tác Chân Thực</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #111;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 12px;
+        }
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.75);
+            padding: 10px 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .menu-box {
+            background: #222;
+            padding: 25px 30px;
+            border-radius: 12px;
+            border: 2px solid #ffeb3b;
+            text-align: center;
+            max-width: 380px;
+            width: 92%;
+        }
+        .menu-box h1, .menu-box h2 {
+            margin-top: 0;
+            color: #ffeb3b;
+            font-size: 1.5rem;
+        }
+        .setting-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+        .setting-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        input[type="range"] {
+            accent-color: #ffeb3b;
+            cursor: pointer;
+            padding: 0;
+            height: 8px;
+        }
+        .range-value {
+            display: inline-block;
+            float: right;
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+        .btn-start {
+            background: #ffeb3b;
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        .btn-start:hover {
+            background: #fdd835;
+        }
+        #controls-prompt {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            pointer-events: auto;
+            border: 2px solid #ffeb3b;
+            margin-bottom: 10px;
+        }
+        .highlight {
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <!-- Menu Cài Đặt Ban Đầu -->
+    <div id="menu-screen" class="overlay-screen">
+        <div class="menu-box">
+            <h1>3D SPEED DASH</h1>
+            <div class="setting-group">
+                <label for="distance-select">Chọn cự li thi đấu:</label>
+                <select id="distance-select">
+                    <option value="60">60 Mét (Nước rút ngắn)</option>
+                    <option value="100" selected>100 Mét (Tiêu chuẩn)</option>
+                    <option value="200">200 Mét (Đường dài)</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="difficulty-range">Độ khó Bot: <span id="difficulty-val" class="range-value">1.4</span></label>
+                <input type="range" id="difficulty-range" min="1.0" max="2.0" step="0.1" value="1.4" oninput="updateDifficultyLabel(this.value)">
+            </div>
+            <button class="btn-start" onclick="startGameFromMenu()">BẮT ĐẦU ĐUA</button>
+        </div>
+    </div>
+
+    <!-- Modal Kết Thúc Trò Chơi -->
+    <div id="game-over-modal" class="overlay-screen" style="display: none;">
+        <div class="menu-box">
+            <h2>KẾT QUẢ ĐUA</h2>
+            <p id="modal-rank-text" style="font-size: 1.2rem; margin: 15px 0; font-weight: bold;">Bạn đạt Hạng X</p>
+            <button class="btn-start" onclick="restartGameModal()">Chơi Lại Ngay</button>
+            <button class="btn-start" onclick="openMenuFromModal()" style="background: #444; color: #fff;">Về Menu Cài Đặt</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="hud-panel">
+            <div>Cự li: <span id="distance" class="highlight">0.0</span>/<span id="max-distance-label">100</span>m</div>
+            <div>Trạng thái: <span id="status" class="highlight">Chờ xuất phát</span></div>
+        </div>
+
+        <div id="controls-prompt">
+            NHẤN LIÊN TỤC <span class="highlight">[SPACE]</span> HOẶC <span class="highlight">[CHẠM]</span> ĐỂ CHẠY!
+        </div>
+    </div>
+
+    <script>
+        let TRACK_LENGTH_M = 100;
+        const TOTAL_RUNNERS = 11;
+        const LANE_WIDTH = 1.2;
+
+        let gameStarted = false;
+        let gameOver = false;
+        let playerDistance = 0;
+        let playerSpeed = 0;
+        let difficultyMultiplier = 1.4;
+        let keyReleased = true;
+
+        let runners = [];
+        let finishOrder = [];
+        let scene, camera, renderer;
+        let audioCtx = null;
+        let cheerNode = null;
+        let cheerGain = null;
+
+        const distanceEl = document.getElementById('distance');
+        const maxDistanceLabel = document.getElementById('max-distance-label');
+        const statusEl = document.getElementById('status');
+        const promptEl = document.getElementById('controls-prompt');
+        const menuScreen = document.getElementById('menu-screen');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const modalRankText = document.getElementById('modal-rank-text');
+
+        const nations = [
+            { name: "🇻🇳 Bạn (VN)", color: 0x00ffff, isPlayer: true },
+            { name: "🇺🇸 USA", color: 0xe91e63, isPlayer: false },
+            { name: "🇯🇵 JPN", color: 0x9c27b0, isPlayer: false },
+            { name: "🇰🇷 KOR", color: 0x673ab7, isPlayer: false },
+            { name: "🇬🇧 GBR", color: 0x3f51b5, isPlayer: false },
+            { name: "🇫🇷 FRA", color: 0x009688, isPlayer: false },
+            { name: "🇩🇪 GER", color: 0x4caf50, isPlayer: false },
+            { name: "🇧🇷 BRA", color: 0xff9800, isPlayer: false },
+            { name: "🇦🇺 AUS", color: 0x795548, isPlayer: false },
+            { name: "🇨🇦 CAN", color: 0x607d8b, isPlayer: false },
+            { name: "🇮🇹 ITA", color: 0xff5722, isPlayer: false }
+        ];
+
+        function updateDifficultyLabel(val) {
+            difficultyMultiplier = parseFloat(val);
+            document.getElementById('difficulty-val').textContent = difficultyMultiplier.toFixed(1);
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function startCheeringSound() {
+            if (!audioCtx) return;
+            stopCheeringSound();
+            try {
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                cheerNode = audioCtx.createBufferSource();
+                cheerNode.buffer = buffer;
+                cheerNode.loop = true;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 800;
+                filter.Q.value = 1.0;
+
+                cheerGain = audioCtx.createGain();
+                cheerGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+
+                cheerNode.connect(filter);
+                filter.connect(cheerGain);
+                cheerGain.connect(audioCtx.destination);
+
+                cheerNode.start();
+            } catch (e) {}
+        }
+
+        function stopCheeringSound() {
+            if (cheerNode) {
+                try {
+                    cheerNode.stop();
+                    cheerNode.disconnect();
+                } catch (e) {}
+                cheerNode = null;
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'tap') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.04);
+                    gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.04);
+                } else if (type === 'finish') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(554.37, audioCtx.currentTime + 0.15);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.5);
+                }
+            } catch (e) {}
+        }
+
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 40, 180);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const fov = aspect < 1 ? 68 : 60;
+            camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            createTrackAndStadium();
+            createRunners();
+            updateCameraPosition(0);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createTrackAndStadium() {
+            const trackTotalLen = TRACK_LENGTH_M + 30;
+
+            const grassGeo = new THREE.PlaneGeometry(300, trackTotalLen);
+            const grassMat = new THREE.MeshLambertMaterial({ color: 0x3a9d23 });
+            const grass = new THREE.Mesh(grassGeo, grassMat);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.set(0, -0.05, TRACK_LENGTH_M / 2);
+            scene.add(grass);
+
+            const trackWidth = TOTAL_RUNNERS * LANE_WIDTH + 1;
+            const trackGeo = new THREE.PlaneGeometry(trackWidth, trackTotalLen);
+            const trackMat = new THREE.MeshLambertMaterial({ color: 0xb54527 });
+            const track = new THREE.Mesh(trackGeo, trackMat);
+            track.rotation.x = -Math.PI / 2;
+            track.position.set(0, 0, TRACK_LENGTH_M / 2);
+            scene.add(track);
+
+            for (let i = 0; i <= TOTAL_RUNNERS; i++) {
+                const lineX = -trackWidth / 2 + i * LANE_WIDTH;
+                const lineGeo = new THREE.PlaneGeometry(0.08, trackTotalLen);
+                const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const line = new THREE.Mesh(lineGeo, lineMat);
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(lineX, 0.01, TRACK_LENGTH_M / 2);
+                scene.add(line);
+            }
+
+            for (let i = 0; i < TOTAL_RUNNERS; i++) {
+                const lineX = -trackWidth / 2 + i * LANE_WIDTH + LANE_WIDTH / 2;
+                const finishGeo = new THREE.PlaneGeometry(LANE_WIDTH, 1);
+                const finishMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+                const finish = new THREE.Mesh(finishGeo, finishMat);
+                finish.rotation.x = -Math.PI / 2;
+                finish.position.set(lineX, 0.02, TRACK_LENGTH_M);
+                scene.add(finish);
+            }
+
+            createSpectators(-trackWidth / 2 - 3, trackTotalLen);
+            createSpectators(trackWidth / 2 + 3, trackTotalLen);
+        }
+
+        function createSpectators(baseX, trackTotalLen) {
+            const rowCount = 4;
+            const colors = [0xff5722, 0x3f51b5, 0x4caf50, 0xe91e63, 0xffeb3b, 0x00bcd4, 0x9c27b0];
+
+            for (let r = 0; r < rowCount; r++) {
+                const xOffset = baseX + (baseX < 0 ? -r * 1.2 : r * 1.2);
+                for (let z = 0; z < trackTotalLen; z += 2.5) {
+                    const headGeo = new THREE.SphereGeometry(0.25, 6, 6);
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    const mat = new THREE.MeshLambertMaterial({ color: randomColor });
+                    
+                    const spectator = new THREE.Mesh(headGeo, mat);
+                    spectator.position.set(xOffset + (Math.random() * 0.4 - 0.2), r * 0.4 + 0.2, z - 10);
+                    scene.add(spectator);
+                }
+            }
+        }
+
+        function createTextSprite(message) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            context.roundRect(10, 10, 236, 44, 12);
+            context.fill();
+
+            context.font = 'bold 26px Arial';
+            context.fillStyle = '#ffffff';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(message, 128, 32);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(1.2, 0.3, 1);
+            sprite.position.y = 1.5;
+            return sprite;
+        }
+
+        function createRunnerMesh(nationInfo) {
+            const group = new THREE.Group();
+            const colorHex = nationInfo.color;
+            const isPlayer = nationInfo.isPlayer;
+
+            const bodyGeo = new THREE.CylinderGeometry(0.2, 0.15, 0.7, 8);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: colorHex });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.55;
+            body.castShadow = true;
+            group.add(body);
+
+            const headGeo = new THREE.SphereGeometry(0.18, 8, 8);
+            const headMat = new THREE.MeshLambertMaterial({ color: 0xffdbac });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.05;
+            group.add(head);
+
+            const nameSprite = createTextSprite(nationInfo.name);
+            group.add(nameSprite);
+
+            if (isPlayer) {
+                const capGeo = new THREE.BoxGeometry(0.25, 0.08, 0.3);
+                const capMat = new THREE.MeshLambertMaterial({ color: 0xffeb3b });
+                const cap = new THREE.Mesh(capGeo, capMat);
+                cap.position.set(0, 1.2, 0.05);
+                group.add(cap);
+
+                const ringGeo = new THREE.RingGeometry(0.4, 0.5, 16);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b, side: THREE.DoubleSide });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.y = 0.02;
+                group.add(ring);
+            }
+
+            // Thiết lập pivot cho tay chân để xoay chuẩn xác từ khớp vai / hông
+            const limbGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.6, 6);
+            limbGeo.translate(0, -0.3, 0); // Dời tâm về đầu trên của chi
+            const limbsMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+
+            const leftArm = new THREE.Mesh(limbGeo, limbsMat);
+            leftArm.position.set(-0.3, 0.8, 0);
+            group.add(leftArm);
+
+            const rightArm = new THREE.Mesh(limbGeo, limbsMat);
+            rightArm.position.set(0.3, 0.8, 0);
+            group.add(rightArm);
+
+            const leftLeg = new THREE.Mesh(limbGeo, limbsMat);
+            leftLeg.position.set(-0.12, 0.35, 0);
+            group.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(limbGeo, limbsMat);
+            rightLeg.position.set(0.12, 0.35, 0);
+            group.add(rightLeg);
+
+            return { group, leftArm, rightArm, leftLeg, rightLeg };
+        }
+
+        function createRunners() {
+            runners.forEach(r => scene.remove(r.meshData.group));
+            runners = [];
+            finishOrder = [];
+
+            const trackWidth = TOTAL_RUNNERS * LANE_WIDTH;
+
+            // Tính toán tốc độ bot dựa trực tiếp vào thanh trượt (1.0 đến 2.0)
+            const baseSpeed = 7.0 + difficultyMultiplier * 2.2;
+            const maxBonus = 1.0 + difficultyMultiplier * 0.8;
+
+            for (let i = 0; i < TOTAL_RUNNERS; i++) {
+                const laneX = -trackWidth / 2 + i * LANE_WIDTH + LANE_WIDTH / 2;
+                const nationInfo = nations[i];
+                const meshData = createRunnerMesh(nationInfo);
+                meshData.group.position.set(laneX, 0, 0);
+                scene.add(meshData.group);
+
+                runners.push({
+                    id: i,
+                    isPlayer: nationInfo.isPlayer,
+                    meshData: meshData,
+                    distance: 0,
+                    maxSpeed: nationInfo.isPlayer ? 0 : baseSpeed + Math.random() * maxBonus,
+                    speed: 0,
+                    finished: false
+                });
+            }
+        }
+
+        function updateCameraPosition(playerDist) {
+            const isMobile = window.innerWidth < 768;
+            const camZOffset = isMobile ? -6.2 : -5.2;
+            const camYOffset = isMobile ? 3.8 : 3.2;
+
+            camera.position.set(0, camYOffset, playerDist + camZOffset);
+            camera.lookAt(0, 1.0, playerDist + 7);
+        }
+
+        function startGameFromMenu() {
+            initAudio();
+            TRACK_LENGTH_M = parseInt(document.getElementById('distance-select').value);
+            
+            maxDistanceLabel.textContent = TRACK_LENGTH_M;
+            menuScreen.style.display = 'none';
+            gameOverModal.style.display = 'none';
+
+            createTrackAndStadium();
+            createRunners();
+            resetGameState();
+            startCheeringSound();
+        }
+
+        function restartGameModal() {
+            gameOverModal.style.display = 'none';
+            resetGameState();
+            startCheeringSound();
+        }
+
+        function openMenuFromModal() {
+            stopCheeringSound();
+            gameOverModal.style.display = 'none';
+            menuScreen.style.display = 'flex';
+        }
+
+        function triggerRunningAction() {
+            if (menuScreen.style.display !== 'none' || gameOverModal.style.display !== 'none') return;
+            initAudio();
+
+            if (gameOver) return;
+
+            if (!keyReleased) return;
+            keyReleased = false;
+
+            if (!gameStarted) {
+                gameStarted = true;
+                statusEl.textContent = "Đang chạy nước rút...";
+                promptEl.textContent = "LIÊN TỤC NHẤN ĐỂ TĂNG TỐC!";
+            }
+
+            playSound('tap');
+
+            playerSpeed += 1.5;
+            if (playerSpeed > 11.2) playerSpeed = 11.2;
+        }
+
+        function releaseRunningAction() {
+            keyReleased = true;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                triggerRunningAction();
+            }
+            if (e.code === 'KeyR' && gameOver) {
+                restartGameModal();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                releaseRunningAction();
+            }
+        });
+
+        window.addEventListener('pointerdown', (e) => {
+            if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+            triggerRunningAction();
+        });
+
+        window.addEventListener('pointerup', (e) => {
+            releaseRunningAction();
+        });
+
+        let lastTime = performance.now();
+
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            if (gameStarted && !gameOver) {
+                playerSpeed -= 3.4 * deltaTime;
+                if (playerSpeed < 0) playerSpeed = 0;
+
+                playerDistance += playerSpeed * deltaTime;
+                if (playerDistance >= TRACK_LENGTH_M) {
+                    playerDistance = TRACK_LENGTH_M;
+                }
+
+                const player = runners[0];
+                player.distance = playerDistance;
+                player.meshData.group.position.z = playerDistance;
+                animateLimbs(player.meshData, playerSpeed, currentTime);
+
+                if (playerDistance >= TRACK_LENGTH_M && !player.finished) {
+                    player.finished = true;
+                    finishOrder.push(player);
+                }
+
+                distanceEl.textContent = playerDistance.toFixed(1);
+                updateCameraPosition(playerDistance);
+
+                for (let i = 1; i < runners.length; i++) {
+                    let bot = runners[i];
+                    if (!bot.finished) {
+                        let targetSpeed = bot.maxSpeed + Math.sin(currentTime * 0.005 + i) * 0.5;
+                        if (bot.distance > TRACK_LENGTH_M * 0.8) targetSpeed *= 1.1;
+
+                        bot.distance += targetSpeed * deltaTime;
+                        if (bot.distance >= TRACK_LENGTH_M) {
+                            bot.distance = TRACK_LENGTH_M;
+                            bot.finished = true;
+                            finishOrder.push(bot);
+                        }
+
+                        bot.meshData.group.position.z = bot.distance;
+                        animateLimbs(bot.meshData, targetSpeed, currentTime);
+                    }
+                }
+
+                if (player.finished || finishOrder.length === runners.length) {
+                    runners.forEach(r => {
+                        if (!finishOrder.includes(r)) finishOrder.push(r);
+                    });
+
+                    gameOver = true;
+                    stopCheeringSound();
+                    checkRanking();
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Hiệu ứng văng tay chân & nhún nhảy khi chạy
+        function animateLimbs(meshData, speed, time) {
+            if (speed < 0.1) {
+                meshData.leftArm.rotation.x = 0;
+                meshData.rightArm.rotation.x = 0;
+                meshData.leftLeg.rotation.x = 0;
+                meshData.rightLeg.rotation.x = 0;
+                meshData.group.position.y = 0;
+                return;
+            }
+
+            const swingFrequency = time * 0.025 * speed;
+            const swingAngle = Math.sin(swingFrequency) * 0.9;
+
+            meshData.leftArm.rotation.x = swingAngle;
+            meshData.rightArm.rotation.x = -swingAngle;
+            meshData.leftLeg.rotation.x = -swingAngle;
+            meshData.rightLeg.rotation.x = swingAngle;
+
+            // Nhún nhảy lên xuống theo nhịp chạy
+            meshData.group.position.y = Math.abs(Math.sin(swingFrequency * 2)) * 0.12;
+        }
+
+        function checkRanking() {
+            playSound('finish');
+            
+            let playerRank = finishOrder.findIndex(r => r.isPlayer) + 1;
+
+            if (playerRank === 1) {
+                statusEl.textContent = "🏆 VÔ ĐỊCH (Hạng 1)! Xuất sắc!";
+                modalRankText.textContent = "🏆 Chúc mừng! Bạn đạt Hạng 1 VÔ ĐỊCH!";
+            } else if (playerRank <= 3) {
+                statusEl.textContent = `🥉 Đạt Hạng ${playerRank}! Rất cố gắng!`;
+                modalRankText.textContent = `🥉 Bạn về đích ở Hạng ${playerRank}!`;
+            } else {
+                statusEl.textContent = `😢 Về đích ở Hạng ${playerRank}. Thử lại nhé!`;
+                modalRankText.textContent = `😢 Bạn về đích ở Hạng ${playerRank}. Cố gắng phục thù nhé!`;
+            }
+            promptEl.textContent = "VỀ ĐÍCH! CHỌN LẠI HOẶC BẤM [R]";
+
+            gameOverModal.style.display = 'flex';
+        }
+
+        function resetGameState() {
+            gameStarted = false;
+            gameOver = false;
+            playerDistance = 0;
+            playerSpeed = 0;
+            keyReleased = true;
+            finishOrder = [];
+            lastTime = performance.now();
+
+            statusEl.textContent = "Chờ xuất phát";
+            distanceEl.textContent = "0.0";
+            promptEl.innerHTML = 'NHẤN LIÊN TỤC <span class="highlight">[SPACE]</span> HOẶC <span class="highlight">[CHẠM]</span> ĐỂ CHẠY!';
+
+            const baseSpeed = 7.0 + difficultyMultiplier * 2.2;
+            const maxBonus = 1.0 + difficultyMultiplier * 0.8;
+
+            runners.forEach((r) => {
+                r.distance = 0;
+                r.finished = false;
+                r.meshData.group.position.z = 0;
+                r.meshData.group.position.y = 0;
+                if (!r.isPlayer) {
+                    r.maxSpeed = baseSpeed + Math.random() * maxBonus;
+                }
+            });
+
+            updateCameraPosition(0);
+        }
+
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.fov = aspect < 1 ? 68 : 60;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        initThree();
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
