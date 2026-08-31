@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brawl Stars 3v3 Arena - Enhanced AI & Visuals</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #090d16 0%, #172033 100%);
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            text-align: center;
+        }
+        canvas {
+            border: 6px solid #3b82f6;
+            background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            cursor: crosshair;
+            border-radius: 12px;
+        }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 850px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            background: rgba(30, 41, 59, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #475569;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .team-blue { color: #38bdf8; text-shadow: 0 0 10px rgba(56,189,248,0.4); }
+        .team-red { color: #f87171; text-shadow: 0 0 10px rgba(248,113,113,0.4); }
+        
+        #menu, #modal-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(9, 13, 22, 0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+        #modal-overlay {
+            display: none;
+            z-index: 20;
+        }
+        .brawler-selection {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .brawler-card {
+            background: #1e293b;
+            border: 3px solid #475569;
+            border-radius: 12px;
+            padding: 20px;
+            width: 240px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: center;
+        }
+        .brawler-card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-6px);
+            background: #283548;
+            box-shadow: 0 10px 20px rgba(56,189,248,0.2);
+        }
+        .brawler-card h3 { margin: 10px 0 5px 0; color: #facc15; font-size: 20px; }
+        .brawler-card p { margin: 5px 0; font-size: 13px; color: #94a3b8; }
+        
+        /* Modal Custom Box */
+        .modal-box {
+            background: #1e293b;
+            border: 3px solid #3b82f6;
+            border-radius: 16px;
+            padding: 30px 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            max-width: 450px;
+            width: 90%;
+        }
+        .modal-box h2 {
+            margin-top: 0;
+            font-size: 28px;
+            color: #facc15;
+        }
+        .modal-box p {
+            font-size: 16px;
+            color: #cbd5e1;
+            margin-bottom: 25px;
+        }
+        .modal-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+        }
+        .modal-btn:hover {
+            transform: scale(1.05);
+            background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+        }
+        .controls-hint {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #64748b;
+            background: rgba(15,23,42,0.6);
+            padding: 8px 15px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Menu chọn nhân vật -->
+    <div id="menu">
+        <h1 style="color: #facc15; margin-bottom: 5px; font-size: 32px; text-shadow: 0 0 15px rgba(250,204,21,0.4);">BRAWL STARS 3V3 ARENA</h1>
+        <p style="margin-bottom: 10px; color: #94a3b8; font-size: 16px;">Chọn Brawler của bạn để bước vào chiến trường:</p>
+        <div class="brawler-selection">
+            <div class="brawler-card" onclick="selectBrawler('Shelly')">
+                <div style="font-size: 35px;">🧢💜</div>
+                <h3>Shelly</h3>
+                <p><b>HP:</b> 4200 | <b>Loại:</b> Cận / Trung</p>
+                <p>Bắn chụm 3 tia đạn lan rộng, sát thương cực lớn ở tầm gần.</p>
+            </div>
+            <div class="brawler-card" onclick="selectBrawler('Colt')">
+                <h3>Colt</h3>
+                <p><b>HP:</b> 2900 | <b>Loại:</b> Xạ thủ</p>
+                <p>Liên thanh đạn tầm xa siêu tốc, tấn công chính xác cao.</p>
+            </div>
+            <div class="brawler-card" onclick="selectBrawler('El Primo')">
+                <h3>El Primo</h3>
+                <p><b>HP:</b> 6800 | <b>Loại:</b> Đấu sĩ</p>
+                <p>Trâu bò, quyền cước cận chiến hạng nặng cực mạnh.</p>
+            </div>
+        </div>
+        <div class="controls-hint">
+            💡 Điều khiển: <b>W, A, S, D</b> để di chuyển | <b>Click chuột</b> hoặc giữ phím <b>SPACE</b> để bắn tự động | Tận dụng địa vật để che chắn!
+        </div>
+    </div>
+
+    <!-- Modal thông báo kết quả trận đấu -->
+    <div id="modal-overlay">
+        <div class="modal-box">
+            <h2 id="modal-title">KẾT QUẢ TRẬN ĐẤU</h2>
+            <p id="modal-desc">Trận đấu đã kết thúc.</p>
+            <button class="modal-btn" onclick="restartGame()">Chơi Lại</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div class="hud">
+            <span class="team-blue">💙 Đội Xanh: <span id="blue-score">0</span> / 5 Hạ gục</span>
+            <span id="match-timer">⏱️ 00:00</span>
+            <span class="team-red">🔴 Đội Đỏ: <span id="red-score">0</span> / 5 Hạ gục</span>
+        </div>
+        <canvas id="gameCanvas" width="850" height="520"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let gameStarted = false;
+        let player = null;
+        let entities = [];
+        let bullets = [];
+        let obstacles = [];
+        let keys = {};
+        let blueKills = 0;
+        let redKills = 0;
+        let gameTime = 0;
+        let timerInterval = null;
+
+        // Chỉ số Brawlers
+        const brawlerTypes = {
+            'Shelly': { hp: 4200, maxHp: 4200, speed: 3.3, radius: 18, color: '#a855f7', rangeType: 'spread', damage: 450, accessory: 'cap' },
+            'Colt': { hp: 2900, maxHp: 2900, speed: 3.7, radius: 16, color: '#38bdf8', rangeType: 'sniper', damage: 380, accessory: 'visor' },
+            'El Primo': { hp: 6800, maxHp: 6800, speed: 3.1, radius: 22, color: '#ef4444', rangeType: 'melee', damage: 650, accessory: 'mask' }
+        };
+
+        // Thiết lập các chướng ngại vật (vật cản trên bản đồ)
+        function initObstacles() {
+            obstacles = [
+                { x: 375, y: 160, w: 100, h: 200, color: '#475569' }, // Bụi/Tường giữa
+                { x: 180, y: 100, w: 60, h: 80, color: '#334155' },  // Tường góc trên trái
+                { x: 180, y: 340, w: 60, h: 80, color: '#334155' },  // Tường góc dưới trái
+                { x: 610, y: 100, w: 60, h: 80, color: '#334155' },  // Tường góc trên phải
+                { x: 610, y: 340, w: 60, h: 80, color: '#334155' }   // Tường góc dưới phải
+            ];
+        }
+
+        function selectBrawler(type) {
+            document.getElementById("menu").style.display = "none";
+            initObstacles();
+            
+            // Tạo Player (Đội Xanh)
+            let stats = brawlerTypes[type];
+            player = {
+                x: 100, y: canvas.height / 2,
+                vx: 0, vy: 0,
+                ...stats,
+                team: 'blue',
+                isPlayer: true,
+                name: type,
+                cooldown: 0
+            };
+            entities.push(player);
+
+            // Tạo 2 Đồng đội AI (Đội Xanh) với hình dạng/phụ kiện khác
+            entities.push(createAI('Colt', 120, 160, 'blue', 'visor'));
+            entities.push(createAI('El Primo', 120, 360, 'blue', 'mask'));
+
+            // Tạo 3 Kẻ địch AI (Đội Đỏ) với hình dạng/phụ kiện đặc trưng
+            entities.push(createAI('Shelly', 730, 150, 'red', 'cap'));
+            entities.push(createAI('Colt', 730, 260, 'red', 'headband'));
+            entities.push(createAI('El Primo', 730, 370, 'red', 'horns'));
+
+            gameStarted = true;
+            timerInterval = setInterval(() => { if(gameStarted) gameTime++; }, 1000);
+            loop();
+        }
+
+        function createAI(type, x, y, team, accessory) {
+            let stats = brawlerTypes[type];
+            return {
+                x: x, y: y,
+                ...stats,
+                team: team,
+                isPlayer: false,
+                name: type,
+                accessory: accessory,
+                cooldown: 0,
+                dodgeTimer: 0,
+                dodgeDirX: 0,
+                dodgeDirY: 0
+            };
+        }
+
+        // Lắng nghe phím & chuột
+        window.addEventListener("keydown", (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.code === 'Space' && gameStarted && player && player.hp > 0) {
+                // Phím Space để bắn tự động tới mục tiêu gần nhất hoặc hướng nhìn chuột gần nhất
+                autoShootSpace(player);
+            }
+        });
+        window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+
+        canvas.addEventListener("click", (e) => {
+            if (!gameStarted || !player || player.hp <= 0) return;
+            const rect = canvas.getBoundingClientRect();
+            let mouseX = e.clientX - rect.left;
+            let mouseY = e.clientY - rect.top;
+            shoot(player, mouseX, mouseY);
+        });
+
+        // Xử lý bắn súng
+        function shoot(ent, targetX, targetY) {
+            if (ent.cooldown > 0) return;
+            let angle = Math.atan2(targetY - ent.y, targetX - ent.x);
+
+            if (ent.rangeType === 'spread') { // Shelly: Bắn chụm 3 tia
+                for (let i = -1; i <= 1; i++) {
+                    let a = angle + i * 0.18;
+                    bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(a) * 6, dy: Math.sin(a) * 6, damage: ent.damage, team: ent.team, radius: 4, life: 35 });
+                }
+                ent.cooldown = 42;
+            } else if (ent.rangeType === 'sniper') { // Colt: Bắn xa liên thanh
+                bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(angle) * 8.5, dy: Math.sin(angle) * 8.5, damage: ent.damage, team: ent.team, radius: 3.5, life: 48 });
+                ent.cooldown = 24;
+            } else if (ent.rangeType === 'melee') { // El Primo: Đấm uy lực
+                bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(angle) * 5, dy: Math.sin(angle) * 5, damage: ent.damage, team: ent.team, radius: 11, life: 16 });
+                ent.cooldown = 48;
+            }
+        }
+
+        // Khi bấm Space, tự động nhắm mục tiêu kẻ địch gần nhất để bắn
+        function autoShootSpace(ent) {
+            let nearest = null;
+            let minDist = Infinity;
+            for (let other of entities) {
+                if (other.team !== ent.team && other.hp > 0) {
+                    let dist = Math.hypot(other.x - ent.x, other.y - ent.y);
+                    if (dist < minDist) { minDist = dist; nearest = other; }
+                }
+            }
+            if (nearest) {
+                shoot(ent, nearest.x, nearest.y);
+            } else {
+                // Mặc định bắn sang phải hoặc trái nếu không thấy địch
+                shoot(ent, ent.x + (ent.team === 'blue' ? 100 : -100), ent.y);
+            }
+        }
+
+        // Kiểm tra va chạm hộp (cho di chuyển và chướng ngại vật)
+        function checkObstacleCollision(nx, ny, radius) {
+            for (let obs of obstacles) {
+                let closestX = Math.max(obs.x, Math.min(nx, obs.x + obs.w));
+                let closestY = Math.max(obs.y, Math.min(ny, obs.y + obs.h));
+                let dist = Math.hypot(nx - closestX, ny - closestY);
+                if (dist < radius) return true;
+            }
+            return false;
+        }
+
+        function update() {
+            // 1. Di chuyển Player
+            if (player && player.hp > 0) {
+                let dx = 0, dy = 0;
+                if (keys['w'] || keys['arrowup']) dy = -1;
+                if (keys['s'] || keys['arrowdown']) dy = 1;
+                if (keys['a'] || keys['arrowleft']) dx = -1;
+                if (keys['d'] || keys['arrowright']) dx = 1;
+
+                if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+                let nextX = player.x + dx * player.speed;
+                let nextY = player.y + dy * player.speed;
+
+                // Giới hạn biên canvas và né tường vật cản
+                nextX = Math.max(player.radius, Math.min(canvas.width - player.radius, nextX));
+                nextY = Math.max(player.radius, Math.min(canvas.height - player.radius, nextY));
+
+                if (!checkObstacleCollision(nextX, nextY, player.radius)) {
+                    player.x = nextX;
+                    player.y = nextY;
+                }
+            }
+
+            // 2. Cập nhật AI thông minh (Né đạn, tận dụng địa hình vật cản, tấn công chiến thuật)
+            for (let ent of entities) {
+                if (ent.hp <= 0) continue;
+                if (ent.cooldown > 0) ent.cooldown--;
+
+                if (!ent.isPlayer) {
+                    // Kiểm tra xem có viên đạn nào đang bay tới gần không để né
+                    let incomingBullet = null;
+                    for (let b of bullets) {
+                        if (b.team !== ent.team) {
+                            let distToBullet = Math.hypot(b.x - ent.x, b.y - ent.y);
+                            if (distToBullet < 80) { // Đạn ở trong bán kính nguy hiểm
+                                incomingBullet = b;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Tìm mục tiêu kẻ địch gần nhất
+                    let target = null;
+                    let minDist = Infinity;
+                    for (let other of entities) {
+                        if (other.team !== ent.team && other.hp > 0) {
+                            let dist = Math.hypot(other.x - ent.x, other.y - ent.y);
+                            if (dist < minDist) { minDist = dist; target = other; }
+                        }
+                    }
+
+                    let moveX = 0, moveY = 0;
+
+                    if (incomingBullet) {
+                        // KỸ NĂNG NÉ ĐẠN: Di chuyển vuông góc hoặc ngược hướng đạn bay
+                        let bAngle = Math.atan2(incomingBullet.dy, incomingBullet.dx);
+                        moveX = Math.cos(bAngle + Math.PI / 2) * ent.speed;
+                        moveY = Math.sin(bAngle + Math.PI / 2) * ent.speed;
+                    } else if (target) {
+                        let angle = Math.atan2(target.y - ent.y, target.x - ent.x);
+                        let preferredDist = ent.rangeType === 'melee' ? 25 : 170;
+
+                        if (minDist > preferredDist + 30) {
+                            // Tiến lại gần mục tiêu
+                            moveX = Math.cos(angle) * (ent.speed * 0.85);
+                            moveY = Math.sin(angle) * (ent.speed * 0.85);
+                        } else if (minDist < preferredDist - 30) {
+                            // Lùi lại giữ khoảng cách an toàn (thả diều)
+                            moveX = -Math.cos(angle) * (ent.speed * 0.7);
+                            moveY = -Math.sin(angle) * (ent.speed * 0.7);
+                        } else {
+                            // Di chuyển lượn vòng quanh vật cản / mục tiêu
+                            moveX = -Math.sin(angle) * (ent.speed * 0.8);
+                            moveY = Math.cos(angle) * (ent.speed * 0.8);
+                        }
+
+                        // AI Tự động bắn khi thấy địch trong tầm
+                        if (Math.random() < 0.08 && minDist < 280) {
+                            shoot(ent, target.x, target.y);
+                        }
+                    }
+
+                    // Áp dụng di chuyển cho AI kèm kiểm tra va chạm chướng ngại vật (Tận dụng địa hình che chắn)
+                    let nextAiX = ent.x + moveX;
+                    let nextAiY = ent.y + moveY;
+                    nextAiX = Math.max(ent.radius, Math.min(canvas.width - ent.radius, nextAiX));
+                    nextAiY = Math.max(ent.radius, Math.min(canvas.height - ent.radius, nextAiY));
+
+                    if (!checkObstacleCollision(nextAiX, nextAiY, ent.radius)) {
+                        ent.x = nextAiX;
+                        ent.y = nextAiY;
+                    } else {
+                        // Nếu vướng tường, thử trượt sang hướng khác để tìm lối đi quanh vật cản
+                        if (!checkObstacleCollision(ent.x + moveX, ent.y, ent.radius)) ent.x += moveX;
+                        else if (!checkObstacleCollision(ent.x, ent.y + moveY, ent.radius)) ent.y += moveY;
+                    }
+                }
+            }
+
+            // 3. Cập nhật đạn & Va chạm vật cản/nhân vật
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.dx;
+                b.y += b.dy;
+                b.life--;
+
+                // Đạn trúng chướng ngại vật sẽ bị chặn lại/biến mất
+                let hitObstacle = false;
+                for (let obs of obstacles) {
+                    if (b.x >= obs.x && b.x <= obs.x + obs.w && b.y >= obs.y && b.y <= obs.y + obs.h) {
+                        hitObstacle = true;
+                        break;
+                    }
+                }
+
+                if (hitObstacle || b.life <= 0 || b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // Đạn trúng nhân vật
+                let hit = false;
+                for (let ent of entities) {
+                    if (ent.team !== b.team && ent.hp > 0) {
+                        let dist = Math.hypot(ent.x - b.x, ent.y - b.y);
+                        if (dist < ent.radius + b.radius) {
+                            ent.hp -= b.damage;
+                            hit = true;
+                            
+                            if (ent.hp <= 0) {
+                                if (ent.team === 'red') blueKills++;
+                                else redKills++;
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (hit) bullets.splice(i, 1);
+            }
+
+            // 4. Kiểm tra điều kiện thắng thua (đạt 5 điểm hạ gục)
+            if (blueKills >= 5 || redKills >= 5) {
+                gameStarted = false;
+                clearInterval(timerInterval);
+                showModal(blueKills >= 5 ? "🎉 CHIẾN THẮNG!" : "💀 THẤT BẠI!", blueKills >= 5 ? "Đội Xanh đã xuất sắc giành chiến thắng 5-5 trước Đội Đỏ!" : "Đội Đỏ đã áp đảo và giành chiến thắng trận đấu!");
+            }
+
+            // Cập nhật giao diện HUD
+            document.getElementById("blue-score").innerText = blueKills;
+            document.getElementById("red-score").innerText = redKills;
+            let mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            let secs = (gameTime % 60).toString().padStart(2, '0');
+            document.getElementById("match-timer").innerText = `⏱️ ${mins}:${secs}`;
+        }
+
+        // Hiển thị Modal tuỳ chỉnh thay vì alert hệ thống
+        function showModal(title, desc) {
+            document.getElementById("modal-title").innerText = title;
+            document.getElementById("modal-desc").innerText = desc;
+            document.getElementById("modal-overlay").style.display = "flex";
+        }
+
+        function restartGame() {
+            location.reload();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Vẽ chướng ngại vật / địa hình địa vật
+            for (let obs of obstacles) {
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#64748b';
+                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+                
+                // Chi tiết trang trí trên tường/bụi
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(obs.x + 8, obs.y + 8, obs.w - 16, obs.h - 16);
+            }
+
+            // Vẽ Entities (Nhân vật & Phụ kiện phân biệt)
+            for (let ent of entities) {
+                if (ent.hp <= 0) continue;
+
+                // Thân nhân vật
+                ctx.fillStyle = ent.color;
+                ctx.beginPath();
+                ctx.arc(ent.x, ent.y, ent.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.lineWidth = ent.isPlayer ? 3.5 : 2;
+                ctx.strokeStyle = ent.team === 'blue' ? '#38bdf8' : '#f87171';
+                ctx.stroke();
+
+                // Vẽ phụ kiện / hình dạng đặc trưng để dễ phân biệt bot/nhân vật
+                ctx.fillStyle = '#fff';
+                if (ent.accessory === 'cap') {
+                    // Mũ lưỡi trai
+                    ctx.fillRect(ent.x - 8, ent.y - ent.radius - 6, 16, 5);
+                } else if (ent.accessory === 'visor') {
+                    // Kính chắn gió / Visor
+                    ctx.fillStyle = '#facc15';
+                    ctx.fillRect(ent.x - 10, ent.y - 4, 20, 6);
+                } else if (ent.accessory === 'mask') {
+                    // Mặt nạ đấu sĩ
+                    ctx.fillStyle = '#eab308';
+                    ctx.beginPath();
+                    ctx.arc(ent.x, ent.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (ent.accessory === 'headband') {
+                    // Băng đô trán
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(ent.x - ent.radius, ent.y - 4, ent.radius * 2, 5);
+                } else if (ent.accessory === 'horns') {
+                    // Sừng quỷ
+                    ctx.fillStyle = '#b91c1c';
+                    ctx.beginPath();
+                    ctx.moveTo(ent.x - 10, ent.y - ent.radius);
+                    ctx.lineTo(ent.x - 14, ent.y - ent.radius - 8);
+                    ctx.lineTo(ent.x - 6, ent.y - ent.radius - 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(ent.x + 10, ent.y - ent.radius);
+                    ctx.lineTo(ent.x + 14, ent.y - ent.radius - 8);
+                    ctx.lineTo(ent.x + 6, ent.y - ent.radius - 2);
+                    ctx.fill();
+                }
+
+                // Thanh HP trên đầu nhân vật
+                let barW = ent.radius * 2;
+                let hpPercent = Math.max(0, ent.hp / ent.maxHp);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(ent.x - barW/2, ent.y - ent.radius - 14, barW, 5);
+                ctx.fillStyle = ent.team === 'blue' ? '#38bdf8' : '#f87171';
+                ctx.fillRect(ent.x - barW/2, ent.y - ent.radius - 14, barW * hpPercent, 5);
+            }
+
+            // Vẽ Đạn
+            for (let b of bullets) {
+                ctx.fillStyle = b.team === 'blue' ? '#38bdf8' : '#fca5a5';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function loop() {
+            if (!gameStarted) return;
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+    </script>
+</body>
+</html>
