@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài Giảng: Liên Kết Hoá Học & Cấu Trúc Electron</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --accent: #f59e0b;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        aside {
+            width: 320px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-item a {
+            display: block;
+            padding: 10px 14px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .nav-item a:hover, .nav-item a.active {
+            background-color: #eff6ff;
+            color: var(--primary);
+            padding-left: 18px;
+        }
+
+        /* Main Content Area */
+        main {
+            margin-left: 320px;
+            flex: 1;
+            padding: 40px;
+            max-width: 1100px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: white;
+            padding: 40px;
+            border-radius: var(--radius);
+            margin-bottom: 40px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero h2 {
+            font-size: 2.25rem;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+        }
+
+        .section-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .section-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+            max-width: 350px;
+        }
+
+        .tag {
+            background-color: #f1f5f9;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .card-body {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            aside { width: 260px; }
+            main { margin-left: 260px; }
+            .card-body { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            aside { display: none; }
+            main { margin-left: 0; padding: 20px; }
+        }
+
+        .content-left p.definition {
+            font-size: 1.05rem;
+            margin-bottom: 20px;
+            color: #334155;
+            line-height: 1.7;
+        }
+
+        .details-box {
+            background-color: #f8fafc;
+            border-left: 4px solid var(--primary);
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95rem;
+        }
+
+        .details-box strong {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--primary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .image-container {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            max-height: 220px;
+            border-radius: 6px;
+            object-fit: contain;
+        }
+
+        .image-caption {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 60px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside>
+        <div class="sidebar-header">
+            <h1>🧪 Hóa Học 10</h1>
+            <p>Bài Giảng: Liên Kết Hoá Học</p>
+        </div>
+        <ul class="nav-list">
+            <li class="nav-item"><a href="#sec-1">Liên kết hoá học</a></li>
+            <li class="nav-item"><a href="#sec-2">Khí hiếm</a></li>
+            <li class="nav-item"><a href="#sec-3">Cấu trúc electron bền vững</a></li>
+            <li class="nav-item"><a href="#sec-4">Electron lớp ngoài cùng</a></li>
+            <li class="nav-item"><a href="#sec-5">Liên kết ion</a></li>
+            <li class="nav-item"><a href="#sec-6">Sự hình thành NaCl</a></li>
+            <li class="nav-item"><a href="#sec-7">Ion dương</a></li>
+            <li class="nav-item"><a href="#sec-8">Ion âm</a></li>
+            <li class="nav-item"><a href="#sec-9">Liên kết ion trong MgO</a></li>
+            <li class="nav-item"><a href="#sec-10">Tính chất hợp chất ion</a></li>
+            <li class="nav-item"><a href="#sec-11">Liên kết kim loại - phi kim</a></li>
+            <li class="nav-item"><a href="#sec-12">Liên kết cộng hoá trị</a></li>
+            <li class="nav-item"><a href="#sec-13">Sự hình thành H₂</a></li>
+            <li class="nav-item"><a href="#sec-14">Sự hình thành O₂</a></li>
+            <li class="nav-item"><a href="#sec-15">Sự hình thành Cl₂</a></li>
+            <li class="nav-item"><a href="#sec-16">Sự hình thành N₂</a></li>
+            <li class="nav-item"><a href="#sec-17">Sự hình thành H₂O</a></li>
+            <li class="nav-item"><a href="#sec-18">Sự hình thành CO₂</a></li>
+            <li class="nav-item"><a href="#sec-19">Sự hình thành NH₃</a></li>
+            <li class="nav-item"><a href="#sec-20">Quy tắc đạt cấu trúc khí hiếm</a></li>
+            <li class="nav-item"><a href="#sec-21">So sánh liên kết ion và cộng hoá trị</a></li>
+            <li class="nav-item"><a href="#sec-22">Tính chất chất cộng hoá trị</a></li>
+            <li class="nav-item"><a href="#sec-23">Ứng dụng kiến thức liên kết</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main>
+        <div class="hero">
+            <h2>Hệ Thống Kiến Thức Liên Kết Hoá Học</h2>
+            <p>Tài liệu giảng dạy chi tiết được phân cấp khoa học, trực quan với sơ đồ hình ảnh và các điểm cốt lõi giúp học sinh nắm vững bản chất liên kết hóa học.</p>
+        </div>
+
+        <section id="sec-1" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Liên kết hoá học</h3>
+                <div class="tags">
+                    <span class="tag">Chemical bond</span>
+                    <span class="tag">chemical bonding</span>
+                    <span class="tag">atom electron</span>
+                    <span class="tag">outer shell</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Nguyên tử thường liên kết với nhau bằng cách nhường, nhận hoặc dùng chung electron lớp ngoài cùng để đạt cấu trúc electron bền vững.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Nguyên tử nhường electron → ion dương<br>• Nguyên tử nhận electron → ion âm<br>• Nguyên tử dùng chung electron → liên kết cộng hoá trị
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://64.media.tumblr.com/29797a70de05857f83313cb636291935/tumblr_n7p83aITQN1rhb9f5o2_r1_640.gif" alt="Liên kết hoá học" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Liên kết hoá học</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-2" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Khí hiếm</h3>
+                <div class="tags">
+                    <span class="tag">noble gas</span>
+                    <span class="tag">electron configuration</span>
+                    <span class="tag">stable atom</span>
+                    <span class="tag">noble gas configuration</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Khí hiếm tồn tại dạng đơn nguyên tử bền vững; lớp electron ngoài cùng thường có 8e, riêng He có 2e.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • He: 2e lớp ngoài cùng<br>• Ne: 8e<br>• Ar: 8e<br>• Đây là cấu trúc electron bền vững
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://ih1.redbubble.net/image.1064688659.7405/bg,f8f8f8-flat,750x,075,f-pad,750x1000,f8f8f8.jpg" alt="Khí hiếm" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Khí hiếm</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-3" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Cấu trúc electron bền vững</h3>
+                <div class="tags">
+                    <span class="tag">Stable electron configuration</span>
+                    <span class="tag">electron shell</span>
+                    <span class="tag">stable electron</span>
+                    <span class="tag">atomic structure</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Nguyên tử có xu hướng đạt lớp electron ngoài cùng giống khí hiếm thông qua việc nhường, nhận hoặc dùng chung electron.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • He bền với 2e lớp ngoài cùng<br>• Ne và Ar bền với 8e lớp ngoài cùng<br>• Quy tắc này giúp giải thích sự hình thành liên kết
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUyajB5dzZrM2RudWs5bGo1cm44dmRnZ2c5ZXRhMjcxdHhrNmdraGx4cSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YlZK330IGhhf5DxyKx/source.gif" alt="Cấu trúc electron bền vững" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Cấu trúc electron bền vững</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-4" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Electron lớp ngoài cùng</h3>
+                <div class="tags">
+                    <span class="tag">valence electron</span>
+                    <span class="tag">valence shell</span>
+                    <span class="tag">outer electron</span>
+                    <span class="tag">electron configuration</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Electron lớp ngoài cùng quyết định nhiều đến khả năng tham gia liên kết hoá học của nguyên tử.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Na có 1e lớp ngoài cùng<br>• Cl có 7e<br>• O có 6e<br>• N có 5e
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://www.blog44.ca/aedanl/files/2018/12/60450A37-0DD4-478F-83B9-E9E815211D75-1brq1ha.gif" alt="Electron lớp ngoài cùng" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Electron lớp ngoài cùng</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-5" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Liên kết ion</h3>
+                <div class="tags">
+                    <span class="tag">Ionic bond</span>
+                    <span class="tag">ion attraction</span>
+                    <span class="tag">electrostatic force</span>
+                    <span class="tag">ionic compound</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Liên kết ion được hình thành bởi lực hút giữa các ion mang điện tích trái dấu.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Na nhường 1e → Na⁺<br>• Cl nhận 1e → Cl⁻<br>• Na⁺ và Cl⁻ hút nhau tạo liên kết ion
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://taylorsciencegeeks.weebly.com/uploads/5/9/2/0/59201005/892509894.gif" alt="Liên kết ion" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Liên kết ion</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-6" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành NaCl</h3>
+                <div class="tags">
+                    <span class="tag">NaCl formation</span>
+                    <span class="tag">sodium chloride</span>
+                    <span class="tag">sodium ion</span>
+                    <span class="tag">chloride ion</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Na nhường 1 electron cho Cl, tạo Na⁺ và Cl⁻ có lớp electron ngoài cùng bền vững.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Na: 2,8,1 → Na⁺: 2,8<br>• Cl: 2,8,7 → Cl⁻: 2,8,8<br>• Na⁺ và Cl⁻ hút nhau tạo NaCl
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://www.knockhardy.org.uk/ionic_htm_files/NACLAG.gif" alt="Sự hình thành NaCl" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành NaCl</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-7" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Ion dương</h3>
+                <div class="tags">
+                    <span class="tag">Cation</span>
+                    <span class="tag">electron loss</span>
+                    <span class="tag">positive ion</span>
+                    <span class="tag">metal ion</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Ion dương được tạo thành khi nguyên tử nhường electron.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Na → Na⁺ + 1e<br>• Mg → Mg²⁺ + 2e<br>• Ion dương có số proton lớn hơn số electron
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a8/NaF.gif?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" alt="Ion dương" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Ion dương</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-8" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Ion âm</h3>
+                <div class="tags">
+                    <span class="tag">Anion</span>
+                    <span class="tag">electron gain</span>
+                    <span class="tag">negative ion</span>
+                    <span class="tag">nonmetal ion</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Ion âm được tạo thành khi nguyên tử nhận thêm electron.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Cl + 1e → Cl⁻<br>• O + 2e → O²⁻<br>• Ion âm có số electron lớn hơn số proton
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://i.makeagif.com/media/3-25-2022/gRE-Gd.gif" alt="Ion âm" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Ion âm</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-9" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Liên kết ion trong MgO</h3>
+                <div class="tags">
+                    <span class="tag">MgO ionic bond</span>
+                    <span class="tag">magnesium oxide</span>
+                    <span class="tag">magnesium ion</span>
+                    <span class="tag">oxide ion</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Mg nhường 2 electron cho O, tạo Mg²⁺ và O²⁻; hai ion hút nhau tạo MgO.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Mg → Mg²⁺ + 2e<br>• O + 2e → O²⁻<br>• Mg²⁺ hút O²⁻ tạo hợp chất MgO
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://custom-images.strikinglycdn.com/res/hrscywv4p/image/upload/c_limit,fl_lossy,h_9000,w_1200,f_auto,q_60/252145/mgo_sc9icg.gif" alt="Liên kết ion trong MgO" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Liên kết ion trong MgO</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-10" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Tính chất hợp chất ion</h3>
+                <div class="tags">
+                    <span class="tag">Ionic compound properties</span>
+                    <span class="tag">solid salt</span>
+                    <span class="tag">electrical conductivity</span>
+                    <span class="tag">melting point</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Hợp chất ion thường là chất rắn, khó bay hơi, khó nóng chảy và dung dịch của chúng dẫn điện.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • NaCl là chất rắn ở điều kiện thường<br>• Khó bay hơi và khó nóng chảy<br>• NaCl tan trong nước tạo dung dịch dẫn điện
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://oaknationalacademy-res.cloudinary.com/image/upload/v1697628747/elpluqoylwx72o8hnpgz.gif" alt="Tính chất hợp chất ion" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Tính chất hợp chất ion</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-11" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Liên kết kim loại - phi kim</h3>
+                <div class="tags">
+                    <span class="tag">Metal nonmetal bonding</span>
+                    <span class="tag">electron transfer</span>
+                    <span class="tag">metal atom</span>
+                    <span class="tag">nonmetal atom</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Khi kim loại tác dụng với phi kim, nguyên tử kim loại thường nhường electron cho nguyên tử phi kim.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Na là kim loại → nhường 1e<br>• Cl là phi kim → nhận 1e<br>• Tạo Na⁺ và Cl⁻
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://www.dynamicscience.com.au/tester/solutions1/chemistry/bonding/animationmetalnonmetal.gif" alt="Liên kết kim loại - phi kim" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Liên kết kim loại - phi kim</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-12" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Liên kết cộng hoá trị</h3>
+                <div class="tags">
+                    <span class="tag">Covalent bond</span>
+                    <span class="tag">shared electrons</span>
+                    <span class="tag">electron pair</span>
+                    <span class="tag">covalent molecule</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Liên kết cộng hoá trị được tạo nên giữa hai nguyên tử bằng một hay nhiều cặp electron dùng chung.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • H₂: 1 cặp electron dùng chung<br>• O₂: 2 cặp electron dùng chung<br>• N₂: 3 cặp electron dùng chung
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://qph.cf2.quoracdn.net/main-qimg-0902fc5a377dfc989ef998f8965bb585" alt="Liên kết cộng hoá trị" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Liên kết cộng hoá trị</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-13" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành H₂</h3>
+                <div class="tags">
+                    <span class="tag">Hydrogen molecule</span>
+                    <span class="tag">H2 molecule</span>
+                    <span class="tag">shared electron pair</span>
+                    <span class="tag">hydrogen atom</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Hai nguyên tử H góp mỗi nguyên tử 1 electron để tạo một cặp electron dùng chung, giúp mỗi H đạt 2e lớp ngoài cùng.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • H + H → H₂<br>• Có 1 cặp electron dùng chung<br>• Mỗi H đạt cấu trúc giống He
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://64.media.tumblr.com/0a789ec939747e16ccbd71253de9bd54/tumblr_n7p83aITQN1rhb9f5o3_r1_400.gifv" alt="Sự hình thành H₂" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành H₂</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-14" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành O₂</h3>
+                <div class="tags">
+                    <span class="tag">Oxygen molecule</span>
+                    <span class="tag">O2 molecule</span>
+                    <span class="tag">double bond</span>
+                    <span class="tag">oxygen atom</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Hai nguyên tử O góp chung 2 cặp electron, tạo liên kết đôi và giúp mỗi O đạt 8e lớp ngoài cùng.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Mỗi O có 6e lớp ngoài cùng<br>• Hai O dùng chung 2 cặp electron<br>• O₂ có liên kết đôi
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://filo-question-diagrams.cdn.askfilo.com/3_zqkRcl_1767177462262182134_Screenshot_31-12-2025_16722_www.bing.com.jpeg" alt="Sự hình thành O₂" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành O₂</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-15" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành Cl₂</h3>
+                <div class="tags">
+                    <span class="tag">Chlorine molecule</span>
+                    <span class="tag">Cl2 molecule</span>
+                    <span class="tag">single covalent bond</span>
+                    <span class="tag">chlorine atom</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Hai nguyên tử Cl góp chung 1 cặp electron để mỗi nguyên tử đạt 8e lớp ngoài cùng.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Mỗi Cl có 7e lớp ngoài cùng<br>• Hai Cl dùng chung 1 cặp electron<br>• Cl₂ có liên kết đơn
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://i.ytimg.com/vi/dGBgYK4BSBw/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AHUBoAC4AOKAgwIABABGGUgUChSMA8=&rs=AOn4CLBPlgsnRQ_0IAN0XH52ddiKBawtsA" alt="Sự hình thành Cl₂" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành Cl₂</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-16" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành N₂</h3>
+                <div class="tags">
+                    <span class="tag">Nitrogen molecule</span>
+                    <span class="tag">N2 molecule</span>
+                    <span class="tag">triple bond</span>
+                    <span class="tag">nitrogen atom</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Hai nguyên tử N góp chung 3 cặp electron, tạo liên kết ba và giúp mỗi N đạt 8e lớp ngoài cùng.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Mỗi N có 5e lớp ngoài cùng<br>• Hai N dùng chung 3 cặp electron<br>• N₂ có liên kết ba
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://www.shutterstock.com/shutterstock/videos/3531695003/thumb/11.jpg?ip=x480" alt="Sự hình thành N₂" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành N₂</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-17" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành H₂O</h3>
+                <div class="tags">
+                    <span class="tag">Water molecule</span>
+                    <span class="tag">H2O molecule</span>
+                    <span class="tag">oxygen hydrogen bond</span>
+                    <span class="tag">shared electrons</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Trong H₂O, O dùng chung một electron với mỗi H, tạo hai cặp electron liên kết; O đạt 8e và H đạt 2e.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • O có 6e lớp ngoài cùng<br>• O liên kết với 2 H<br>• Mỗi liên kết O–H gồm 1 cặp electron dùng chung
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://i.makeagif.com/media/10-28-2024/SAoPNa.gif" alt="Sự hình thành H₂O" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành H₂O</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-18" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành CO₂</h3>
+                <div class="tags">
+                    <span class="tag">Carbon dioxide molecule</span>
+                    <span class="tag">CO2 molecule</span>
+                    <span class="tag">double covalent bond</span>
+                    <span class="tag">carbon oxygen</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">C liên kết với hai O bằng cách dùng chung hai cặp electron với mỗi O, tạo hai liên kết đôi.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • C có 4e lớp ngoài cùng<br>• Mỗi O có 6e<br>• C và mỗi O dùng chung 2 cặp electron<br>• C và O đều đạt 8e
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://i.pinimg.com/1200x/ed/e6/10/ede610f14a2e4bf5d17b3166ddf019cc.jpg" alt="Sự hình thành CO₂" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành CO₂</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-19" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Sự hình thành NH₃</h3>
+                <div class="tags">
+                    <span class="tag">Ammonia molecule</span>
+                    <span class="tag">NH3 molecule</span>
+                    <span class="tag">nitrogen hydrogen bond</span>
+                    <span class="tag">shared electron pair</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">N dùng chung một cặp electron với mỗi trong ba nguyên tử H, tạo ba liên kết N–H.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • N có 5e lớp ngoài cùng<br>• N liên kết với 3 H<br>• Mỗi H dùng chung 1e với N<br>• N đạt 8e, mỗi H đạt 2e
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://secondaryscience4all.wordpress.com/wp-content/uploads/2014/09/slide2.png" alt="Sự hình thành NH₃" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Sự hình thành NH₃</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-20" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Quy tắc đạt cấu trúc khí hiếm</h3>
+                <div class="tags">
+                    <span class="tag">Noble gas rule</span>
+                    <span class="tag">octet rule</span>
+                    <span class="tag">duet rule</span>
+                    <span class="tag">stable electron shell</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Nguyên tử tham gia liên kết nhằm đạt số electron lớp ngoài cùng bền vững giống khí hiếm gần nhất.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • H hướng tới 2e như He<br>• Na nhường 1e để đạt cấu trúc như Ne<br>• Cl nhận 1e để đạt cấu trúc như Ar<br>• O nhận hoặc dùng chung electron để đạt 8e
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://images.squarespace-cdn.com/content/v1/5c5aed8434c4e20e953d6011/1617382024087-NCISU7IRIZOWTURK3SOP/Hydrogen+chloride+dot+and+cross.jpg" alt="Quy tắc đạt cấu trúc khí hiếm" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Quy tắc đạt cấu trúc khí hiếm</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-21" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">So sánh liên kết ion và cộng hoá trị</h3>
+                <div class="tags">
+                    <span class="tag">Ionic vs covalent bond</span>
+                    <span class="tag">bond comparison</span>
+                    <span class="tag">electron transfer</span>
+                    <span class="tag">electron sharing</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Liên kết ion hình thành do sự chuyển electron và hút tĩnh điện giữa ion; liên kết cộng hoá trị hình thành do dùng chung electron.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • Liên kết ion: NaCl, MgO<br>• Liên kết cộng hoá trị: H₂, O₂, H₂O, CO₂<br>• Ion: cho và nhận electron<br>• Cộng hoá trị: dùng chung electron
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://www.chemistrylearner.com/wp-content/uploads/2021/12/Octet-Rule-Examples.jpg" alt="So sánh liên kết ion và cộng hoá trị" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: So sánh liên kết ion và cộng hoá trị</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-22" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Tính chất chất cộng hoá trị</h3>
+                <div class="tags">
+                    <span class="tag">Covalent compound properties</span>
+                    <span class="tag">molecular substance</span>
+                    <span class="tag">boiling point</span>
+                    <span class="tag">melting point</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Chất cộng hoá trị có thể ở thể khí, lỏng hoặc rắn; thường có nhiệt độ nóng chảy và nhiệt độ sôi thấp.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • H₂O có thể tồn tại rắn, lỏng, khí<br>• CO₂ là chất khí ở điều kiện thường<br>• Đường là chất rắn nhưng có nhiệt độ nóng chảy thấp hơn nhiều hợp chất ion
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://64.media.tumblr.com/006ea358b4823007c8482242c30f323c/tumblr_n7p83aITQN1rhb9f5o1_r1_400.gifv" alt="Tính chất chất cộng hoá trị" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Tính chất chất cộng hoá trị</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-23" class="section-card">
+            <div class="card-header">
+                <h3 class="card-title">Ứng dụng kiến thức liên kết</h3>
+                <div class="tags">
+                    <span class="tag">Chemical bonding application</span>
+                    <span class="tag">physical properties</span>
+                    <span class="tag">salt sugar</span>
+                    <span class="tag">water molecule</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content-left">
+                    <p class="definition">Kiểu liên kết giúp giải thích tính chất vật lí của chất, chẳng hạn muối ăn khó nóng chảy còn nước và đường dễ nóng chảy hơn.</p>
+                    <div class="details-box">
+                        <strong>Chi tiết & Ví dụ minh họa:</strong>
+                        • NaCl: hợp chất ion → rắn, khó nóng chảy, khó bay hơi<br>• Nước và đường: chất cộng hoá trị → thường có nhiệt độ nóng chảy thấp hơn hợp chất ion<br>• Tính chất phụ thuộc cấu tạo và kiểu liên kết
+                    </div>
+                </div>
+                <div class="content-right">
+                    <div class="image-container">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHzbS2wYiElXnAdYmLfGQ-DUntqMieqXJJ4uYL2MJruG0o3Y8GLwyYPx5T&s=10" alt="Ứng dụng kiến thức liên kết" loading="lazy">
+                        <div class="image-caption">Mô phỏng trực quan: Ứng dụng kiến thức liên kết</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 - Thiết Kế Bài Giảng Hóa Học Tự Động. Được tối ưu hóa cho giảng dạy và học tập.</p>
+        </footer>
+    </main>
+
+    <script>
+        // Smooth scrolling & active nav highlight
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    document.querySelectorAll('.nav-item a').forEach(a => {
+                        if (a.getAttribute('href') === '#' + id) {
+                            a.classList.add('active');
+                        } else {
+                            a.classList.remove('active');
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        document.querySelectorAll('.section-card').forEach((section) => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>
