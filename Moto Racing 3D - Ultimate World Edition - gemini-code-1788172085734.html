@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Moto Racing 3D - Ultimate World Edition</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 5;
+        }
+        #theme-banner {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #f1c40f;
+            font-size: 16px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 12px;
+            border-radius: 8px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 5;
+            transition: all 0.5s;
+        }
+        #menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 15, 15, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+        #menu-screen h1 {
+            color: #f1c40f;
+            font-size: 30px;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+        }
+        .high-score-board {
+            font-size: 15px;
+            color: #2ed573;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .setting-group {
+            margin: 8px 0;
+            width: 85%;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 14px;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .setting-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #ddd;
+        }
+        .setting-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            font-size: 15px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .checkbox-group input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        #start-btn, #restart-btn {
+            background-color: #2ed573;
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(46, 213, 115, 0.4);
+            transition: background 0.2s;
+        }
+        #start-btn:hover, #restart-btn:hover {
+            background-color: #26af5f;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            display: none;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255,0,0,0.7);
+            z-index: 15;
+        }
+        #game-over h1 {
+            margin-top: 0;
+            color: #ff4757;
+            font-size: 38px;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 15px;
+            width: 100%;
+            text-align: center;
+            color: #ccc;
+            font-size: 12px;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px black;
+            z-index: 5;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <h1>MOTO RACING 3D</h1>
+        <div class="high-score-board">🏆 Kỷ lục cao nhất: <span id="menu-high-score">0</span> m</div>
+        
+        <div class="setting-group">
+            <label for="speed-select">🚀 Tốc độ cơ bản:</label>
+            <select id="speed-select">
+                <option value="15">Chậm (15 m/s)</option>
+                <option value="25" selected>Bình thường (25 m/s)</option>
+                <option value="38">Nhanh / Siêu tốc (38 m/s)</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label for="density-select">🚗 Mật độ vật cản:</label>
+            <select id="density-select">
+                <option value="1.8">Thưa thớt</option>
+                <option value="1.2" selected>Bình thường</option>
+                <option value="0.7">Dày đặc (Khó)</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label for="difficulty-select">🔥 Độ khó (Tăng trưởng):</label>
+            <select id="difficulty-select">
+                <option value="0.2">Dễ (Tăng chậm)</option>
+                <option value="0.5" selected>Trung bình</option>
+                <option value="1.0">Ác mộng (Tăng cực nhanh)</option>
+            </select>
+        </div>
+
+        <div class="setting-group checkbox-group">
+            <label for="sound-toggle" style="margin:0; cursor:pointer;">🔊 Tiếng động cơ xe:</label>
+            <input type="checkbox" id="sound-toggle" checked>
+        </div>
+
+        <button id="start-btn" onclick="startGameSession()">BẮT ĐẦU ĐUA</button>
+    </div>
+
+    <div id="ui">
+        Quãng đường: <span id="score">0</span> m<br>
+        ⭐ Điểm thưởng: <span id="coins">0</span><br>
+        🏆 Kỷ lục: <span id="high-score">0</span> m
+    </div>
+
+    <div id="theme-banner">🌆 Khu vực: Thành Phố</div>
+    
+    <div id="game-over">
+        <h1>TAI NẠN!</h1>
+        <p>Quãng đường đi được: <span id="final-score">0</span> m</p>
+        <p>Kỷ lục mới: <span id="new-record-text" style="color: #2ed573; font-weight: bold;"></span></p>
+        <p>Điểm thưởng: <span id="final-coins">0</span></p>
+        <br>
+        <button id="restart-btn" onclick="resetGame()">Chơi Lại</button>
+    </div>
+
+    <div id="instructions">
+        <b>Nghiêng điện thoại</b> để lái | <b>Giữ màn hình / Phím Lên (↑) / W</b> để Tăng tốc không giới hạn!
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        let scene, camera, renderer, player;
+        let roadMesh, roadMat;
+        let obstacles = [];
+        let randyRacers = []; // Các tay đua AI cùng chạy
+        let sceneryObjects = []; // Các vật thể ngoại cảnh bên đường
+        let coins = [];
+        let score = 0;
+        let coinCount = 0;
+        let highScore = localStorage.getItem('moto_high_score') || 0;
+        let isGameStarted = false;
+        let isGameOver = false;
+        
+        let gameSpeed = 25;
+        let baseSpeed = 25;
+        let spawnIntervalFactor = 1.2;
+        let difficultyMultiplier = 0.5;
+        let soundEnabled = true;
+        let isBoosting = false;
+        
+        const roadWidth = 7.0;
+        let playerX = 0;
+        let targetPlayerX = 0;
+
+        let currentThemeIndex = -1;
+
+        // Cấu hình chi tiết các Theme, màu sắc và ngoại cảnh đi kèm
+        const themes = [
+            { 
+                threshold: 0, 
+                name: "🌆 Thành Phố Đêm", 
+                bgColor: 0x1e272e, 
+                roadColor: 0x222222, 
+                motoColor: 0xe74c3c,
+                sceneryType: 'building',
+                sceneryColor: 0x34495e
+            },
+            { 
+                threshold: 1000, 
+                name: "🌲 Rừng Núi Xanh", 
+                bgColor: 0x2c3e50, 
+                roadColor: 0x3d3d3d, 
+                motoColor: 0x2ecc71,
+                sceneryType: 'tree',
+                sceneryColor: 0x27ae60
+            },
+            { 
+                threshold: 2500, 
+                name: "🏖️ Bãi Biển Hoàng Hôn", 
+                bgColor: 0xe67e22, 
+                roadColor: 0x795548, 
+                motoColor: 0x3498db,
+                sceneryType: 'palm',
+                sceneryColor: 0xd35400
+            },
+            { 
+                threshold: 5000, 
+                name: "🏜️ Hoang Mạc Cát Khô", 
+                bgColor: 0xd35400, 
+                roadColor: 0x8d6e63, 
+                motoColor: 0xf1c40f,
+                sceneryType: 'cactus',
+                sceneryColor: 0x16a085
+            },
+            { 
+                threshold: 8000, 
+                name: "❄️ Xứ Sở Băng Giá", 
+                bgColor: 0xbdc3c7, 
+                roadColor: 0x95a5a6, 
+                motoColor: 0x9b59b6,
+                sceneryType: 'pine_snow',
+                sceneryColor: 0xecf0f1
+            }
+        ];
+
+        let clock = new THREE.Clock();
+        let spawnTimerObs = 0;
+        let spawnTimerCoin = 0;
+        let scenerySpawnTimer = 0;
+        let aiSpawnTimer = 0;
+
+        let audioCtx;
+        let engineOsc = null;
+        let engineGain = null;
+
+        document.getElementById('menu-high-score').innerText = highScore;
+        document.getElementById('high-score').innerText = highScore;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            if (soundEnabled && !engineOsc) {
+                startEngineSound();
+            }
+        }
+
+        function startEngineSound() {
+            try {
+                engineOsc = audioCtx.createOscillator();
+                engineGain = audioCtx.createGain();
+
+                engineOsc.type = 'sawtooth';
+                engineOsc.frequency.setValueAtTime(60, audioCtx.currentTime);
+
+                let filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(350, audioCtx.currentTime);
+
+                engineGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+
+                engineOsc.connect(filter);
+                filter.connect(engineGain);
+                engineGain.connect(audioCtx.destination);
+
+                engineOsc.start();
+            } catch(e) {}
+        }
+
+        function updateEngineSound() {
+            if (!soundEnabled || !engineOsc || !audioCtx || !isGameStarted || isGameOver) {
+                if (engineGain) engineGain.gain.setValueAtTime(0, audioCtx ? audioCtx.currentTime : 0);
+                return;
+            }
+            try {
+                let targetFreq = 50 + (gameSpeed * 2.5) + (isBoosting ? 50 : 0);
+                engineOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.1);
+                engineGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.1);
+            } catch(e) {}
+        }
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                let now = audioCtx.currentTime;
+
+                if (type === 'coin') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(900, now);
+                    osc.frequency.exponentialRampToValueAtTime(1500, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'hit') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.linearRampToValueAtTime(30, now + 0.4);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                }
+            } catch(e) {}
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1e272e);
+            scene.fog = new THREE.Fog(0x1e272e, 25, 100);
+
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4.2, 7.0);
+            camera.lookAt(0, 0.5, -4);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            createRoad();
+            createPlayerMoto();
+
+            let keys = {};
+            window.addEventListener('keydown', (e) => { 
+                keys[e.key] = true; 
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') isBoosting = true;
+            });
+            window.addEventListener('keyup', (e) => { 
+                keys[e.key] = false; 
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') isBoosting = false;
+            });
+            window.pcKeys = keys;
+
+            window.addEventListener('touchstart', (e) => {
+                initAudio();
+                isBoosting = true;
+            }, {passive: true});
+
+            window.addEventListener('touchend', (e) => {
+                isBoosting = false;
+            }, {passive: true});
+
+            window.addEventListener('deviceorientation', (e) => {
+                if (!isGameStarted || isGameOver) return;
+                let gamma = e.gamma; 
+                if (gamma !== null) {
+                    let normalizedTilt = Math.max(-1, Math.min(1, gamma / 25));
+                    targetPlayerX = normalizedTilt * (roadWidth / 2 - 0.5);
+                }
+            }, true);
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function createRoad() {
+            const roadGeo = new THREE.PlaneGeometry(8.5, 160);
+            roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+            roadMesh = new THREE.Mesh(roadGeo, roadMat);
+            roadMesh.rotation.x = -Math.PI / 2;
+            roadMesh.position.set(0, 0, -70);
+            scene.add(roadMesh);
+
+            for (let i = -1; i <= 1; i += 2) {
+                const lineGeo = new THREE.PlaneGeometry(0.12, 160);
+                const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const line = new THREE.Mesh(lineGeo, lineMat);
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(i * 1.4, 0.02, -70);
+                scene.add(line);
+            }
+        }
+
+        function createPlayerMoto() {
+            player = new THREE.Group();
+
+            const bodyGeo = new THREE.BoxGeometry(0.6, 0.5, 1.4);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, metalness: 0.5 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.5;
+
+            const handleGeo = new THREE.BoxGeometry(0.9, 0.1, 0.2);
+            const handleMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1 });
+            const handle = new THREE.Mesh(handleGeo, handleMat);
+            handle.position.set(0, 0.8, 0.4);
+
+            const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            
+            const frontWheel = new THREE.Mesh(wheelGeo, wheelMat);
+            frontWheel.rotation.z = Math.PI / 2;
+            frontWheel.position.set(0, 0.3, 0.6);
+
+            const rearWheel = new THREE.Mesh(wheelGeo, wheelMat);
+            rearWheel.rotation.z = Math.PI / 2;
+            rearWheel.position.set(0, 0.3, -0.6);
+
+            player.add(body, handle, frontWheel, rearWheel);
+            player.position.set(playerX, 0, 0);
+            scene.add(player);
+        }
+
+        // Tạo ngoại cảnh sinh động hai bên đường dựa theo theme hiện tại
+        function spawnSceneryPair() {
+            let activeTheme = themes[currentThemeIndex >= 0 ? currentThemeIndex : 0];
+            let sideOffset = 6.0; // Khoảng cách đặt vật thể sang hai bên lề đường
+
+            for (let side = -1; side <= 1; side += 2) {
+                const scGroup = new THREE.Group();
+                let type = activeTheme.sceneryType;
+                let color = activeTheme.sceneryColor;
+
+                if (type === 'building') {
+                    // Tòa nhà cao tầng thành phố
+                    let h = 4 + Math.random() * 8;
+                    let w = 2.5 + Math.random() * 2;
+                    let d = 2.5 + Math.random() * 2;
+                    let bGeo = new THREE.BoxGeometry(w, h, d);
+                    let bMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
+                    let mesh = new THREE.Mesh(bGeo, bMat);
+                    mesh.position.y = h / 2;
+                    scGroup.add(mesh);
+                } 
+                else if (type === 'tree' || type === 'pine_snow') {
+                    // Cây xanh rừng núi hoặc cây tuyết
+                    let trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 8);
+                    let trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+                    let trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                    trunk.position.y = 0.75;
+
+                    let leavesGeo = new THREE.ConeGeometry(1.2, 3, 8);
+                    let leavesMat = new THREE.MeshStandardMaterial({ color: color });
+                    let leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                    leaves.position.y = 2.5;
+
+                    scGroup.add(trunk, leaves);
+                } 
+                else if (type === 'palm') {
+                    // Cây dừa bờ biển
+                    let trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 4, 8);
+                    let trunkMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63 });
+                    let trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                    trunk.position.y = 2;
+                    trunk.rotation.z = side * 0.1;
+
+                    let leavesGeo = new THREE.BoxGeometry(2.5, 0.2, 0.6);
+                    let leavesMat = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
+                    let leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                    leaves.position.set(0, 3.8, 0);
+
+                    scGroup.add(trunk, leaves);
+                } 
+                else if (type === 'cactus') {
+                    // Xương rồng hoang mạc
+                    let cGeo = new THREE.BoxGeometry(0.5, 3, 0.5);
+                    let cMat = new THREE.MeshStandardMaterial({ color: color });
+                    let mesh = new THREE.Mesh(cGeo, cMat);
+                    mesh.position.y = 1.5;
+                    scGroup.add(mesh);
+                }
+
+                scGroup.position.set(side * sideOffset, 0, -90);
+                scene.add(scGroup);
+        sceneryObjects.push(scGroup);
+            }
+        }
+
+        // Tạo tay đua AI đối thủ chạy cùng chiều đường, có thể xảy ra va chạm
+        function spawnRivalRacer() {
+            const rivalGroup = new THREE.Group();
+            const randomX = (Math.random() - 0.5) * (roadWidth - 1.2);
+            
+            // Xe máy của đối thủ AI
+            const bodyGeo = new THREE.BoxGeometry(0.6, 0.5, 1.4);
+            const rivalColors = [0x9b59b6, 0x34495e, 0x1abc9c, 0xe67e22, 0x2980b9];
+            let rColor = rivalColors[Math.floor(Math.random() * rivalColors.length)];
+            const bodyMat = new THREE.MeshStandardMaterial({ color: rColor, metalness: 0.4 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.5;
+
+            const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            
+            const frontWheel = new THREE.Mesh(wheelGeo, wheelMat);
+            frontWheel.rotation.z = Math.PI / 2;
+            frontWheel.position.set(0, 0.3, 0.6);
+
+            const rearWheel = new THREE.Mesh(wheelGeo, wheelMat);
+            rearWheel.rotation.z = Math.PI / 2;
+            rearWheel.position.set(0, 0.3, -0.6);
+
+            rivalGroup.add(body, frontWheel, rearWheel);
+            rivalGroup.position.set(randomX, 0, -90);
+            
+            // Tốc độ riêng của AI (chạy chậm hơn tốc độ người chơi một chút để người chơi vượt, hoặc có thể lạng lách nhẹ)
+            rivalGroup.userData = { 
+                type: 'rival', 
+                aiSpeed: 12 + Math.random() * 8,
+                laneChangeTimer: 0,
+                targetAiX: randomX
+            };
+
+            scene.add(rivalGroup);
+            randyRacers.push(rivalGroup);
+        }
+
+        function checkAndUpdateTheme() {
+            let activeTheme = themes[0];
+            let newIndex = 0;
+            for (let i = themes.length - 1; i >= 0; i--) {
+                if (score >= themes[i].threshold) {
+                    activeTheme = themes[i];
+                    newIndex = i;
+                    break;
+                }
+            }
+
+            if (newIndex !== currentThemeIndex) {
+                currentThemeIndex = newIndex;
+                scene.background.setHex(activeTheme.bgColor);
+                scene.fog.color.setHex(activeTheme.bgColor);
+                roadMat.color.setHex(activeTheme.roadColor);
+                player.children[0].material.color.setHex(activeTheme.motoColor);
+
+                let banner = document.getElementById('theme-banner');
+                banner.innerText = "Khu vực: " + activeTheme.name;
+                banner.style.transform = "scale(1.2)";
+                setTimeout(() => { banner.style.transform = "scale(1)"; }, 400);
+            }
+        }
+
+        function spawnObstacle() {
+            const obstacleGroup = new THREE.Group();
+            const randomX = (Math.random() - 0.5) * (roadWidth - 1.2);
+            const isPedestrian = Math.random() < 0.35;
+
+            if (!isPedestrian) {
+                const carGeo = new THREE.BoxGeometry(1.2, 0.8, 2.2);
+                const colors = [0x3498db, 0x2ecc71, 0x9b59b6, 0xf1c40f, 0xe67e22];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                const carMat = new THREE.MeshStandardMaterial({ color: randomColor, roughness: 0.3 });
+                const carBody = new THREE.Mesh(carGeo, carMat);
+                carBody.position.y = 0.4;
+
+                const cabinGeo = new THREE.BoxGeometry(1.0, 0.5, 1.2);
+                const cabinMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+                cabin.position.set(0, 0.9, -0.1);
+
+                obstacleGroup.add(carBody, cabin);
+                obstacleGroup.userData = { type: 'car' };
+            } else {
+                const pedGroup = new THREE.Group();
+                const torsoGeo = new THREE.BoxGeometry(0.5, 0.9, 0.3);
+                const torsoMat = new THREE.MeshStandardMaterial({ color: 0x34495e });
+                const torso = new THREE.Mesh(torsoGeo, torsoMat);
+                torso.position.y = 0.75;
+
+                const headGeo = new THREE.SphereGeometry(0.2, 12, 12);
+                const headMat = new THREE.MeshStandardMaterial({ color: 0xf39c12 });
+                const head = new THREE.Mesh(headGeo, headMat);
+                head.position.y = 1.35;
+
+                pedGroup.add(torso, head);
+                obstacleGroup.add(pedGroup);
+                
+                const walkDirection = Math.random() > 0.5 ? 1 : -1;
+                obstacleGroup.userData = { 
+                    type: 'pedestrian', 
+                    walkSpeed: walkDirection * (1.0 + Math.random() * 1.5) 
+                };
+            }
+
+            obstacleGroup.position.set(randomX, 0, -90);
+            scene.add(obstacleGroup);
+            obstacles.push(obstacleGroup);
+        }
+
+        function spawnCoins() {
+            const randomX = (Math.random() - 0.5) * (roadWidth - 1.0);
+            const starGeo = new THREE.OctahedronGeometry(0.35);
+            const starMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.5 });
+            
+            for (let i = 0; i < 3; i++) {
+                const star = new THREE.Mesh(starGeo, starMat);
+                star.position.set(randomX, 0.6, -85 - (i * 1.8));
+                scene.add(star);
+                coins.push(star);
+            }
+        }
+
+        function startGameSession() {
+            baseSpeed = parseFloat(document.getElementById('speed-select').value);
+            gameSpeed = baseSpeed;
+            spawnIntervalFactor = parseFloat(document.getElementById('density-select').value);
+            difficultyMultiplier = parseFloat(document.getElementById('difficulty-select').value);
+            soundEnabled = document.getElementById('sound-toggle').checked;
+
+            document.getElementById('menu-screen').style.display = 'none';
+            isGameStarted = true;
+            clock.getDelta();
+
+            initAudio();
+        }
+
+        function updateGame() {
+            if (!isGameStarted || isGameOver) return;
+
+            let delta = clock.getDelta();
+
+            if (window.pcKeys) {
+                if (window.pcKeys['ArrowLeft'] || window.pcKeys['a'] || window.pcKeys['A']) {
+                    targetPlayerX -= 6.0 * delta;
+                }
+                if (window.pcKeys['ArrowRight'] || window.pcKeys['d'] || window.pcKeys['D']) {
+                    targetPlayerX += 6.0 * delta;
+                }
+            }
+
+            targetPlayerX = Math.max(-roadWidth/2 + 0.5, Math.min(roadWidth/2 - 0.5, targetPlayerX));
+
+            playerX += (targetPlayerX - playerX) * (delta * 15);
+            player.position.x = playerX;
+            player.rotation.z = (targetPlayerX - playerX) * -0.25;
+
+            let targetBoostBonus = isBoosting ? 25 : 0;
+            let currentTargetSpeed = baseSpeed + targetBoostBonus;
+            
+            if (gameSpeed < currentTargetSpeed) {
+                gameSpeed += delta * 15;
+            } else if (gameSpeed > currentTargetSpeed) {
+                gameSpeed -= delta * 10;
+            }
+
+            gameSpeed += delta * (0.35 * difficultyMultiplier);
+
+            updateEngineSound();
+
+            score += Math.floor(gameSpeed * delta * 1.5);
+            document.getElementById('score').innerText = score;
+
+            checkAndUpdateTheme();
+
+            // Sinh vật cản, ngoại cảnh và xe AI đối thủ
+            let dynamicSpawnInterval = Math.max(0.3, spawnIntervalFactor / (gameSpeed / baseSpeed));
+            spawnTimerObs += delta;
+            if (spawnTimerObs > dynamicSpawnInterval) {
+                spawnObstacle();
+                spawnTimerObs = 0;
+            }
+
+            scenerySpawnTimer += delta;
+            if (scenerySpawnTimer > 0.6) {
+                spawnSceneryPair();
+                scenerySpawnTimer = 0;
+            }
+
+            aiSpawnTimer += delta;
+            if (aiSpawnTimer > 2.5) {
+                spawnRivalRacer();
+                aiSpawnTimer = 0;
+            }
+
+            spawnTimerCoin += delta;
+            if (spawnTimerCoin > 1.5) {
+                spawnCoins();
+                spawnTimerCoin = 0;
+            }
+
+            // Cập nhật ngoại cảnh bên đường
+            for (let i = sceneryObjects.length - 1; i >= 0; i--) {
+                let sc = sceneryObjects[i];
+                sc.position.z += gameSpeed * delta;
+                if (sc.position.z > 10) {
+                    scene.remove(sc);
+                    sceneryObjects.splice(i, 1);
+                }
+            }
+
+            // Cập nhật các tay đua AI cùng chiều (có thể xảy ra va chạm)
+            for (let i = randyRacers.length - 1; i >= 0; i--) {
+                let ai = randyRacers[i];
+                
+                // AI di chuyển tương đối so với tốc độ của người chơi
+                let relativeSpeed = gameSpeed - ai.userData.aiSpeed;
+                ai.position.z += relativeSpeed * delta;
+
+                // AI tự động lạng lách nhẹ đổi làn đường
+                ai.userData.laneChangeTimer += delta;
+                if (ai.userData.laneChangeTimer > 3.0) {
+                    ai.userData.targetAiX = (Math.random() - 0.5) * (roadWidth - 1.2);
+                    ai.userData.laneChangeTimer = 0;
+                }
+                ai.position.x += (ai.userData.targetAiX - ai.position.x) * delta * 2;
+
+                // Kiểm tra va chạm giữa người chơi và xe AI
+                if (Math.abs(player.position.x - ai.position.x) < 0.8 && 
+                    Math.abs(ai.position.z) < 1.2) {
+                    triggerGameOver();
+                }
+
+                if (ai.position.z > 10) {
+                    scene.remove(ai);
+                    randyRacers.splice(i, 1);
+                }
+            }
+
+            // Cập nhật chướng ngại vật (xe ô tô, người đi bộ)
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.position.z += gameSpeed * delta;
+
+                if (obs.userData.type === 'pedestrian') {
+                    obs.position.x += obs.userData.walkSpeed * delta;
+                    if (obs.position.x > roadWidth/2 - 0.5 || obs.position.x < -roadWidth/2 + 0.5) {
+                        obs.userData.walkSpeed *= -1;
+                    }
+                }
+
+                let hitBoxMarginX = obs.userData.type === 'pedestrian' ? 0.5 : 0.8;
+                let hitBoxMarginZ = obs.userData.type === 'pedestrian' ? 0.5 : 1.2;
+
+                if (Math.abs(player.position.x - obs.position.x) < hitBoxMarginX && 
+                    Math.abs(obs.position.z) < hitBoxMarginZ) {
+                    triggerGameOver();
+                }
+
+                if (obs.position.z > 6) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Cập nhật đồng xu/sao
+            for (let i = coins.length - 1; i >= 0; i--) {
+                const c = coins[i];
+                c.rotation.y += delta * 4;
+                c.position.z += gameSpeed * delta;
+
+                if (Math.abs(player.position.x - c.position.x) < 0.7 && Math.abs(c.position.z) < 0.8) {
+                    scene.remove(c);
+                    coins.splice(i, 1);
+                    coinCount++;
+                    score += 30;
+                    document.getElementById('coins').innerText = coinCount;
+                    playSound('coin');
+                    continue;
+                }
+
+                if (c.position.z > 6) {
+                    scene.remove(c);
+                    coins.splice(i, 1);
+                }
+            }
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            playSound('hit');
+            if (engineGain) engineGain.gain.setValueAtTime(0, audioCtx.currentTime);
+
+            let recordText = "";
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('moto_high_score', highScore);
+                recordText = "🎉 PHÁ KỶ LỤC MỚI! (" + highScore + " m)";
+            } else {
+                recordText = highScore + " m";
+            }
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('new-record-text').innerText = recordText;
+            document.getElementById('final-coins').innerText = coinCount;
+            document.getElementById('high-score').innerText = highScore;
+            document.getElementById('menu-high-score').innerText = highScore;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        function resetGame() {
+            obstacles.forEach(obs => scene.remove(obs));
+            randyRacers.forEach(ai => scene.remove(ai));
+            sceneryObjects.forEach(sc => scene.remove(sc));
+            coins.forEach(c => scene.remove(c));
+            obstacles = [];
+            randyRacers = [];
+            sceneryObjects = [];
+            coins = [];
+
+            score = 0;
+            coinCount = 0;
+            gameSpeed = baseSpeed;
+            playerX = 0;
+            targetPlayerX = 0;
+            spawnTimerObs = 0;
+            spawnTimerCoin = 0;
+            scenerySpawnTimer = 0;
+            aiSpawnTimer = 0;
+            isBoosting = false;
+            currentThemeIndex = -1;
+            clock = new THREE.Clock();
+
+            player.position.set(playerX, 0, 0);
+            player.rotation.z = 0;
+
+            checkAndUpdateTheme();
+
+            document.getElementById('score').innerText = score;
+            document.getElementById('coins').innerText = coinCount;
+            document.getElementById('game-over').style.display = 'none';
+            isGameOver = false;
+
+            if (soundEnabled && engineGain) {
+                engineGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            updateGame();
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
