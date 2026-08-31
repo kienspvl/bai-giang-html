@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brawl Stars 3v3 Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            text-align: center;
+        }
+        canvas {
+            border: 6px solid #3b82f6;
+            background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            cursor: crosshair;
+            border-radius: 8px;
+        }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            background: #1e293b;
+            padding: 8px 15px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            border: 2px solid #475569;
+        }
+        .team-blue { color: #38bdf8; }
+        .team-red { color: #f87171; }
+        
+        #menu {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .brawler-card {
+            background: #1e293b;
+            border: 2px solid #475569;
+            border-radius: 10px;
+            padding: 15px 25px;
+            margin: 10px;
+            text-align: left;
+            width: 350px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .brawler-card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-3px);
+            background: #334155;
+        }
+        .brawler-card h3 { margin: 0 0 5px 0; color: #facc15; }
+        .brawler-card p { margin: 3px 0; font-size: 13px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h1 style="color: #facc15; margin-bottom: 5px;">BRAWL STARS 3V3 ARENA</h1>
+        <p style="margin-bottom: 20px; color: #94a3b8;">Chọn Brawler yêu thích của bạn để tham gia chiến đấu:</p>
+        <div id="selection-list">
+            <div class="brawler-card" onclick="selectBrawler('Shelly')">
+                <h3>Shelly (Cận chiến / Tầm trung)</h3>
+                <p><b>HP:</b> 4000 | <b>Tốc độ:</b> Trung bình</p>
+                <p><b>Cơ chế:</b> Bắn chụm 3 viên đạn tỏa rộng, sát thương cực khủng ở cự ly gần.</p>
+            </div>
+            <div class="brawler-card" onclick="selectBrawler('Colt')">
+                <h3>Colt (Xạ thủ tầm xa)</h3>
+                <p><b>HP:</b> 2800 | <b>Tốc độ:</b> Nhanh</p>
+                <p><b>Cơ chế:</b> Liên thanh 3 viên đạn thẳng tốc độ cao, tầm bắn xa vượt trội.</p>
+            </div>
+            <div class="brawler-card" onclick="selectBrawler('El Primo')">
+                <h3>El Primo (Đấu sĩ cận chiến)</h3>
+                <p><b>HP:</b> 6500 | <b>Tốc độ:</b> Rất nhanh</p>
+                <p><b>Cơ chế:</b> Đấm móc cực mạnh tầm cực ngắn, lượng máu "trâu bò".</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div class="hud">
+            <span class="team-blue">💙 Đội Xanh: <span id="blue-score">0</span>/3 Hạ gục</span>
+            <span id="match-timer">Thời gian: 00:00</span>
+            <span class="team-red">🔴 Đội Đỏ: <span id="red-score">0</span>/3 Hạ gục</span>
+        </div>
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let gameStarted = false;
+        let player = null;
+        let entities = [];
+        let bullets = [];
+        let keys = {};
+        let blueKills = 0;
+        let redKills = 0;
+        let gameTime = 0;
+
+        // Định nghĩa thông số kỹ năng các Brawler
+        const brawlerTypes = {
+            'Shelly': { hp: 4000, maxHp: 4000, speed: 3.2, radius: 18, color: '#a855f7', rangeType: 'spread', damage: 400 },
+            'Colt': { hp: 2800, maxHp: 2800, speed: 3.6, radius: 16, color: '#38bdf8', rangeType: 'sniper', damage: 350 },
+            'El Primo': { hp: 6500, maxHp: 6500, speed: 3.8, radius: 22, color: '#ef4444', rangeType: 'melee', damage: 600 }
+        };
+
+        function selectBrawler(type) {
+            document.getElementById("menu").style.display = "none";
+            
+            // Tạo Player (Đội Xanh - Blue)
+            let stats = brawlerTypes[type];
+            player = {
+                x: 100, y: canvas.height / 2,
+                vx: 0, vy: 0,
+                ...stats,
+                team: 'blue',
+                isPlayer: true,
+                name: type,
+                cooldown: 0
+            };
+            entities.push(player);
+
+            // Tạo 2 Đồng đội AI (Đội Xanh)
+            entities.push(createAI('Colt', 120, 150, 'blue'));
+            entities.push(createAI('El Primo', 120, 350, 'blue'));
+
+            // Tạo 3 Kẻ địch AI (Đội Đỏ)
+            entities.push(createAI('Shelly', 680, 150, 'red'));
+            entities.push(createAI('Colt', 680, 250, 'red'));
+            entities.push(createAI('El Primo', 680, 350, 'red'));
+
+            gameStarted = true;
+            setInterval(() => { if(gameStarted) gameTime++; }, 1000);
+            loop();
+        }
+
+        function createAI(type, x, y, team) {
+            let stats = brawlerTypes[type];
+            return {
+                x: x, y: y,
+                ...stats,
+                team: team,
+                isPlayer: false,
+                name: type,
+                cooldown: 0
+            };
+        }
+
+        // Bắt sự kiện bàn phím & chuột
+        window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
+        window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+
+        canvas.addEventListener("click", (e) => {
+            if (!gameStarted || !player || player.hp <= 0) return;
+            const rect = canvas.getBoundingClientRect();
+            let mouseX = e.clientX - rect.left;
+            let mouseY = e.clientY - rect.top;
+            shoot(player, mouseX, mouseY);
+        });
+
+        // Xử lý hành vi khai hỏa dựa trên cơ chế nhân vật
+        function shoot(ent, targetX, targetY) {
+            if (ent.cooldown > 0) return;
+            let angle = Math.atan2(targetY - ent.y, targetX - ent.x);
+
+            if (ent.rangeType === 'spread') { // Shelly: Bắn chụm 3 viên
+                for (let i = -1; i <= 1; i++) {
+                    let a = angle + i * 0.15;
+                    bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(a) * 6, dy: Math.sin(a) * 6, damage: ent.damage, team: ent.team, radius: 4, life: 35 });
+                }
+                ent.cooldown = 40;
+            } else if (ent.rangeType === 'sniper') { // Colt: Bắn tầm xa tốc độ cao
+                bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(angle) * 8, dy: Math.sin(angle) * 8, damage: ent.damage, team: ent.team, radius: 3, life: 50 });
+                ent.cooldown = 25;
+            } else if (ent.rangeType === 'melee') { // El Primo: Đấm gần diện rộng uy lực
+                bullets.push({ x: ent.x, y: ent.y, dx: Math.cos(angle) * 5, dy: Math.sin(angle) * 5, damage: ent.damage, team: ent.team, radius: 10, life: 15 });
+                ent.cooldown = 50;
+            }
+        }
+
+        function update() {
+            // 1. Di chuyển Player
+            if (player && player.hp > 0) {
+                let dx = 0, dy = 0;
+                if (keys['w'] || keys['arrowup']) dy = -1;
+                if (keys['s'] || keys['arrowdown']) dy = 1;
+                if (keys['a'] || keys['arrowleft']) dx = -1;
+                if (keys['d'] || keys['arrowright']) dx = 1;
+
+                if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+                player.x += dx * player.speed;
+                player.y += dy * player.speed;
+
+                // Giới hạn trong bản đồ
+                player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+                player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+            }
+
+            // 2. Cập nhật AI
+            for (let ent of entities) {
+                if (ent.hp <= 0) continue;
+                if (ent.cooldown > 0) ent.cooldown--;
+
+                if (!ent.isPlayer) {
+                    // Tìm mục tiêu gần nhất khác phe
+                    let target = null;
+                    let minDist = Infinity;
+                    for (let other of entities) {
+                        if (other.team !== ent.team && other.hp > 0) {
+                            let dist = Math.hypot(other.x - ent.x, other.y - ent.y);
+                            if (dist < minDist) { minDist = dist; target = other; }
+                        }
+                    }
+
+                    if (target) {
+                        let angle = Math.atan2(target.y - ent.y, target.x - ent.x);
+                        // Di chuyển lại gần nếu ở xa, giữ khoảng cách tùy loại
+                        let preferredDist = ent.rangeType === 'melee' ? 20 : 180;
+                        if (minDist > preferredDist) {
+                            ent.x += Math.cos(angle) * (ent.speed * 0.8);
+                            ent.y += Math.sin(angle) * (ent.speed * 0.8);
+                        }
+                        // AI Tự động bắn
+                        if (Math.random() < 0.05 && minDist < 250) {
+                            shoot(ent, target.x, target.y);
+                        }
+                    }
+                }
+            }
+
+            // 3. Cập nhật đạn & Va chạm
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.dx;
+                b.y += b.dy;
+                b.life--;
+
+                if (b.life <= 0 || b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // Kiểm tra đạn trúng nhân vật
+                let hit = false;
+                for (let ent of entities) {
+                    if (ent.team !== b.team && ent.hp > 0) {
+                        let dist = Math.hypot(ent.x - b.x, ent.y - b.y);
+                        if (dist < ent.radius + b.radius) {
+                            ent.hp -= b.damage;
+                            hit = true;
+                            
+                            // Kiểm tra hạ gục
+                            if (ent.hp <= 0) {
+                                if (ent.team === 'red') blueKills++;
+                                else redKills++;
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (hit) bullets.splice(i, 1);
+            }
+
+            // 4. Kiểm tra điều kiện thắng thua
+            if (blueKills >= 3 || redKills >= 3) {
+                gameStarted = false;
+                alert(blueKills >= 3 ? "CHIẾN THẮNG! Đội Xanh đã quét sạch Đội Đỏ!" : "THẤT BẠI! Đội Đỏ đã giành chiến thắng!");
+                location.reload();
+            }
+
+            // Cập nhật HUD giao diện
+            document.getElementById("blue-score").innerText = blueKills;
+            document.getElementById("red-score").innerText = redKills;
+            let mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            let secs = (gameTime % 60).toString().padStart(2, '0');
+            document.getElementById("match-timer").innerText = `Thời gian: ${mins}:${secs}`;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Vẽ chướng ngại vật/vật cản trang trí trên sàn đấu
+            ctx.fillStyle = "#334155";
+            ctx.fillRect(360, 150, 80, 200);
+            ctx.fillRect(180, 80, 40, 60);
+            ctx.fillRect(580, 360, 40, 60);
+
+            // Vẽ Entities (Nhân vật)
+            for (let ent of entities) {
+                if (ent.hp <= 0) continue;
+
+                // Vòng tròn thân nhân vật
+                ctx.fillStyle = ent.color;
+                ctx.beginPath();
+                ctx.arc(ent.x, ent.y, ent.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Viền phân biệt Đội Xanh / Đội Đỏ
+                ctx.lineWidth = ent.isPlayer ? 4 : 2;
+                ctx.strokeStyle = ent.team === 'blue' ? '#38bdf8' : '#f87171';
+                ctx.stroke();
+
+                // Thanh HP trên đầu nhân vật
+                let barW = ent.radius * 2;
+                let hpPercent = Math.max(0, ent.hp / ent.maxHp);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(ent.x - barW/2, ent.y - ent.radius - 12, barW, 5);
+                ctx.fillStyle = ent.team === 'blue' ? '#38bdf8' : '#f87171';
+                ctx.fillRect(ent.x - barW/2, ent.y - ent.radius - 12, barW * hpPercent, 5);
+            }
+
+            // Vẽ Đạn
+            for (let b of bullets) {
+                ctx.fillStyle = b.team === 'blue' ? '#38bdf8' : '#fca5a5';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function loop() {
+            if (!gameStarted) return;
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+    </script>
+</body>
+</html>
