@@ -1,0 +1,713 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icarus Translator v13.5.5 - Cloud Sync &amp; Toggle</title>
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root { 
+            --sidebar-w: 300px; --sidebar-r: 320px; --font-size: 16px; --content-max-w: 1000px;
+            --bg: #f1f5f9; --text: #1e293b; --side-bg: #f8fafc; --side-text: #1e293b;
+            --primary: #e11d48; --border: #e2e8f0; --box-bg: #ffffff;
+            --pinyin-color: #e11d48; 
+        }
+
+        /* Chế độ ẩn Sidebar */
+        body.sidebars-hidden {
+            --sidebar-w: 0px;
+            --sidebar-r: 0px;
+        }
+
+        aside:first-of-type { 
+            --side-bg: #1e293b; 
+            --side-text: #f1f5f9; 
+            --border: #334155; 
+            --bg: #0a0f1d; 
+            background: var(--side-bg) !important;
+            color: var(--side-text) !important;
+            overflow: hidden; 
+        }
+        aside:first-of-type .sidebar-textarea, 
+        aside:first-of-type select {
+            background: #0a0f1d;
+            color: #f1f5f9;
+            border-color: #334155;
+        }
+
+        body.theme-1 { --bg: #f0f4f8; --text: #1e293b; --side-bg: #f8fafc; --side-text: #1e293b; --primary: #2563eb; --border: #e2e8f0; --box-bg: #ffffff; --pinyin-color: #2563eb; }
+        body.theme-2 { --bg: #0a0f1d; --text: #f1f5f9; --side-bg: #1e293b; --side-text: #f1f5f9; --primary: #fb7185; --border: #334155; --box-bg: #1e293b; --pinyin-color: #fb7185; }
+        body.theme-3 { --bg: #f7eed7; --text: #5d4037; --side-bg: #f5ecd5; --side-text: #4e342e; --primary: #d84315; --border: #d7ccc8; --box-bg: #fdf6e3; --pinyin-color: #1976d2; }
+        body.theme-4 { --bg: #dceada; --text: #2d3e2d; --side-bg: #d4e4d4; --side-text: #1a2a1a; --primary: #3e7a3e; --border: #bdcfbd; --box-bg: #e8f3e8; --pinyin-color: #4a90e2; }
+        body.theme-5 { --bg: #14110f; --text: #dccab8; --side-bg: #2a2421; --side-text: #f3e5d8; --primary: #a67c52; --border: #334155; --box-bg: #1a1614; --pinyin-color: #8e9aaf; }
+
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); display: flex; height: 100vh; color: var(--text); overflow: hidden; transition: 0.3s; }
+        aside { width: var(--sidebar-w); background: var(--side-bg); color: var(--side-text); display: flex; flex-direction: column; box-sizing: border-box; border-right: 1px solid var(--border); transition: 0.3s; z-index: 10; position: relative; }
+        .sidebar-right { width: var(--sidebar-r); background: var(--side-bg); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; color: var(--text); transition: 0.3s; display: flex; flex-direction: column; border-right: none; }
+        
+        body.sidebars-hidden aside { padding: 0; border: none; }
+        body.sidebars-hidden .sidebar-right { padding: 0; }
+
+        #hamburgerBtn {
+            position: fixed;
+            right: calc(var(--sidebar-r) - 20px);
+            top: 10px;
+            z-index: 1000;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: right 0.3s ease;
+        }
+        body.sidebars-hidden #hamburgerBtn {
+            right: 0px;
+            border-radius: 4px 0 0 4px;
+        }
+
+        select { width: 100%; padding: 5px; margin-top: 5px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
+        .tabs { display: flex; background: rgba(0,0,0,0.2); }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: none; color: inherit; opacity: 0.6; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        .tab-btn.active { opacity: 1; border-bottom: 2px solid var(--primary); background: rgba(255,255,255,0.05); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; }
+        .tab-content:not(.active) { display: none; }
+        
+        .sidebar-textarea { width: 100%; height: 120px; background: var(--bg); color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 10px; box-sizing: border-box; resize: none; font-size: 0.9rem; outline: none; }
+        .history-list { flex: 1; overflow-y: auto; }
+        .history-item { padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.75rem; display: flex; justify-content: space-between; gap: 10px; }
+        .history-item:hover { background: rgba(255,255,255,0.05); }
+
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        header { width: 100%; background: var(--side-bg); border-bottom: 1px solid var(--border); padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; gap: 10px; z-index: 15; flex-shrink: 0; padding-right: 50px; }
+        
+        .workspace { 
+            width: 100%; 
+            max-width: var(--content-max-w); 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 42vh 20px; 
+            box-sizing: border-box; 
+            scroll-behavior: smooth;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .sentence-box { 
+            padding: 15px 20px; 
+            background: var(--box-bg); 
+            margin-bottom: 12px; 
+            border-radius: 10px; 
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06); 
+            cursor: pointer; 
+            border-left: 5px solid transparent; 
+            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            opacity: 0.45; 
+            overflow: hidden;
+        }
+        .sentence-box .text-orig { font-weight: 400; } 
+        .sentence-box:hover { opacity: 0.8; transform: translateY(-1px); }
+        .sentence-box.active { 
+            opacity: 1; 
+            border-left-color: var(--primary); 
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1); 
+            transform: scale(1.01); 
+        }
+        .sentence-box.active .text-orig { font-weight: 600; } 
+
+        .text-orig { display: block; font-size: var(--font-size); margin-bottom: 8px; color: var(--text); line-height: 1.4; }
+        .trans-line { 
+            font-size: var(--font-size); 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            background: rgba(0,0,0,0.03); 
+            border-left: 3px solid var(--border); 
+            margin-top: 6px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .lang-en { border-left-color: #2563eb; }
+        .lang-ru { border-left-color: #ef4444; }
+        .lang-zh { border-left-color: #f59e0b; }
+        .lang-vi { border-left-color: #22c55e; }
+
+        .btn-mini-speak { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: 0.5; transition: 0.2s; color: var(--text); }
+        .btn-mini-speak:hover { opacity: 1; transform: scale(1.1); }
+        .pinyin { font-size: 0.85em; color: var(--pinyin-color); font-style: italic; margin-top: 2px; display: block; }
+
+        .pagination { display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.05); padding: 4px 12px; border-radius: 20px; }
+        .pagination button { background: none; border: none; padding: 2px 8px; font-size: 1.2rem; line-height: 1; color: var(--text); cursor: pointer; opacity: 0.6; }
+        .pagination button:hover { opacity: 1; color: var(--primary); }
+        .page-input { width: 35px; text-align: center; border: none; background: transparent; font-weight: bold; color: var(--primary); outline: none; font-size: 0.9rem; }
+        .total-page { font-size: 0.9rem; opacity: 0.5; font-weight: 500; }
+
+        .timer-display { font-size: 1.00rem; background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 20px; color: var(--primary); font-weight: bold; border: 1px solid var(--border); }
+        .preview-label { font-size: 0.7rem; font-weight: bold; color: var(--primary); margin-top: 15px; display: block; text-transform: uppercase; opacity: 0.8; }
+        .preview-text { font-size: 0.95rem; line-height: 1.5; margin-top: 5px; }
+
+        .vocab-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .word-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-top: 10px; }
+        .word-card { background: var(--bg); border: 1px solid var(--border); padding: 8px; border-radius: 6px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .ana-word { font-weight: bold; font-size: 1.1rem; color: var(--primary); display: block; }
+        .ana-pinyin { color: var(--pinyin-color); font-size: 0.75em; font-style: italic; display: block; margin: 2px 0; }
+        .ana-meaning { font-size: 0.75em; color: var(--text); opacity: 0.8; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; line-height: 1.2; }
+
+        .sw-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.8rem; }
+        .switch { position: relative; width: 34px; height: 18px; display: inline-block; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #cbd5e1; border-radius: 20px; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .4s; }
+        input:checked + .slider { background: var(--primary); }
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        button { cursor: pointer; border-radius: 6px; border: 1px solid var(--border); padding: 6px 12px; font-weight: 500; transition: 0.2s; background: var(--bg); color: var(--text); }
+        .btn-action { background: var(--primary); color: white; border: none; }
+        
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { 
+            display: none; position: absolute; left: 0; top: 100%; background-color: var(--side-bg); 
+            min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 100; 
+            border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+        }
+        .dropdown:hover .dropdown-content { display: block; }
+        .menu-item { padding: 8px 12px; color: var(--text); font-size: 0.85rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .menu-item:hover { background-color: rgba(0,0,0,0.05); }
+        .menu-key { opacity: 0.5; font-size: 0.75rem; font-weight: bold; background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+        
+        .modal-content { 
+            background: var(--bg); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 15px 25px 25px 25px; border-radius: 12px; width: 90%; max-width: 700px; color: var(--text); 
+            border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.3); box-sizing: border-box; 
+        }
+        .modal-content h3 { margin-top: 10px; margin-bottom: 15px; }
+        #noteArea { width: 100%; height: 300px; background: rgba(0,0,0,0.02); color: inherit; border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-sizing: border-box; resize: none; font-family: inherit; font-size: 1rem; margin: 10px 0; outline: none; }
+        
+        .note-tools { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .btn-tool { font-size: 0.75rem; padding: 5px 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: 4px; }
+        .btn-full-close { width: 100%; margin-top: 10px; padding: 12px; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 6px; }
+        .btn-export-popup { width: 100%; margin-top: 5px; padding: 10px; font-weight: bold; background: #6366f1; color: white; border: none; border-radius: 6px; }
+
+        footer { width: 100%; background: var(--side-bg); color: var(--text); padding: 8px; text-align: center; font-size: 0.75rem; opacity: 0.6; border-top: 1px solid var(--border); flex-shrink: 0; z-index: 15; }
+    </style>
+</head>
+<body class="theme-3"> 
+
+<button id="hamburgerBtn" onclick="toggleSidebars()">☰</button>
+
+<aside id="sidebarLeft">
+    <div class="tabs">
+        <button id="btn-tab-settings" class="tab-btn active" onclick="switchTab('settings')">CÀI ĐẶT</button>
+        <button id="btn-tab-history" class="tab-btn" onclick="switchTab('history')">LỊCH SỬ</button>
+    </div>
+
+    <div id="tab-settings" class="tab-content active">
+        <textarea id="input" class="sidebar-textarea" placeholder="Dán văn bản nguồn..."></textarea>
+        <button class="btn-action" style="width:100%; margin: 10px 0 5px 0;" onclick="initSentences()">TÁCH CÂU &amp; LƯU</button>
+        
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button class="btn-action" style="flex: 1; background: #0ea5e9; font-size: 0.75rem; padding: 8px 5px;" onclick="syncToCloud()">☁️ LƯU CLOUD</button>
+            <button class="btn-action" style="flex: 1; background: #8b5cf6; font-size: 0.75rem; padding: 8px 5px;" onclick="fetchFromCloud()">🔄 TẢI CLOUD</button>
+        </div>
+
+        <!-- Yêu cầu 1: Thêm nút Save As -->
+        <button class="btn-action" style="width:100%; background: #10b981; font-size: 0.75rem; padding: 8px 5px; margin-bottom: 10px;" onclick="saveFileWithData()">💾 LƯU FILE HTML (SAVE AS)</button>
+
+        <div class="setting-item" style="margin-top:5px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">GIAO DIỆN</span>
+            <select id="themeSelect" onchange="changeTheme(this.value); blurFocus(this)">
+                <option value="theme-1">Light (Icarus Pro)</option>
+                <option value="theme-2">Dark (Icarus Pro)</option>
+                <option value="theme-3" selected="">Amber (Icarus Pro)</option>
+                <option value="theme-4">Saga Green (Icarus Pro)</option>
+                <option value="theme-5">Mocha (Icarus Pro)</option>
+            </select>
+        </div>
+
+        <div class="setting-item" style="margin-top:15px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">NGÔN NGỮ ĐÍCH</span>
+            <div class="sw-row">Tiếng Anh <label class="switch"><input type="checkbox" class="target-lang" value="en" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Nga <label class="switch"><input type="checkbox" class="target-lang" value="ru" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Trung <label class="switch"><input type="checkbox" class="target-lang" value="zh-CN" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Việt <label class="switch"><input type="checkbox" class="target-lang" value="vi" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+        </div>
+
+        <div class="setting-item" style="margin-top:15px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">CHẾ ĐỘ ĐỌC</span>
+            <div class="sw-row">Autonext <label class="switch"><input type="checkbox" id="autoNext" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Dịch trước (3 câu) <label class="switch"><input type="checkbox" id="preTranslate" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Autoplay âm thanh <label class="switch"><input type="checkbox" id="autoSpeak" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            
+            <!-- Yêu cầu 3: Nút bật/tắt giữ màn hình sáng (Wake Lock) -->
+            <div class="sw-row">Giữ sáng màn hình <label class="switch"><input type="checkbox" id="wakeLockToggle" onchange="toggleWakeLock(); blurFocus(this)"><span class="slider"></span></label></div>
+
+            <!-- Yêu cầu 2: Tùy chọn tốc độ đọc -->
+            <span style="font-size:0.7rem; opacity:0.7; display:block; margin-top:10px;">TỐC ĐỘ ĐỌC</span>
+            <select id="speechRate" onchange="blurFocus(this)">
+                <option value="1">1x (Bình thường)</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="2.5">2.5x</option>
+                <option value="3">3x</option>
+            </select>
+            
+            <span style="font-size:0.7rem; opacity:0.7; display:block; margin-top:10px;">GIỌNG ĐỌC MẶC ĐỊNH</span>
+            <select id="voiceTarget" onchange="blurFocus(this)">
+                <option value="orig">Ngôn ngữ gốc</option>
+                <option value="en" selected="">Tiếng Anh</option>
+                <option value="ru">Tiếng Nga</option>
+                <option value="zh-CN">Tiếng Trung</option>
+                <option value="vi">Tiếng Việt</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="tab-history" class="tab-content">
+        <div class="history-list" id="historyList"><div class="history-item" onclick="restore('1785165202541')"><span><b>Nội dung của các chương từ 7 đến 9 trong...</b><br><small>22:13:22 27/7/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1785165202541', event)">×</span></div><div class="history-item" onclick="restore('1785162428419')"><span><b>I. TRẮC NGHIỆM LỰA CHỌN ĐƠN - PHƯƠNG TRÌ...</b><br><small>21:27:08 27/7/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1785162428419', event)">×</span></div><div class="history-item" onclick="restore('1779120851511')"><span><b>CHƯƠNG 2 Bồi Thường Cho Cái Chết Của Một...</b><br><small>23:14:11 18/5/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1779120851511', event)">×</span></div><div class="history-item" onclick="restore('1773764665357')"><span><b>SPIKE Prime LEGO Education Set
+https://y...</b><br><small>23:24:25 17/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773764665357', event)">×</span></div><div class="history-item" onclick="restore('1773505208019')"><span><b>Arduino MASTERCLASS | Full Programming W...</b><br><small>23:20:08 14/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773505208019', event)">×</span></div><div class="history-item" onclick="restore('1773452689800')"><span><b>Hi, this is Ben Finio with Science Buddi...</b><br><small>08:44:49 14/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773452689800', event)">×</span></div><div class="history-item" onclick="restore('1773410715066')"><span><b>I'm going to talk about what they are, w...</b><br><small>21:05:15 13/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773410715066', event)">×</span></div><div class="history-item" onclick="restore('1773190358964')"><span><b>But “to open your heart to pain is to op...</b><br><small>07:52:38 11/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773190358964', event)">×</span></div><div class="history-item" onclick="restore('undefined')"><span><b>undefined</b><br><small>undefined</small></span><span style="color:#ef4444;" onclick="deleteHistory('undefined', event)">×</span></div><div class="history-item" onclick="restore('1773068453761')"><span><b>Unthinkingly, as an afterthought!
+I aske...</b><br><small>22:00:53 9/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773068453761', event)">×</span></div><div class="history-item" onclick="restore('1772463353206')"><span><b>CHAPTER 2
+
+Why do we long for “perfect” ...</b><br><small>21:55:53 2/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1772463353206', event)">×</span></div><div class="history-item" onclick="restore('1772434528422')"><span><b>What is sadness good for?
+
+Before you know ki...</b><br><small>13:55:28 2/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1772434528422', event)">×</span></div></div>
+        <button class="btn-action" style="background:#ef4444; margin-top:10px; font-size: 0.7rem;" onclick="clearAllHistory()">XÓA TOÀN BỘ LỊCH SỬ</button>
+    </div>
+</aside>
+
+<main>
+    <header>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <div class="dropdown">
+                <button class="btn-action" style="font-size: 0.75rem;">☰ MENU</button>
+                <div class="dropdown-content">
+                    <div class="menu-item">
+                        <span>🇨🇳 Vocab Tiếng Trung</span>
+                        <label class="switch"><input type="checkbox" id="showZhVocab" checked="" onchange="updateSidebarRight(currentIdx); blurFocus(this)"><span class="slider"></span></label>
+                    </div>
+                    <div class="menu-item">
+                        <span>🇷🇺 Vocab Tiếng Nga</span>
+                        <label class="switch"><input type="checkbox" id="showRuVocab" onchange="updateSidebarRight(currentIdx); blurFocus(this)"><span class="slider"></span></label>
+                    </div>
+                    <hr style="border:0; border-top:1px solid var(--border); margin:5px 0;">
+                    <div class="menu-item" onclick="changeFontSize(1)"><span>➕ Tăng chữ</span><span class="menu-key">=</span></div>
+                    <div class="menu-item" onclick="changeFontSize(-1)"><span>➖ Giảm chữ</span><span class="menu-key">-</span></div>
+                    <div class="menu-item" onclick="changeWidth(50)"><span>↔️ Tăng rộng</span><span class="menu-key">.</span></div>
+                    <div class="menu-item" onclick="changeWidth(-50)"><span>⬅️ Giảm rộng</span><span class="menu-key">,</span></div>
+                    <div class="menu-item" onclick="cycleTheme()"><span>🎨 Đổi màu Theme</span><span class="menu-key">M</span></div>
+                    <div class="menu-item" onclick="toggleModal('noteModal')"><span>📝 Ghi chú</span><span class="menu-key">N</span></div>
+                    <div class="menu-item" onclick="togglePlayPause()"><span>⏯️ Tạm dừng âm</span><span class="menu-key">K</span></div>
+                    <div class="menu-item" onclick="replayCurrent()"><span>🔊 Đọc lại câu</span><span class="menu-key">Space</span></div>
+                    <div class="menu-item" onclick="toggleModal('updateModal')"><span>🕒 Cập nhật</span><span class="menu-key">U</span></div>
+                </div>
+            </div>
+            <button onclick="togglePlayPause()" id="playPauseBtn">⏯️</button>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div class="pagination">
+                <button onclick="nav(-1)">‹</button>
+                <input type="text" class="page-input" id="currPage" value="0" onchange="jumpToPage(this.value); blurFocus(this)">
+                <span id="totalPage" class="total-page">/ 23</span>
+                <button onclick="nav(1)">›</button>
+            </div>
+            <div id="appTimer" class="timer-display">00:25</div>
+        </div>
+        <select id="viVoice" style="max-width:120px; font-size:0.7rem;" onchange="blurFocus(this)"></select>
+    </header>
+    <div class="workspace" id="output"><div class="sentence-box" id="s-0"><span class="text-orig">1. Nội dung của các chương từ 7 đến 9 trong tác phẩm bao gồm các sự kiện chính sau:</span><div class="trans-group" id="tg-0"></div></div><div class="sentence-box" id="s-1"><span class="text-orig">2. **Chương 7: Cuộc sống kỷ luật của Kafka tại Takamatsu**</span><div class="trans-group" id="tg-1"></div></div><div class="sentence-box" id="s-2"><span class="text-orig">3. Kafka Tamura bắt đầu thiết lập một lộ trình sinh hoạt nghiêm ngặt tại Takamatsu.</span><div class="trans-group" id="tg-2"></div></div><div class="sentence-box" id="s-3"><span class="text-orig">4. Cậu dành buổi sáng để tập luyện tại một phòng tập thể dục công cộng nhằm duy trì sức mạnh thể chất, coi đó là "container" bảo vệ bản thân.</span><div class="trans-group" id="tg-3"></div></div><div class="sentence-box" id="s-4"><span class="text-orig">5. Buổi chiều, cậu đến thư viện tưởng niệm Komura để đọc sách, chủ yếu là bộ *Nghìn lẻ một đêm* và các tác phẩm của Natsume Soseki.</span><div class="trans-group" id="tg-4"></div></div><div class="sentence-box" id="s-5"><span class="text-orig">6. Tại đây, cậu có những cuộc trò chuyện sâu sắc với Oshima về các tác phẩm của Franz Kafka, đặc biệt là truyện ngắn "Trong trại trừng phạt".</span><div class="trans-group" id="tg-5"></div></div><div class="sentence-box" id="s-6"><span class="text-orig">7. Kafka cũng khéo léo đàm phán với nhân viên khách sạn để được hưởng mức giá ưu đãi dành cho sinh viên với lý do đang thực hiện bài luận tốt nghiệp.</span><div class="trans-group" id="tg-6"></div></div><div class="sentence-box" id="s-7"><span class="text-orig">8. Tuy nhiên, đến tối ngày thứ tám, cuộc sống bình lặng này bị phá vỡ.</span><div class="trans-group" id="tg-7"></div></div><div class="sentence-box" id="s-8"><span class="text-orig">9. **Chương 8: Báo cáo quân đội về sự cố Đồi Bát Cơm và sự hồi tỉnh của Nakata**</span><div class="trans-group" id="tg-8"></div></div><div class="sentence-box" id="s-9"><span class="text-orig">10. Chương này tiếp tục dưới dạng một báo cáo giải mật của quân đội Mỹ năm 1946, phỏng vấn Giáo sư Tsukayama, một chuyên gia tâm thần học.</span><div class="trans-group" id="tg-9"></div></div><div class="sentence-box" id="s-10"><span class="text-orig">11. Các chuyên gia đã điều tra sự cố 16 học sinh bất tỉnh năm 1944 và loại trừ khả năng bị nhiễm độc khí gas vì không có di chứng vật lý.</span><div class="trans-group" id="tg-10"></div></div><div class="sentence-box" id="s-11"><span class="text-orig">12. Họ đưa ra giả thuyết về một hiện tượng "thôi miên tập thể".</span><div class="trans-group" id="tg-11"></div></div><div class="sentence-box" id="s-12"><span class="text-orig">13. Điểm nhấn quan trọng là trường hợp của cậu bé Satoru Nakata, người duy nhất không tỉnh lại ngay tại hiện trường.</span><div class="trans-group" id="tg-12"></div></div><div class="sentence-box" id="s-13"><span class="text-orig">14. Nakata bị hôn mê trong hai tuần, trong tình trạng mà giáo sư gọi là "tâm hồn rời khỏi xác".</span><div class="trans-group" id="tg-13"></div></div><div class="sentence-box" id="s-14"><span class="text-orig">15. Khi bất ngờ tỉnh lại, trí não Nakata trở thành một "tờ giấy trắng" (blank slate): ông mất toàn bộ ký ức, không biết tên mình, không biết đọc hay viết.</span><div class="trans-group" id="tg-14"></div></div><div class="sentence-box" id="s-15"><span class="text-orig">16. **Chương 9: Kafka thức dậy trong máu và sự giúp đỡ của Sakura**</span><div class="trans-group" id="tg-15"></div></div><div class="sentence-box" id="s-16"><span class="text-orig">17. Kafka tỉnh lại trong một bụi rậm sau một ngôi đền Shinto vào đêm ngày 28 tháng 5, nhận ra mình đã mất khoảng 4 giờ ký ức.</span><div class="trans-group" id="tg-16"></div></div><div class="sentence-box" id="s-17"><span class="text-orig">18. Áo thun của cậu đẫm máu tươi nhưng trên người không có vết thương nào ngoài cơn đau nhức ở vai trái.</span><div class="trans-group" id="tg-17"></div></div><div class="sentence-box" id="s-18"><span class="text-orig">19. Trong cơn hoảng loạn và lo sợ mình đã phạm tội, cậu gọi điện cho Sakura để nhờ giúp đỡ.</span><div class="trans-group" id="tg-18"></div></div><div class="sentence-box" id="s-19"><span class="text-orig">20. Sakura đưa cậu về căn hộ của một người bạn mà cô đang trông coi.</span><div class="trans-group" id="tg-19"></div></div><div class="sentence-box" id="s-20"><span class="text-orig">21. Kafka đã kể cho cô nghe về việc mình bỏ nhà đi, về gia đình và lời nguyền của cha, nhưng giữ kín một số chi tiết về "điềm báo".</span><div class="trans-group" id="tg-20"></div></div><div class="sentence-box" id="s-21"><span class="text-orig">22. Đêm đó, trong trạng thái căng thẳng, Kafka đã ngủ cùng giường với Sakura; cô đã dùng tay giúp cậu giải tỏa nhu cầu sinh lý để cậu có thể bình tâm và ngủ thiếp đi.</span><div class="trans-group" id="tg-21"></div></div><div class="sentence-box active" id="s-22"><span class="text-orig">23. Sáng hôm sau, khi thấy tin tức không có vụ án mạng nào được báo cáo, Kafka rời đi, để lại lời nhắn cảm ơn và quyết định không quay lại khách sạn mà hướng về phía thư viện Komura.</span><div class="trans-group" id="tg-22"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> The next morning, when he saw on the news that there were no reported murders, Kafka left, left a thank you note and decided not to return to the hotel but headed towards the Komura library. </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('The next morning, when he saw on the news that there were no reported murders, Kafka left, left a thank you note and decided not to return to the hotel but headed towards the Komura library.', 'en')">🔊</button></div></div></div></div>
+    <footer>Icarus - kienspvl@gmail.com - 097.463.87.94</footer>
+</main>
+
+<aside class="sidebar-right" id="sideRight">
+    <div id="sidePlaceholder" style="text-align: center; opacity: 0.3; margin-top: 100px; display: none;">Chọn câu để xem chi tiết</div>
+    <div id="sideContent" style="display: block;">
+        <span class="preview-label">Bản gốc</span>
+        <div id="sideOrig" class="preview-text">Sáng hôm sau, khi thấy tin tức không có vụ án mạng nào được báo cáo, Kafka rời đi, để lại lời nhắn cảm ơn và quyết định không quay lại khách sạn mà hướng về phía thư viện Komura.</div>
+        <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
+        <div id="sideTrans"><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span class="preview-label" style="margin:0">en</span><button class="btn-mini-speak" onclick="speak('The next morning, when he saw on the news that there were no reported murders, Kafka left, left a thank you note and decided not to return to the hotel but headed towards the Komura library.', 'en')">🔊</button></div><div class="preview-text">The next morning, when he saw on the news that there were no reported murders, Kafka left, left a thank you note and decided not to return to the hotel but headed towards the Komura library.</div></div>
+        <div id="vocabAnalysis" class="vocab-section" style="display:none;">
+            <span class="preview-label">Phân tích từ vựng</span>
+            <div id="wordGrid" class="word-grid"></div>
+        </div>
+    </div>
+</aside>
+
+<div id="noteModal" class="modal" onclick="closeByOverlay(event, 'noteModal')">
+    <div class="modal-content">
+        <h3>Ghi chú (N)</h3>
+        <div class="note-tools">
+            <button class="btn-tool" onclick="insertTimestamp()">🕒 Thời gian</button>
+            <button class="btn-tool" onclick="insertCurrentText()">📄 Chèn câu</button>
+            <button class="btn-tool" style="background: #fbbf24; color: #000;" onclick="insertBookmark()">🔖 Đánh dấu vị trí</button>
+        </div>
+        <textarea id="noteArea" oninput="saveNote()" placeholder="Viết ghi chú..."></textarea>
+        <button class="btn-export-popup" onclick="exportNotes()">XUẤT GHI CHÚ (TXT)</button>
+        <button class="btn-full-close" onclick="closeModal('noteModal')">ĐÓNG (N)</button>
+    </div>
+</div>
+
+<div id="updateModal" class="modal" onclick="closeByOverlay(event, 'updateModal')">
+    <div class="modal-content">
+        <h3>Cập nhật (U)</h3>
+        <p><b>v13.5.5:</b> Thêm tính năng <b>Save As</b> lưu file HTML ngậm kèm dữ liệu, tích hợp tùy chọn <b>Tốc độ đọc (1x - 3x)</b>, và tính năng <b>Giữ màn hình sáng (Wake Lock)</b> cho Android.</p>
+        <button class="btn-full-close" onclick="closeModal('updateModal')">ĐÓNG (U)</button>
+    </div>
+</div>
+
+<script>
+    // --- FIREBASE INITIALIZATION ---
+    const firebaseConfig = {
+        databaseURL: "https://icarus-reader-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function syncToCloud() {
+        const txt = document.getElementById('input').value;
+        const savedIdx = parseInt(localStorage.getItem('icarus_last_idx') || "0");
+        if (!txt.trim()) { alert("Văn bản trống!"); return; }
+
+        db.ref('icarus_session').set({
+            content: txt,
+            lastIndex: savedIdx,
+            timestamp: Date.now()
+        }).then(() => {
+            alert("Đã đồng bộ lên Cloud thành công!");
+        }).catch(e => {
+            alert("Lỗi đồng bộ: " + e.message);
+        });
+    }
+
+    function fetchFromCloud() {
+        db.ref('icarus_session').once('value').then((snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('input').value = data.content;
+                localStorage.setItem('icarus_last_idx', data.lastIndex);
+                initSentences(true);
+                alert("Đã tải dữ liệu từ Cloud!");
+            } else {
+                alert("Không tìm thấy dữ liệu trên Cloud.");
+            }
+        });
+    }
+
+    // --- YÊU CẦU 1: TÍNH NĂNG SAVE AS (LƯU FILE HTML KÈM DỮ LIỆU) ---
+    function saveFileWithData() {
+        const htmlContent = document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Icarus_Translator_Offline.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    // --- YÊU CẦU 3: TÍNH NĂNG GIỮ MÀN HÌNH SÁNG (WAKE LOCK API CHO ANDROID) ---
+    let wakeLock = null;
+    async function toggleWakeLock() {
+        const toggle = document.getElementById('wakeLockToggle');
+        if (toggle.checked) {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Screen Wake Lock is active.');
+                } else {
+                    alert('Trình duyệt của bạn không hỗ trợ Wake Lock API.');
+                    toggle.checked = false;
+                }
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+                toggle.checked = false;
+            }
+        } else {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                    console.log('Screen Wake Lock released.');
+                });
+            }
+        }
+    }
+
+    // Tự động khôi phục Wake Lock nếu tab được bật lại
+    document.addEventListener('visibilitychange', async () => {
+        const toggle = document.getElementById('wakeLockToggle');
+        if (wakeLock !== null && document.visibilityState === 'visible' && toggle.checked) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    });
+
+    // --- LOGIC TOGGLE SIDEBARS ---
+    function toggleSidebars() {
+        document.body.classList.toggle('sidebars-hidden');
+        setTimeout(centerActiveSentence, 350);
+    }
+
+    let sentences = []; let currentIdx = -1; let fontSize = 16; let contentWidth = 1000;
+    let startTime = Date.now(); const synth = window.speechSynthesis; const { pinyin } = pinyinPro;
+
+    function blurFocus(e) { if(e) e.blur(); }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('btn-tab-'+t).classList.add('active');
+        document.getElementById('tab-'+t).classList.add('active');
+    }
+
+    function changeTheme(t) { 
+        document.body.className = t; 
+        document.getElementById('themeSelect').value = t;
+        if (currentIdx !== -1) updateSidebarRight(currentIdx); 
+    }
+    
+    function cycleTheme() {
+        const themes = ['theme-1', 'theme-2', 'theme-3', 'theme-4', 'theme-5'];
+        let current = document.body.className.replace('sidebars-hidden', '').trim() || 'theme-3';
+        let nextIdx = (themes.indexOf(current) + 1) % themes.length;
+        changeTheme(themes[nextIdx]);
+    }
+
+    function changeFontSize(d) { fontSize += d; document.documentElement.style.setProperty('--font-size', fontSize+'px'); }
+    function changeWidth(d) { contentWidth += d; document.documentElement.style.setProperty('--content-max-w', contentWidth+'px'); }
+
+    function updateTimer() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const secs = (elapsed % 60).toString().padStart(2, '0');
+        document.getElementById('appTimer').innerText = `${mins}:${secs}`;
+    }
+    setInterval(updateTimer, 1000);
+
+    async function googleTranslate(text, to) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${to}&dt=t&dt=rm&q=${encodeURIComponent(text)}`);
+            return await res.json();
+        } catch (e) { return null; }
+    }
+
+    function initSentences(isRestore = false) {
+        const txt = document.getElementById('input').value; if (!txt.trim()) return;
+        localStorage.setItem('icarus_last_session', txt);
+        if (!isRestore) saveHistory(txt);
+        const raw = txt.split(/\n+/).flatMap(p => p.match(/[^.!?]+[.!?]*["'”’)]*/g) || [p]);
+        sentences = raw.filter(s => s.trim()).map(s => ({ original: s.trim(), translations: {}, pinyin: "", enPinyin: "" }));
+        renderOutput(); document.getElementById('totalPage').innerText = "/ " + sentences.length;
+        const savedIdx = parseInt(localStorage.getItem('icarus_last_idx') || "0");
+        setTimeout(() => select(isRestore ? savedIdx : 0, true), 100);
+        document.getElementById('input').blur();
+    }
+
+    function renderOutput() {
+        const out = document.getElementById('output'); out.innerHTML = '';
+        sentences.forEach((s, i) => {
+            const div = document.createElement('div'); div.className = 'sentence-box'; div.id = `s-${i}`;
+            div.innerHTML = `<span class="text-orig">${i+1}. ${s.original}</span><div class="trans-group" id="tg-${i}"></div>`;
+            div.onclick = () => select(i, true); out.appendChild(div);
+        });
+    }
+
+    function centerActiveSentence() {
+        const el = document.getElementById(`s-${currentIdx}`);
+        const container = document.getElementById('output');
+        if (el && container) {
+            const elTop = el.offsetTop;
+            const elHeight = el.offsetHeight;
+            const containerHeight = container.clientHeight;
+            const targetScroll = elTop - (containerHeight / 2) + (elHeight / 2);
+            container.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        }
+    }
+
+    async function select(i, forceTrans = false) {
+        if (i < 0 || i >= sentences.length) return;
+        currentIdx = i; 
+        localStorage.setItem('icarus_last_idx', i);
+        document.getElementById('currPage').value = i + 1;
+        document.querySelectorAll('.sentence-box').forEach(b => b.classList.remove('active'));
+        const el = document.getElementById(`s-${i}`);
+        if (el) { el.classList.add('active'); centerActiveSentence(); }
+        if (forceTrans) {
+            await translateSentence(i);
+            if (document.getElementById('preTranslate').checked) {
+                for(let j=1; j<=3; j++) if(i+j < sentences.length) translateSentence(i+j);
+            }
+        }
+        updateSidebarRight(i);
+        if (document.getElementById('autoSpeak').checked) replayCurrent();
+    }
+
+    async function translateSentence(idx) {
+        const targets = Array.from(document.querySelectorAll('.target-lang:checked')).map(cb => cb.value);
+        const group = document.getElementById(`tg-${idx}`);
+        for (let lang of targets) {
+            if (!sentences[idx].translations[lang]) {
+                const data = await googleTranslate(sentences[idx].original, lang);
+                if (data) {
+                    const res = data[0].map(item => item[0]).join('');
+                    if (sentences[idx].translations[lang] === res) continue; 
+                    sentences[idx].translations[lang] = res;
+                    let pinyinHtml = '';
+                    if (lang === 'zh-CN') { 
+                        sentences[idx].pinyin = pinyin(res); 
+                        pinyinHtml = `<div class="pinyin">${sentences[idx].pinyin}</div>`; 
+                    }
+                    if (group) {
+                        const line = document.createElement('div');
+                        line.className = `trans-line lang-${lang.split('-')[0]}`;
+                        line.innerHTML = `<div style="flex:1;"><b>${lang.split('-')[0]}</b> ${res} ${pinyinHtml}</div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('${res.replace(/'/g, "\\'")}', '${lang}')">🔊</button>`;
+                        group.appendChild(line);
+                        if (idx === currentIdx) { requestAnimationFrame(centerActiveSentence); }
+                    }
+                }
+            }
+        }
+    }
+
+    function updateSidebarRight(i) {
+        if (i === -1) return;
+        document.getElementById('sidePlaceholder').style.display = 'none';
+        document.getElementById('sideContent').style.display = 'block';
+        document.getElementById('sideOrig').innerText = sentences[i].original;
+        let html = ''; let zhText = ''; let ruText = '';
+        for (let [lang, text] of Object.entries(sentences[i].translations)) {
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span class="preview-label" style="margin:0">${lang}</span><button class="btn-mini-speak" onclick="speak('${text.replace(/'/g, "\\'")}', '${lang}')">🔊</button></div><div class="preview-text">${text}</div>`;
+            if (lang === 'zh-CN') { zhText = text; if (sentences[i].pinyin) html += `<div class="pinyin">${sentences[i].pinyin}</div>`; }
+            if (lang === 'ru') { ruText = text; }
+        }
+        document.getElementById('sideTrans').innerHTML = html;
+        const showZh = document.getElementById('showZhVocab').checked;
+        const showRu = document.getElementById('showRuVocab').checked;
+        if ((showZh && zhText) || (showRu && ruText)) {
+            document.getElementById('vocabAnalysis').style.display = 'block';
+            let combinedText = (showZh ? zhText : "") + (showRu ? ruText : "");
+            breakdownWords(combinedText, showZh, showRu);
+        } else { document.getElementById('vocabAnalysis').style.display = 'none'; }
+    }
+
+    async function breakdownWords(text, isZh, isRu) {
+        const container = document.getElementById('wordGrid'); container.innerHTML = '';
+        let words = [];
+        if (isZh) words = words.concat(text.match(/[\u4e00-\u9fa5]/g) || []);
+        if (isRu) words = words.concat(text.match(/[а-яА-ЯёЁ]+/g) || []);
+        const uniqueWords = [...new Set(words)];
+        for (const w of uniqueWords) {
+            const card = document.createElement('div'); card.className = 'word-card';
+            let isCyrillic = /[а-яА-ЯёЁ]/.test(w);
+            card.innerHTML = `<span class="ana-word">${w}</span><span class="ana-pinyin" id="p-${w}">...</span><div class="ana-meaning" id="m-${w}">...</div>`;
+            card.onclick = () => speak(w, isCyrillic ? 'ru' : 'zh-CN');
+            container.appendChild(card);
+            fetchVocabInfo(w, isCyrillic ? 'ru' : 'zh-CN');
+        }
+    }
+
+    async function fetchVocabInfo(w, lang) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${lang}&tl=en&dt=t&dt=rm&q=${encodeURIComponent(w)}`);
+            const data = await res.json();
+            document.getElementById(`p-${w}`).innerText = data[0][1] ? (data[0][1][3] || data[0][1][2] || "") : '';
+            document.getElementById(`m-${w}`).innerText = data[0][0][0].toLowerCase();
+        } catch (e) { }
+    }
+
+    function speak(t, l) {
+        synth.cancel(); 
+        const u = new SpeechSynthesisUtterance(t);
+        
+        // Yêu cầu 2: Lấy tốc độ đọc từ select box
+        const speed = parseFloat(document.getElementById('speechRate').value) || 1;
+        u.rate = speed;
+
+        if (l === 'vi') {
+            const v = synth.getVoices().find(x => x.name === document.getElementById('viVoice').value);
+            if (v) u.voice = v;
+        } else { u.lang = { 'en': 'en-US', 'zh-CN': 'zh-CN', 'ru': 'ru-RU' }[l] || 'en-US'; }
+        u.onend = () => { if (document.getElementById('autoNext').checked) nav(1); }; 
+        synth.speak(u);
+    }
+
+    function replayCurrent() {
+        if (currentIdx === -1) return;
+        const target = document.getElementById('voiceTarget').value;
+        const txt = (target === 'orig') ? sentences[currentIdx].original : (sentences[currentIdx].translations[target] || sentences[currentIdx].original);
+        speak(txt, target === 'orig' ? 'en' : target);
+    }
+
+    function nav(s) { select(currentIdx + s, true); }
+    function jumpToPage(v) { select(parseInt(v) - 1, true); }
+    function togglePlayPause() { synth.paused ? synth.resume() : synth.pause(); }
+
+    function saveHistory(text) {
+        let history = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        history = history.filter(h => h.full !== text);
+        history.unshift({ id: Date.now(), text: text.substring(0, 40) + '...', full: text, date: new Date().toLocaleString() });
+        localStorage.setItem('icarus_hist', JSON.stringify(history.slice(0, 20))); loadHistory();
+    }
+    function loadHistory() {
+        const container = document.getElementById('historyList');
+        const history = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        container.innerHTML = history.map(h => `<div class="history-item" onclick="restore('${h.id}')"><span><b>${h.text}</b><br><small>${h.date}</small></span><span style="color:#ef4444;" onclick="deleteHistory('${h.id}', event)">×</span></div>`).join('');
+    }
+    function restore(id) {
+        const h = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        const item = h.find(x => x.id == id);
+        if (item) { document.getElementById('input').value = item.full; initSentences(true); }
+    }
+    function deleteHistory(id, e) { e.stopPropagation(); let h = JSON.parse(localStorage.getItem('icarus_hist') || '[]'); h = h.filter(x => x.id != id); localStorage.setItem('icarus_hist', JSON.stringify(h)); loadHistory(); }
+    function clearAllHistory() { if(confirm("Xóa sạch?")) { localStorage.setItem('icarus_hist', '[]'); loadHistory(); } }
+    function saveNote() { localStorage.setItem('icarus_note', document.getElementById('noteArea').value); }
+    function loadNote() { document.getElementById('noteArea').value = localStorage.getItem('icarus_note') || ""; }
+    function insertTimestamp() { const area = document.getElementById('noteArea'); area.setRangeText(`[${new Date().toLocaleString()}] `, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function insertCurrentText() { if (currentIdx === -1) return; const area = document.getElementById('noteArea'); area.setRangeText(`\n"${sentences[currentIdx].original}"\n`, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function insertBookmark() { if (currentIdx === -1) return; const area = document.getElementById('noteArea'); const marker = `\n--- ĐÃ ĐỌC TỚI CÂU ${currentIdx + 1} ---\n`; area.setRangeText(marker, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function exportNotes() { const blob = new Blob([document.getElementById('noteArea').value], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Icarus_Notes.txt'; a.click(); }
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function toggleModal(id) { const m = document.getElementById(id); if (m.style.display === 'block') closeModal(id); else openModal(id); }
+    function closeByOverlay(e, id) { if(e.target.id === id) closeModal(id); }
+
+    document.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { if (e.key === 'Escape') { closeModal('noteModal'); closeModal('updateModal'); } return; }
+        if (e.key === 'ArrowRight') nav(1);
+        else if (e.key === 'ArrowLeft') nav(-1);
+        else if (key === 'n') toggleModal('noteModal');
+        else if (key === 'u') toggleModal('updateModal');
+        else if (key === 'm') cycleTheme();
+        else if (key === 'k') togglePlayPause();
+        else if (key === '=') changeFontSize(1);
+        else if (key === '-') changeFontSize(-1);
+        else if (key === '.') changeWidth(50);
+        else if (key === ',') changeWidth(-50);
+        else if (e.code === 'Space') { e.preventDefault(); replayCurrent(); }
+        else if (e.key === 'Escape') { closeModal('noteModal'); closeModal('updateModal'); }
+    });
+
+    window.onload = () => {
+        const vs = synth.getVoices(); document.getElementById('viVoice').innerHTML = vs.filter(v => v.lang.includes('vi')).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        loadHistory(); loadNote();
+        const lastSession = localStorage.getItem('icarus_last_session');
+        if (lastSession) { document.getElementById('input').value = lastSession; initSentences(true); }
+    };
+    speechSynthesis.onvoiceschanged = () => {
+        const vs = synth.getVoices(); document.getElementById('viVoice').innerHTML = vs.filter(v => v.lang.includes('vi')).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+    };
+</script>
+
+</body></html>
