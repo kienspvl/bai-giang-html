@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đo Tốc Độ Chuyển Động</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .card {
+            background: #fff;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .card h3 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .card .value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2980b9;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #fff;
+        }
+        #startBtn { background-color: #27ae60; }
+        #stopBtn { background-color: #c0392b; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        .chart-container {
+            position: relative;
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            height: 250px;
+        }
+        #status {
+            text-align: center;
+            font-style: italic;
+            color: #e67e22;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>GPS Speedometer</h2>
+    <div id="status">Nhấn "Bắt đầu" để đo chuyển động</div>
+
+    <div class="dashboard">
+        <div class="card">
+            <h3>Tốc độ tức thời</h3>
+            <div class="value"><span id="currentSpeed">0.0</span> <span style="font-size:12px">km/h</span></div>
+        </div>
+        <div class="card">
+            <h3>Tốc độ trung bình</h3>
+            <div class="value"><span id="avgSpeed">0.0</span> <span style="font-size:12px">km/h</span></div>
+        </div>
+        <div class="card" style="grid-column: span 2;">
+            <h3>Quãng đường đi được</h3>
+            <div class="value"><span id="distance">0.00</span> <span style="font-size:12px">mét</span></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="startBtn" onclick="startTracking()">Bắt đầu</button>
+        <button id="stopBtn" onclick="stopTracking()" disabled>Dừng lại</button>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="speedChart"></canvas>
+    </div>
+
+    <script>
+        let watchId = null;
+        let lastPosition = null;
+        let totalDistance = 0;
+        let startTime = null;
+        let speedChart = null;
+
+        // Khởi tạo biểu đồ Chart.js
+        function initChart() {
+            const ctx = document.getElementById('speedChart').getContext('2d');
+            speedChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [], // Thời gian (giây)
+                    datasets: [{
+                        label: 'Vận tốc (km/h)',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Thời gian (s)' } },
+                        y: { title: { display: true, text: 'km/h' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Tính khoảng cách giữa 2 tọa độ GPS (Công thức Haversine)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Bán kính Trái Đất tính bằng mét
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            return R * c; // Khoảng cách tính bằng mét
+        }
+
+        function startTracking() {
+            if (!navigator.geolocation) {
+                alert("Trình duyệt của bạn không hỗ trợ định vị GPS!");
+                return;
+            }
+
+            // Reset dữ liệu cũ
+            totalDistance = 0;
+            lastPosition = null;
+            startTime = Date.now();
+            speedChart.data.labels = [];
+            speedChart.data.datasets[0].data = [];
+            speedChart.update();
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('status').innerText = "Đang kết nối GPS...";
+
+            // Cấu hình theo dõi GPS độ chính xác cao
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            watchId = navigator.geolocation.watchPosition(updateMetrics, handleError, options);
+        }
+
+        function updateMetrics(position) {
+            document.getElementById('status').innerText = "Đang theo dõi chuyển động...";
+            
+            const currentLat = position.coords.latitude;
+            const currentLon = position.coords.longitude;
+            
+            // GPS trên điện thoại đôi khi trả về tốc độ (m/s), nếu không có ta tự tính
+            let currentSpeedKmh = 0;
+            if (position.coords.speed !== null && position.coords.speed >= 0) {
+                currentSpeedKmh = position.coords.speed * 3.6; // Đổi m/s sang km/h
+            }
+
+            if (lastPosition) {
+                // Tính khoảng cách di chuyển từ điểm trước đến điểm hiện tại
+                const dist = calculateDistance(lastPosition.lat, lastPosition.lon, currentLat, currentLon);
+                
+                // Lọc nhiễu GPS nhỏ hơn 1 mét tránh nhảy cóc khi đứng yên
+                if (dist > 1.0) {
+                    totalDistance += dist;
+                }
+
+                // Nếu GPS không cung cấp sẵn tốc độ, ta tính thủ công qua quãng đường và thời gian
+                if (position.coords.speed === null || position.coords.speed < 0) {
+                    const timeElapsed = (position.timestamp - lastPosition.timestamp) / 1000; // giây
+                    if (timeElapsed > 0) {
+                        currentSpeedKmh = (dist / timeElapsed) * 3.6;
+                    }
+                }
+            }
+
+            lastPosition = {
+                lat: currentLat,
+                lon: currentLon,
+                timestamp: position.timestamp || Date.now()
+            };
+
+            // Tính tốc độ trung bình toàn hành trình
+            const totalTimeHours = (Date.now() - startTime) / 3600000; // giờ
+            const avgSpeedKmh = totalTimeHours > 0 ? (totalDistance / 1000) / totalTimeHours : 0;
+
+            // Hiển thị ra màn hình
+            document.getElementById('currentSpeed').innerText = currentSpeedKmh.toFixed(1);
+            document.getElementById('avgSpeed').innerText = avgSpeedKmh.toFixed(1);
+            document.getElementById('distance').innerText = totalDistance >= 1000 
+                ? (totalDistance / 1000).toFixed(2) + " km" 
+                : totalDistance.toFixed(1) + " mét";
+
+            // Cập nhật dữ liệu vào đồ thị
+            const elapsedTimeSec = Math.floor((Date.now() - startTime) / 1000);
+            speedChart.data.labels.push(elapsedTimeSec);
+            speedChart.data.datasets[0].data.push(currentSpeedKmh.toFixed(1));
+            
+            // Giới hạn hiển thị tối đa 30 điểm gần nhất trên đồ thị cho gọn
+            if (speedChart.data.labels.length > 30) {
+                speedChart.data.labels.shift();
+                speedChart.data.datasets[0].data.shift();
+            }
+            speedChart.update();
+        }
+
+        function handleError(error) {
+            let msg = "Lỗi GPS: ";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    msg += "Bạn đã từ chối quyền truy cập vị trí.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    msg += "Không tìm thấy thông tin vị trí.";
+                    break;
+                case error.TIMEOUT:
+                    msg += "Hết thời gian chờ tín hiệu GPS.";
+                    break;
+            }
+            document.getElementById('status').innerText = msg;
+        }
+
+        function stopTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('status').innerText = "Đã dừng đo.";
+        }
+
+        // Chạy khởi tạo đồ thị khi tải trang
+        window.onload = initChart;
+    </script>
+</body>
+</html>
