@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro Trợ Giảng Trực Tuyến</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 350px;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .btn.stop {
+            background-color: #dc3545;
+        }
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #666;
+        }
+        .volume-control {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .volume-control label {
+            font-size: 14px;
+            color: #444;
+        }
+        .volume-control input {
+            width: 100%;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🎤 Micro Trợ Giảng</h2>
+        
+        <button id="toggleBtn" class="btn" onclick="toggleMic()">Bật Micro</button>
+        <div id="status" class="status">Trạng thái: Đang tắt</div>
+
+        <div class="volume-control">
+            <label for="volumeRange">Âm lượng phát ra loa:</label>
+            <input type="range" id="volumeRange" min="0" max="2" step="0.1" value="1" onchange="changeVolume(this.value)">
+        </div>
+    </div>
+
+    <script>
+        let audioContext;
+        let mediaStream;
+        let sourceNode;
+        let gainNode;
+        let isRunning = false;
+
+        async function toggleMic() {
+            const btn = document.getElementById('toggleBtn');
+            const status = document.getElementById('status');
+
+            if (!isRunning) {
+                try {
+                    // Yêu cầu quyền truy cập micro
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true, // Lọc tiếng vọng
+                            noiseSuppression: true, // Lọc tiếng ồn
+                            autoGainControl: false  // Tắt tự động tăng âm lượng để tránh méo tiếng
+                        } 
+                    });
+
+                    // Khởi tạo AudioContext
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    sourceNode = audioContext.createMediaStreamSource(mediaStream);
+                    
+                    // Tạo GainNode để điều chỉnh âm lượng
+                    gainNode = audioContext.createGain();
+                    gainNode.gain.value = document.getElementById('volumeRange').value;
+
+                    // Kết nối: Micro -> Gain (Âm lượng) -> Loa ngoài
+                    sourceNode.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    isRunning = true;
+                    btn.textContent = "Tắt Micro";
+                    btn.classList.add("stop");
+                    status.textContent = "Trạng thái: Đang hoạt động 🟢";
+                    status.style.color = "#28a745";
+
+                } catch (error) {
+                    alert("Không thể truy cập Micro. Hãy kiểm tra lại quyền cấp phép trên trình duyệt!");
+                    console.error(error);
+                }
+            } else {
+                // Dừng hoạt động
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                }
+                if (audioContext) {
+                    audioContext.close();
+                }
+
+                isRunning = false;
+                btn.textContent = "Bật Micro";
+                btn.classList.remove("stop");
+                status.textContent = "Trạng thái: Đã tắt 🔴";
+                status.style.color = "#dc3545";
+            }
+        }
+
+        function changeVolume(value) {
+            if (gainNode) {
+                gainNode.gain.value = value;
+            }
+        }
+    </script>
+
+</body>
+</html>
