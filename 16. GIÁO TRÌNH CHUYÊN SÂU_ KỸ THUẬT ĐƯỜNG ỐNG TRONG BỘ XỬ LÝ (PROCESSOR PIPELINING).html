@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Đọc Bài Giảng Markdown &amp; Word Chuyên Nghiệp v3.6</title>
+    <!-- MarkedJS: Chuyển Markdown sang HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Mammoth.js: Đọc file .docx Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js: Chuyển HTML từ Word sang Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    
+    <!-- KaTeX: Render Toán LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- MathJax v3 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            }
+        };
+    </script>
+    <script id="MathJax-script" async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #020617;
+            --card-bg: #1e293b;
+            --text-color: #94a3b8;
+            --text-active: #f8fafc;
+            --border-color: #334155;
+            --accent-color: #38bdf8;
+            --highlight-bg: rgba(56, 189, 248, 0.12);
+            --sidebar-width: 280px;
+            --font-size: 20px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #475569;
+            --text-active: #0f172a;
+            --border-color: #cbd5e1;
+            --accent-color: #0284c7;
+            --highlight-bg: rgba(2, 132, 199, 0.12);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 8px 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .controls-group { 
+            display: flex; 
+            gap: 6px; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+
+        button, label.btn {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover, label.btn:hover { border-color: var(--accent-color); }
+        button.active { background-color: var(--accent-color); color: #fff; }
+
+        input[type="text"], input[type="number"], select {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 8px; border-radius: 6px; font-size: 13px;
+        }
+
+        .toggle-switch-wrapper { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-active); }
+        .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .toggle-switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        #selection-popup {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-width: 380px;
+        }
+        #selection-popup button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #selection-popup input[type="text"] {
+            width: 150px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 5;
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        #sidebar.open { margin-left: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; font-weight: bold; color: var(--text-active);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item {
+            padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            cursor: pointer; font-size: 14px; color: var(--text-color);
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-item:hover { background-color: var(--card-bg); color: var(--text-active); }
+        .toc-item.active-toc {
+            background-color: var(--highlight-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            border-left: 3px solid var(--accent-color);
+        }
+        .toc-item.level-1 { font-weight: bold; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; }
+        .toc-item.level-3 { padding-left: 30px; font-style: italic; }
+        .toc-item.level-4 { padding-left: 40px; opacity: 0.8; }
+
+        main {
+            flex: 1; overflow-y: auto;
+            padding: 30px 20px 150px 20px;
+            scroll-behavior: smooth;
+        }
+
+        #lecture-paper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            font-size: var(--font-size); line-height: 1.8;
+            transition: font-size 0.2s ease, background-color 0.3s;
+        }
+
+        #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4 { 
+            color: var(--accent-color); 
+            margin-top: 1.2em; margin-bottom: 0.5em; 
+            line-height: 1.4;
+        }
+        #lecture-paper p { margin: 0.8em 0; color: inherit; }
+        #lecture-paper ul, #lecture-paper ol { padding-left: 28px; margin: 0.8em 0; }
+        #lecture-paper li { margin-bottom: 6px; }
+        #lecture-paper strong { color: var(--accent-color); font-weight: 700; }
+        
+        #lecture-paper blockquote {
+            margin: 1em 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        #lecture-paper blockquote p { margin: 0.4em 0; }
+
+        #lecture-paper hr {
+            border: none;
+            border-top: 2px dashed var(--border-color);
+            margin: 2em 0;
+        }
+
+        #lecture-paper img {
+            max-width: 100%; height: auto; max-height: 400px;
+            object-fit: contain; border-radius: 8px;
+            margin: 12px auto; display: block; cursor: zoom-in;
+            border: 1px solid var(--border-color);
+        }
+
+        #lecture-paper table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        #lecture-paper th, #lecture-paper td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+        #lecture-paper th { background-color: var(--highlight-bg); }
+
+        .markdown-unit {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            border-radius: 6px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .markdown-unit.revealed {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+
+        li.markdown-unit.revealed, li.markdown-unit.active {
+            display: list-item !important;
+        }
+
+        .markdown-unit.active {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        hr.markdown-unit.active {
+            border-top-color: var(--accent-color);
+            box-shadow: none;
+            background-color: transparent;
+        }
+
+        body.mode-expand .markdown-unit {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+        body.mode-expand li.markdown-unit {
+            display: list-item !important;
+        }
+        body.mode-expand .markdown-unit.active {
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        footer {
+            background-color: var(--header-bg); 
+            padding: 10px 20px; display: flex; 
+            justify-content: center; align-items: center;
+            position: relative; border-top: 1px solid var(--border-color); 
+            font-size: 14px; color: var(--text-color); z-index: 10;
+        }
+
+        .author-info { font-weight: 600; color: var(--accent-color); text-align: center; }
+        #progress-counter { 
+            position: absolute; right: 20px; font-size: 13px; 
+            display: flex; align-items: center; gap: 4px;
+        }
+        #page-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); padding: 24px; border-radius: 12px;
+            width: 85%; max-width: 800px; display: flex; flex-direction: column; gap: 15px;
+            border: 1px solid var(--border-color); max-height: 90vh;
+        }
+
+        textarea {
+            width: 100%; height: 350px; background: var(--bg-color);
+            color: var(--text-active); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 8px; font-family: monospace; resize: vertical;
+        }
+
+        input[type="file"] { display: none; }
+
+        .history-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-color); padding: 10px 14px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .changelog-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .changelog-item:last-child { border-bottom: none; }
+        .changelog-version { font-weight: bold; color: var(--accent-color); font-size: 16px; }
+        .changelog-date { font-size: 12px; color: var(--text-color); margin-left: 8px; }
+        .changelog-list { margin: 6px 0 0 20px; padding: 0; font-size: 14px; line-height: 1.6; }
+
+        #image-lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); z-index: 200;
+            justify-content: center; align-items: center; user-select: none;
+        }
+
+        #image-lightbox img { width: 95vw; height: 95vh; object-fit: contain; border-radius: 4px; }
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15); color: #fff;
+            border: none; padding: 16px 20px; font-size: 24px; cursor: pointer;
+            border-radius: 50%; transition: background 0.2s; z-index: 210;
+        }
+        .lightbox-nav:hover { background: var(--accent-color); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-size: 14px;
+        }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast {
+            background-color: var(--card-bg); color: var(--text-active); border: 1px solid var(--accent-color);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        body.slideshow-mode header, body.slideshow-mode footer, body.slideshow-mode #sidebar { display: none !important; }
+        body.slideshow-mode main { padding: 40px 20px; }
+        #exit-slideshow-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 99;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        #exit-slideshow-btn:hover { background: var(--accent-color); color: #fff; }
+        body.slideshow-mode #exit-slideshow-btn { display: block; }
+    </style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+</style></head>
+<body class="mode-expand">
+
+    <header>
+        <div class="controls-group">
+            <button onclick="toggleSidebar()" title="Ẩn/Hiện Mục lục">☰</button>
+            <button onclick="openImportModal()">📥 Import</button>
+            <button onclick="openHistoryModal()">📜 History</button>
+            <button onclick="openSaveModal()">💾 Save as</button>
+            <button onclick="openUpdateModal()" title="Xem lịch sử cập nhật (Phím tắt U)">🚀 U</button>
+            <button onclick="toggleSlideshow()" style="background-color: var(--accent-color); color: #fff;">📺 Slide</button>
+            
+            <div class="toggle-switch-wrapper" style="margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                <span title="Chế độ Mở Rộng / Hiện tất cả">📖 Expand</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="expand-toggle" checked="" onchange="toggleExpandMode(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- CẦN GẠT AUTOPLAY DẠNG SWITCH -->
+            <div class="toggle-switch-wrapper" style="margin-left: 6px;">
+                <span title="Tự động đọc đoạn tiếp theo">▶️ Autoplay</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoplay-toggle" onchange="toggleAutoplay(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 4px;">
+                <span>🌙</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-toggle" checked="" onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+                <span>☀️</span>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button id="btn-mute" onclick="toggleMute()" title="Âm thanh">🔊</button>
+            <select id="rate-select" onchange="updateRate(this.value)">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="controls-group">
+            <input type="text" id="prompt-topic" placeholder="Chủ đề..." style="width: 110px;">
+            <button id="btn-copy-prompt" onclick="copyPrompt()">📋 Copy Prompt</button>
+        </div>
+    </header>
+
+    <!-- POPUP KHI BÔI ĐEN CHỮ -->
+    <div id="selection-popup" style="display: none; top: 338px; left: 205px;">
+        <button onclick="searchImageSelected()" title="Tìm kiếm hình ảnh">🔍 Ảnh</button>
+        <button onclick="searchGifSelected()" title="Tìm kiếm GIF">🎞️ GIF</button>
+        <button onclick="searchGoogleSelected()" title="Tìm kiếm trên Google">🌐 Google</button>
+        <input type="text" id="popup-img-url" placeholder="Nhập/Dán URL ảnh..." oninput="autoInsertImageFromPopup(this)" onchange="autoInsertImageFromPopup(this)">
+    </div>
+
+    <div class="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <span>📑 Mục Lục</span>
+                <button onclick="toggleSidebar()" style="padding: 2px 6px; font-size: 12px;">✕</button>
+            </div>
+            <div class="sidebar-content">
+                <ul id="toc-container" class="toc-list"><li class="toc-item level-1 active-toc" data-unit-index="0">GIÁO TRÌNH CHUYÊN SÂU: KỸ THUẬT ĐƯỜNG ỐNG TRONG BỘ XỬ LÝ (PROCESSOR PIPELINING)</li><li class="toc-item level-2" data-unit-index="2">CHƯƠNG 1: TỔNG QUAN VỀ HIỆU SUẤT VÀ VẤN ĐỀ XUNG ĐỘT (HAZARDS)</li><li class="toc-item level-3" data-unit-index="3">Mục 1.1: Đánh giá Hiệu suất Bộ xử lý</li><li class="toc-item level-4" data-unit-index="11">So sánh hai trường phái thiết kế bộ xử lý:</li><li class="toc-item level-3" data-unit-index="20">Mục 1.2: Bản chất và Phân loại Xung đột (Hazards)</li><li class="toc-item level-4" data-unit-index="21">1.2.1: Khái niệm Xung đột</li><li class="toc-item level-4" data-unit-index="24">1.2.2: Phân loại Xung đột</li><li class="toc-item level-2" data-unit-index="30">CHƯƠNG 2: KIẾN TRÚC ĐƯỜNG ỐNG 5 TẦNG CỔ ĐIỂN VÀ CẢI TIẾN BỘ NHỚ</li><li class="toc-item level-3" data-unit-index="31">Mục 2.1: Bộ xử lý Đường ống RISC 5 Tầng Cổ điển (Classic 5-Stage RISC Pipeline)</li><li class="toc-item level-4" data-unit-index="32">2.1.1: Cấu trúc các tầng đường ống</li><li class="toc-item level-4" data-unit-index="41">2.1.2: Sơ đồ biểu diễn Đường ống (Pipeline Diagram)</li><li class="toc-item level-3" data-unit-index="47">Mục 2.2: So sánh Cơ chế Đọc Bộ nhớ: Combinational Reads vs Clocked Reads</li><li class="toc-item level-4" data-unit-index="49">2.2.1: Cơ chế Đọc Tổ hợp (Combinational Reads)</li><li class="toc-item level-4" data-unit-index="53">2.2.2: Cơ chế Đọc theo Xung nhịp (Clocked Reads)</li><li class="toc-item level-4" data-unit-index="57">2.2.3: Lý do chuyển đổi sang Bộ nhớ Đọc theo Xung nhịp</li><li class="toc-item level-2" data-unit-index="62">CHƯƠNG 3: CÁC CHIẾN LƯỢC GIẢI QUYẾT XUNG ĐỘT DỮ LIỆU (DATA HAZARDS)</li><li class="toc-item level-3" data-unit-index="68">Mục 3.1: Chiến lược Trì hoãn (Stalling)</li><li class="toc-item level-4" data-unit-index="69">3.1.1: Nguyên lý Hoạt động</li><li class="toc-item level-4" data-unit-index="71">3.1.2: Ví dụ Thực tế về Xung đột Dữ liệu trên Tập thanh ghi</li><li class="toc-item level-4" data-unit-index="81">3.1.3: Hiện thực hóa Phần cứng cho Cơ chế Trì hoãn</li><li class="toc-item level-3" data-unit-index="93">Mục 3.2: Chiến lược Chuyển tiếp / Bỏ qua (Bypassing / Forwarding)</li><li class="toc-item level-4" data-unit-index="94">3.2.1: Nguyên lý Hoạt động</li><li class="toc-item level-4" data-unit-index="96">3.2.2: Hiện thực hóa Phần cứng cho Cơ chế Chuyển tiếp</li><li class="toc-item level-4" data-unit-index="109">3.2.3: Đánh giá và Đánh đổi trong Thiết kế Chuyển tiếp</li><li class="toc-item level-3" data-unit-index="113">Mục 3.3: Xung đột Dữ liệu đặc biệt: Load-to-Use Hazard</li><li class="toc-item level-4" data-unit-index="114">3.3.1: Bản chất vấn đề</li><li class="toc-item level-4" data-unit-index="116">3.3.2: Cơ chế giải quyết bằng phối hợp Stall và Bypass</li><li class="toc-item level-4" data-unit-index="124">3.3.3: Vai trò của Trình biên dịch trong việc Giảm thiểu Trì hoãn (Instruction Scheduling)</li><li class="toc-item level-2" data-unit-index="128">CHƯƠNG 4: CÁC CHIẾN LƯỢC GIẢI QUYẾT XUNG ĐỘT ĐIỀU KHIỂN (CONTROL HAZARDS)</li><li class="toc-item level-3" data-unit-index="130">Mục 4.1: Bản chất của Xung đột Điều khiển</li><li class="toc-item level-4" data-unit-index="134">Phân tích thời điểm sẵn có của thông tin theo loại chỉ thị:</li><li class="toc-item level-3" data-unit-index="140">Mục 4.2: Giải quyết Xung đột Điều khiển bằng Trì hoãn (Stalling)</li><li class="toc-item level-3" data-unit-index="155">Mục 4.3: Giải quyết Xung đột Điều khiển bằng Đầu cơ / Dự đoán (Speculation)</li><li class="toc-item level-4" data-unit-index="156">4.3.1: Nguyên lý Hoạt động</li><li class="toc-item level-4" data-unit-index="161">4.3.2: Trường hợp Dự đoán Đúng (Branch NOT Taken)</li><li class="toc-item level-4" data-unit-index="171">4.3.3: Trường hợp Dự đoán Sai và Cơ chế Hủy bỏ (Annulment / Flushing)</li><li class="toc-item level-2" data-unit-index="184">CHƯƠNG 5: SỰ TƯƠNG TÁC GIỮA TRÌ HOÃN VÀ DỰ ĐOÁN (INTERACTION BETWEEN STALLING AND SPECULATION)</li><li class="toc-item level-3" data-unit-index="186">Mục 5.1: Xung đột giữa Yêu cầu Hủy bỏ và Yêu cầu Trì hoãn</li><li class="toc-item level-2" data-unit-index="202">BẢNG TỔNG HỢP SO SÁNH CÁC CHIẾN LƯỢC GIẢI QUYẾT HAZARDS</li></ul>
+            </div>
+        </aside>
+
+        <button id="exit-slideshow-btn" onclick="toggleSlideshow()">✖ Thoát Slide Show (Esc)</button>
+
+        <main id="main-scroll">
+            <div id="lecture-paper">
+<div style="text-align: center; color: var(--text-color); margin-top: 50px;">
+<em>Nội dung bài giảng sẽ hiển thị tại đây.<br>Ấn <strong>Import</strong> để tải bài giảng hoặc chọn file Word (.docx).</em>
+</div>
+</div>
+        </main>
+    </div>
+
+    <footer>
+        <span class="author-info">Icarus - kienspvl@gmail.com - 097 463 8794</span>
+        <div id="progress-counter">
+            Mục: <input type="number" id="page-input" min="1" value="0" onkeydown="handlePageInputChange(event)" onblur="jumpToInputValue()" max="207"> / <span id="total-units-count">207</span>
+        </div>
+    </footer>
+
+    <div id="image-lightbox">
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image" onclick="closeLightbox()">
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div id="lightbox-counter" class="lightbox-counter">0 / 0</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="import-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập hoặc Chỉnh Sửa Bài Giảng</h3>
+            <textarea id="import-text" placeholder="Dán văn bản Markdown hoặc Import file Word vào đây..."></textarea>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <label class="btn">
+                        📄 Chọn File .txt / .md
+                        <input type="file" accept=".txt,.md" onchange="handleFileImport(event)">
+                    </label>
+                    <label class="btn" style="border-color: #22c55e;">
+                        📘 Import từ File Word (.docx)
+                        <input type="file" accept=".docx" onchange="handleWordImport(event)">
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="closeImportModal()">Hủy</button>
+                    <button onclick="processImport()" style="background-color: var(--accent-color); color: #fff;">Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SAVE AS HTML -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>💾 Lưu Bài Giảng Dưới Dạng HTML</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-color);">Nhập tên file HTML muốn lưu:</label>
+                <input type="text" id="save-filename-input" placeholder="Tên file..." onkeydown="if(event.key==='Enter') executeSaveAsHtml()">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeSaveModal()">Hủy</button>
+                <button onclick="executeSaveAsHtml()" style="background-color: var(--accent-color); color: #fff;">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Lịch Sử Bài Giảng Dưới LocalStorage</h3>
+                <button onclick="clearAllHistory()" style="background-color: #ef4444; color: #fff;">🗑️ Xóa Tất Cả</button>
+            </div>
+            <div id="history-container" class="history-list"></div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+    <div id="update-modal" class="modal">
+        <div class="modal-content">
+            <h3>🚀 Lịch Sử Cập Nhật Chương Trình (Changelog)</h3>
+            <div class="history-list" style="max-height: 400px; padding-right: 8px;">
+                <div class="changelog-item">
+                    <span class="changelog-version">v3.6</span><span class="changelog-date">(Cập nhật mới)</span>
+                    <ul class="changelog-list">
+                        <li><strong>Pagination linh hoạt:</strong> Cho phép gõ trực tiếp số câu/mục ở footer để nhảy nhanh.</li>
+                        <li><strong>Chọn câu bằng chuột:</strong> Click chuột vào bất kỳ đoạn văn bản nào để chọn trực tiếp.</li>
+                        <li><strong>Mặc định Expand &amp; Light Mode:</strong> Giao diện khởi động sáng sủa, hiển thị toàn bộ nội dung bài giảng.</li>
+                        <li><strong>Đồng bộ Mục Lục (TOC):</strong> Tự động highlight phần mục lục tương ứng với đoạn văn bản đang được chọn.</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeUpdateModal()">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <script id="embedded-data" type="application/json">"# GIÁO TRÌNH CHUYÊN SÂU: KỸ THUẬT ĐƯỜNG ỐNG TRONG BỘ XỬ LÝ (PROCESSOR PIPELINING)\n\n---\n\n## CHƯƠNG 1: TỔNG QUAN VỀ HIỆU SUẤT VÀ VẤN ĐỀ XUNG ĐỘT (HAZARDS)\n\n### Mục 1.1: Đánh giá Hiệu suất Bộ xử lý\nHiệu suất của một bộ xử lý được định nghĩa là nghịch đảo của thời gian thực thi một chương trình cụ thể:\n$\\text{Hiệu suất} = \\frac{1}{\\text{Thời gian thực thi}}$\n\nThời gian cần thiết để thực thi một chương trình được phân tích và xác định bởi tích của ba yếu tố độc lập:\n$\\text{Thời gian thực thi} = \\text{Số lượng chỉ thị} \\times \\text{CPI} \\times t_{\\text{CLK}}$\n\nTrong đó:\n*   **Số lượng chỉ thị (Instruction count):** Tổng số lượng lệnh mà chương trình thực thi. Yếu tố này chịu sự quyết định và kiểm soát của Kiến trúc tập lệnh (ISA) và trình biên dịch.\n*   **CPI (Cycles Per Instruction - Số chu kỳ trên mỗi chỉ thị):** Số chu kỳ xung nhịp trung bình để hoàn thành một chỉ thị.\n*   **\\\\(t_{\\text{CLK}}\\\\) (Clock cycle time - Thời gian một chu kỳ xung nhịp):** Khoảng thời gian của một chu kỳ xung nhịp (nghịch đảo của tần số xung nhịp \\\\(f_{\\text{CLK}}\\\\)).\n\nTrong thiết kế phần cứng bộ xử lý, hai yếu tố có thể can thiệp và tối ưu hóa trực tiếp là **CPI** và **Thời gian một chu kỳ xung nhịp (\\\\(t_{\\text{CLK}}\\\\))**.\n\n#### So sánh hai trường phái thiết kế bộ xử lý:\n1.  **Bộ xử lý đơn chu kỳ (Single-Cycle Processor):**\n    *   *Đặc điểm:* Thực thi hoàn thành toàn bộ một chỉ thị trong đúng một chu kỳ xung nhịp.\n    *   *Ưu điểm:* Chỉ số \\\\(CPI = 1\\\\) (tối ưu về mặt chu kỳ).\n    *   *Nhược điểm:* Thời gian chu kỳ \\\\(t_{\\text{CLK}}\\\\) cực kỳ dài do đường truyền logic tổ hợp (combinational path) phải kéo dài qua toàn bộ các bước thực thi của chỉ thị phức tạp nhất.\n2.  **Bộ xử lý đường ống (Pipelined Processor):**\n    *   *Đặc điểm:* Chia nhỏ quá trình thực thi của từng chỉ thị thành nhiều bước nhỏ độc lập (tầng đường ống - pipeline stages) và thực hiện chồng chéo (overlapping) các chỉ thị liên tiếp nhau trong cùng một khoảng thời gian.\n    *   *Ưu điểm:* Giảm thiểu tối đa thời gian một chu kỳ xung nhịp \\\\(t_{\\text{CLK}}\\\\) giúp đạt tần số hoạt động cực kỳ cao. Một bộ xử lý thực tế không sử dụng kỹ thuật đường ống chỉ có thể chạy ở mức tần số 100 MHz đến 200 MHz, trong khi một bộ xử lý tích hợp kỹ thuật đường ống sâu (khoảng 30 tầng) có thể vận hành ổn định ở tần số lên tới 4 GHz.\n\n---\n\n### Mục 1.2: Bản chất và Phân loại Xung đột (Hazards)\n\n#### 1.2.1: Khái niệm Xung đột\nTrong các đường ống số học thông thường (như mạch tính toán số học tổ hợp không có chu trình), dữ liệu luôn di chuyển theo một chiều tuyến tính. Tuy nhiên, trong một bộ xử lý, các chỉ thị được thực thi tuần tự và các chỉ thị phía trước thường sản sinh ra các kết quả (giá trị thanh ghi hoặc ô nhớ) làm đầu vào cho các chỉ thị phía sau. \n\nKhi thực hiện kỹ thuật đường ống, việc chồng chéo các chỉ thị chưa hoàn thành sẽ dẫn đến việc chỉ thị phía sau cố gắng truy cập hoặc sử dụng một giá trị chưa được cập nhật xong bởi chỉ thị phía trước. Sự không nhất quán này gọi là **Xung đột (Hazards)**. Nếu không có cơ chế can thiệp, xung đột sẽ phá vỡ tính đúng đắn của chương trình và vi phạm giao ước của Kiến trúc tập lệnh (ISA).\n\n#### 1.2.2: Phân loại Xung đột\nXung đột trong bộ xử lý được chia làm hai loại cơ bản:\n*   **Xung đột dữ liệu (Data Hazard):** Xảy ra khi một chỉ thị cần sử dụng một giá trị dữ liệu (như nội dung của một thanh ghi hoặc một ô nhớ) được tạo ra bởi một chỉ thị trước đó, nhưng giá trị này chưa được cập nhật chính thức vào vị trí lưu trữ mà chỉ thị sau truy cập.\n*   **Xung đột điều khiển (Control Hazard):** Xảy ra khi bộ xử lý cần xác định địa chỉ của chỉ thị tiếp theo (Program Counter - PC) để nạp vào đường ống, nhưng thông tin này (ví dụ như kết quả điều kiện của một lệnh rẽ nhánh hoặc địa chỉ đích của một lệnh nhảy) chưa được tính toán xong ở các tầng phía trước.\n\nXung đột làm tăng chỉ số CPI trung bình của bộ xử lý do phải chèn thêm các chu kỳ chờ. Để thiết kế đường ống có hiệu quả kinh tế và hiệu suất thực tế, mức độ giảm của thời gian chu kỳ (\\\\(t_{\\text{CLK}}\\\\)) phải lớn hơn mức độ tăng của CPI do ảnh hưởng của các xung đột gây ra.\n\n---\n\n## CHƯƠNG 2: KIẾN TRÚC ĐƯỜNG ỐNG 5 TẦNG CỔ ĐIỂN VÀ CẢI TIẾN BỘ NHỚ\n\n### Mục 2.1: Bộ xử lý Đường ống RISC 5 Tầng Cổ điển (Classic 5-Stage RISC Pipeline)\n\n#### 2.1.1: Cấu trúc các tầng đường ống\nĐường ống RISC cổ điển chia quá trình thực thi chỉ thị thành 5 tầng độc lập, được phân tách bởi các thanh ghi đường ống (pipeline registers):\n1.  **IF (Instruction Fetch - Lấy chỉ thị):** Đọc mã chỉ thị từ bộ nhớ chỉ thị dựa trên địa chỉ lưu trong thanh ghi PC.\n2.  **DEC (Decode - Giải mã):** Giải mã chỉ thị để xác định các tín hiệu điều khiển và thực hiện đọc các toán hạng từ tập thanh ghi (Register File).\n3.  **EXE (Execute - Thực thi):** Sử dụng ALU để thực hiện các phép toán số học/logic, tính toán địa chỉ bộ nhớ hoặc đánh giá điều kiện rẽ nhánh.\n4.  **MEM (Memory Access - Truy cập bộ nhớ):** Đọc dữ liệu từ bộ nhớ hoặc ghi dữ liệu vào bộ nhớ nếu đó là chỉ thị truy cập bộ nhớ.\n5.  **WB (Write Back - Ghi trả):** Ghi kết quả tính toán hoặc dữ liệu đọc được từ bộ nhớ trở lại tập thanh ghi.\n\n```\n  [IF] ---> [Thanh ghi] ---> [DEC] ---> [Thanh ghi] ---> [EXE] ---> [Thanh ghi] ---> [MEM] ---> [Thanh ghi] ---> [WB]\n```\n\n*Đặc điểm thiết kế:* Tập thanh ghi được phân tách luận lý thành hai phần: việc đọc thanh ghi diễn ra ở tầng DEC (nằm ở phía trên luồng dữ liệu) và việc ghi thanh ghi diễn ra ở tầng WB (nằm ở phía dưới luồng dữ liệu).\n\n*Giả định ban đầu:* Ở cấu trúc cơ bản chưa xử lý xung đột điều khiển, giá trị PC tiếp theo luôn được mặc định gán bằng $PC + 4$ tại mỗi chu kỳ. Thiết kế này chỉ có khả năng thực thi các chuỗi chỉ thị tuần tự và không hỗ trợ các lệnh rẽ nhánh (taken branches) hoặc nhảy (jumps).\n\n#### 2.1.2: Sơ đồ biểu diễn Đường ống (Pipeline Diagram)\nĐể phân tích hoạt động của bộ xử lý đường ống, một biểu đồ hai chiều được sử dụng:\n*   **Trục tung (Y-axis):** Biểu diễn các tầng của đường ống (IF, DEC, EXE, MEM, WB).\n*   **Trục hoành (X-axis):** Biểu diễn các chu kỳ xung nhịp liên tiếp (Cycle 1, Cycle 2,...).\n*   **Mỗi ô trong bảng:** Thể hiện chỉ thị cụ thể nào đang được chiếm dụng và xử lý tại tầng tương ứng trong chu kỳ đó.\n\n---\n\n### Mục 2.2: So sánh Cơ chế Đọc Bộ nhớ: Combinational Reads vs Clocked Reads\n\nTrong thiết kế bộ xử lý đường ống, việc lựa chọn công nghệ và cơ chế đọc của bộ nhớ ảnh hưởng trực tiếp đến cấu trúc và các ràng buộc về mặt thời gian.\n\n#### 2.2.1: Cơ chế Đọc Tổ hợp (Combinational Reads)\n*   **Định nghĩa:** Là cơ chế mà việc đọc dữ liệu từ bộ nhớ hoạt động như một mạch logic tổ hợp không đồng bộ (asynchronous).\n*   **Cách thức hoạt động:** Khi một địa chỉ được cấp tới cổng vào của bộ nhớ tại một chu kỳ bất kỳ, dữ liệu phản hồi tương ứng sẽ xuất hiện ở cổng ra ngay trong cùng chu kỳ đó sau một khoảng trễ lan truyền tổ hợp.\n*   **Đặc điểm:** Đây là mô hình lý thuyết đơn giản, thường được gọi là \"bộ nhớ ma thuật\" (magic memory).\n\n#### 2.2.2: Cơ chế Đọc theo Xung nhịp (Clocked Reads)\n*   **Định nghĩa:** Là cơ chế đọc bộ nhớ đồng bộ (synchronous) hoạt động dựa trên các cạnh của xung nhịp.\n*   **Cách thức hoạt động:** Khi địa chỉ bộ nhớ được cấp vào chu kỳ \\\\(N\\\\), bộ nhớ sẽ tiếp nhận địa chỉ tại cạnh lên của xung nhịp và dữ liệu phản hồi tương ứng chỉ thực sự sẵn sàng ở đầu ra của bộ nhớ tại đầu chu kỳ kế tiếp (\\\\(N+1\\\\)).\n*   **Đặc điểm:** Đây là mô hình hoạt động thực tế của các bộ nhớ SRAM tĩnh công nghiệp.\n\n#### 2.2.3: Lý do chuyển đổi sang Bộ nhớ Đọc theo Xung nhịp\nViệc áp dụng cơ chế đọc theo xung nhịp trong thiết kế đường ống mang lại hai lợi ích lớn:\n1.  **Tính thực tế:** Phù hợp với các đặc tính kỹ thuật của phần cứng thương mại (đã được kiểm chứng và sử dụng trong các bài thực hành thực tế như Lab 5).\n2.  **Đơn giản hóa phân tích thời gian cực hạn:** Loại bỏ các câu hỏi phức tạp liên quan đến việc liệu một tín hiệu dữ liệu được trả về muộn trong chu kỳ từ bộ nhớ tổ hợp có kịp đi qua các cổng logic bổ sung khác mà không làm vi phạm thời gian thiết lập (setup time) hay không. Với clocked reads, dữ liệu luôn xuất hiện ổn định ở đầu chu kỳ tiếp theo, giúp cô lập đường truyền tới hạn một cách rõ ràng.\n\n---\n\n## CHƯƠNG 3: CÁC CHIẾN LƯỢC GIẢI QUYẾT XUNG ĐỘT DỮ LIỆU (DATA HAZARDS)\n\nKhi thiết kế bộ xử lý đường ống, có ba chiến lược cơ bản để giải quyết xung đột:\n1.  **Trì hoãn (Stalling):** Đóng băng tạm thời các chỉ thị phụ thuộc.\n2.  **Chuyển tiếp (Bypassing / Forwarding):** Truyền dữ liệu trực tiếp từ nơi vừa tính toán xong đến nơi cần sử dụng.\n3.  **Dự đoán (Speculation):** Dự đoán giá trị toán hạng và thực hiện sửa sai nếu dự đoán không chính xác.\n\n---\n\n### Mục 3.1: Chiến lược Trì hoãn (Stalling)\n\n#### 3.1.1: Nguyên lý Hoạt động\nPhương pháp trì hoãn giải quyết xung đột dữ liệu bằng cách tạm thời dừng việc đẩy các chỉ thị mới vào đường ống, đồng thời cho phép các chỉ thị đang ở các tầng phía sau tiếp tục di chuyển tuần tự để hoàn thành việc ghi kết quả vào tập thanh ghi.\n\n#### 3.1.2: Ví dụ Thực tế về Xung đột Dữ liệu trên Tập thanh ghi\n\n##### Ví dụ 1\n*   **Nội dung chương trình:**\n    ```assembly\n    ADDI x11, x1, 4    ; Chỉ thị 1 (I1): x11 = x1 + 4\n    XOR  x14, x11, x15 ; Chỉ thị 2 (I2): x14 = x11 ^ x15\n    SUB  x8, x9, x10   ; Chỉ thị 3 (I3)\n    ```\n*   **Phân tích sự phụ thuộc:** Chỉ thị I2 (`XOR`) cần đọc giá trị của thanh ghi `x11` tại tầng DEC ở chu kỳ 3. Tuy nhiên, chỉ thị I1 (`ADDI`) chỉ thực hiện ghi giá trị mới vào thanh ghi `x11` tại cuối tầng WB ở chu kỳ 5. Nếu thực thi không có cơ chế can thiệp, lệnh `XOR` sẽ đọc phải giá trị cũ (stale) của thanh ghi `x11`.\n*   **Cách thực hiện Trì hoãn (Stalling Steps):**\n    *   *Bước 1 (Chu kỳ 3):* I1 nằm ở tầng EXE, I2 nằm ở tầng DEC, I3 nằm ở tầng IF. Phần cứng phát hiện sự trùng khớp giữa thanh ghi nguồn của I2 (`x11`) và thanh ghi đích của I1 (`x11`).\n    *   *Bước 2 (Chu kỳ 4):* Bộ xử lý kích hoạt trạng thái trì hoãn. Tầng DEC (chứa I2) và tầng IF (chứa I3) bị đóng băng (giữ nguyên trạng thái). Bộ xử lý chèn một chỉ thị không hoạt động (NOP) vào tầng EXE để nó di chuyển tiếp đến tầng MEM. Lệnh I1 tiếp tục dịch chuyển từ tầng EXE sang MEM.\n    *   *Bước 3 (Chu kỳ 5):* Tầng DEC và IF tiếp tục bị đóng băng. Một NOP thứ hai được đẩy vào tầng EXE. Lệnh I1 dịch chuyển đến tầng WB và thực hiện ghi giá trị mới vào tập thanh ghi tại cuối chu kỳ này.\n    *   *Bước 4 (Chu kỳ 6):* Quá trình đóng băng kết thúc. Lệnh I2 (`XOR`) được phép tiến hành đọc tập thanh ghi và nhận được giá trị chính xác của `x11` vừa được ghi. Lệnh I2 di chuyển vào tầng EXE, lệnh I3 (`SUB`) di chuyển vào tầng DEC.\n*   **Kết quả:** Chương trình được thực thi chính xác nhưng tốn thêm 3 chu kỳ trống (stalls/bubbles), làm giảm hiệu năng hệ thống.\n\n#### 3.1.3: Hiện thực hóa Phần cứng cho Cơ chế Trì hoãn\nĐể hỗ trợ cơ chế trì hoãn, phần cứng bộ xử lý cần được bổ sung các thành phần điều khiển sau:\n1.  **Tín hiệu điều khiển trì hoãn `stall` (1 bit):**\n    *   Khi `stall = 1`, bộ xử lý sẽ vô hiệu hóa (disable) việc cập nhật dữ liệu của thanh ghi Program Counter (PC) và thanh ghi đường ống nằm giữa tầng IF và DEC. Hành động này trực tiếp đóng băng hai tầng IF và DEC.\n2.  **Bộ chọn Multiplexer (MUX) chèn NOP:**\n    *   Được đặt tại đầu vào của tầng EXE. Khi tín hiệu `stall = 1`, bộ chọn này sẽ bỏ qua chỉ thị thực tế được giải mã từ tầng DEC và ghi đè bằng một chỉ thị NOP vào thanh ghi đường ống trước tầng EXE.\n3.  **Cách mã hóa chỉ thị NOP trong RISC-V:**\n    *   Một chỉ thị NOP hợp lệ có thể là bất kỳ lệnh nào không gây ra bất kỳ tác động hoặc thay đổi trạng thái nào của hệ thống.\n    *   Trong kiến trúc RISC-V, chỉ thị NOP chuẩn được mã hóa bằng lệnh: `addi x0, x0, 0`. Do thanh ghi `x0` trong RISC-V được nối cứng xuống mức 0 bằng phần cứng, mọi thao tác ghi vào `x0` đều bị bỏ qua. Các lệnh giả lập khác như `addi x0, x3, 4` cũng có thể đóng vai trò là NOP vì chúng hoàn toàn không gây ra tác dụng phụ lên tài nguyên hệ thống.\n4.  **Logic phát hiện điều kiện trì hoãn:**\n    *   Bộ điều khiển sẽ liên tục giám sát địa chỉ thanh ghi đích (\\\\(rd\\\\)) của các chỉ thị đang nằm ở các tầng phía sau (EXE, MEM, WB). Nếu bất kỳ địa chỉ \\\\(rd\\\\) nào trùng với địa chỉ thanh ghi nguồn (\\\\(rs1\\\\) hoặc \\\\(rs2\\\\)) của chỉ thị hiện tại đang ở tầng DEC, tín hiệu `stall` sẽ được kích hoạt lên mức 1.\n\n---\n\n### Mục 3.2: Chiến lược Chuyển tiếp / Bỏ qua (Bypassing / Forwarding)\n\n#### 3.2.1: Nguyên lý Hoạt động\nMặc dù kết quả của một chỉ thị chưa được ghi chính thức vào tập thanh ghi cho đến tầng WB, giá trị thực tế của nó đã được tính toán xong từ rất sớm (ví dụ: ngay sau khi đi qua ALU ở tầng EXE). Cơ chế chuyển tiếp (Bypassing) sẽ trích xuất trực tiếp giá trị vừa được tính toán này từ các thanh ghi đường ống phía sau và đưa ngược trở lại làm đầu vào cho tầng cần sử dụng ngay lập tức, loại bỏ nhu cầu phải trì hoãn đường ống.\n\n#### 3.2.2: Hiện thực hóa Phần cứng cho Cơ chế Chuyển tiếp\nĐể triển khai cơ chế chuyển tiếp, sơ đồ phần cứng tại tầng DEC/EXE được cải tiến như sau:\n1.  **Bypass Multiplexers (Bộ chọn chuyển tiếp):** Được chèn vào đầu ra của tập thanh ghi tại tầng DEC. Các bộ chọn này cho phép lựa chọn toán hạng đầu vào cho ALU từ một trong các nguồn dữ liệu sau:\n    *   Dữ liệu đọc trực tiếp từ tập thanh ghi (mặc định).\n    *   Dữ liệu được chuyển tiếp ngược từ đầu ra của tầng **EXE** (kết quả của ALU vừa tính xong).\n    *   Dữ liệu được chuyển tiếp ngược từ đầu ra của tầng **MEM**.\n    *   Dữ liệu được chuyển tiếp ngược từ đầu ra của tầng **WB**.\n\n```\n           +---------------------------------------------+\n           |                                             | (Bypass từ WB)\n           |         +-------------------------+         |\n           |         |                         |         | (Bypass từ MEM)\n           |         |         +-----+         |         |\n           |         |         |     |         |         | (Bypass từ EXE)\n         +---+     +---+     +---+   |         |         |\n[RegFile]-|   |-----|   |-----|   |--+         |         |\n          | M |     | M |     | M |            |         |\n          | U |     | U |     | U |<-----------+         |\n          | X |     | X |     | X |<---------------------+\n          +---+     +---+     +---+\n            |         |         |\n            v         v         v\n         [Tầng DEC] [Tầng EXE] [Tầng MEM] [Tầng WB]\n```\n\n2.  **Logic điều khiển chuyển tiếp:**\n    *   Bộ điều khiển sẽ so sánh địa chỉ thanh ghi nguồn (\\\\(rs1\\\\), \\\\(rs2\\\\)) của lệnh đang ở tầng DEC với địa chỉ thanh ghi đích (\\\\(rd\\\\)) của các lệnh đang ở các tầng EXE, MEM, WB. Nếu phát hiện sự trùng khớp, bộ chọn tương ứng sẽ được chuyển sang kênh nhận dữ liệu từ đường chuyển tiếp thích hợp.\n3.  **Quy tắc độ ưu tiên khi có nhiều kết quả trùng khớp (Priority Rule):**\n    *   *Tình huống:* Nếu chuỗi chỉ thị liên tiếp cùng thực hiện ghi dữ liệu vào một thanh ghi duy nhất, và chỉ thị sau cùng cần đọc thanh ghi đó:\n        ```assembly\n        ADD x1, x2, x3   ; Ghi vào x1 (Nằm ở tầng WB)\n        ADD x1, x4, x5   ; Ghi vào x1 (Nằm ở tầng MEM)\n        ADD x1, x6, x7   ; Ghi vào x1 (Nằm ở tầng EXE)\n        XOR x8, x1, x9   ; Đọc x1 (Nằm ở tầng DEC)\n        ```\n    *   *Quy tắc:* Bộ xử lý bắt buộc phải chọn đường chuyển tiếp từ chỉ thị **gần nhất về mặt thời gian** đối với lệnh hiện tại (trong trường hợp này là từ tầng EXE) để đảm bảo giá trị nhận được là giá trị mới nhất của chương trình.\n4.  **Trường hợp loại trừ đặc biệt:** Không thực hiện cơ chế chuyển tiếp đối với thanh ghi `x0` vì giá trị của nó luôn được giữ cố định bằng 0.\n\n#### 3.2.3: Đánh giá và Đánh đổi trong Thiết kế Chuyển tiếp\n*   **Đặc tính vật lý:** Việc bổ sung nhiều đường chuyển tiếp (bypass paths) và các bộ chọn kích thước lớn sẽ tiêu tốn đáng kể diện tích silicon (area) của vi mạch do số lượng dây dẫn và logic chọn tăng lên.\n*   **Đường tới hạn (Critical Path):** Việc trích xuất tín hiệu ở cuối một chu kỳ và đưa trực tiếp vào một khối logic tổ hợp cũng hoạt động ở cuối một chu kỳ khác có thể làm tăng đáng kể độ trễ lan truyền tổ hợp tổng thể, làm giảm tần số hoạt động cực đại của xung nhịp (\\\\(f_{\\text{CLK}}\\\\)). Do đó, người thiết kế cần cân nhắc loại bỏ các đường chuyển tiếp ít sử dụng hoặc có độ trễ lớn (ví dụ đường dẫn từ tầng MEM) nếu hiệu năng thực tế thu lại không bù đắp được sự sụt giảm tần số xung nhịp.\n\n---\n\n### Mục 3.3: Xung đột Dữ liệu đặc biệt: Load-to-Use Hazard\n\n#### 3.3.1: Bản chất vấn đề\nĐối với chỉ thị nạp dữ liệu từ bộ nhớ (`Load`), dữ liệu thực tế chỉ được trả về từ bộ nhớ dữ liệu và sẵn sàng ở đầu ra của tầng MEM tại đầu chu kỳ của tầng WB. Do đó, nếu chỉ thị ngay phía sau lệnh `Load` cần sử dụng dữ liệu này, cơ chế chuyển tiếp thông thường từ tầng EXE không thể giải quyết được vì tại thời điểm đó, dữ liệu của lệnh `Load` chưa hề tồn tại trong đường ống. Hiện tượng này được gọi là **Load-to-Use Hazard**.\n\n#### 3.3.2: Cơ chế giải quyết bằng phối hợp Stall và Bypass\n\n##### Ví dụ 2\n*   **Nội dung chương trình:**\n    ```assembly\n    LW  x11, 0(x10)    ; Chỉ thị nạp dữ liệu từ bộ nhớ vào x11\n    XOR x14, x11, x15  ; Sử dụng x11 ngay lập tức\n    ```\n*   **Cách thức thực hiện:**\n    *   *Bước 1:* Khi phát hiện xung đột loại Load-to-Use, bộ xử lý bắt buộc phải kích hoạt tín hiệu `stall = 1` để đóng băng tầng DEC (chứa lệnh `XOR`) và tầng IF trong vòng **2 chu kỳ**.\n    *   *Bước 2:* Chèn các chỉ thị trống NOP vào tầng EXE. Lệnh `LW` được phép tiếp tục dịch chuyển qua tầng EXE và tầng MEM.\n    *   *Bước 3:* Khi lệnh `LW` đạt tới tầng WB và dữ liệu từ bộ nhớ đã phản hồi sẵn sàng, bộ xử lý kích hoạt đường chuyển tiếp (bypass path) từ tầng WB trực tiếp đưa dữ liệu về tầng DEC cho lệnh `XOR`.\n*   **Kết quả:** Nhờ sự phối hợp giữa trì hoãn và chuyển tiếp, số chu kỳ lãng phí giảm từ 3 chu kỳ (nếu chỉ dùng trì hoãn thuần túy) xuống còn 2 chu kỳ.\n\n#### 3.3.3: Vai trò của Trình biên dịch trong việc Giảm thiểu Trì hoãn (Instruction Scheduling)\nTrình biên dịch hiện đại có khả năng tối ưu hóa mã nguồn bằng cách sắp xếp lại thứ tự thực hiện của các chỉ thị. Nếu trình biên dịch phát hiện một lệnh `Load` chuẩn bị được sử dụng, nó sẽ cố gắng tìm kiếm các chỉ thị độc lập khác trong chương trình để chèn vào giữa lệnh `Load` và lệnh tiêu thụ dữ liệu.\n\n*Điều kiện tối ưu:* Nếu khoảng cách giữa lệnh `Load` và lệnh sử dụng kết quả được giãn cách bằng ít nhất 2 chỉ thị độc lập, bộ xử lý sẽ hoàn toàn không gặp phải bất kỳ chu kỳ trì hoãn nào (0 stalls) nhờ cơ chế chuyển tiếp từ các tầng xa hơn.\n\n---\n\n## CHƯƠNG 4: CÁC CHIẾN LƯỢC GIẢI QUYẾT XUNG ĐỘT ĐIỀU KHIỂN (CONTROL HAZARDS)\n\n---\n\n### Mục 4.1: Bản chất của Xung đột Điều khiển\n\nĐể xác định địa chỉ chỉ thị tiếp theo (PC) phục vụ cho tầng IF, bộ xử lý cần giải quyết hai câu hỏi cơ bản:\n1.  **Cần thông tin gì** để xác định PC tiếp theo?\n2.  **Thời điểm nào** thông tin đó sẵn sàng trong đường ống?\n\n#### Phân tích thời điểm sẵn có của thông tin theo loại chỉ thị:\n*   **Chỉ thị tuần tự (Sequential):** Cần thông tin mã hóa để biết đây không phải lệnh rẽ nhánh hay lệnh nhảy. Thông tin này sẵn sàng tại tầng **DEC**. Địa chỉ PC kế tiếp là \\\\(PC + 4\\\\).\n*   **Lệnh nhảy không điều kiện (JAL):** Cần giá trị PC hiện tại và hằng số trực tiếp (immediate) được mã hóa trong lệnh. Thông tin sẵn sàng tại tầng **EXE**. Địa chỉ PC kế tiếp là \\\\(PC + \\text{immediate}\\\\).\n*   **Lệnh nhảy gián tiếp qua thanh ghi (JALR):** Cần đọc giá trị từ một thanh ghi nguồn và cộng với hằng số trực tiếp. Thông tin chỉ sẵn sàng sau khi thực hiện phép tính tại tầng **EXE**.\n*   **Lệnh rẽ nhánh có điều kiện (Branches):** Cần thực hiện phép so sánh điều kiện và tính toán địa chỉ đích (\\\\(PC + \\text{immediate}\\\\)). Cả kết quả điều kiện và địa chỉ đích đều chỉ sẵn sàng sau khi hoàn thành tầng **EXE**.\n\n---\n\n### Mục 4.2: Giải quyết Xung đột Điều khiển bằng Trì hoãn (Stalling)\n\nNếu sử dụng phương pháp trì hoãn thuần túy (đóng băng đường ống cho đến khi biết chắc chắn địa chỉ PC tiếp theo mới tiến hành nạp chỉ thị mới), hiệu năng của bộ xử lý sẽ bị sụt giảm nghiêm trọng.\n\n##### Ví dụ 3\n*   **Nội dung chương trình:**\n    ```assembly\n    LOOP: ADD x1, x2, x3\n          SUB x4, x5, x6\n          BNE x1, x4, LOOP  ; Rẽ nhánh quay lại LOOP nếu x1 != x4\n    ```\n*   **Phân tích chu kỳ hoạt động sử dụng cơ chế Trì hoãn:**\n    *   *Chu kỳ 1:* Nạp lệnh `ADD` (tầng IF). Do chưa giải mã nên chưa biết đây là chỉ thị gì, bộ xử lý phải trì hoãn nạp ở chu kỳ tiếp theo.\n    *   *Chu kỳ 2:* Giải mã lệnh `ADD` (tầng DEC). Xác định đây là lệnh thường, tính PC tiếp theo là địa chỉ của `SUB`.\n    *   *Chu kỳ 3:* Nạp lệnh `SUB` (tầng IF). Trì hoãn nạp ở chu kỳ tiếp theo.\n    *   *Chu kỳ 4:* Giải mã lệnh `SUB` (tầng DEC). Xác định PC tiếp theo là địa chỉ của `BNE`.\n    *   *Chu kỳ 5:* Nạp lệnh `BNE` (tầng IF). Trì hoãn nạp ở chu kỳ tiếp theo.\n    *   *Chu kỳ 6:* Giải mã lệnh `BNE` (tầng DEC). Phát hiện đây là lệnh rẽ nhánh nhưng chưa rõ điều kiện có thỏa mãn hay không. Tiếp tục trì hoãn nạp ở chu kỳ tiếp theo.\n    *   *Chu kỳ 7:* Thực thi lệnh `BNE` (tầng EXE). Phép so sánh hoàn tất, xác định điều kiện thỏa mãn (branch taken). Tính toán được PC tiếp theo là địa chỉ của `ADD` ở đầu vòng lặp.\n    *   *Chu kỳ 8:* Bắt đầu nạp lại chỉ thị `ADD` từ địa chỉ đích.\n*   **Kết quả:** Bộ xử lý mất **7 chu kỳ** để thực hiện hoàn tất một vòng lặp gồm 3 chỉ thị. Chỉ số CPI trung bình tăng lên mức:\n    $\\text{CPI} = \\frac{7}{3} \\approx 2.33$\n\n---\n\n### Mục 4.3: Giải quyết Xung đột Điều khiển bằng Đầu cơ / Dự đoán (Speculation)\n\n#### 4.3.1: Nguyên lý Hoạt động\nThay vì dừng hoạt động đường ống để chờ đợi thông tin, bộ xử lý sẽ đưa ra một dự đoán về địa chỉ PC tiếp theo và tiếp tục nạp các chỉ thị theo nhánh dự đoán đó. Khi thông tin thực tế được xác định ở tầng EXE, bộ xử lý sẽ đối chiếu kết quả:\n*   Nếu dự đoán đúng: Đường ống tiếp tục vận hành liên tục mà không gặp bất kỳ chu kỳ trễ nào.\n*   Nếu dự đoán sai: Bộ xử lý thực hiện cơ chế phục hồi trạng thái bằng cách hủy bỏ các chỉ thị nạp sai và nạp lại chỉ thị đúng.\n\nChiến lược dự đoán đơn giản và phổ biến nhất là: **Luôn dự đoán nhánh rẽ nhánh không xảy ra (Predict Not-Taken)**, nghĩa là mặc định PC tiếp theo luôn là $PC + 4$.\n\n#### 4.3.2: Trường hợp Dự đoán Đúng (Branch NOT Taken)\n\n##### Ví dụ 4\n*   **Nội dung chương trình:** Sử dụng chuỗi lệnh của Ví dụ 3, nhưng giả định điều kiện so sánh của lệnh `BNE` không thỏa mãn (nhánh rẽ không xảy ra, bộ xử lý đi tiếp tới lệnh `AND` và `XOR` phía dưới vòng lặp).\n*   **Phân tích chu kỳ hoạt động:**\n    *   *Chu kỳ 1:* Nạp `ADD` (IF). Dự đoán PC tiếp theo là \\\\(PC+4\\\\).\n    *   *Chu kỳ 2:* Nạp `SUB` (IF). `ADD` chuyển sang tầng DEC. Dự đoán PC tiếp theo là \\\\(PC+4\\\\).\n    *   *Chu kỳ 3:* Nạp `BNE` (IF). `SUB` chuyển sang tầng DEC. `ADD` ở tầng EXE. Dự đoán PC tiếp theo là \\\\(PC+4\\\\).\n    *   *Chu kỳ 4:* Nạp `AND` (IF). `BNE` ở tầng DEC, `SUB` ở tầng EXE. Dự đoán PC tiếp theo là \\\\(PC+4\\\\).\n    *   *Chu kỳ 5:* Nạp `XOR` (IF). `AND` ở tầng DEC, `BNE` ở tầng EXE. Tại tầng EXE, điều kiện của lệnh `BNE` được đánh giá và xác nhận là không rẽ nhánh. Dự đoán ban đầu (\\\\(PC+4\\\\)) là chính xác.\n*   **Kết quả:** Bộ xử lý thực thi liên tục không tốn bất kỳ một chu kỳ trì hoãn nào (0 stalls).\n\n#### 4.3.3: Trường hợp Dự đoán Sai và Cơ chế Hủy bỏ (Annulment / Flushing)\n\n##### Ví dụ 5\n*   **Nội dung chương trình:** Giống Ví dụ 4, nhưng giả định điều kiện so sánh của lệnh `BNE` thỏa mãn (nhánh rẽ thực sự xảy ra, bộ xử lý cần quay lại thực thi lệnh `ADD` ở đầu vòng lặp).\n*   **Phân tích chu kỳ và cách thức xử lý lỗi dự đoán:**\n    *   *Chu kỳ 1 đến chu kỳ 4:* Bộ xử lý nạp các chỉ thị tuần tự theo dự đoán \\\\(PC+4\\\\): nạp `ADD`, `SUB`, `BNE`, `AND`, `XOR`.\n    *   *Chu kỳ 5:* Lệnh `BNE` đi tới tầng EXE và phát hiện điều kiện rẽ nhánh xảy ra. Dự đoán nạp `AND` (hiện đang ở tầng DEC) và `XOR` (hiện đang ở tầng IF) là sai.\n    *   *Cách thực hiện Hủy bỏ (Annulment):*\n        1.  Bộ xử lý kích hoạt tín hiệu điều khiển **`annul`** từ tầng EXE.\n        2.  Tín hiệu `annul` tác động lên các thanh ghi đường ống trước tầng DEC và trước tầng EXE, chuyển đổi các chỉ thị `AND` và `XOR` đang lưu trữ tại đây thành các chỉ thị không hoạt động NOP (bong bóng đường ống).\n        3.  Đồng thời, tầng EXE cung cấp địa chỉ đích thực tế (địa chỉ của `ADD`) quay ngược lại để ghi đè vào thanh ghi PC.\n    *   *Chu kỳ 6:* Bộ xử lý bắt đầu nạp lại chỉ thị chính xác `ADD` từ địa chỉ đích. Các chỉ thị sai `AND` và `XOR` đã bị triệt tiêu thành NOP và tiếp tục trôi qua các tầng phía sau mà không gây ra tác dụng phụ.\n*   **Tính an toàn của cơ chế hủy bỏ (State Safety):**\n    Cơ chế hủy bỏ này hoàn toàn an toàn và không gây ra lỗi sai lệch dữ liệu. Lý do là vì trong cấu trúc đường ống 5 tầng, tất cả các hoạt động làm thay đổi trạng thái của hệ thống (như ghi bộ nhớ ở tầng MEM hoặc ghi tập thanh ghi ở tầng WB) đều được thiết kế ở các tầng cuối cùng của đường ống. Các chỉ thị bị dự đoán sai đã bị triệt tiêu ngay khi chúng mới chỉ đi tới tầng IF và DEC, chưa kịp tác động hay thay đổi bất kỳ trạng thái lưu trữ nào của bộ xử lý.\n\n---\n\n## CHƯƠNG 5: SỰ TƯƠNG TÁC GIỮA TRÌ HOÃN VÀ DỰ ĐOÁN (INTERACTION BETWEEN STALLING AND SPECULATION)\n\nTrong thực tế vận hành, các cơ chế xử lý xung đột dữ liệu (Trì hoãn) và xung đột điều khiển (Dự đoán/Hủy bỏ) hoạt động song song và có khả năng xảy ra tranh chấp tín hiệu trong cùng một chu kỳ.\n\n### Mục 5.1: Xung đột giữa Yêu cầu Hủy bỏ và Yêu cầu Trì hoãn\n*   **Tình huống:** Trong cùng một chu kỳ xung nhịp, đồng thời xảy ra hai điều kiện:\n    1.  Một chỉ thị ở tầng EXE phát hiện dự đoán sai và yêu cầu **Hủy bỏ (Annul)** các chỉ thị phía sau.\n    2.  Một chỉ thị ở tầng DEC gặp xung đột dữ liệu (ví dụ do Load-to-Use) và yêu cầu **Trì hoãn (Stall)** toàn bộ đường ống phía trước.\n*   **Nguyên tắc ưu tiên:** Yêu cầu **Hủy bỏ (Annul) từ tầng EXE luôn có quyền ưu tiên cao hơn** yêu cầu Trì hoãn (Stall) từ tầng DEC. \n*   **Lập luận logic:** Chỉ thị đang ở tầng DEC yêu cầu trì hoãn thực chất là một chỉ thị nằm trên nhánh dự đoán sai và chuẩn bị bị hủy bỏ. Do đó, việc trì hoãn đường ống để chờ dữ liệu cho một chỉ thị không có giá trị thực thi là vô nghĩa. Bộ xử lý phải ưu tiên thực hiện hủy bỏ ngay lập tức để giải phóng đường ống và nạp nhánh lệnh đúng.\n\n---\n\n##### Ví dụ 6\n*   **Nội dung chương trình:**\n    ```assembly\n    LW  x14, 0(x10)     ; Chỉ thị nạp dữ liệu vào x14\n    BNE x1, x2, TARGET  ; Rẽ nhánh tới TARGET (giả sử nhánh thực sự xảy ra)\n    AND x15, x14, x16   ; Chỉ thị tiêu thụ x14 (bị nạp nhầm do dự đoán)\n    ```\n*   **Phân tích chu kỳ hoạt động phối hợp:**\n    *   *Chu kỳ 5:* \n        *   Lệnh `BNE` đi tới tầng EXE và phát hiện điều kiện rẽ nhánh thỏa mãn \\\\(\\rightarrow\\\\) Kích hoạt yêu cầu **Hủy bỏ (Annul)** lệnh `AND` (ở tầng DEC) và lệnh tiếp theo (ở tầng IF).\n        *   Cùng lúc đó, lệnh `AND` ở tầng DEC phát hiện thanh ghi nguồn `x14` phụ thuộc vào lệnh `LW` phía trước chưa sẵn sàng dữ liệu $\\rightarrow$ Kích hoạt yêu cầu **Trì hoãn (Stall)**.\n    *   *Cách thực hiện:* Bộ xử lý áp dụng quy tắc ưu tiên: lệnh Hủy bỏ từ tầng EXE được thực thi, bỏ qua yêu cầu trì hoãn từ tầng DEC. Lệnh `AND` và chỉ thị ở tầng IF bị biến đổi thành NOP.\n    *   *Chu kỳ 6:* Bộ xử lý thực hiện nạp chỉ thị từ địa chỉ đích `TARGET`. Lệnh `AND` bị triệt tiêu hoàn toàn mà không làm tiêu tốn thêm bất kỳ chu kỳ trì hoãn nào.\n\n---\n\n## BẢNG TỔNG HỢP SO SÁNH CÁC CHIẾN LƯỢC GIẢI QUYẾT HAZARDS\n\n| Chiến lược | Loại Hazard áp dụng | Cơ chế tác động | Chi phí phần cứng | Ảnh hưởng tới hiệu suất (CPI) |\n| :--- | :--- | :--- | :--- | :--- |\n| **Trì hoãn (Stalling)** | Dữ liệu & Điều khiển | Đóng băng các tầng IF và DEC, chèn thêm các chỉ thị NOP vào tầng EXE. | Thấp (chỉ cần tín hiệu điều khiển `stall` và bộ chọn MUX chèn NOP). | Làm tăng CPI do chèn nhiều chu kỳ trống. |\n| **Chuyển tiếp (Bypassing)** | Dữ liệu | Truyền trực tiếp dữ liệu từ các tầng phía sau (EXE, MEM, WB) về tầng DEC/EXE. | Trung bình - Cao (yêu cầu thêm bộ chọn MUX lớn và nhiều đường dây chuyển tiếp). | Tối ưu hóa tối đa CPI, giảm thiểu các chu kỳ trì hoãn. |\n| **Dự đoán (Speculation)** | Điều khiển | Dự đoán địa chỉ PC tiếp theo (mặc định $PC+4$). Hủy bỏ (Annul) các lệnh sai nếu đoán lệch. | Trung bình (yêu cầu logic so sánh và tín hiệu điều khiển `annul`). | Đạt CPI hoàn hảo nếu đoán đúng; mất khoảng 2 chu kỳ phạt nếu đoán sai. |\n\n---\n*Acknowledge: Tài liệu học tập chuyên sâu này được biên soạn đầy đủ và chính xác dựa trên nội dung bài giảng số 16 thuộc khóa học MIT 6.004.*\n\n💡 **Nợi ý bước tiếp theo:** Bạn có muốn tôi thiết kế một sơ đồ khối phần cứng chi tiết của tầng Decode (DEC) để thể hiện rõ cách bố trí các bộ chọn chuyển tiếp (Bypass MUXes) và logic xử lý tín hiệu `stall`/`annul` không?"</script>
+
+    <script>
+        let units = [];
+        let allImages = [];
+        let currentImageIndex = -1;
+        let isLightboxOpen = false;
+
+        let currentUnitIndex = -1;
+        let fontSize = 20;
+        let isMuted = false;
+        let speechRate = 1;
+        let synth = window.speechSynthesis;
+        let rawContent = "";
+        let lastSavedFilename = "BaiGiang_Complete.html";
+        
+        let isAutoplay = false;
+        let selectedText = "";
+        let selectedNodeParent = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const embeddedDataText = document.getElementById('embedded-data').textContent.trim();
+            if (embeddedDataText) {
+                try {
+                    rawContent = JSON.parse(embeddedDataText);
+                    if (rawContent) parseAndBuildDocument(rawContent);
+                } catch(e) {}
+            } else {
+                const lastContent = localStorage.getItem('current_lecture');
+                if (lastContent) {
+                    rawContent = lastContent;
+                    parseAndBuildDocument(lastContent);
+                }
+            }
+
+            const savedName = localStorage.getItem('last_saved_filename');
+            if (savedName) lastSavedFilename = savedName;
+
+            document.addEventListener('mouseup', handleTextSelection);
+        });
+
+        /* --- XỬ LÝ TRA CỨU & POPUP BÔI ĐEN VĂN BẢN --- */
+        function handleTextSelection(e) {
+            const popup = document.getElementById('selection-popup');
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+
+            if (popup.contains(e.target)) return;
+
+            if (text.length > 0 && document.getElementById('lecture-paper').contains(selection.anchorNode)) {
+                selectedText = text;
+                let node = selection.anchorNode;
+                while (node && node.nodeType !== 1) {
+                    node = node.parentNode;
+                }
+                selectedNodeParent = node.closest('p, li, h1, h2, h3, h4, blockquote') || node;
+
+                document.getElementById('popup-img-url').value = '';
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                popup.style.left = `${Math.max(10, rect.left + window.scrollX - 50)}px`;
+                popup.style.display = 'flex';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+
+        function searchImageSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function searchGifSelected() {
+            if (selectedText) {
+                window.open(`https://tenor.com/search/${encodeURIComponent(selectedText)}-gifs`, '_blank');
+            }
+        }
+
+        function searchGoogleSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function autoInsertImageFromPopup(inputEl) {
+            const url = inputEl.value.trim();
+            if (!url) return;
+
+            if (/^(http|https):\/\/[^ "]+$/i.test(url) || url.startsWith('data:image')) {
+                if (selectedNodeParent) {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = selectedText || "Hình ảnh bài giảng";
+                    img.onclick = () => openLightbox(img.src);
+
+                    selectedNodeParent.parentNode.insertBefore(img, selectedNodeParent.nextSibling);
+
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    rawContent = turndownService.turndown(document.getElementById('lecture-paper').innerHTML);
+                    localStorage.setItem('current_lecture', rawContent);
+
+                    reindexUnits();
+
+                    showToast("Đã chèn ảnh tự động!");
+                    inputEl.value = '';
+                    document.getElementById('selection-popup').style.display = 'none';
+                }
+            }
+        }
+
+        function toggleAutoplay(toggle) {
+            isAutoplay = toggle.checked;
+            if (isAutoplay) showToast("Đã bật Autoplay (Tự động chuyển đoạn)");
+            else showToast("Đã tắt Autoplay");
+        }
+
+        function toggleTheme(toggle) {
+            if (toggle.checked) document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+        }
+
+        function toggleExpandMode(toggle) {
+            if (toggle.checked) {
+                document.body.classList.add('mode-expand');
+                showToast("Đã bật chế độ Expand (Hiện tất cả)");
+            } else {
+                document.body.classList.remove('mode-expand');
+                showToast("Đã tắt chế độ Expand");
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function toggleSlideshow() {
+            document.body.classList.toggle('slideshow-mode');
+            const isSlideshow = document.body.classList.contains('slideshow-mode');
+            if (isSlideshow) {
+                showToast("Đã bật chế độ Slide Show (Ấn Esc để thoát)");
+            }
+        }
+
+        function openUpdateModal() { document.getElementById('update-modal').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('update-modal').style.display = 'none'; }
+
+        function openLightbox(imgSrc) {
+            allImages = Array.from(document.querySelectorAll('#lecture-paper img'));
+            currentImageIndex = allImages.findIndex(img => img.src === imgSrc);
+            if (currentImageIndex === -1 && allImages.length > 0) currentImageIndex = 0;
+
+            updateLightboxContent();
+            document.getElementById('image-lightbox').style.display = 'flex';
+            isLightboxOpen = true;
+        }
+
+        function updateLightboxContent() {
+            if (allImages.length === 0 || currentImageIndex < 0) return;
+            const img = document.getElementById('lightbox-img');
+            img.src = allImages[currentImageIndex].src;
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${allImages.length}`;
+        }
+
+        function nextImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function prevImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function closeLightbox() {
+            document.getElementById('image-lightbox').style.display = 'none';
+            isLightboxOpen = false;
+        }
+
+        function autoAddMarkdownHeaders(text) {
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+/i.test(trimmed)) {
+                    return '# ' + trimmed;
+                } else if (/^\d+\.\s+/.test(trimmed)) {
+                    return '## ' + trimmed;
+                } else if (/^([A-Z]\.|[a-z]\))\s+/.test(trimmed)) {
+                    return '### ' + trimmed;
+                }
+                return line;
+            });
+            return processedLines.join('\n');
+        }
+
+        function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                const options = {
+                    convertImage: mammoth.images.imgElement(function(image) {
+                        return image.read("base64").then(function(imageBuffer) {
+                            return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                        });
+                    })
+                };
+
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer}, options).then(function(result) {
+                    const html = result.value;
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    turndownService.addRule('keepImages', {
+                        filter: 'img',
+                        replacement: function (content, node) {
+                            return `\n\n![image](${node.getAttribute('src')})\n\n`;
+                        }
+                    });
+
+                    let markdown = turndownService.turndown(html);
+                    markdown = autoAddMarkdownHeaders(markdown);
+                    document.getElementById('import-text').value = markdown;
+                    processImport();
+                    showToast("Đã đọc xong file Word!");
+                }).catch(function(err) {
+                    showToast("Lỗi khi đọc file Word: " + err.message);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndBuildDocument(markdownText) {
+            rawContent = markdownText;
+            localStorage.setItem('current_lecture', markdownText);
+            saveToHistory(markdownText);
+
+            const container = document.getElementById('lecture-paper');
+            container.innerHTML = marked.parse(markdownText);
+
+            container.querySelectorAll('img').forEach(img => {
+                img.onclick = () => openLightbox(img.src);
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([container]).catch((err) => console.log('MathJax error:', err));
+            }
+
+            reindexUnits();
+            generateTOC();
+            updateCounter();
+        }
+
+        function reindexUnits() {
+            const container = document.getElementById('lecture-paper');
+            units = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, table, img, hr'));
+            
+            units = units.filter(el => {
+                if (el.tagName.toLowerCase() === 'img' && el.parentElement.tagName.toLowerCase() === 'p' && el.parentElement.childNodes.length === 1) {
+                    return true;
+                }
+                return !el.parentElement.closest('blockquote, table');
+            });
+
+            units.forEach((unit, idx) => {
+                unit.classList.add('markdown-unit');
+                
+                /* CHỌN CÂU BẰNG MÓC CHUỘT DIRECT CLICK */
+                unit.onclick = (e) => {
+                    if (window.getSelection().toString().trim().length > 0) return;
+                    jumpToUnit(idx);
+                };
+
+                if (idx < currentUnitIndex) {
+                    unit.classList.add('revealed');
+                } else if (idx === currentUnitIndex) {
+                    unit.classList.add('active');
+                }
+            });
+        }
+
+        function generateTOC() {
+            const tocContainer = document.getElementById('toc-container');
+            tocContainer.innerHTML = '';
+
+            const headings = units.filter(unit => ['H1', 'H2', 'H3', 'H4'].includes(unit.tagName));
+
+            if (headings.length === 0) {
+                tocContainer.innerHTML = '<li style="font-size: 13px; color: var(--text-color); padding: 8px;">Không tìm thấy mục lục tiêu đề.</li>';
+                return;
+            }
+
+            headings.forEach((heading) => {
+                const level = heading.tagName.substring(1);
+                const li = document.createElement('li');
+                li.className = `toc-item level-${level}`;
+                li.innerText = heading.innerText || heading.textContent;
+                li.dataset.unitIndex = units.indexOf(heading);
+                
+                li.onclick = () => {
+                    const targetIndex = units.indexOf(heading);
+                    if (targetIndex !== -1) {
+                        jumpToUnit(targetIndex);
+                    }
+                };
+
+                tocContainer.appendChild(li);
+            });
+        }
+
+        /* ĐỒNG BỘ MỤC LỤC TƯƠNG ỨNG VỚI ĐOẠN VĂN BẢN ĐANG CHỌN */
+        function highlightTOCForCurrentUnit() {
+            if (currentUnitIndex < 0 || units.length === 0) return;
+
+            let closestHeadingIndex = -1;
+            for (let i = currentUnitIndex; i >= 0; i--) {
+                if (['H1', 'H2', 'H3', 'H4'].includes(units[i].tagName)) {
+                    closestHeadingIndex = i;
+                    break;
+                }
+            }
+
+            const tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(item => {
+                item.classList.remove('active-toc');
+                if (closestHeadingIndex !== -1 && parseInt(item.dataset.unitIndex) === closestHeadingIndex) {
+                    item.classList.add('active-toc');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function jumpToUnit(index) {
+            if (index < 0 || index >= units.length) return;
+            
+            units.forEach((u, idx) => {
+                u.classList.remove('active');
+                if (idx < index) {
+                    u.classList.add('revealed');
+                } else {
+                    u.classList.remove('revealed');
+                }
+            });
+
+            currentUnitIndex = index;
+            const targetEl = units[currentUnitIndex];
+            targetEl.classList.add('active');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(targetEl);
+        }
+
+        /* XỬ LÝ NHẬP SỐ TRANG PAGINATION */
+        function handlePageInputChange(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        }
+
+        function jumpToInputValue() {
+            const inputEl = document.getElementById('page-input');
+            let val = parseInt(inputEl.value) - 1;
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val >= units.length) val = units.length - 1;
+            jumpToUnit(val);
+        }
+
+        function showNextSentence() {
+            if (units.length === 0) return;
+            if (currentUnitIndex < units.length - 1) {
+                if (currentUnitIndex >= 0) {
+                    units[currentUnitIndex].classList.remove('active');
+                    units[currentUnitIndex].classList.add('revealed');
+                }
+                currentUnitIndex++;
+                const activeEl = units[currentUnitIndex];
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateCounter();
+                highlightTOCForCurrentUnit();
+                speakUnit(activeEl);
+            }
+        }
+
+        function showPrevSentence() {
+            if (units.length === 0 || currentUnitIndex <= 0) return;
+            const activeEl = units[currentUnitIndex];
+            activeEl.classList.remove('active', 'revealed');
+
+            currentUnitIndex--;
+            const prevEl = units[currentUnitIndex];
+            prevEl.classList.remove('revealed');
+            prevEl.classList.add('active');
+            prevEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(prevEl);
+        }
+
+        function replayCurrentSentence() {
+            if (currentUnitIndex >= 0 && currentUnitIndex < units.length) {
+                speakUnit(units[currentUnitIndex]);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            if (isLightboxOpen) {
+                if (e.key === 'Escape') closeLightbox();
+                else if (e.key === 'ArrowRight') nextImage();
+                else if (e.key === 'ArrowLeft') prevImage();
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (document.getElementById('save-modal').style.display === 'flex') {
+                    closeSaveModal();
+                    return;
+                }
+                if (document.getElementById('update-modal').style.display === 'flex') {
+                    closeUpdateModal();
+                    return;
+                }
+                if (document.body.classList.contains('slideshow-mode')) {
+                    toggleSlideshow();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                const updateModal = document.getElementById('update-modal');
+                if (updateModal.style.display === 'flex') closeUpdateModal();
+                else openUpdateModal();
+                return;
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                replayCurrentSentence();
+            } else if (e.key === 'ArrowRight') {
+                showNextSentence();
+            } else if (e.key === 'ArrowLeft') {
+                showPrevSentence();
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(2);
+            } else if (e.key === '-') {
+                changeFontSize(-2);
+            }
+        });
+
+        function saveToHistory(text) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            if (history.length === 0 || history[0].content !== text) {
+                const title = text.slice(0, 40).replace(/[#*]/g, '').trim() + '...';
+                history.unshift({ id: Date.now(), title: title, content: text, date: new Date().toLocaleDateString('vi-VN') });
+                if (history.length > 20) history.pop();
+                localStorage.setItem('lecture_history', JSON.stringify(history));
+            }
+        }
+
+        function openHistoryModal() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px;">Lịch sử trống.</div>';
+            } else {
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size: 12px; color: var(--text-color);">${item.date}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="loadHistoryItem(${item.id})">Mở</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background:#ef4444; color:#fff;">Xóa</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+
+        function loadHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            const found = history.find(item => item.id === id);
+            if (found) {
+                parseAndBuildDocument(found.content);
+                closeHistoryModal();
+                showNextSentence();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('lecture_history', JSON.stringify(history));
+            openHistoryModal();
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem('lecture_history');
+            openHistoryModal();
+            showToast("Đã xóa toàn bộ lịch sử!");
+        }
+
+        function openImportModal() {
+            document.getElementById('import-text').value = rawContent;
+            document.getElementById('import-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('import-text').focus();
+            }, 50);
+        }
+
+        function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            if (text.trim()) {
+                parseAndBuildDocument(text);
+                closeImportModal();
+                showNextSentence();
+                showToast("Đã import thành công bài giảng!");
+            }
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById('import-text').value = e.target.result;
+                processImport();
+                showToast("Đã đọc xong file văn bản!");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('prompt-topic').value.trim() || '[TÊN CHỦ ĐỀ CỦA BẠN]';
+            const btn = document.getElementById('btn-copy-prompt');
+            const promptTemplate = `Hãy tạo một bài giảng chi tiết khoảng 1000 từ về chủ đề: "${topic}". 
+Yêu cầu:
+1. ĐÁNH SỐ VÀ PHÂN CẤP CÁC MỤC BÀI GIẢNG THEO THỨ TỰ CỤ THỂ:
+   - Cấp 1 dùng: I. II. III...
+   - Cấp 2 dùng: 1. 2. 3...
+   - Cấp 3 dùng: a) b) c)...
+2. THÊM TỪ KHÓA TIẾNG ANH TƯƠNG ỨNG CHO CÁC KHÁI NIỆM/TỪ KHÓA/NỘI DUNG QUAN TRỌNG VÀ ĐẶT TRONG DẤU NGOẶC ĐƠN ().
+3. Sử dụng định dạng Markdown đầy đủ: in đậm (**từ khóa**), in nghiêng (*chú thích*), danh sách (*).
+4. Thêm link ảnh minh họa dạng Markdown ![mô tả ảnh](https://url-anh.com) nếu phù hợp.
+5. Công thức toán học và phản ứng hóa học dùng chuẩn LaTeX bọc trong dấu $ (ví dụ $CaCO_3$) hoặc \\[...\\] / \\(...\\).
+6. Các url ảnh được cấp phía trên, đặt các url ảnh đó vào nội dung tương ứng (đặt dưới tiêu đề, nhưng trên nội dung), tất cả các url ảnh đều phải được gắn vào các nội dung phù hợp.
+7. Gửi tôi markdown nhưng dạng plain text để tôi copy.`;
+
+            navigator.clipboard.writeText(promptTemplate).then(() => {
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✅ Đã Copy!';
+                btn.classList.add('active');
+                showToast(`Đã copy Prompt AI cho chủ đề: ${topic}`);
+                
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.classList.remove('active');
+                }, 2000);
+            });
+        }
+
+        function speakUnit(element) {
+            if (!synth) return;
+            synth.cancel();
+            if (isMuted) return;
+
+            if (['img', 'hr'].includes(element.tagName.toLowerCase())) {
+                if (isAutoplay) setTimeout(showNextSentence, 1000);
+                return;
+            }
+
+            const textToSpeak = element.innerText || element.textContent;
+            if (!textToSpeak.trim()) {
+                if (isAutoplay) setTimeout(showNextSentence, 500);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechRate;
+            
+            utterance.onend = () => {
+                if (isAutoplay) {
+                    setTimeout(showNextSentence, 600);
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('btn-mute');
+            if (isMuted) {
+                btn.classList.add('active');
+                if (synth) synth.cancel();
+            } else {
+                btn.classList.remove('active');
+                replayCurrentSentence();
+            }
+        }
+
+        function updateRate(val) { speechRate = parseFloat(val); replayCurrentSentence(); }
+        function changeFontSize(delta) { fontSize = Math.max(14, Math.min(50, fontSize + delta)); document.documentElement.style.setProperty('--font-size', fontSize + 'px'); }
+        
+        function updateCounter() { 
+            const pageInput = document.getElementById('page-input');
+            const totalUnitsCount = document.getElementById('total-units-count');
+            pageInput.value = currentUnitIndex + 1;
+            pageInput.max = units.length;
+            totalUnitsCount.innerText = units.length;
+        }
+
+        function openSaveModal() {
+            if (!rawContent) return showToast("Chưa có nội dung để lưu!");
+            const saveModal = document.getElementById('save-modal');
+            const filenameInput = document.getElementById('save-filename-input');
+            
+            filenameInput.value = lastSavedFilename;
+            saveModal.style.display = 'flex';
+            
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 50);
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').style.display = 'none';
+        }
+
+        function executeSaveAsHtml() {
+            const inputEl = document.getElementById('save-filename-input');
+            let filename = inputEl.value.trim();
+            if (!filename) filename = "BaiGiang_Complete.html";
+            if (!filename.toLowerCase().endsWith('.html') && !filename.toLowerCase().endsWith('.htm')) {
+                filename += '.html';
+            }
+
+            lastSavedFilename = filename;
+            localStorage.setItem('last_saved_filename', filename);
+
+            closeSaveModal();
+
+            let cleanDocumentHTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<div id="lecture-paper">[\s\S]*?<\/div>/,
+                `<div id="lecture-paper">\n<div style="text-align: center; color: var(--text-color); margin-top: 50px;">\n<em>Nội dung bài giảng sẽ hiển thị tại đây.<br>Ấn <strong>Import</strong> để tải bài giảng hoặc chọn file Word (.docx).<\/em>\n<\/div>\n<\/div>`
+            );
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(/\s*/g, '');
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<div id="save-modal" class="modal" style="display:\s*flex;">/g,
+                '<div id="save-modal" class="modal">'
+            );
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<script id="embedded-data" type="application\/json">[\s\S]*?<\/script>/,
+                `<script id="embedded-data" type="application/json">${JSON.stringify(rawContent)}<\/script>`
+            );
+
+            const blob = new Blob([cleanDocumentHTML], { type: 'text/html;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Đã lưu file thành công: ${filename}`);
+        }
+    </script>
+
+</body></html>
