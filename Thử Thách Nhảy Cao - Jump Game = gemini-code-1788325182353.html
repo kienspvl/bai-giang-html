@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thử Thách Nhảy Cao - Jump Game</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #38bdf8;
+            --accent: #4ade80;
+            --danger: #f87171;
+            --text: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 400px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.1rem;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 10px 15px;
+            border-radius: 10px;
+            flex: 1;
+            margin: 0 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-top: 5px;
+        }
+
+        #timer {
+            color: var(--danger);
+        }
+
+        .counter-display {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+
+        button {
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+            transition: transform 0.1s, background 0.2s;
+            width: 100%;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        /* Modal / Màn hình kết quả & Chúc mừng */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .trophy {
+            font-size: 5rem;
+            animation: bounce 1s infinite alternate;
+            margin-bottom: 10px;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-15px); }
+        }
+
+        .modal h2 {
+            font-size: 2rem;
+            margin: 10px 0;
+        }
+
+        .modal p {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+
+        /* Hiệu ứng pháo hoa đơn giản bằng CSS */
+        .fireworks {
+            position: absolute;
+            width: 10px; height: 10px;
+            background: transparent;
+            box-shadow: 0 0 10px #fff;
+            border-radius: 50%;
+            animation: explode 0.8s infinite ease-out;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(20); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🏃‍♂️ THỬ THÁCH NHẢY</h1>
+        <p style="font-size: 0.9rem; color: #94a3b8;">Cầm chắc điện thoại trên tay và nhảy liên tục!</p>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div>Level</div>
+                <div class="stat-value" id="levelDisplay">1</div>
+            </div>
+            <div class="stat-box">
+                <div>Mục Tiêu</div>
+                <div class="stat-value" id="targetDisplay">10</div>
+            </div>
+            <div class="stat-box">
+                <div>Thời Gian</div>
+                <div class="stat-value" id="timer">30</div>
+            </div>
+        </div>
+
+        <div class="counter-display" id="jumpCount">0</div>
+
+        <button id="startBtn" onclick="startGame()">BẮT ĐẦU</button>
+    </div>
+
+    <div class="modal" id="winModal">
+        <div class="trophy">🏆</div>
+        <h2 style="color: var(--accent);">XUẤT SẮC!</h2>
+        <p id="winMessage">Bạn đã hoàn thành định mức và lên Level tiếp theo!</p>
+        <button onclick="nextLevel()">TIẾP TỤC LEVEL TIẾP</button>
+    </div>
+
+    <div class="modal" id="loseModal">
+        <div style="font-size: 4rem; margin-bottom: 10px;">💫</div>
+        <h2 style="color: var(--danger);">HẾT GIỜ!</h2>
+        <p id="loseMessage">Bạn chưa đạt đủ số bước nhảy yêu cầu. Thử lại nhé!</p>
+        <button onclick="resetGame()">CHƠI LẠI</button>
+    </div>
+
+    <script>
+        let currentLevel = 1;
+        let targetJumps = 10; // Mục tiêu level 1
+        let jumps = 0;
+        let timeLeft = 30;
+        let gameInterval = null;
+        let isPlaying = false;
+
+        // Biến xử lý cảm biến gia tốc (Motion)
+        let lastY = 0;
+        let lastTime = 0;
+        const threshold = 12; // Ngưỡng gia tốc để tính là một cú nhảy
+
+        const jumpCountEl = document.getElementById('jumpCount');
+        const timerEl = document.getElementById('timer');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const targetDisplay = document.getElementById('targetDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const winModal = document.getElementById('winModal');
+        const loseModal = document.getElementById('loseModal');
+        const winMessage = document.getElementById('winMessage');
+
+        function startGame() {
+            // Xin quyền truy cập cảm biến trên iOS 13+
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission().then(response => {
+                    if (response === 'granted') {
+                        initGamePlay();
+                    } else {
+                        alert("Cần cấp quyền truy cập cảm biến để chơi trò chơi này!");
+                    }
+                }).catch(console.error);
+            } else {
+                // Android và các trình duyệt hỗ trợ mặc định
+                initGamePlay();
+            }
+        }
+
+        function initGamePlay() {
+            jumps = 0;
+            timeLeft = 30;
+            isPlaying = true;
+            jumpCountEl.innerText = jumps;
+            timerEl.innerText = timeLeft;
+            startBtn.style.display = 'none';
+
+            winModal.classList.remove('active');
+            loseModal.classList.remove('active');
+
+            // Bắt sự kiện chuyển động
+            window.addEventListener('devicemotion', handleMotion);
+
+            // Đếm ngược thời gian
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function handleMotion(event) {
+            if (!isPlaying) return;
+
+            let acc = event.accelerationIncludingGravity;
+            if (!acc) return;
+
+            let currentTime = new Date().getTime();
+            // Lọc bớt tần số đọc cảm biến (khoảng 100ms)
+            if ((currentTime - lastTime) > 100) {
+                let diffTime = currentTime - lastTime;
+                lastTime = currentTime;
+
+                // Lấy gia tốc trục Y (hoặc tổng hợp)
+                let currentY = acc.y;
+                let speed = Math.abs(currentY - lastY) / diffTime * 10000;
+
+                // Phát hiện bước nhảy khi có dao động mạnh vượt ngưỡng
+                if (speed > threshold && (currentY - lastY) > 5) {
+                    jumps++;
+                    jumpCountEl.innerText = jumps;
+                    
+                    // Kiểm tra nếu đạt mục tiêu ngay trong lúc chơi
+                    if (jumps >= targetJumps) {
+                        winGame();
+                    }
+                }
+                lastY = currentY;
+            }
+        }
+
+        function stopSensors() {
+            window.removeEventListener('devicemotion', handleMotion);
+            clearInterval(gameInterval);
+            isPlaying = false;
+        }
+
+        function winGame() {
+            stopSensors();
+            winMessage.innerText = `Tuyệt vời! Bạn đã nhảy được ${jumps}/${targetJumps} bước trong 30s. Sẵn sàng lên cấp khó hơn chưa?`;
+            winModal.classList.add('active');
+        }
+
+        function endGame() {
+            stopSensors();
+            if (jumps < targetJumps) {
+                document.getElementById('loseMessage').innerText = `Bạn đạt được ${jumps}/${targetJumps} bước. Cố gắng vận động nhanh hơn nhé!`;
+                loseModal.classList.add('active');
+            }
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            // Tăng định mức yêu cầu ở level tiếp theo (ví dụ tăng thêm 8 bước mỗi level)
+            targetJumps += 8; 
+            levelDisplay.innerText = currentLevel;
+            targetDisplay.innerText = targetJumps;
+            winModal.classList.remove('active');
+            startBtn.style.display = 'block';
+            startBtn.innerText = `BẮT ĐẦU LEVEL ${currentLevel}`;
+        }
+
+        function resetGame() {
+            currentLevel = 1;
+            targetJumps = 10;
+            levelDisplay.innerText = currentLevel;
+            targetDisplay.innerText = targetJumps;
+            loseModal.classList.remove('active');
+            startBtn.style.display = 'block';
+            startBtn.innerText = 'BẮT ĐẦU';
+        }
+    </script>
+</body>
+</html>
