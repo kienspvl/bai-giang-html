@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="vi" style="--cell-size: 46px; --cell-font: 1.61rem; --num-font: 1.0465000000000002rem;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Ô Chữ - Đường Lên Đỉnh Olympia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #0b3954;
+            --olympia-yellow: #ffcc00;
+            --olympia-red: #e03616;
+            --keyword-row-color: #7209b7;
+            --bg-color: #072a3e;
+            --card-bg: rgba(255, 255, 255, 0.96);
+            --text-color: #222222;
+            
+            --cell-size: 40px;
+            --cell-font: 1.4rem;
+            --num-font: 0.95rem;
+            --card-hint-font: 1.5rem; 
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--primary-blue);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 8px 15px;
+        }
+
+        /* Header gọn gàng */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+
+        .header-left h1 {
+            font-size: 1.35rem;
+            color: var(--olympia-yellow);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            white-space: nowrap;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        /* Nhóm nút chỉnh size thủ công */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 2px 6px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            gap: 4px;
+        }
+        .zoom-controls button {
+            background: transparent;
+            color: #fff;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            padding: 0;
+        }
+        .zoom-controls button:hover {
+            background: var(--olympia-yellow);
+            color: var(--primary-blue);
+        }
+
+        /* Cần gạt dạng Switch hiện đại */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            user-select: none;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--olympia-yellow);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Layout chính */
+        .main-container {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 5px;
+        }
+
+        .board-section {
+            flex: 1.3;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .crossword-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 4px;
+        }
+
+        .crossword-grid.multi-line-grid {
+            align-items: stretch;
+        }
+        .keyword-group-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .row-item {
+            display: flex;
+            gap: 4px;
+            cursor: pointer;
+            transition: transform 0.15s, background 0.15s;
+            padding: 2px 6px;
+            border-radius: 5px;
+            flex-shrink: 0;
+        }
+
+        .row-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .row-item.active-row {
+            background: rgba(255, 204, 0, 0.35);
+            border: 2px solid var(--olympia-yellow);
+            transform: scale(1.01);
+        }
+
+        .row-item.keyword-row-item {
+            background: rgba(114, 9, 183, 0.35);
+            border: 2px dashed #b5179e;
+        }
+        .row-item.keyword-row-item.active-row {
+            border: 2px solid #f72585;
+            background: rgba(247, 37, 133, 0.4);
+        }
+
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background-color: #fff;
+            color: #333;
+            font-weight: bold;
+            font-size: var(--cell-font);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            text-transform: uppercase;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .cell.keyword-cell {
+            background-color: var(--olympia-yellow);
+            color: var(--primary-blue);
+            border: 2px solid #e6b800;
+        }
+
+        .cell.keyword-main-cell {
+            background-color: #f72585;
+            color: #ffffff;
+            font-weight: 900;
+            border: 2px solid #ffffff;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+        }
+
+        @keyframes keywordPulse {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.08); filter: brightness(1.25); box-shadow: 0 0 15px #ffcc00; }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+
+        .keyword-revealed-glow {
+            animation: keywordPulse 0.6s ease-in-out 2;
+        }
+
+        .cell.revealed {
+            background-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .cell.empty {
+            background-color: rgba(255,255,255,0.15);
+            border: 1px dashed rgba(255,255,255,0.4);
+            color: transparent;
+        }
+
+        .row-number {
+            width: calc(var(--cell-size) * 0.7);
+            height: var(--cell-size);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--olympia-yellow);
+            color: var(--primary-blue);
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: var(--num-font);
+            flex-shrink: 0;
+        }
+
+        .row-number.keyword-num {
+            background: #b5179e;
+            color: #fff;
+        }
+
+        .spacer-cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            visibility: hidden;
+            flex-shrink: 0;
+        }
+
+        /* Khu vực điều khiển câu hỏi bên phải */
+        .control-section {
+            flex: 1.1;
+            background: var(--card-bg);
+            color: var(--text-color);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .panel-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary-blue);
+            min-height: 0;
+        }
+
+        .panel-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+            background: var(--primary-blue);
+            padding: 10px 14px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .panel-box h3 {
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .search-icon-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .search-icon-btn:hover {
+            background: var(--olympia-yellow);
+            color: var(--primary-blue);
+        }
+
+        .hints-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .hint-card {
+            flex: 1;
+            min-height: 52px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            font-size: var(--card-hint-font);
+            color: #94a3b8;
+            font-weight: 500;
+            line-height: 1.35;
+            white-space: normal;
+            word-break: break-word;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hint-card:hover {
+            border-color: var(--primary-blue);
+            background: #f8fafc;
+        }
+
+        .hint-card.active-hint {
+            color: #0f172a;
+            border-color: var(--olympia-red);
+            border-left: 5px solid var(--olympia-red);
+            font-weight: 600;
+            background: #fff5f5;
+        }
+
+        .action-container {
+            flex-shrink: 0;
+            width: 100%;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .action-btns button {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-size: 0.95rem;
+        }
+
+        button:active { transform: scale(0.97); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-primary { background-color: var(--primary-blue); color: white; }
+        .btn-primary:hover { background-color: #124e78; }
+
+        .btn-warning { background-color: var(--olympia-yellow); color: var(--primary-blue); }
+        .btn-warning:hover { background-color: #e6b800; }
+
+        .btn-danger { background-color: var(--olympia-red); color: white; }
+        .btn-danger:hover { background-color: #c22d10; }
+
+        .btn-success { background-color: #2e7d32; color: white; }
+        .btn-success:hover { background-color: #1b5e20; }
+
+        .btn-keyword { background-color: #b5179e; color: white; }
+        .btn-keyword:hover { background-color: #7209b7; }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 1.45rem; 
+            font-weight: 600;
+            text-transform: none;
+            color: #0b3954;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-blue);
+            outline: none;
+        }
+
+        textarea { font-size: 0.95rem; font-weight: normal; }
+
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(11, 57, 84, 0.96);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            border: 2px solid var(--olympia-yellow);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+
+        #toast-container.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            color: #333;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 580px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-content h2 { margin-bottom: 10px; color: var(--primary-blue); font-size: 1.25rem; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container" class="">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg">Import bộ câu hỏi thành công!</span>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            <h1>Vượt Chướng Ngại Vật</h1>
+        </div>
+        <div class="header-right">
+            <div class="zoom-controls" title="Phím tắt: Phím '=' để phóng to, phím '-' để thu nhỏ">
+                <button onclick="adjustCellSize(-3)" title="Thu nhỏ (-)">A-</button>
+                <button onclick="adjustCellSize(3)" title="Phóng to (+)">A+</button>
+            </div>
+            <div class="switch-container" title="Tự động chuyển câu khi trả lời đúng">
+                <span>⚡ Tự next</span>
+                <label class="switch">
+                    <input type="checkbox" id="autoNextCheckbox" checked="">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <button class="btn-primary btn-sm" style="padding: 6px 10px;" onclick="openImportModal()">📥 Import</button>
+            <button class="btn-warning btn-sm" style="padding: 6px 10px;" onclick="openSaveModal()">💾 Save As</button>
+            <button class="btn-danger btn-sm" style="padding: 6px 10px;" onclick="resetGame()">🔄 Chơi Lại</button>
+            <button class="btn-primary btn-sm" style="padding: 6px 10px;" id="btnMute" onclick="toggleMute()">🔊</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="board-section" id="boardSection">
+            <div class="crossword-grid multi-line-grid" id="crosswordGrid"><div class="row-item"><div class="row-number">1</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div></div><div class="row-item"><div class="spacer-cell"></div><div class="row-number">2</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div></div><div class="row-item"><div class="spacer-cell"></div><div class="spacer-cell"></div><div class="row-number">3</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell keyword-cell empty"></div></div><div class="row-item"><div class="row-number">4</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div></div><div class="row-item"><div class="spacer-cell"></div><div class="row-number">5</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell empty"></div><div class="cell empty"></div></div><div class="row-item"><div class="spacer-cell"></div><div class="spacer-cell"></div><div class="row-number">6</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div></div><div class="row-item"><div class="row-number">7</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div></div><div class="row-item"><div class="spacer-cell"></div><div class="row-number">8</div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell keyword-cell empty"></div><div class="cell empty"></div><div class="cell empty"></div></div><div class="keyword-group-container"><div class="row-item keyword-row-item" style="border-style: dashed dashed none;"><div class="row-number keyword-num">9</div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div></div><div class="row-item keyword-row-item" style="border-style: none dashed dashed;"><div class="row-number keyword-num"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div><div class="cell keyword-main-cell empty"></div></div></div></div>
+        </div>
+
+        <div class="control-section">
+            <div class="panel-box" id="questionPanel">
+                <div class="panel-header-row">
+                    <h3 id="panel-title-text">
+                        <span>👉 Chọn một hàng ngang hoặc từ khóa để bắt đầu</span>
+                    </h3>
+                </div>
+
+                <div class="hints-container" id="hintsContainer">
+                    <div class="hint-card">Nhấp chọn một hàng ngang bên trái để xem gợi ý</div>
+                    <div class="hint-card">Các thẻ gợi ý có thể ấn trực tiếp để mở &amp; nghe đọc (hoặc dùng phím Up/Down)</div>
+                    <div class="hint-card">Nhấp hàng số 9 để đoán Từ Khóa Chính</div>
+                </div>
+                
+                <div class="action-container" id="answer-section" style="display: none;">
+                    <input type="text" id="userAnswerInput" placeholder="Nhập đáp án..." onkeydown="handleAnswerKeydown(event)">
+                    <div class="action-btns" id="actionButtonsContainer">
+                        <button class="btn-primary" onclick="nextHint()" id="btnNextHint">💡 Gợi ý tiếp theo</button>
+                        <button class="btn-success" onclick="submitRowAnswer()">Xác nhận</button>
+                        <button class="btn-warning" onclick="revealCurrentRow()">Mở đáp án</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Import -->
+    <div class="modal" id="importModal" onclick="closeImportModal()" style="display: none;">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Cấu hình &amp; Import Bộ Câu Hỏi</h2>
+            <label for="topicInput" style="font-weight: 600; font-size: 0.9rem;">Chủ đề bộ câu hỏi:</label>
+            <input type="text" id="topicInput" placeholder="Ví dụ: Biển đảo Việt Nam" style="font-size: 0.95rem; font-weight: normal; margin-bottom: 8px; padding: 8px; text-transform: none;">
+            
+            <label for="rawTextInput" style="font-weight: 600; font-size: 0.9rem;">Dữ liệu câu hỏi (Plain text - Nhãn &amp; Xuống dòng):</label>
+            <textarea id="rawTextInput" rows="8" placeholder="TỪ KHÓA: VIỆT NAM
+
+HÀNG 1: VẬN TẢI
+Ngành nghề chuyên chở hàng hóa và hành khách.
+Sử dụng nhiều phương tiện như ô tô, tàu thuyền.
+Đóng vai trò huyết mạch trong giao thương."></textarea>
+            
+            <div class="action-btns" style="margin-top: 10px;">
+                <button class="btn-primary" onclick="processImportData()">Áp dụng dữ liệu</button>
+                <button class="btn-warning" onclick="copyAIPrompt()">📋 Copy Prompt AI</button>
+                <button class="btn-danger" onclick="closeImportModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Save As -->
+    <div class="modal" id="saveModal" onclick="closeSaveModal()" style="display: none;">
+        <div class="modal-content" style="max-width: 420px;" onclick="event.stopPropagation()">
+            <h2>Lưu tệp HTML</h2>
+            <label for="fileNameInput" style="font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 6px;">Tên file lưu:</label>
+            <input type="text" id="fileNameInput" value="olympia_ochu.html" onkeydown="handleSaveModalKeydown(event)" style="font-size: 1rem; font-weight: normal; margin-bottom: 12px; padding: 8px; text-transform: none;">
+            
+            <div class="action-btns" style="margin-top: 5px;">
+                <button class="btn-primary" onclick="confirmSaveHTML()">💾 Tải xuống</button>
+                <button class="btn-danger" onclick="closeSaveModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let manualCellSize = null; 
+
+        function calculateAutoFitSize() {
+            if (manualCellSize !== null) return; 
+
+            const boardSection = document.getElementById('boardSection');
+            const availableHeight = boardSection.clientHeight - 40; 
+            const totalRows = (gameData.rows.length || 8) + 1;
+            
+            let calculatedSize = Math.floor(availableHeight / totalRows) - 4;
+            calculatedSize = Math.max(22, Math.min(46, calculatedSize)); 
+            
+            applyCellSize(calculatedSize);
+        }
+
+        function applyCellSize(size) {
+            let calculatedFont = Math.max(0.85, size * 0.035);
+            document.documentElement.style.setProperty('--cell-size', size + 'px');
+            document.documentElement.style.setProperty('--cell-font', calculatedFont + 'rem');
+            document.documentElement.style.setProperty('--num-font', (calculatedFont * 0.65) + 'rem');
+        }
+
+        function adjustCellSize(delta) {
+            playSound('click');
+            const currentSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 40;
+            let newSize = currentSize + delta;
+            newSize = Math.max(18, Math.min(65, newSize));
+            manualCellSize = newSize;
+            applyCellSize(newSize);
+            showToast(`Cỡ ô chữ: ${newSize}px`, '🔍');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            if (e.key === '=' || e.key === '+') {
+                e.preventDefault();
+                adjustCellSize(3);
+            } else if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                adjustCellSize(-3);
+            }
+        });
+
+        window.addEventListener('resize', calculateAutoFitSize);
+
+        let isMuted = false;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function speakText(text) {
+            if (isMuted || !('speechSynthesis' in window) || !text) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'vi-VN';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function playSound(type) {
+            if (isMuted) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                gainNode.gain.setValueAtTime(0.05, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'correct') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.1);
+                osc.frequency.setValueAtTime(783.99, now + 0.2);
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.setValueAtTime(100, now + 0.15);
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'win') {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const subOsc = audioCtx.createOscillator();
+                    const subGain = audioCtx.createGain();
+                    subOsc.connect(subGain);
+                    subGain.connect(audioCtx.destination);
+                    subOsc.type = 'sine';
+                    subOsc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                    subGain.gain.setValueAtTime(0.1, now + idx * 0.12);
+                    subGain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.2);
+                    subOsc.start(now + idx * 0.12);
+                    subOsc.stop(now + idx * 0.12 + 0.2);
+                });
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('btnMute').textContent = isMuted ? '🔇' : '🔊';
+            if (isMuted && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            showToast(isMuted ? 'Đã tắt âm thanh & giọng đọc' : 'Đã bật âm thanh & giọng đọc', isMuted ? '🔇' : '🔊');
+        }
+
+        let toastTimeout = null;
+        function showToast(msg, icon = '💡') {
+            const toast = document.getElementById('toast-container');
+            document.getElementById('toast-msg').textContent = msg;
+            document.getElementById('toast-icon').textContent = icon;
+            toast.classList.add('show');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2200);
+        }
+
+        // Dữ liệu mẫu ban đầu (dùng cho file gốc nếu chưa có localStorage)
+        let gameData = {
+            keyword: "VIỆT NAM",
+            keywordColIndex: 3,
+            keywordRevealed: false,
+            rows: [
+                { id: 1, word: "VẬN TẢI", hints: ["Ngành nghề chuyên chở hàng hóa và hành khách.", "Sử dụng nhiều phương tiện như ô tô, tàu thuyền.", "Đóng vai trò huyết mạch trong giao thương kinh tế."], revealed: false, currentHintIdx: -1, offset: 1 },
+                { id: 2, word: "BÚT KIM", hints: ["Dụng cụ dùng để viết hoặc vẽ.", "Thường có ngòi bằng kim loại bền chắc.", "Hay dùng trong kỹ thuật hoặc viết chữ nghệ thuật."], revealed: false, currentHintIdx: -1, offset: 0 },
+                { id: 3, word: "NHIỆT ĐIỆN", hints: ["Nhà máy sản xuất năng lượng quy mô lớn.", "Sử dụng nhiên liệu than, khí đốt hoặc dầu mỏ.", "Chuyển hóa nhiệt năng thành điện năng phục vụ quốc gia."], revealed: false, currentHintIdx: -1, offset: 2 },
+                { id: 4, word: "BẾN XE", hints: ["Nơi tập trung các phương tiện vận tải công cộng.", "Hành khách đến đây để mua vé đi các tỉnh.", "Nơi xe buýt và xe khách đậu chờ xuất bến."], revealed: false, currentHintIdx: -1, offset: 1 },
+                { id: 5, word: "QUẢ NHO", hints: ["Loại quả mọc thành chùm sum sê.", "Vỏ có màu tím đậm hoặc xanh mát mắt.", "Thường được dùng để ăn tươi hoặc làm nước ép."], revealed: false, currentHintIdx: -1, offset: 0 },
+                { id: 6, word: "ANH CẢ", hints: ["Chỉ người con trai lớn nhất trong gia đình.", "Thường gánh vác nhiều trách nhiệm phụ giúp cha mẹ.", "Đại diện cho thế hệ đi đầu trong anh chị em."], revealed: false, currentHintIdx: -1, offset: 3 },
+                { id: 7, word: "MÂY MƯA", hints: ["Hiện tượng thời tiết tự nhiên trên bầu trời.", "Thường xuất hiện trước những cơn giông lớn.", "Từ ghép miêu tả sự biến đổi của trời đất."], revealed: false, currentHintIdx: -1, offset: 1 },
+                { id: 8, word: "CHÂU ÂU", hints: ["Một trong các châu lục lớn trên thế giới.", "Nơi tọa lạc của tháp Eiffel và nhiều quốc gia phát triển.", "Nổi tiếng với nền văn hóa và lịch sử lâu đời."], revealed: false, currentHintIdx: -1, offset: 2 }
+            ]
+        };
+
+        // Biến đánh dấu: Thẻ nhúng sẵn dữ liệu từ file Save As (Embedded Data)
+        const EMBEDDED_GAME_DATA = {"keyword":"LÀNG TRANH ĐÔNG HỒ","keywordColIndex":3,"keywordRevealed":false,"rows":[{"id":1,"word":"GIẤY ĐIỆP","hints":["Loại vật liệu dùng làm nền, có bề mặt óng ánh đặc trưng.","Thành phần tạo ánh sáng lấp lánh được lấy từ vỏ của một loài sinh vật biển.","Nghệ nhân thường quét lớp bột đặc biệt lên giấy dó trước khi in."],"revealed":false,"currentHintIdx":-1,"offset":0},{"id":2,"word":"VÁN KHẮC","hints":["Dụng cụ bằng gỗ được chạm nổi để tạo khuôn truyền hình ảnh.","Mỗi lớp màu có thể cần một bản riêng.","Người thợ phải tạo hình ngược trên bề mặt vật liệu này."],"revealed":false,"currentHintIdx":-1,"offset":1},{"id":3,"word":"GÀ ĐÀN","hints":["Tác phẩm thể hiện một con vật nuôi cùng nhiều con nhỏ quây quần.","Hình tượng này gợi sự sum họp và đông vui.","Thường được lựa chọn làm quà tặng với mong muốn gia đình hạnh phúc."],"revealed":false,"currentHintIdx":-1,"offset":2},{"id":4,"word":"ĐÁM CƯỚI CHUỘT","hints":["Tác phẩm nổi tiếng có đoàn vật nhỏ mang lễ vật đến một nhân vật quyền thế.","Nội dung mang sắc thái hài hước và phê phán xã hội.","Hình ảnh đoàn rước tạo nên một cảnh sinh hoạt đầy tính châm biếm."],"revealed":false,"currentHintIdx":-1,"offset":0},{"id":5,"word":"LỢN ĐÀN","hints":["Tác phẩm mô tả một con vật nuôi cùng nhiều con non.","Hình dáng đầy đặn biểu tượng cho sự sung túc, sinh sôi.","Thường được treo trong dịp đầu năm với mong ước no đủ."],"revealed":false,"currentHintIdx":-1,"offset":1},{"id":6,"word":"HỨNG DỪA","hints":["Tác phẩm thể hiện cảnh sinh hoạt dân gian có nhiều chi tiết dí dỏm.","Một nhân vật đứng phía dưới thực hiện động tác đón lấy vật từ phía trên.","Hình ảnh quả nhiệt đới tạo nên tên gọi đặc biệt của tác phẩm."],"revealed":false,"currentHintIdx":-1,"offset":2},{"id":7,"word":"VINH HOA","hints":["Tác phẩm thể hiện một em bé với hình tượng gia cầm mang ý nghĩa cát tường.","Nội dung gửi gắm mong ước trẻ nhỏ khỏe mạnh, thành đạt.","Thường được đặt thành cặp với một tác phẩm mang ý nghĩa giàu sang."],"revealed":false,"currentHintIdx":-1,"offset":0},{"id":8,"word":"PHÚ QUÝ","hints":["Tác phẩm thể hiện em nhỏ bên một loài thủy cầm.","Hình tượng hướng đến mong ước giàu sang, sung túc.","Thường được ghép đôi với tác phẩm có ý nghĩa về danh vọng và thành đạt."],"revealed":false,"currentHintIdx":-1,"offset":1}]}; 
+
+        function initGameData() {
+            // Ưu tiên 1: Nếu file đã được "ngậm" dữ liệu sẵn bên trong (qua Save As)
+            if (typeof EMBEDDED_GAME_DATA !== 'undefined' && EMBEDDED_GAME_DATA !== null) {
+                gameData = JSON.parse(JSON.stringify(EMBEDDED_GAME_DATA));
+                return;
+            }
+
+            // Ưu tiên 2: Nếu là file gốc -> Nạp từ localStorage nếu có
+            try {
+                const saved = localStorage.getItem('olympia_crossword_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.keyword && parsed.rows) {
+                        gameData = parsed;
+                    }
+                }
+            } catch (e) {
+                console.error('Không thể đọc localStorage', e);
+            }
+        }
+
+        function saveToLocalStorage() {
+            // Chỉ lưu localStorage khi dùng file gốc (không dùng cho file đã ngậm dữ liệu)
+            if (typeof EMBEDDED_GAME_DATA !== 'undefined' && EMBEDDED_GAME_DATA !== null) return;
+            try {
+                localStorage.setItem('olympia_crossword_data', JSON.stringify(gameData));
+            } catch (e) {
+                console.error('Không thể lưu vào localStorage', e);
+            }
+        }
+
+        let activeRowId = null; 
+
+        function initGame() {
+            initGameData();
+            calculateAutoFitSize();
+            renderBoard();
+        }
+
+        function splitKeywordIntoTwoLines(fullKeyword) {
+            const clean = fullKeyword.trim();
+            if (clean.length <= 13) return [clean, null];
+
+            const mid = Math.floor(clean.length / 2);
+            let bestSpaceIdx = -1;
+            let minDiff = 999;
+
+            for (let i = 0; i < clean.length; i++) {
+                if (clean[i] === ' ') {
+                    let diff = Math.abs(i - mid);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestSpaceIdx = i;
+                    }
+                }
+            }
+
+            if (bestSpaceIdx !== -1) {
+                return [
+                    clean.substring(0, bestSpaceIdx).trim(),
+                    clean.substring(bestSpaceIdx + 1).trim()
+                ];
+            }
+
+            return [
+                clean.substring(0, mid).trim(),
+                clean.substring(mid).trim()
+            ];
+        }
+
+        function renderBoard() {
+            const grid = document.getElementById('crosswordGrid');
+            grid.innerHTML = '';
+
+            gameData.rows.forEach((r) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'row-item';
+                if (activeRowId === r.id) rowDiv.classList.add('active-row');
+                rowDiv.onclick = () => {
+                    playSound('click');
+                    selectRow(r.id);
+                };
+
+                const offset = r.offset !== undefined ? r.offset : (r.id % 3); 
+                for (let s = 0; s < offset; s++) {
+                    const spacer = document.createElement('div');
+                    spacer.className = 'spacer-cell';
+                    rowDiv.appendChild(spacer);
+                }
+
+                const numBox = document.createElement('div');
+                numBox.className = 'row-number';
+                numBox.textContent = r.id;
+                rowDiv.appendChild(numBox);
+
+                const cleanWord = r.word.replace(/\s+/g, '');
+                const cleanKeyword = gameData.keyword.replace(/\s+/g, '');
+
+                for (let i = 0; i < cleanWord.length; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    if (i === gameData.keywordColIndex || cleanWord[i] === cleanKeyword[r.id - 1]) {
+                        cell.classList.add('keyword-cell');
+                    }
+
+                    if (r.revealed) {
+                        cell.textContent = cleanWord[i];
+                        cell.classList.add('revealed');
+                    } else {
+                        cell.textContent = "";
+                        cell.classList.add('empty');
+                    }
+                    rowDiv.appendChild(cell);
+                }
+                grid.appendChild(rowDiv);
+            });
+
+            const cleanKeywordFull = gameData.keyword.replace(/\s+/g, '');
+            const [line1Kw, line2Kw] = splitKeywordIntoTwoLines(gameData.keyword);
+
+            if (line2Kw) {
+                grid.classList.add('multi-line-grid');
+                const kwContainer = document.createElement('div');
+                kwContainer.className = 'keyword-group-container';
+                if (activeRowId === 9) kwContainer.classList.add('active-row');
+                
+                const createKeywordSubRow = (subText, isFirstLine) => {
+                    const kwRowDiv = document.createElement('div');
+                    kwRowDiv.className = 'row-item keyword-row-item';
+                    kwRowDiv.style.borderStyle = isFirstLine ? 'dashed dashed none dashed' : 'none dashed dashed dashed';
+                    kwRowDiv.onclick = () => {
+                        playSound('click');
+                        selectRow(9);
+                    };
+
+                    const kwNumBox = document.createElement('div');
+                    kwNumBox.className = 'row-number keyword-num';
+                    kwNumBox.textContent = isFirstLine ? '9' : '';
+                    kwRowDiv.appendChild(kwNumBox);
+
+                    const subClean = subText.replace(/\s+/g, '');
+                    for (let i = 0; i < subClean.length; i++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell keyword-main-cell';
+                        if (gameData.keywordRevealed) {
+                            cell.classList.add('keyword-revealed-glow');
+                        }
+
+                        if (gameData.keywordRevealed) {
+                            cell.textContent = subClean[i];
+                            cell.classList.add('revealed');
+                        } else {
+                            cell.textContent = "";
+                            cell.classList.add('empty');
+                        }
+                        kwRowDiv.appendChild(cell);
+                    }
+                    return kwRowDiv;
+                };
+
+                kwContainer.appendChild(createKeywordSubRow(line1Kw, true));
+                kwContainer.appendChild(createKeywordSubRow(line2Kw, false));
+                grid.appendChild(kwContainer);
+
+            } else {
+                grid.classList.remove('multi-line-grid');
+                const kwRowDiv = document.createElement('div');
+                kwRowDiv.className = 'row-item keyword-row-item';
+                if (activeRowId === 9) kwRowDiv.classList.add('active-row');
+                kwRowDiv.onclick = () => {
+                    playSound('click');
+                    selectRow(9);
+                };
+
+                const kwNumBox = document.createElement('div');
+                kwNumBox.className = 'row-number keyword-num';
+                kwNumBox.textContent = '9';
+                kwRowDiv.appendChild(kwNumBox);
+
+                for (let i = 0; i < cleanKeywordFull.length; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell keyword-main-cell';
+                    if (gameData.keywordRevealed) {
+                        cell.classList.add('keyword-revealed-glow');
+                    }
+
+                    if (gameData.keywordRevealed) {
+                        cell.textContent = cleanKeywordFull[i];
+                        cell.classList.add('revealed');
+                    } else {
+                        cell.textContent = "";
+                        cell.classList.add('empty');
+                    }
+                    kwRowDiv.appendChild(cell);
+                }
+                grid.appendChild(kwRowDiv);
+            }
+        }
+
+        function selectRow(id) {
+            activeRowId = id;
+            renderBoard();
+
+            const actionButtonsContainer = document.getElementById('actionButtonsContainer');
+            const hintsContainer = document.getElementById('hintsContainer');
+            const answerSection = document.getElementById('answer-section');
+            const inputEl = document.getElementById('userAnswerInput');
+            const titleEl = document.getElementById('panel-title-text');
+
+            answerSection.style.display = 'block';
+            inputEl.value = '';
+
+            if (id === 9) {
+                const kwCleanLen = gameData.keyword.replace(/\s+/g, '').length;
+                titleEl.innerHTML = `
+                    <span>🎯 Hàng số 9: Từ khóa chính (${kwCleanLen} chữ cái)</span>
+                    <button class="search-icon-btn" onclick="openKeywordImageSearch()" title="Tìm kiếm hình ảnh">🔍</button>
+                `;
+                
+                hintsContainer.innerHTML = `
+                    <div class="hint-card active-hint" style="justify-content:center; text-align:center; font-weight:bold; color:var(--primary-blue);">
+                        ${gameData.keywordRevealed ? '🎉 Từ khóa đã được mở!' : '💡 Nhập từ khóa chính xác để giành chiến thắng chung cuộc!'}
+                    </div>
+                `;
+
+                actionButtonsContainer.innerHTML = `
+                    <button class="btn-keyword" onclick="submitMainKeyword()">Xác nhận Đoán Từ Khóa</button>
+                `;
+                inputEl.focus();
+            } else {
+                const row = gameData.rows.find(r => r.id === id);
+                const cleanWord = row.word.replace(/\s+/g, '');
+                
+                titleEl.innerHTML = `
+                    <span>👉 Hàng ngang số ${id} (${cleanWord.length} chữ cái)</span>
+                    <button class="search-icon-btn" onclick="searchRowKeyword('${row.word}')" title="Tìm kiếm hình ảnh">🔍</button>
+                `;
+                
+                hintsContainer.innerHTML = '';
+                row.hints.forEach((h, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'hint-card';
+                    card.id = `hintCard-${idx}`;
+                    
+                    if (idx <= row.currentHintIdx) {
+                        card.textContent = h;
+                        card.classList.add('active-hint');
+                    } else {
+                        card.textContent = '';
+                    }
+
+                    card.onclick = () => {
+                        playSound('click');
+                        if (row.currentHintIdx < idx) {
+                            row.currentHintIdx = idx;
+                            selectRow(activeRowId);
+                            saveToLocalStorage();
+                        }
+                        speakText(h);
+                    };
+
+                    hintsContainer.appendChild(card);
+                });
+
+                actionButtonsContainer.innerHTML = `
+                    <button class="btn-primary" onclick="nextHint()" id="btnNextHint">💡 Gợi ý tiếp theo</button>
+                    <button class="btn-success" onclick="submitRowAnswer()">Xác nhận</button>
+                    <button class="btn-warning" onclick="revealCurrentRow()">Mở đáp án</button>
+                `;
+
+                document.getElementById('btnNextHint').disabled = row.currentHintIdx >= row.hints.length - 1;
+                inputEl.focus();
+            }
+        }
+
+        function nextHint() {
+            if (activeRowId === null || activeRowId === 9) return;
+            playSound('click');
+            const row = gameData.rows.find(r => r.id === activeRowId);
+            if (row.currentHintIdx < row.hints.length - 1) {
+                row.currentHintIdx++;
+                const hintText = row.hints[row.currentHintIdx];
+                selectRow(activeRowId);
+                saveToLocalStorage();
+                speakText(hintText);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (activeRowId === null || activeRowId === 9) return;
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            const row = gameData.rows.find(r => r.id === activeRowId);
+            if (!row) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (row.currentHintIdx < row.hints.length - 1) {
+                    row.currentHintIdx++;
+                    const hintText = row.hints[row.currentHintIdx];
+                    selectRow(activeRowId);
+                    saveToLocalStorage();
+                    speakText(hintText);
+                    playSound('click');
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (row.currentHintIdx >= 0) {
+                    row.currentHintIdx--;
+                    selectRow(activeRowId);
+                    saveToLocalStorage();
+                    playSound('click');
+                    if (row.currentHintIdx >= 0) {
+                        speakText(row.hints[row.currentHintIdx]);
+                    }
+                }
+            }
+        });
+
+        function handleAnswerKeydown(event) {
+            if (event.key === 'Enter') {
+                if (activeRowId === 9) {
+                    submitMainKeyword();
+                } else {
+                    submitRowAnswer();
+                }
+            }
+        }
+
+        function submitRowAnswer() {
+            if (activeRowId === null || activeRowId === 9) return;
+            const inputEl = document.getElementById('userAnswerInput');
+            const val = inputEl.value.trim().toUpperCase().replace(/\s+/g, '');
+            const row = gameData.rows.find(r => r.id === activeRowId);
+            const targetWord = row.word.toUpperCase().replace(/\s+/g, '');
+
+            if (val === targetWord) {
+                playSound('correct');
+                showToast(`Chính xác! Hàng ngang ${row.id}: ${row.word}`, '🎉');
+                row.revealed = true;
+                row.currentHintIdx = row.hints.length - 1;
+                renderBoard();
+                saveToLocalStorage();
+
+                const autoNext = document.getElementById('autoNextCheckbox').checked;
+                if (autoNext) {
+                    const currentIndex = gameData.rows.findIndex(r => r.id === activeRowId);
+                    let nextUnsolved = null;
+                    
+                    for (let i = 1; i <= gameData.rows.length; i++) {
+                        const idx = (currentIndex + i) % gameData.rows.length;
+                        if (!gameData.rows[idx].revealed) {
+                            nextUnsolved = gameData.rows[idx];
+                            break;
+                        }
+                    }
+
+                    setTimeout(() => {
+                        if (nextUnsolved) {
+                            selectRow(nextUnsolved.id);
+                        } else {
+                            selectRow(9);
+                            showToast('Đã hoàn thành tất cả hàng ngang! Hãy đoán Từ Khóa Chính', '🎯');
+                        }
+                    }, 600);
+                } else {
+                    selectRow(activeRowId);
+                }
+            } else {
+                playSound('wrong');
+                showToast('Chưa chính xác, hãy thử lại hoặc xem gợi ý!', '❌');
+            }
+        }
+
+        function revealCurrentRow() {
+            if (activeRowId === null || activeRowId === 9) return;
+            playSound('click');
+            const row = gameData.rows.find(r => r.id === activeRowId);
+            row.revealed = true;
+            row.currentHintIdx = row.hints.length - 1;
+            renderBoard();
+            saveToLocalStorage();
+            selectRow(activeRowId);
+            showToast(`Đã mở đáp án hàng ngang ${row.id}`, '🔓');
+        }
+
+        function submitMainKeyword() {
+            const inputEl = document.getElementById('userAnswerInput');
+            const val = inputEl.value.trim().toUpperCase().replace(/\s+/g, '');
+            const targetKeyword = gameData.keyword.toUpperCase().replace(/\s+/g, '');
+
+            if (val === targetKeyword) {
+                playSound('win');
+                showToast(`CHÍNH XÁC! Từ khóa chính là: ${gameData.keyword}`, '🏆');
+                gameData.keywordRevealed = true;
+                gameData.rows.forEach(r => r.revealed = true);
+                renderBoard();
+                saveToLocalStorage();
+                selectRow(9);
+            } else {
+                playSound('wrong');
+                showToast('Rất tiếc, từ khóa chưa chính xác!', '❌');
+            }
+        }
+
+        function openKeywordImageSearch() {
+            const cleanKw = gameData.keyword.replace(/\s+/g, ' ');
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(cleanKw)}&tbm=isch`;
+            window.open(searchUrl, '_blank');
+        }
+
+        function searchRowKeyword(word) {
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(word)}&tbm=isch`;
+            window.open(searchUrl, '_blank');
+        }
+
+        function openImportModal() {
+            playSound('click');
+            document.getElementById('importModal').style.display = 'flex';
+        }
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function openSaveModal() {
+            playSound('click');
+            document.getElementById('saveModal').style.display = 'flex';
+            document.getElementById('fileNameInput').focus();
+            document.getElementById('fileNameInput').select();
+        }
+        function closeSaveModal() {
+            document.getElementById('saveModal').style.display = 'none';
+        }
+
+        function handleSaveModalKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                confirmSaveHTML();
+            }
+        }
+
+        function confirmSaveHTML() {
+            playSound('click');
+            let fileName = document.getElementById('fileNameInput').value.trim();
+            if (!fileName) fileName = "olympia_ochu.html";
+
+            document.getElementById('importModal').style.display = 'none';
+            document.getElementById('saveModal').style.display = 'none';
+
+            // Tạo một bản sao dữ liệu sạch ở TRẠNG THÁI CHƠI VÁN MỚI (reset toàn bộ tiến trình)
+            const freshGameData = JSON.parse(JSON.stringify(gameData));
+            freshGameData.keywordRevealed = false;
+            freshGameData.rows.forEach(r => {
+                r.revealed = false;
+                r.currentHintIdx = -1;
+            });
+
+            // Lấy toàn bộ mã nguồn hiện tại của trang
+            let htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+            // Chèn dữ liệu câu hỏi sạch vào biến EMBEDDED_GAME_DATA trong file xuất ra
+            const dataScriptReplacement = `const EMBEDDED_GAME_DATA = ${JSON.stringify(freshGameData)};`;
+            htmlContent = htmlContent.replace(/const EMBEDDED_GAME_DATA = [^;]*;/, dataScriptReplacement);
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName.endsWith('.html') ? fileName : fileName + '.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Đã lưu file ngậm dữ liệu (vân mới) thành công!', '💾');
+        }
+
+        function processImportData() {
+            const raw = document.getElementById('rawTextInput').value.trim();
+            if (!raw) {
+                showToast('Vui lòng nhập dữ liệu!', '⚠️');
+                return;
+            }
+
+            try {
+                const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                let newKeyword = "";
+                let newRows = [];
+                let currentRow = null;
+
+                lines.forEach((line) => {
+                    const upper = line.toUpperCase();
+                    
+                    if (upper.startsWith('TỪ KHÓA:') || upper.startsWith('KEYWORD:')) {
+                        newKeyword = line.substring(line.indexOf(':') + 1).trim().toUpperCase();
+                    } else if (upper.match(/^(HÀNG|HÀNG NGANG|ROW)\s*\d+:/i)) {
+                        if (currentRow) newRows.push(currentRow);
+                        
+                        const colonIdx = line.indexOf(':');
+                        const headerPart = line.substring(0, colonIdx);
+                        const wordPart = line.substring(colonIdx + 1).trim().toUpperCase();
+                        const rowNumMatch = headerPart.match(/\d+/);
+                        const rowId = rowNumMatch ? parseInt(rowNumMatch[0]) : (newRows.length + 1);
+
+                        currentRow = {
+                            id: rowId,
+                            word: wordPart,
+                            hints: [],
+                            revealed: false,
+                            currentHintIdx: -1,
+                            offset: (rowId - 1) % 3
+                        };
+                    } else if (currentRow) {
+                        let hintText = line;
+                        if (hintText.indexOf(':') !== -1 && (hintText.toUpperCase().startsWith('GỢI Ý') || hintText.toUpperCase().startsWith('HINT'))) {
+                            hintText = hintText.substring(hintText.indexOf(':') + 1).trim();
+                        } else if (hintText.startsWith('-') || hintText.startsWith('*')) {
+                            hintText = hintText.substring(1).trim();
+                        }
+                        if (hintText) {
+                            currentRow.hints.push(hintText);
+                        }
+                    }
+                });
+
+                if (currentRow) newRows.push(currentRow);
+
+                if (newKeyword && newRows.length > 0) {
+                    gameData.keyword = newKeyword;
+                    gameData.keywordRevealed = false;
+                    gameData.rows = newRows;
+                    activeRowId = null;
+                    manualCellSize = null; 
+                    saveToLocalStorage();
+                    initGame();
+                    closeImportModal();
+                    playSound('correct');
+                    showToast('Import bộ câu hỏi thành công!', '✅');
+                } else {
+                    showToast('Chưa nhận diện được. Cần có nhãn "TỪ KHÓA:" và "HÀNG X:"', '❌');
+                }
+            } catch (e) {
+                showToast('Lỗi xử lý dữ liệu: ' + e.message, '❌');
+            }
+        }
+
+        function copyAIPrompt() {
+            const topic = document.getElementById('topicInput').value.trim() || "Chủ đề bất kỳ";
+            const promptText = `Hãy tạo bộ câu hỏi ô chữ trò chơi "Vượt Chướng Ngại Vật" chủ đề: "${topic}".
+LƯU Ý QUAN TRỌNG: Các nội dung gợi ý TUYỆT ĐỐI KHÔNG ĐƯỢC CHỨA từ trùng với từ khóa cần đoán hoặc từ đáp án hàng ngang tương ứng.
+Định dạng bắt buộc theo nhãn và dòng (không dùng bảng, không dùng gạch đứng '|'):
+
+TỪ KHÓA: [TỪ KHÓA CHÍNH]
+
+HÀNG 1: [TỪ HÀNG NGANG 1]
+Nội dung gợi ý 1
+Nội dung gợi ý 2
+Nội dung gợi ý 3
+
+HÀNG 2: [TỪ HÀNG NGANG 2]
+Nội dung gợi ý 1
+Nội dung gợi ý 2
+Nội dung gợi ý 3
+
+(Tạo từ 6 đến 8 hàng ngang phù hợp với từ khóa chính)`;
+
+            navigator.clipboard.writeText(promptText).then(() => {
+                showToast('Đã sao chép AI Prompt kèm quy tắc gợi ý!', '📋');
+            }).catch(() => {
+                showToast('Không thể tự động chép, hãy copy thủ công', '⚠️');
+            });
+        }
+
+        function resetGame() {
+            playSound('click');
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            gameData.keywordRevealed = false;
+            gameData.rows.forEach(r => {
+                r.revealed = false;
+                r.currentHintIdx = -1;
+            });
+            activeRowId = null;
+            manualCellSize = null;
+            saveToLocalStorage();
+            initGame();
+            document.getElementById('panel-title-text').innerHTML = '<span>👉 Chọn một hàng ngang hoặc từ khóa để bắt đầu</span>';
+            document.getElementById('hintsContainer').innerHTML = `
+                <div class="hint-card">Nhấp chọn một hàng ngang bên trái để xem gợi ý</div>
+                <div class="hint-card">Các thẻ gợi ý có thể ấn trực tiếp để mở & nghe đọc (hoặc dùng phím Up/Down)</div>
+                <div class="hint-card">Nhấp hàng số 9 để đoán Từ Khóa Chính</div>
+            `;
+            document.getElementById('answer-section').style.display = 'none';
+            showToast('Đã làm mới trò chơi!', '🔄');
+        }
+
+        window.onload = initGame;
+    </script>
+
+</body></html>
