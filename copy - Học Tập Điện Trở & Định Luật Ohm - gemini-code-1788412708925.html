@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Tập: Điện Trở & Định Luật Ohm</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #f59e0b;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --highlight-bg: #fef08a;
+            --highlight-text: #854d0e;
+            --base-font-size: 16px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --border-color: #334155;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+            --highlight-bg: #854d0e;
+            --highlight-text: #fef08a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: var(--base-font-size);
+            line-height: 1.6;
+            padding-bottom: 80px;
+        }
+
+        /* Sticky Control Bar */
+        .sticky-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .controls-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button, select {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button:hover, select:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.secondary {
+            background-color: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        button.secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        select {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 7px 10px;
+        }
+
+        /* Main Container & Grid */
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header-title h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        .card.active-reading {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        .card-media {
+            width: 100%;
+            height: 180px;
+            background-color: #f1f5f9;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .card-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .card-media:hover img {
+            transform: scale(1.05);
+        }
+
+        .card-content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            gap: 12px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .card-main {
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .card-details {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            background: var(--bg-color);
+            padding: 10px 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .keywords-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: auto;
+            padding-top: 10px;
+        }
+
+        .keyword-badge {
+            font-size: 0.75rem;
+            background-color: var(--border-color);
+            color: var(--text-color);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .card-footer {
+            padding: 12px 20px;
+            background-color: var(--bg-color);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Keyword Highlighting */
+        .highlight {
+            background-color: var(--highlight-bg);
+            color: var(--highlight-text);
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 600;
+        }
+
+        /* Lightbox Modal */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .lightbox.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 85vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+        }
+
+        .lightbox-caption {
+            color: white;
+            margin-top: 12px;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .lightbox-close, .lightbox-nav {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: background 0.2s;
+        }
+
+        .lightbox-close:hover, .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .lightbox-close {
+            top: 20px;
+            right: 20px;
+        }
+
+        .lightbox-prev {
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .lightbox-next {
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sticky-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .controls-group {
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <div class="sticky-bar">
+        <div class="brand">⚡ Học Điện Trở & Định Luật Ohm</div>
+        <div class="controls-group">
+            <button id="autoPlayBtn" onclick="toggleAutoPlay()">▶ Tự Động Đọc</button>
+            <select id="speedSelector" onchange="changeSpeed(this.value)" title="Tốc độ đọc">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="1.75">1.75x</option>
+                <option value="2">2x</option>
+                <option value="2.5">2.5x</option>
+                <option value="3">3x</option>
+            </select>
+            <button id="muteBtn" class="secondary" onclick="toggleMute()" title="Bật/Tắt âm thanh">🔊 Âm thanh</button>
+            <button class="secondary" onclick="adjustFontSize(1)" title="Tăng cỡ chữ (+)">A+</button>
+            <button class="secondary" onclick="adjustFontSize(-1)" title="Giảm cỡ chữ (-)">A-</button>
+            <button class="secondary" onclick="toggleTheme()" title="Đổi giao diện">🌓 Giao diện</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header-title">
+            <h1>Tổng Hợp Kiến Thức Vật Lý</h1>
+            <p>Khám phá về điện trở, cường độ dòng điện, hiệu điện thế và định luật Ohm qua các thẻ tương tác.</p>
+        </div>
+        <div class="grid" id="cardContainer">
+            </div>
+    </div>
+
+    <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+        <button class="lightbox-close" onclick="closeLightboxDirect()">✕</button>
+        <button class="lightbox-nav lightbox-prev" onclick="changeLightboxImage(-1, event)">❮</button>
+        <button class="lightbox-nav lightbox-next" onclick="changeLightboxImage(1, event)">❯</button>
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <img id="lightboxImg" src="" alt="Zoomed Image">
+            <div class="lightbox-caption" id="lightboxCaption"></div>
+        </div>
+    </div>
+
+    <script>
+        // Data Source
+        const rawData = [
+            ["Điện trở", "Điện trở có tác dụng cản trở dòng điện trong mạch.", "• Các điện trở khác nhau cản trở dòng điện khác nhau.<br>• Điện trở càng lớn thì dòng điện qua mạch càng nhỏ khi U không đổi.", "Resistance, Electric circuit, Current, Resistor", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJcWSV_S-l1ziRxRDmFDkZFsfNGi4sCh7WlUDfx-w56zI2Hbvmk4iOcM5V&s=10"],
+            ["Tác dụng của điện trở", "Điện trở làm giảm cường độ dòng điện chạy trong mạch.", "• Thay các điện trở khác nhau vào mạch làm độ sáng bóng đèn thay đổi.<br>• Đèn càng mờ thì dòng điện qua đèn càng nhỏ.", "Resistor effect, Current, Light bulb, Circuit", "https://i.makeagif.com/media/9-25-2015/eZ6bn3.gif"],
+            ["Thí nghiệm điện trở", "Thí nghiệm dùng bóng đèn và các điện trở R₁, R₂, R₃ để chứng minh tác dụng cản trở dòng điện.", "• R₁: đèn sáng rõ.<br>• R₂: đèn sáng mờ.<br>• R₃: đèn rất mờ.<br>• Kết luận: điện trở cản trở dòng điện.", "Resistance experiment, Light bulb, Resistor, Circuit", "https://vietjack.com/khoa-hoc-tu-nhien-8-ct/images/cau-hoi-thao-luan-trang-115-khtn-8-chan-troi-176109.PNG"],
+            ["Cường độ dòng điện", "Cường độ dòng điện cho biết mức độ mạnh yếu của dòng điện và được đo bằng ampe kế.", "• Kí hiệu: I.<br>• Đơn vị: ampe (A).<br>• I thay đổi khi U hoặc R thay đổi.", "Electric current, Current intensity, Ampere, Ammeter", "https://serpmedia.org/scigen/images/electrons-dc%20copy.gif?crc=57018027"],
+            ["Hiệu điện thế", "Hiệu điện thế giữa hai đầu đoạn dây là nguyên nhân làm xuất hiện dòng điện qua đoạn dây.", "• Kí hiệu: U.<br>• Đơn vị: vôn (V).<br>• Với R không đổi, U tăng thì I tăng.", "Voltage, Electric potential, Volt, Circuit", "https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUybTdxbzc3NWt0cXhtYjh3bWp0aGN3emdkYXlhcjlzcmVtcm8zOWFqZiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/y5oetElpzdbToijNGL/200w.gif"],
+            ["Biến trở", "Biến trở là điện trở có thể thay đổi giá trị để điều chỉnh cường độ dòng điện trong mạch.", "• Mắc biến trở nối tiếp với điện trở cần khảo sát.<br>• Điều chỉnh biến trở để thay đổi U và I.", "Variable resistor, Rheostat, Circuit, Current", "https://www.engineersgarage.com/wp-content/uploads/2/2/1/5/22159166/potentiometer-fading-led-controlling-led-brightness_orig.gif"],
+            ["Quan hệ I và U", "Khi điện trở của đoạn dây không đổi, cường độ dòng điện tỉ lệ thuận với hiệu điện thế.", "• I ∼ U.<br>• U tăng 2 lần thì I tăng 2 lần.<br>• Ví dụ: U = 3 V thì I = 0,5 A; U = 6 V thì I = 1 A.", "Current-voltage relationship, Voltage, Current, Resistance", "https://www.circuitbasics.com/wp-content/uploads/2020/08/Ohms-Law-cartoon.jpg"],
+            ["Đồ thị I theo U", "Đồ thị biểu diễn I phụ thuộc U là đường thẳng đi qua gốc tọa độ khi R không đổi.", "• Trục tung: I (A).<br>• Trục hoành: U (V).<br>• Các điểm thực nghiệm nằm trên một đường thẳng qua O.", "I-U graph, Graph, Voltage, Current", "https://electricalacademia.com/wp-content/uploads/2017/04/o7.jpg"],
+            ["Điện trở R", "Điện trở của đoạn dây dẫn được xác định bằng thương số giữa hiệu điện thế và cường độ dòng điện.", "• Công thức: R = U/I.<br>• Với một đoạn dây dẫn xác định, U/I không đổi.", "Electrical resistance, Voltage, Current, Ohm", "https://static.wixstatic.com/media/626574_41f21b723b124e78bf0ed28c2e6bb2de~mv2.gif"],
+            ["Định luật Ohm", "Định luật Ohm: cường độ dòng điện tỉ lệ thuận với hiệu điện thế và tỉ lệ nghịch với điện trở.", "• Công thức: I = U/R.<br>• U tăng thì I tăng nếu R không đổi.<br>• R tăng thì I giảm nếu U không đổi.", "Ohm's law, Voltage, Current, Resistance", "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhUnZZJuHMIsMxwM2rp-NyCtVPWbpluBBWPxMlUTW9pm7z6EKxpuTyYVw7ljgimtfa4bDBsOW_HVInU_brsdml76eFJv5pdcva0wYmtK-hQ5WpUI34n8HFqigugVxCJD2rHwJCL9v60GwMm/s600/ohm401.gif"],
+            ["Đơn vị ôm", "Đơn vị SI của điện trở là ôm, kí hiệu Ω.", "• 1 Ω = 1 V/1 A.<br>• Điện trở 6 Ω khi U = 6 V và I = 1 A.", "Ohm, Voltage, Ampere, Resistance", "https://upload.wikimedia.org/wikipedia/commons/e/e6/Georg_Simon_Ohm_%281789-1854%29.jpg"],
+            ["Đổi đơn vị điện trở", "Các đơn vị thường dùng của điện trở gồm mΩ, Ω, kΩ và MΩ.", "• 1 mΩ = 0,001 Ω.<br>• 1 kΩ = 1000 Ω.<br>• 1 MΩ = 1 000 000 Ω.", "Resistance units, Ohm, Kilohm, Megohm", "https://preview.redd.it/electrical-engineer-how-do-i-insert-the-ohm-omega-symbol-v0-6he6fwfarpn41.png?width=442&format=png&auto=webp&s=09557d14b04e9df98b22fcda251edb819ce8b438"],
+            ["Tính hiệu điện thế", "Hiệu điện thế được tính bằng tích của cường độ dòng điện và điện trở.", "• Công thức: U = I·R.<br>• Với I = 0,5 A và R = 12 Ω: U = 0,5·12 = 6 V.", "Voltage calculation, Ohm's law, Current, Resistance", "https://i.makeagif.com/media/6-17-2022/LhzFH3.gif"],
+            ["Tính cường độ dòng điện", "Cường độ dòng điện được tính bằng thương số giữa hiệu điện thế và điện trở.", "• Công thức: I = U/R.<br>• Với U = 12 V, R = 6 Ω: I = 2 A.", "Current calculation, Voltage, Resistance, Ohm's law", "https://i.makeagif.com/media/6-17-2022/PvTJbs.gif"],
+            ["Tính điện trở từ U và I", "Có thể tính điện trở bằng cách lấy hiệu điện thế chia cho cường độ dòng điện.", "• Công thức: R = U/I.<br>• Với U = 2 V và I = 0,4 A: R = 5 Ω.", "Resistance calculation, Voltage, Current, Ohm", "https://i.makeagif.com/media/11-13-2024/_DJaF9.gif"],
+            ["Quan hệ tỉ lệ thuận I và U", "Với R không đổi, nếu I tăng bao nhiêu lần thì U cũng tăng bấy nhiêu lần.", "• I₁ = 0,4 A tại U₁ = 2 V.<br>• I₂ = 0,8 A = 2I₁ nên U₂ = 2U₁ = 4 V.", "Direct proportionality, Voltage, Current, Resistance", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTd7fnt461MsuXzQ_59qkgftm1KhLkHrndcloQOR-Ojuw&s=10"],
+            ["Điện trở suất", "Điện trở suất đặc trưng cho khả năng cản trở dòng điện của vật liệu làm dây dẫn.", "• Kí hiệu: ρ.<br>• Đơn vị: Ω·m.<br>• ρ phụ thuộc vào bản chất vật liệu.", "Resistivity, Material, Conductor, Resistance", "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh1qV-6EGUC2ZGzIsPIQLbu2PL9BuH3ZXJHyYaTl26bYBSaAsZg7oDMmbgf0MzPO6sFo_iNQRGmTMcuJl_DAqAkEtM-2zWScTDE3WX_c8YcWZPjLXahb5tc7bbTPSDII6LgutD6bx01haC1/s1600/res2.gif"],
+            ["Chiều dài dây dẫn", "Điện trở của dây dẫn tỉ lệ thuận với chiều dài dây.", "• Công thức: R = ρl/S.<br>• Chiều dài tăng 2 lần thì R tăng 2 lần nếu ρ và S không đổi.", "Wire length, Resistance, Conductor, Resistivity", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXXhYbTeQaVyJNQiCIXzzvwk2VVuxLY8R4ll59QjFoKa_tY4NxnHk3sHfc&s=10"],
+            ["Tiết diện dây dẫn", "Điện trở của dây dẫn tỉ lệ nghịch với tiết diện dây.", "• R = ρl/S.<br>• Tiết diện tăng 2 lần thì R giảm 2 lần nếu ρ và l không đổi.", "Cross-sectional area, Resistance, Wire, Conductor", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSuE5wWHZb8iTr1l48Gvo4C8NjWzVFIVFNBjyqlnm5pA&s=10"],
+            ["Công thức điện trở dây dẫn", "Điện trở của dây dẫn phụ thuộc vào điện trở suất, chiều dài và tiết diện theo công thức R = ρl/S.", "• R: điện trở (Ω).<br>• ρ: điện trở suất (Ω·m).<br>• l: chiều dài (m).<br>• S: tiết diện (m²).", "Resistance formula, Resistivity, Wire length, Cross-sectional area", "https://pressbooks.bccampus.ca/collegephysics/wp-content/uploads/sites/29/2016/04/Figure_21_03_01a.jpg"],
+            ["So sánh hai dây đồng", "Với cùng vật liệu, điện trở phụ thuộc vào tỉ số giữa chiều dài và tiết diện của dây.", "• l₁ = 0,5l₂; S₁ = 2S₂.<br>• R₁/R₂ = (l₁/l₂)(S₂/S₁) = 0,25.<br>• R₁ = R₂/4.", "Comparing resistances, Copper wire, Resistance, Resistivity", "https://assets-v2.lottiefiles.com/a/6f852d92-116d-11ee-a118-035253f4479e/DOAIIN2PgE.gif"],
+            ["Tính điện trở dây đồng", "Có thể tính điện trở dây dẫn khi biết ρ, l và S.", "• Với ρ = 1,7×10⁻⁸ Ω·m, l = 150 m, S = 2×10⁻⁶ m².<br>• R = ρl/S = 1,275 Ω.", "Copper wire resistance, Resistivity, Copper, Calculation", "https://www.schoolphysics.co.uk/age14-16/Electricity%20and%20magnetism/Current%20electricity/text/Resistance_/images/2.png"],
+            ["Dây dẫn bằng đồng", "Đồng có điện trở suất nhỏ nên dẫn điện tốt và thường dùng làm dây dẫn trong gia đình.", "• Điện trở suất của đồng khoảng 1,7×10⁻⁸ Ω·m.<br>• Đồng dẫn điện tốt, dẻo và dễ uốn.", "Copper conductor, Copper, Conductivity, Power cable", "https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUyZG9jajd6YTdjamlnbXozdm9vM3h3eTg0eHZjbnZlcmJsbnJzaHk1aiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/zFMwVE0oKyufm/giphy_s.gif"],
+            ["Dây dẫn bằng nhôm", "Nhôm nhẹ và có giá thành thấp nên thích hợp làm dây truyền tải điện trên khoảng cách lớn.", "• Nhôm có điện trở suất lớn hơn đồng nhưng nhẹ hơn nhiều.<br>• Dây nhôm giúp giảm tải trọng lên cột điện.", "Aluminum conductor, Aluminum, Power transmission, High voltage", "https://i.makeagif.com/media/3-22-2018/tmCzQG.gif"],
+            ["Chập điện", "Chập điện làm điện trở mạch giảm mạnh khiến cường độ dòng điện tăng rất lớn và có thể gây cháy.", "• Khi R ≈ 0, theo I = U/R, dòng điện tăng đột ngột.<br>• Cần dùng cầu chì hoặc aptomat để bảo vệ mạch.", "Short circuit, Overcurrent, Fuse, Circuit breaker", "https://media.tenor.com/3XPXsF304GgAAAAM/crazy.gif"]
+        ];
+
+        // Highlight Keywords List
+        const keywordsToHighlight = [
+            "điện trở", "dòng điện", "hiệu điện thế", "cường độ dòng điện", 
+            "ampe kế", "vôn kế", "biến trở", "định luật Ohm", "ôm", 
+            "điện trở suất", "chiều dài", "tiết diện", "đồng", "nhôm", "chập điện", "cầu chì"
+        ];
+
+        let currentFontSize = 16;
+        let isMuted = false;
+        let speechSpeed = 1.0;
+        let autoPlayActive = false;
+        let currentCardIndex = 0;
+        let activeSpeechUtterance = null;
+
+        // Lightbox tracking array
+        let lightboxImages = [];
+        let currentLightboxIndex = 0;
+
+        // Initialize App
+        function initApp() {
+            const container = document.getElementById('cardContainer');
+            container.innerHTML = '';
+
+            rawData.forEach((item, index) => {
+                const [title, mainContent, details, keywordsStr, imageUrl] = item;
+                const keywords = keywordsStr ? keywordsStr.split(',').map(k => k.trim()) : [];
+                
+                lightboxImages.push({ url: imageUrl, caption: title });
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = `card-${index}`;
+
+                card.innerHTML = `
+                    <div class="card-media" onclick="openLightbox(${index})">
+                        <img src="${imageUrl}" alt="${title}" onerror="this.src='https://via.placeholder.com/400x180?text=No+Image+Available'">
+                    </div>
+                    <div class="card-content">
+                        <div class="card-title">${highlightKeywords(title)}</div>
+                        <div class="card-main">${highlightKeywords(mainContent)}</div>
+                        <div class="card-details">${highlightKeywords(details)}</div>
+                        <div class="keywords-container">
+                            ${keywords.map(kw => `<span class="keyword-badge">${kw}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Phần ${index + 1}/${rawData.length}</span>
+                        <button onclick="readCard(${index})" class="secondary" style="padding: 5px 10px; font-size: 0.8rem;">🔊 Đọc phần này</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Highlight Functionality
+        function highlightKeywords(text) {
+            if (!text) return '';
+            let highlighted = text;
+            keywordsToHighlight.forEach(kw => {
+                const regex = new RegExp(`(${kw})`, 'gi');
+                highlighted = highlighted.replace(regex, '<span class="highlight">$1</span>');
+            });
+            return highlighted;
+        }
+
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            body.setAttribute('data-theme', currentTheme === 'light' ? 'dark' : 'light');
+        }
+
+        // Font Size Controls & Keyboard Shortcuts
+        function adjustFontSize(delta) {
+            currentFontSize = Math.min(Math.max(12, currentFontSize + delta * 2), 26);
+            document.documentElement.style.setProperty('--base-font-size', `${currentFontSize}px`);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '=' || e.key === '+') {
+                adjustFontSize(1);
+            } else if (e.key === '-') {
+                adjustFontSize(-1);
+            } else if (e.key === 'Escape') {
+                closeLightboxDirect();
+            } else if (e.key === 'ArrowRight') {
+                changeLightboxImage(1);
+            } else if (e.key === 'ArrowLeft') {
+                changeLightboxImage(-1);
+            }
+        });
+
+        // Text-to-Speech Functions
+        function speakText(text, onEndCallback) {
+            if (isMuted || !('speechSynthesis' in window)) {
+                if (onEndCallback) onEndCallback();
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+            
+            // Clean HTML tags for speech
+            const cleanText = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechSpeed;
+
+            utterance.onend = () => {
+                if (onEndCallback) onEndCallback();
+            };
+
+            activeSpeechUtterance = utterance;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function readCard(index) {
+            stopAutoPlay();
+            highlightActiveCard(index);
+            const item = rawData[index];
+            const textToRead = `${item[0]}. ${item[1]}. Chi tiết: ${item[2]}`;
+            speakText(textToRead);
+        }
+
+        function highlightActiveCard(index) {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active-reading'));
+            const card = document.getElementById(`card-${index}`);
+            if (card) {
+                card.classList.add('active-reading');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('muteBtn');
+            if (isMuted) {
+                btn.textContent = '🔇 Đã tắt';
+                window.speechSynthesis.cancel();
+            } else {
+                btn.textContent = '🔊 Âm thanh';
+            }
+        }
+
+        function changeSpeed(val) {
+            speechSpeed = parseFloat(val);
+        }
+
+        // Auto Play Sequence
+        function toggleAutoPlay() {
+            if (autoPlayActive) {
+                stopAutoPlay();
+            } else {
+                startAutoPlay();
+            }
+        }
+
+        function startAutoPlay() {
+            autoPlayActive = true;
+            document.getElementById('autoPlayBtn').textContent = '⏹ Dừng Đọc';
+            currentCardIndex = 0;
+            playNextCardInSequence();
+        }
+
+        function stopAutoPlay() {
+            autoPlayActive = false;
+            document.getElementById('autoPlayBtn').textContent = '▶ Tự Động Đọc';
+            window.speechSynthesis.cancel();
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active-reading'));
+        }
+
+        function playNextCardInSequence() {
+            if (!autoPlayActive) return;
+
+            if (currentCardIndex >= rawData.length) {
+                stopAutoPlay();
+                return;
+            }
+
+            highlightActiveCard(currentCardIndex);
+            const item = rawData[currentCardIndex];
+            const textToRead = `${item[0]}. ${item[1]}. Chi tiết: ${item[2]}`;
+
+            speakText(textToRead, () => {
+                if (autoPlayActive) {
+                    currentCardIndex++;
+                    setTimeout(playNextCardInSequence, 500); // Khoảng dừng ngắn giữa các thẻ
+                }
+            });
+        }
+
+        // Lightbox Functions
+        function openLightbox(index) {
+            currentLightboxIndex = index;
+            const item = lightboxImages[index];
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightboxImg');
+            const caption = document.getElementById('lightboxCaption');
+
+            img.src = item.url;
+            caption.textContent = item.caption;
+            lightbox.classList.add('active');
+        }
+
+        function closeLightbox(event) {
+            if (event.target.id === 'lightbox') {
+                closeLightboxDirect();
+            }
+        }
+
+        function closeLightboxDirect() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        function changeLightboxImage(direction, event) {
+            if (event) event.stopPropagation();
+            currentLightboxIndex = (currentLightboxIndex + direction + lightboxImages.length) % lightboxImages.length;
+            const item = lightboxImages[currentLightboxIndex];
+            const img = document.getElementById('lightboxImg');
+            const caption = document.getElementById('lightboxCaption');
+
+            img.src = item.url;
+            caption.textContent = item.caption;
+        }
+
+        // Run initialization on load
+        window.onload = initApp;
+    </script>
+</body>
+</html>
