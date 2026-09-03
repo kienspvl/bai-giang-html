@@ -1,0 +1,781 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icarus Translator v13.5.6 - Cloud Sync &amp; Toggle</title>
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root { 
+            --sidebar-w: 300px; --sidebar-r: 320px; --font-size: 16px; --content-max-w: 1000px;
+            --bg: #f1f5f9; --text: #1e293b; --side-bg: #f8fafc; --side-text: #1e293b;
+            --primary: #e11d48; --border: #e2e8f0; --box-bg: #ffffff;
+            --pinyin-color: #e11d48; 
+        }
+
+        /* Chế độ ẩn Sidebar */
+        body.sidebars-hidden {
+            --sidebar-w: 0px;
+            --sidebar-r: 0px;
+        }
+
+        aside:first-of-type { 
+            --side-bg: #1e293b; 
+            --side-text: #f1f5f9; 
+            --border: #334155; 
+            --bg: #0a0f1d; 
+            background: var(--side-bg) !important;
+            color: var(--side-text) !important;
+            overflow: hidden; 
+        }
+        aside:first-of-type .sidebar-textarea, 
+        aside:first-of-type select {
+            background: #0a0f1d;
+            color: #f1f5f9;
+            border-color: #334155;
+        }
+
+        body.theme-1 { --bg: #f0f4f8; --text: #1e293b; --side-bg: #f8fafc; --side-text: #1e293b; --primary: #2563eb; --border: #e2e8f0; --box-bg: #ffffff; --pinyin-color: #2563eb; }
+        body.theme-2 { --bg: #0a0f1d; --text: #f1f5f9; --side-bg: #1e293b; --side-text: #f1f5f9; --primary: #fb7185; --border: #334155; --box-bg: #1e293b; --pinyin-color: #fb7185; }
+        body.theme-3 { --bg: #f7eed7; --text: #5d4037; --side-bg: #f5ecd5; --side-text: #4e342e; --primary: #d84315; --border: #d7ccc8; --box-bg: #fdf6e3; --pinyin-color: #1976d2; }
+        body.theme-4 { --bg: #dceada; --text: #2d3e2d; --side-bg: #d4e4d4; --side-text: #1a2a1a; --primary: #3e7a3e; --border: #bdcfbd; --box-bg: #e8f3e8; --pinyin-color: #4a90e2; }
+        body.theme-5 { --bg: #14110f; --text: #dccab8; --side-bg: #2a2421; --side-text: #f3e5d8; --primary: #a67c52; --border: #334155; --box-bg: #1a1614; --pinyin-color: #8e9aaf; }
+
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); display: flex; height: 100vh; color: var(--text); overflow: hidden; transition: 0.3s; }
+        aside { width: var(--sidebar-w); background: var(--side-bg); color: var(--side-text); display: flex; flex-direction: column; box-sizing: border-box; border-right: 1px solid var(--border); transition: 0.3s; z-index: 10; position: relative; }
+        .sidebar-right { width: var(--sidebar-r); background: var(--side-bg); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; color: var(--text); transition: 0.3s; display: flex; flex-direction: column; border-right: none; }
+        
+        body.sidebars-hidden aside { padding: 0; border: none; }
+        body.sidebars-hidden .sidebar-right { padding: 0; }
+
+        #hamburgerBtn {
+            position: fixed;
+            right: calc(var(--sidebar-r) - 20px);
+            top: 10px;
+            z-index: 1000;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: right 0.3s ease;
+        }
+        body.sidebars-hidden #hamburgerBtn {
+            right: 0px;
+            border-radius: 4px 0 0 4px;
+        }
+
+        select { width: 100%; padding: 5px; margin-top: 5px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
+        .tabs { display: flex; background: rgba(0,0,0,0.2); flex-shrink: 0; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: none; color: inherit; opacity: 0.6; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        .tab-btn.active { opacity: 1; border-bottom: 2px solid var(--primary); background: rgba(255,255,255,0.05); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; box-sizing: border-box; }
+        .tab-content:not(.active) { display: none; }
+        
+        /* FIX YÊU CẦU 1: Khôi phục kích thước chuẩn lớn, cố định cho textarea, không bị thu hẹp */
+        .sidebar-textarea { width: 100%; height: 120px; min-height: 60px; background: var(--bg); color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 10px; box-sizing: border-box; resize: vertical; font-size: 0.9rem; outline: none; flex-shrink: 0; }
+        
+        .history-list { flex: 1; overflow-y: auto; }
+        .history-item { padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.75rem; display: flex; justify-content: space-between; gap: 10px; }
+        .history-item:hover { background: rgba(255,255,255,0.05); }
+
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        header { width: 100%; background: var(--side-bg); border-bottom: 1px solid var(--border); padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; gap: 10px; z-index: 15; flex-shrink: 0; padding-right: 50px; }
+        
+        .workspace { 
+            width: 100%; 
+            max-width: var(--content-max-w); 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 42vh 20px; 
+            box-sizing: border-box; 
+            scroll-behavior: smooth;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .sentence-box { 
+            padding: 15px 20px; 
+            background: var(--box-bg); 
+            margin-bottom: 12px; 
+            border-radius: 10px; 
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06); 
+            cursor: pointer; 
+            border-left: 5px solid transparent; 
+            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            opacity: 0.45; 
+            overflow: hidden;
+        }
+        .sentence-box .text-orig { font-weight: 400; } 
+        .sentence-box:hover { opacity: 0.8; transform: translateY(-1px); }
+        .sentence-box.active { 
+            opacity: 1; 
+            border-left-color: var(--primary); 
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1); 
+            transform: scale(1.01); 
+        }
+        .sentence-box.active .text-orig { font-weight: 600; } 
+
+        .text-orig { display: block; font-size: var(--font-size); margin-bottom: 8px; color: var(--text); line-height: 1.4; }
+        .trans-line { 
+            font-size: var(--font-size); 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            background: rgba(0,0,0,0.03); 
+            border-left: 3px solid var(--border); 
+            margin-top: 6px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .lang-en { border-left-color: #2563eb; }
+        .lang-ru { border-left-color: #ef4444; }
+        .lang-zh { border-left-color: #f59e0b; }
+        .lang-vi { border-left-color: #22c55e; }
+
+        .btn-mini-speak { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: 0.5; transition: 0.2s; color: var(--text); }
+        .btn-mini-speak:hover { opacity: 1; transform: scale(1.1); }
+        .pinyin { font-size: 0.85em; color: var(--pinyin-color); font-style: italic; margin-top: 2px; display: block; }
+
+        .pagination { display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.05); padding: 4px 12px; border-radius: 20px; }
+        .pagination button { background: none; border: none; padding: 2px 8px; font-size: 1.2rem; line-height: 1; color: var(--text); cursor: pointer; opacity: 0.6; }
+        .pagination button:hover { opacity: 1; color: var(--primary); }
+        .page-input { width: 35px; text-align: center; border: none; background: transparent; font-weight: bold; color: var(--primary); outline: none; font-size: 0.9rem; }
+        .total-page { font-size: 0.9rem; opacity: 0.5; font-weight: 500; }
+
+        .timer-display { font-size: 1.00rem; background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 20px; color: var(--primary); font-weight: bold; border: 1px solid var(--border); }
+        .preview-label { font-size: 0.7rem; font-weight: bold; color: var(--primary); margin-top: 15px; display: block; text-transform: uppercase; opacity: 0.8; }
+        .preview-text { font-size: 0.95rem; line-height: 1.5; margin-top: 5px; }
+
+        .vocab-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .word-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-top: 10px; }
+        .word-card { background: var(--bg); border: 1px solid var(--border); padding: 8px; border-radius: 6px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .ana-word { font-weight: bold; font-size: 1.1rem; color: var(--primary); display: block; }
+        .ana-pinyin { color: var(--pinyin-color); font-size: 0.75em; font-style: italic; display: block; margin: 2px 0; }
+        .ana-meaning { font-size: 0.75em; color: var(--text); opacity: 0.8; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; line-height: 1.2; }
+
+        .sw-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.8rem; }
+        .switch { position: relative; width: 34px; height: 18px; display: inline-block; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #cbd5e1; border-radius: 20px; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .4s; }
+        input:checked + .slider { background: var(--primary); }
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        button { cursor: pointer; border-radius: 6px; border: 1px solid var(--border); padding: 6px 12px; font-weight: 500; transition: 0.2s; background: var(--bg); color: var(--text); }
+        .btn-action { background: var(--primary); color: white; border: none; }
+        
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { 
+            display: none; position: absolute; left: 0; top: 100%; background-color: var(--side-bg); 
+            min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 100; 
+            border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+        }
+        .dropdown:hover .dropdown-content { display: block; }
+        .menu-item { padding: 8px 12px; color: var(--text); font-size: 0.85rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .menu-item:hover { background-color: rgba(0,0,0,0.05); }
+        .menu-key { opacity: 0.5; font-size: 0.75rem; font-weight: bold; background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+        
+        .modal-content { 
+            background: var(--bg); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 15px 25px 25px 25px; border-radius: 12px; width: 90%; max-width: 700px; color: var(--text); 
+            border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.3); box-sizing: border-box; 
+        }
+        .modal-content h3 { margin-top: 10px; margin-bottom: 15px; }
+        #noteArea { width: 100%; height: 300px; background: rgba(0,0,0,0.02); color: inherit; border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-sizing: border-box; resize: none; font-family: inherit; font-size: 1rem; margin: 10px 0; outline: none; }
+        
+        .note-tools { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .btn-tool { font-size: 0.75rem; padding: 5px 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: 4px; }
+        .btn-full-close { width: 100%; margin-top: 10px; padding: 12px; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 6px; }
+        .btn-export-popup { width: 100%; margin-top: 5px; padding: 10px; font-weight: bold; background: #6366f1; color: white; border: none; border-radius: 6px; }
+
+        footer { width: 100%; background: var(--side-bg); color: var(--text); padding: 8px; text-align: center; font-size: 0.75rem; opacity: 0.6; border-top: 1px solid var(--border); flex-shrink: 0; z-index: 15; }
+    </style>
+</head>
+<body class="theme-3"> 
+
+<button id="hamburgerBtn" onclick="toggleSidebars()">☰</button>
+
+<aside id="sidebarLeft">
+    <div class="tabs">
+        <button id="btn-tab-settings" class="tab-btn active" onclick="switchTab('settings')">CÀI ĐẶT</button>
+        <button id="btn-tab-history" class="tab-btn" onclick="switchTab('history')">LỊCH SỬ</button>
+    </div>
+
+    <div id="tab-settings" class="tab-content active">
+        <!-- Vùng nhập văn bản được giữ nguyên vẹn nội dung ngậm (nếu có) khi mở file save as -->
+        <textarea id="input" class="sidebar-textarea" placeholder="Dán văn bản nguồn..." value="Chương 22: TOY STORY - CÂU CHUYỆN ĐỒ CHƠI
+Buzz và Woody giải cứu
+Jeffrey Katzenberg
+“Làm những điều bất khả thi cũng vui theo cách riêng của nó,” Walt Disney đã có lần nói như vậy. Và đó cũng là thái độ tiếp cận hấp dẫn Jobs. Ông ngưỡng mộ sự ám ảnh với chi tiết và thiết kế của Disney và cảm thấy giữa Pixar và hãng phim ảnh mà Disney sáng lập vừa vặn phù hợp với nhau một cách rất tự nhiên. 
+Công ty Walt Disney đã cấp phép cho Hệ thống Sản phẩm Hoạt hình Máy tính Pixar và trở thành khách hàng lớn nhất của công ty máy tính Pixar. Một ngày, Jeffrey Katzenberg, người đứng đầu phân nhánh phim của Disney mời Jobs tới mấy studio ở Burbak để xem sức mạnh của công nghệ trong quá trình vận hành. Trong khi nhân viên của Disney đưa ông đi tham quan vòng vòng, Jobs quay ra Katzenberg và hỏi: “Disney có hài lòng với Pixar không?” Với vẻ hồ hởi hết mức, Katzenberg trả lời có. Sau đó Jobs lại hỏi: “Anh có nghĩ chúng tôi ở Pixar cũng hài lòng với Disney không?” Katzenberg nói anh đoán vậy. “Không, chúng tôi không hề,” Jobs trả lời. “Chúng tôi muốn làm phim với các anh. Điều đó mới khiến chúng tôi hài lòng.”
+Katzenberg rất sẵn lòng. Ông ngưỡng mộ những bộ phim ngắn của John Lasseter và đã từng cố gắng lôi kéo nhưng không thành công John về với Disney. Thế là Katzenberg mời nhóm Pixar đến để thảo luận về việc trở thành đối tác làm chung một bộ phim. Khi Catmull, Jobs và Lasseter đã yên vị trong phòng họp, Katzenberg thẳng thắn. “John, vì ông không muốn sang làm việc cho tôi,” ông nói và nhìn Lasseter, “Tôi sẽ thực hiện điều đó theo cách này.”
+Trong khi công ty Disney giới thiệu những đặc điểm chính của mình với Pixar, thì Katzenberg cũng chia sẻ vài điều với Jobs. Cả hai đều có thể trở nên dễ chịu khi họ muốn như vậy và cũng nhanh chóng trở nên dữ dằn (hoặc tệ hơn) tùy thuộc thái độ ấy phản ánh đúng tâm trạng hoặc sự quan tâm của họ. Alvy Ray Smith, lúc ấy đang sửa soạn rời khỏi Pixar cũng có mặt trong buổi gặp gỡ hôm ấy. “Katzenberg và Jobs gây cho tôi một ấn tượng mạnh mẽ,” anh nhớ lại. “Những nhà độc tài thường được trao tặng một món quà kì diệu là sự hoạt ngôn.” Katzenberg tỏ ra thú vị khi nhận ra điều này. “Tất cả mọi người đều nghĩ tôi là một kẻ độc tài,” ông nói với nhóm Pixar. “Tôi đúng là một người độc tài. Nhưng vấn đề là tôi luôn đúng.” Ai cũng dễ dàng tưởng tượng ra Jobs cũng có thể nói y hệt như vậy. 
+Cả hai người đều tìm thấy niềm đam mê chung và cân bằng, các thoả thuận giữa Katzenberg và Jobs chỉ mất có mấy tháng. Katzenberg khăng khăng rằng Disney sẽ cấp cho Pixar quyền sử dụng công nghệ để làm phim hoạt hình 3-D. Jobs từ chối, và cuối cùng ông cũng có được thoả thuận. Jobs cũng đưa ra đề nghị phía mình: Pixar cũng có phần sở hữu đối với bộ phim và các nhân vật của nó, cả hai bên cùng có quyền kiểm soát bản quyền của bộ phim và các tập tiếp theo. “Nếu đó là những gì anh muốn,” Katzenberg nói, “thì chúng ta có thể dừng cuộc nói chuyện ở đây và các anh có thể ra về.” Jobs đã ở lại, và chấp nhận điểm đó. 
+Lasseter chăm chú theo dõi cuộc đối thoại như thể đang quan sát những lưỡi gươm sáng loang loáng của hai đấu sĩ vung lên, hạ xuống. “Chỉ nhìn cách Steve và Jeffrey trong cuộc thoả thuận ấy, tôi đã thấy kinh hãi,” ông nhớ lại. “Y hệt một trận đấu kiếm. Cả hai đều là anh tài.” Nhưng Katzenberg vào trận với một lưỡi đao, còn Jobs chỉ có một chiếc lá mỏng. Pixar đang trên bờ vực phá sản và cần một hợp đồng với Disney hơn là Disney cần một thoả thuận với Pixar. Hơn nữa, Disney có khả năng tài chính cho cả hãng, còn Pixar thì không. Kết quả vẫn là một thoả thuận, kí kết vào tháng Năm năm 1991, trong đó Disney sở hữu hình ảnh và toàn quyền khai thác nhân vật, được kiểm soát nội dung sáng tạo và chi cho Pixar 12,5% doanh thu bán vé. Có khả năng (nhưng không phải là bắt buộc) làm tiếp với Pixar hai phim tiếp theo và có quyền làm tiếp (cùng hoặc không với Pixar) các phần tiếp theo, sử dụng các nhân vật của phim. Disney cũng có quyền huỷ bỏ bộ phim vào bất cứ lúc nào nếu đối tác vi phạm những điều khoản quyết định. 
+Ý tưởng mà John Laseter nảy ra có tên gọi “Câu chuyện Đồ chơi” (Toy Story). Nó xuất phát từ một niềm tin, mà cả ông và Jobs cùng chia sẻ, đó là tất cả các sản phẩm đều có giá trị tồn tại cốt lõi, là mục đích mà vì đó chúng mới được làm ra. Nếu một vật có cảm xúc, thì cảm xúc đó phải dựa trên khát khao được thoả mãn giá trị tồn tại của nó. Ví dụ, mục đích của cái cốc đựng nước, là được chứa nước bên trong; nếu nó có cảm xúc, nó sẽ hạnh phúc khi được chứa đầy nước và sẽ buồn tủi khi không có nước bên trong. Giá trị cốt lõi của chiếc màn hình máy tính là giao tiếp với con người. Giá trị cốt lõi của chiếc xe đạp một bánh là được biểu diễn ở trong rạp xiếc. Đối với đồ chơi, mục đích tồn tại của chúng là để cho trẻ em chơi, và vì thế, tồn tại nỗi sợ hãi vốn có khi bị vứt bỏ hoặc bị “thất thế” trước những món đồ chơi mới. Vậy là một bộ phim về tình bạn giữa một món đồ chơi yêu thích cũ với một món đồ chơi mới sáng loá sẽ ẩn chứa trong nó cái bi kịch cốt lõi, đặc biệt là khi cuộc đấu tranh xoay quanh những đồ chơi bị chia cắt với chủ nhân bé nhỏ của chúng. Vấn đề cần giải quyết xuất phát từ quan điểm “Mọi người ai cũng từng trải qua cảm giác đau thương thuở nhỏ khi đánh mất đồ chơi. Câu chuyện của chúng tôi được kể dưới góc nhìn của một anh bạn đồ chơi, khi anh ta bị đánh mất và cố gắng tìm kiếm lại cảm giác quan trọng nhất với mình: được chơi đùa với lũ trẻ. Đó là lý do cho sự tồn tại của tất cả đồ chơi trên thế giới. Đó là cơ sở cảm xúc cho sự tồn tại của chúng.”
+Phải trải qua rất nhiều lượt tuyển chọn, cuối cùng mới chọn được ra hai nhân vật chính là Buzz Lightyear và Woody. Cứ hai tuần một lần, Lasseter và nhóm của mình lại ngồi lại để ghép phân cảnh mới nhất hoặc chiếu thử cho người của Disney xem. Trong những cảnh chiếu thử đầu tiên, Pixar đã trình chiếu kĩ xảo tuyệt vời của mình bằng cách, ví dụ là giới thiệu một cảnh Woody rón rén đi trên nóc tủ, trong khi ánh sáng lọt qua khe của tấm mành trên cửa sổ, phủ bóng xuống chiếc áo sơ mi sọc vuông của cậu – hiệu ứng này hầu như không thể thực hiện được bằng kĩ thuật thô sơ. Tuy vậy, đưa ra được kịch bản làm Disney ấn tượng khó khăn hơn nhiều. Mỗi lần Pixar trình bày, Katzenberg “chặt chém” không thương tiếc, xối xả đưa ra những nhận xét và ghi chú đến từng chi tiết. Và lăm lăm trên tay những nhân viên cốt cán là cả tập hồ sơ theo dõi kịch bản để đảm bảo những ý kiến cũng như những ý tưởng bất chợt của Katzenberg không bị bỏ qua và được theo sát thực hiện. 
+Điều mà Katzenberg thúc ép nhiều nhất chính là phải tạo nên những chi tiết kịch tính hơn cho hai nhân vật chính. Có thể đó là một bộ phim hoạt hình tên là Câu chuyện Đồ chơi, ông nói, nhưng nó không thể chỉ nhắm tới trẻ em. “Lúc đầu, câu chuyện chả có kịch tính, không có câu chuyện cụ thể và chả có mâu thuẫn gì hết,” Katzenberg nhớ lại. Ông gợi ý Lasseter nên xem vài bộ phim bằng hữu kinh điển như Những người nổi loạn (The Defiant Ones) và 48 Giờ (48 Hours), trong đó hai nhân vật chính với hai cách sống khác nhau lại buộc phải chung đường và ràng buộc với nhau. Hơn nữa, ông tiếp tục thúc ép phải làm cho ra cái gọi là “cao trào”, tức là phải có gì làm nhân vật Woody trở nên đố kỵ, xấu xa và sẵn sàng đối đầu với Buzz, kẻ “tiếm ngôi” trong hộp đựng đồ chơi. “Đây là thế giới đồ chơi nuốt đồ chơi,” Woody đã nói như vậy trong một cảnh, sau đó cậu đẩy Buzz ra ngoài cửa sổ. 
+Sau rất nhiều vòng thảo luận với Katzenberg và những chuyên gia khác của Disney, Woody bị lột dần hết vẻ dễ thương. Trong một cảnh, cậu ném hết những đồ chơi khác xuống đất và yêu cầu Slinky đến giúp một tay. Khi thấy Slinky chần chừ, Woody đã gào lên: “Việc của mày là nghĩ ngợi đấy chắc, con chó kia?” Slinky khi đó đã hỏi một câu mà sau này chính nhóm làm phim của Pixar cũng phải tự hỏi mình: “Tại sao tên cao bồi này đáng sợ vậy trời?” Và Tom Hanks, người được mời lồng tiếng cho Woody cũng công nhận điểm này, “Ôi hắn đúng là một tên khốn!”
+Cắt!
+Tháng Mười một năm 1993, Lasseter và nhóm Pixar đã hoàn thành xong nửa đầu bộ phim và sẵn sàng mang đi chiếu thử, họ mang phim của mình đến Burbank để chiếu cho Katzenberg và những chuyên gia khác của Disney xem. Peter Schneider, giám đốc nhánh phim hoạt hình chưa bao giờ thích ý tưởng để người bên ngoài làm phim cho Disney của Katzenberg, ông tuyên bố bộ phim là một đống lộn xộn và yêu cầu ngừng sản xuất. Katzenberg đồng ý. “Tại sao nó lại kinh khủng như vậy? ông hỏi một đồng nghiệp, Tom Schumacher. “Bởi vì đó không còn là bộ phim của họ nữa,” Schumacher nói thẳng toẹt ra. Sau này ông giải thích, “Họ làm theo những gì Katzenberg gợi ý, và dự án này đã hoàn toàn mất phương hướng.”
+Lasseter nhận thấy Schumacher đã đúng. “Tôi đứng ở đó và cảm thấy vô cùng xấu hổ với những gì được trình chiếu trên màn hình,” ông nhớ lại. “Đó là một câu chuyện chỉ toàn những nhân vật bất hạnh, xấu xa mà tôi chưa từng thấy bao giờ.” Ông đề nghị Disney cho Pixar thêm một cơ hội để sửa và xem lại kịch bản. Katzenbers đã ủng hộ. 
+Jobs không can thiệp quá nhiều vào quá trình sáng tạo. Với cá tính thích kiểm soát mọi thứ, đặc biệt là trong lĩnh vực phong cách và thiết kế của mình, thì sự tự kiềm chế này chính là minh chứng hùng hồn cho việc ông tôn trọng Lasseter và những nghệ sĩ làm việc tại Pixar như thế nào – cũng như tin tưởng vào khả năng Lasseter và Catmull sẽ không làm ông thất vọng. Tuy nhiên, ông đã giúp đỡ họ xử lý mối quan hệ với Disney và điều này khiến nhóm Pixar vô cùng cảm kích. Khi Katzenberg và Schneider thắt chặt sản xuất với Câu chuyện Đồ chơi, Jobs đã bỏ tiền riêng ra để duy trì hoạt động của studio. Ông đứng về phía họ để chống lại Katzenberg. “Chính ông ta làm Toy Story loạn hết cả lên,” Jobs nói. “Ông ta muốn Woody trở thành nhân vật xấu, và khi ông ta muốn dẹp bỏ tụi tôi, chúng tôi thể hiện rằng chúng tôi sẵn sàng đá ông ta ra và nói ‘Đây không phải là những gì chúng tôi muốn’ và tiếp tục làm bộ phim theo cách mà chúng tôi vẫn theo đuổi.”
+Ba tháng sau, nhóm Pixar trở lại với kịch bản mới. Nhân vật Woody đã biến đổi, từ một gã đồ chơi bạo ngược trở thành người lãnh đạo khôn ngoan, dẫn dắt đám đồ chơi của Andy. Thái độ hiềm khích của cậu với Buzz Lightyear được thể hiện một cách dễ thông cảm hơn, và nó được xây dựng trên nền những bản nhạc mới của Randy Newman Strange Things (Tạm dịch: Những thứ lạ lùng). Cảnh Woody đẩy Buzz ra khỏi cửa sổ được viết lại, Buzz ngã do bị Woody vô tình xô vào khi cậu giằng co với đèn Luxo trước đó. Katzenberg và Công ty chấp nhận cách tiếp cận mới này, và đến tháng Hai năm 1994, bộ phim được sản xuất trở lại. 
+Katzenberg rất ấn tượng với sự tập trung của Jobs để giữ chi phí cho bộ phim nằm trong tầm kiểm soát. “Ngay từ những giai đoạn dự thảo ngân sách đầu tiên, Steve đã rất háo hức làm sao để tiền chi ra đạt hiệu quả nhất có thể,” ông nói. Nhưng 17 triệu đô-la ngân sách dành cho sản xuất rõ ràng là không tương xứng, nhất là khi họ phải sửa lại phần lớn nội dung sau khi Katzenberg can thiệp và bắt Woody phải hung ác hơn. Vì vậy Jobs đã yêu cầu cần thêm tiền đầu tư để hoàn thành bộ phim cho đúng kế hoạch. “Nghe này, chúng ta đã thoả thuận,” Katzenberg nói với Jobs. “Chúng tôi để các anh quyền kiểm soát kinh doanh, các anh đã đồng ý thực hiện với khoản tiền chúng tôi đề xuất.” Jobs cáu điên lên. Ông liên tục gọi điện hoặc bay thẳng đến gặp Katzenberg và giữ thái độ, như ngôn ngữ của Katzenberg là “đeo bám dữ dội như chỉ có ở Steve.” Jobs khăng khăng cho rằng Disney cũng phải có trách nhiệm với việc chi phí đội lên do Katzenberg đã làm hỏng ý tưởng ban đầu và khiến họ phải mất thêm công sức sửa chữa sai lầm. “Khoan đã!” Katzenberg đáp trả. “Chúng tôi chỉ cố gắng giúp các anh. Các anh cũng hưởng lợi khi được các chuyên gia sáng tạo của chúng tôi giúp đỡ, và giờ các anh lại muốn chúng tôi phải trả tiền cho điều đó.” Đó là cuộc đối đầu giữa hai vị lãnh đạo cứng rắn như nhau, để tranh luận xem cuối cùng thì bên nào đã gia ơn cho bên nào. 
+Ed Catmull, khôn khéo hơn Jobs, là người đạt được thoả hiệp về nguồn kinh phí mới. “Tôi có cái nhìn lạc quan đối với Jeffrey hơn bất cứ ai trong số những người làm dự án này,” ông nói. Nhưng sự cố này khiến Jobs bắt đầu suy tính đến cách thoả thuận có lợi hơn khi đàm phán với Disney trong tương lai. Ông không muốn bị coi là một nhà đàm phán non kém; ông luôn muốn mọi thứ trong tầm kiểm soát. Điều đó có nghĩa là Pixar sẽ phải tự mình đầu tư cho những dự án của mình trong tương lai, và như vậy thì cần một thoả thuận mới với Disney. 
+Khi bộ phim tiến triển, Jobs trở nên hào hứng với nó hơn bao giờ hết. Ông đã từng nói chuyện với nhiều công ty, từ Hallmark tới Microsoft về chuyện bán Pixar, nhưng khi Woody và Buzz xuất hiện, ông nhận ra rằng mình đang ở rất gần cơ hội thay đổi ngành công nghiệp điện ảnh. Khi những cảnh cuối cùng của bộ phim hoàn thành, ông xem đi xem lại và mời bạn bè đến nhà để chia sẻ niềm đam mê mới. “Tôi không thể nhớ mình đã xem bao nhiêu phiên bản của Toy Story trước khi bộ phim được chính thức công chiếu,” Larry Ellison nói. “Thực ra nó giống như một dạng tra tấn vậy. Tôi đến đó và xem những bản chỉ cải tiến có 10% so với phiên bản trước. Steve bị ám ảnh về chuyện làm thế nào cho đúng – cả nội dung lẫn công nghệ - và không chịu chấp nhận bất cứ điều gì ngoài sự hoàn hảo.”
+Linh cảm của Jobs về việc đầu tư vào Pixar thực tế đã đơm hoa kết trái càng được củng cố khi Disney mời ông tới tham dự buổi chiếu phim ra mắt báo giới bộ phim hoạt hình Pocahontas vào tháng Một năm 1995, trong một rạp chiếu dựng lên trong công viên Center Park ở Manhattan. Tại đây, CEO của Disney Michael Eisner công bố phim Pocahontas sẽ được trình chiếu suất đầu tiên trước 100.000 khán giả trên màn hình cao 2,4m tại Great Lawn ở Central Park. Jobs là bậc thầy quảng cáo, ông thừa biết nên làm gì để có một buổi trình chiếu thành công, nhưng kế hoạch này cũng khiến ông sửng sốt. Câu khẩu hiệu quen thuộc của Buzz Lightyear - “Bay vào không gian và hơn thế nữa!” – bỗng nhiên đáng được lưu tâm. 
+Jobs quyết định thời điểm ra mắt Toy Story sẽ là cơ hội để phát hành cổ phiếu của Pixar ra công chúng. Ngay cả những ngân hàng đầu tư hám lợi nhất cũng nghi ngại trước quyết định này và cho rằng chuyện đó không thể xảy ra. Trong suốt 5 năm ròng, Pixar chỉ “chảy máu” đồng vốn. Nhưng Jobs đã quyết. “Tôi rất căng thẳng và lập luận rằng có lẽ chúng tôi nên chờ đến khi ra được bộ phim thứ hai,” Lasseter nhớ lại. “Steve gạt phắt ý kiến của tôi và nói chúng tôi cần tiền mặt để có thể góp nửa số tiền để làm phim và để đàm phán lại thoả thuận với Disney.”
+Bay vào không gian!
+Có suất chiếu ra mắt Toy Story diễn ra vào tháng Mười Một năm 1995. Disney tổ chức một buổi ở El Capitan, một rạp lớn cổ kính ở Los Angeles và dựng một ngôi nhà đồ chơi với các nhân vật trong phim ở ngay bên cạnh. Pixar được trao cho ít vé vào cửa, nhưng buổi tối hôm đó và danh sách khách mời là người nổi tiếng đều mang tính đại diện cho sản phẩm của Disney rất cao; Jobs thậm chí không tham dự. Thay vào đó, ngay tối hôm sau ông thuê Regency, một nhà hát tương tự ở San Francisco và tự tổ chức buổi công chiếu của mình. Thay vì mời Tom Hanks và Steve Martin , khách mời là những ngôi sao công nghệ ở Thung lũng Silicon như Larry Ellison và Andy Grove. Rõ ràng đó là sân khấu của Jobs; chính ông, chứ không phải Lasseter lên sân khấu để mở màn cho bộ phim. 
+Hai buổi công chiếu đình đám làm dấy lên một câu hỏi: Vậy thì Toy Story là phim của Disney hay Pixar? Có phải Pixar chỉ đơn thuần là xưởng phim hoạt hình phụ giúp Disney làm phim? Hay Disney đơn thuần là nhà phân phối và tiếp thị giúp Pixar quảng bá cho bộ phim của mình? Câu trả lời nằm ở lưng chừng. Dù thế nào, thì câu hỏi cần đặt ra ở đây là làm thế nào hai cái tôi ngạo nghễ, cụ thể ở đây là của Michael Eisner và Steve Jobs lại có thể trở thành đối tác của nhau như vậy. 
+Vấn đề được đặt ra khi Toy Story trở thành bộ phim bom tấn về thương mại và thành công rực rỡ. Bộ phim thu hồi vốn ngay sau tuần đầu tiên trình chiếu, với tiền vé thu được riêng trong nước Mỹ là 30 triệu đô-la, và trở thành bộ phim có doanh thu cao nhất trong năm, đánh bại Batman Forever và Apollo 13 với 192 triệu đô-la doanh thu bán vé trong nước và 326 triệu đô-la trên toàn thế giới. Theo trang web chuyên tổng hợp các bình luận phim Rotten Tomatoes, 100% trong số 73 nhà phê bình được hỏi ý kiến đều đưa ra bình luận tích cực cho bộ phim. Nhà báo Richard Corliss của tạp chí Time cho rằng đó là “câu chuyện sáng tạo nhất năm”, David Ansen của tờ Newsweek tuyên bố đó là một “điều kì diệu” và Janet Masline của tờ New York Times thì giới thiệu bộ phim là “sản phẩm của sự thông minh lạ thường trong số những phim từng sản xuất trong lịch sử Disney.”
+Điều duy nhất khiến Jobs nổi điên là những nhà bình luận như Maslin đã dám viết “lịch sử Disney”, chứ không phải là sự xuất hiện của Pixar. Sau khi đọc bài bình luận của cô này, ông quyết định mình sẽ thực hiện một chiến dịch để nâng cao danh tiếng cho Pixar. Khi ông và Lasseter đến chương trình truyền hình Charlie Rose, ông nhấn mạnh rằng Toy Story là phim của Pixar, thậm chí ông còn cố gắng làm nổi bật tính tự nhiên lịch sử của một xưởng phim mới ra đời. “Kể từ khi Nàng Bạch Tuyết và Bảy chú lùn ra đời đến nay, tất cả các studio lớn đều cố gắng xâm nhập thị trường phim hoạt hình, nhưng cũng kể từ đó đến nay, Disney là hãng phim duy nhất cho ra đời những bộ phim hoạt hình trở thành bom tấn,” ông nói với Rose. “Pixar giờ đây đã trở thành studio thứ hai làm được việc đó.”
+Jobs xoáy vào điểm Disney chỉ đơn thuần là nhà phân phối cho bộ phim của Pixar. “Ông ta cứ lải nhải ‘Chúng tôi ở Pixar mới là thực chất, còn Disney các anh chỉ là đống rác rưởi,” Michael Eisner nhớ lại. “Nhưng chúng tôi mới là người khiến Toy Story thành công. Chúng tôi định hình bộ phim, và chúng tôi dồn tổng lực vào, từ các nhà tiếp thị tiêu dùng vào kênh Disney, để biến nó trở thành hit.” Jobs đi đến kết luận cho vấn đề cơ bản – Bộ phim thuộc về ai? - sẽ cần phải ngồi xem xét lại bản hợp đồng hơn là nổ ra một cuộc chiến ngôn từ trên báo chí. “Sau thành công của Toy Story,” ông nói, “Tôi nhận ra là mình cần phải tiến hành thoả thuận mới với Disney nếu chúng tôi đã mất công xây dựng một studio và không muốn trở thành lính-đánh-thuê.” Nhưng để có thể ngồi lại với Disney ở thế cân bằng, Pixar cần phải mang tiền đến chồng trước mặt đối tác. Đó là lý do vì sao cần một cuộc IPO thành công. 
+Kế hoạch chào bán Pixar ra công chúng phải tiến hành chính xác một tuần sau buổi ra mắt Toy Story. Jobs đã đánh cược rằng bộ phim sẽ thành công, và chấp nhận mạo hiểm “liều ăn nhiều”, thời khắc vàng. Cũng giống IPO của Apple, sự kiện được tổ chức tại trụ sở của bên bảo hiểm chính ở San Francisco lúc 7 giờ sáng, khi các cổ phiếu bắt đầu được chào bán. Theo kế hoạch ban đầu, những cổ phiếu đầu tiên sẽ được chào bán với mức giá 14 đô-la, đó là mức giá đảm bảo sẽ có người mua. Jobs nài nỉ tăng giá lên 22 đô-la, vì như thế công ty sẽ kiếm được nhiều tiền hơn nếu chào bán thành công. Nhưng mọi sự đã diễn ra trên cả mong đợi điên rồ nhất của ông. Nó vượt qua cả Netscape để trở thành vụ chào bán IPO lớn nhất trong năm. Trong nửa giờ đầu, giá cổ phiếu vọt lên 45 đô-la và hoạt động giao dịch bị đình lại bởi vì có quá nhiều người đặt mua. Thậm chí sau đó giá còn cao hơn, lên 49 đô-la, trước khi trở lại mức giá cuối cùng khi kết thúc phiên giao dịch là 39 đô-la. 
+Đầu năm đó, Jobs đã hi vọng sẽ tìm được một nhà đầu tư mua lại Pixar với giá 50 triệu đô-la, vừa đủ để hoàn số vốn ông đã bỏ ra. Đến cuối năm, với số cổ phiếu ông sở hữu – 80% toàn công ty – đã trị giá nhiều gấp hơn 20 lần con số đó, một con số khổng lồ 1,2 tỷ đô-la. Con số đó nhiều gấp năm lần so với những gì ông thu được khi Apple lên sàn chứng khoán năm 1980. Nhưng Jobs nói với John Markoff của tờ New York Times rằng tiền không nhiều ý nghĩa với ông. “Sẽ chẳng có chiếc du thuyền nào của tôi trong tương lai hết,” ông nói. “Tôi không bao giờ làm những điều này chỉ vì tiền cả.”
+Sự thành công nhất của Pixar khi lên sàn chứng khoán đó là họ sẽ không còn phải phụ thuộc tài chính vào Disney để làm phim của mình nữa. Đó chính là cán cân thăng bằng mà Jobs muốn có. “Giờ đây chúng tôi đã có thể góp một nửa chi phí làm phim của chúng tôi, cho nên tôi cũng có thể đòi hỏi một nửa lợi nhuận,” ông nhớ lại. “Nhưng điều quan trọng hơn, tôi muốn hợp tác thương hiệu. Đó sẽ là những bộ phim của cả Pixar và Disney.”
+Jobs đáp máy bay đến để ăn trưa với Eisner đang choáng váng với sự táo bạo của ông. Họ đã từng thoả thuận sẽ làm với nhau 3 bộ phim, và Pixar mới hoàn thành xong một. Bên nào cũng có vũ khí hạng nặng. Sau cuộc chia tay không mấy ngọt ngào với Eisner, Katzenberg đã rời khỏi Disney và trở thành người đồng sáng lập với Steven Spielberg và David Geffen thành lập DreamWorks SKG. Nếu Eisner không chấp nhận thoả thuận mới với Pixar, Jobs nói, thì Pixar buộc lòng phải hợp tác studio khác, như của Katzenberg chẳng hạn, sau khi kết thúc hợp đồng hợp tác 3 phim. “Vũ khí” trong tay Eisner đó là nếu chuyện đó xảy ra, thì Disney có thể tự mình làm các tập tiếp theo của Toy Story, sử dụng nhân vật Woody, Buzz và toàn bộ những nhân vật mà Lasseter đã sáng tạo ra. “Điều đó như thể bán đi chính con cái của mình vậy,” Jobs sau này nhớ lại. “John bắt đầu rơi nước mắt khi ông phải tính đến khả năng đó.”
+Vậy nên họ cố công tìm ra cho được một thoả thuận mới. Eisner đồng ý để Pixar góp một nửa vốn trong những bộ phim sau, và đổi lại, được nhận một nửa lợi nhuận. “Ông ta không nghĩ chúng tôi có thể có bao nhiêu sản phẩm đình đám, chính vì thế ông ta nghĩ mình đã tiết kiệm được một số tiền,” Jobs nói. “Rốt cục thì điều đó có lợi cho chúng tôi, bởi vì Pixar có những 10 ý tưởng bom tấn cả thảy.” Họ cũng thống nhất với nhau về việc hợp tác thương hiệu, tuy nhiên cũng có rất nhiều cuộc tranh cãi nổ ra để xác định cho rõ. “Quan điểm của tôi xuất phát từ chuyện đó là một bộ phim của Disney cơ mà, nhưng sau đó tôi cũng dịu lại,” Eisner nhớ lại. “Chúng tôi bắt đầu thoả thuận về chuyện chữ Disney sẽ lớn đến mức nào, chữ ‘Pixar” lớn tới mức nào, hệt như mấy đứa bé 4 tuổi vậy.” Nhưng đến đầu năm 1997, họ đã đạt được thoả thuận, với 5 bộ phim trong vòng 10 năm, hai thương hiệu sẽ có kích thước to bằng nhau, như những người bạn, ít nhất là trong thời gian ở bên nhau. “Khi ấy Eisner khá biết điều và công bằng với tôi,” Jobs sau này thừa nhận. “Nhưng thực ra, trong vòng 10 năm tiếp theo, tôi đã đi đến kết luận rằng ông ta là một người đen tối.”
+Trong thư gửi cho những cổ đông của Pixar, Jobs giải thích việc thắng được quyền hợp tác thương hiệu ngang nhau với Disney đối với tất cả các bộ phim, cũng như trong quảng cáo và sản xuất đồ chơi chính là yếu tố quan trọng nhất của bản thoả thuận. “Chúng ta muốn Pixar phát triển thành một thương hiệu ngang bằng, có cùng đẳng cấp chiếm được lòng tin như thương hiệu Disney đã làm được,” ông viết như vậy. “Nhưng để Pixar có thể đạt được lòng tin ấy, khán giả phải biết rằng chính Pixar là người sáng tạo ra các bộ phim.” Jobs luôn được biết đến trong suốt sự nghiệp của mình là người tạo ra những sản phẩm vĩ đại. Nhưng điều đó cũng đồng nghĩa với việc ông có khả năng tạo ra những công ty vĩ đại với những thương hiệu giá trị. Và ông đã tạo ra hai công ty tốt nhất trong thời đại của mình: Apple và Pixar. 
+"></textarea>
+        <button class="btn-action" style="width:100%; margin: 10px 0 5px 0;" onclick="initSentences()">TÁCH CÂU &amp; LƯU</button>
+        
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button class="btn-action" style="flex: 1; background: #0ea5e9; font-size: 0.75rem; padding: 8px 5px;" onclick="syncToCloud()">☁️ LƯU CLOUD</button>
+            <button class="btn-action" style="flex: 1; background: #8b5cf6; font-size: 0.75rem; padding: 8px 5px;" onclick="fetchFromCloud()">🔄 TẢI CLOUD</button>
+        </div>
+
+        <!-- Nút Save As -->
+        <button class="btn-action" style="width:100%; background: #10b981; font-size: 0.75rem; padding: 8px 5px; margin-bottom: 10px;" onclick="saveFileWithData()">💾 LƯU FILE HTML (SAVE AS)</button>
+
+        <div class="setting-item" style="margin-top:5px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">GIAO DIỆN</span>
+            <select id="themeSelect" onchange="changeTheme(this.value); blurFocus(this)">
+                <option value="theme-1">Light (Icarus Pro)</option>
+                <option value="theme-2">Dark (Icarus Pro)</option>
+                <option value="theme-3" selected="">Amber (Icarus Pro)</option>
+                <option value="theme-4">Saga Green (Icarus Pro)</option>
+                <option value="theme-5">Mocha (Icarus Pro)</option>
+            </select>
+        </div>
+
+        <div class="setting-item" style="margin-top:15px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">NGÔN NGỮ ĐÍCH</span>
+            <div class="sw-row">Tiếng Anh <label class="switch"><input type="checkbox" class="target-lang" value="en" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Nga <label class="switch"><input type="checkbox" class="target-lang" value="ru" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Trung <label class="switch"><input type="checkbox" class="target-lang" value="zh-CN" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Việt <label class="switch"><input type="checkbox" class="target-lang" value="vi" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+        </div>
+
+        <div class="setting-item" style="margin-top:15px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">CHẾ ĐỘ ĐỌC</span>
+            <div class="sw-row">Autonext <label class="switch"><input type="checkbox" id="autoNext" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Dịch trước (3 câu) <label class="switch"><input type="checkbox" id="preTranslate" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Autoplay âm thanh <label class="switch"><input type="checkbox" id="autoSpeak" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            
+            <!-- Giữ màn hình sáng (Wake Lock) -->
+            <div class="sw-row">Giữ sáng màn hình <label class="switch"><input type="checkbox" id="wakeLockToggle" onchange="toggleWakeLock(); blurFocus(this)"><span class="slider"></span></label></div>
+
+            <!-- Tùy chọn tốc độ đọc -->
+            <span style="font-size:0.7rem; opacity:0.7; display:block; margin-top:10px;">TỐC ĐỘ ĐỌC</span>
+            <select id="speechRate" onchange="blurFocus(this)">
+                <option value="1">1x (Bình thường)</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="2.5">2.5x</option>
+                <option value="3">3x</option>
+            </select>
+            
+            <span style="font-size:0.7rem; opacity:0.7; display:block; margin-top:10px;">GIỌNG ĐỌC MẶC ĐỊNH</span>
+            <select id="voiceTarget" onchange="blurFocus(this)">
+                <option value="orig">Ngôn ngữ gốc</option>
+                <option value="en" selected="">Tiếng Anh</option>
+                <option value="ru">Tiếng Nga</option>
+                <option value="zh-CN">Tiếng Trung</option>
+                <option value="vi">Tiếng Việt</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="tab-history" class="tab-content">
+        <div class="history-list" id="historyList"><div class="history-item" onclick="restore('1788449174213')"><span><b>Chương 22: TOY STORY - CÂU CHUYỆN ĐỒ CHƠ...</b><br><small>22:26:14 3/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788449174213', event)">×</span></div><div class="history-item" onclick="restore('1788449113622')"><span><b>Chương 21: NGƯỜI ĐÀN ÔNG CỦA GIA ĐÌNH
+Tổ...</b><br><small>22:25:13 3/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788449113622', event)">×</span></div><div class="history-item" onclick="restore('1788367337451')"><span><b>Chương 22
+Nếu nhìn từ góc độ tình cảm củ...</b><br><small>23:42:17 2/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788367337451', event)">×</span></div><div class="history-item" onclick="restore('1788279272173')"><span><b>Below is a student-friendly rewrite of t...</b><br><small>23:14:32 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788279272173', event)">×</span></div><div class="history-item" onclick="restore('1788256582931')"><span><b>Chương 19
+Hắn bế con xuống ga Bắc Giang ...</b><br><small>16:56:22 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788256582931', event)">×</span></div><div class="history-item" onclick="restore('1788252540877')"><span><b>Chương 16
+Lúc ăn ở với nhau đầu đường xó...</b><br><small>15:49:00 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788252540877', event)">×</span></div><div class="history-item" onclick="restore('1788252457158')"><span><b>Chương 13
+Suy cho cùng ông cũng không ph...</b><br><small>15:47:37 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788252457158', event)">×</span></div><div class="history-item" onclick="restore('1788223984081')"><span><b>PHẦN MỘT - PETER KEATING
+I.
+Howard Roak ...</b><br><small>07:53:04 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788223984081', event)">×</span></div><div class="history-item" onclick="restore('1788164691643')"><span><b>Chương 7
+Tiếng sấm như tiếng bom nổ ngan...</b><br><small>15:24:51 31/8/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788164691643', event)">×</span></div><div class="history-item" onclick="restore('1788158542150')"><span><b>Chương 4
+Cùng là khuya khoắt như mọi khi...</b><br><small>13:42:22 31/8/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788158542150', event)">×</span></div><div class="history-item" onclick="restore('1785165202541')"><span><b>Nội dung của các chương từ 7 đến 9 trong...</b><br><small>22:13:22 27/7/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1785165202541', event)">×</span></div><div class="history-item" onclick="restore('1785162428419')"><span><b>I. TRẮC NGHIỆM LỰA CHỌN ĐƠN - PHƯƠNG TRÌ...</b><br><small>21:27:08 27/7/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1785162428419', event)">×</span></div><div class="history-item" onclick="restore('1779120851511')"><span><b>CHƯƠNG 2 Bồi Thường Cho Cái Chết Của Một...</b><br><small>23:14:11 18/5/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1779120851511', event)">×</span></div><div class="history-item" onclick="restore('1773764665357')"><span><b>SPIKE Prime LEGO Education Set
+https://y...</b><br><small>23:24:25 17/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773764665357', event)">×</span></div><div class="history-item" onclick="restore('1773505208019')"><span><b>Arduino MASTERCLASS | Full Programming W...</b><br><small>23:20:08 14/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773505208019', event)">×</span></div><div class="history-item" onclick="restore('1773452689800')"><span><b>Hi, this is Ben Finio with Science Buddi...</b><br><small>08:44:49 14/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773452689800', event)">×</span></div><div class="history-item" onclick="restore('1773410715066')"><span><b>I'm going to talk about what they are, w...</b><br><small>21:05:15 13/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773410715066', event)">×</span></div><div class="history-item" onclick="restore('1773190358964')"><span><b>But “to open your heart to pain is to op...</b><br><small>07:52:38 11/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773190358964', event)">×</span></div><div class="history-item" onclick="restore('undefined')"><span><b>undefined</b><br><small>undefined</small></span><span style="color:#ef4444;" onclick="deleteHistory('undefined', event)">×</span></div><div class="history-item" onclick="restore('1773068453761')"><span><b>Unthinkingly, as an afterthought!
+I aske...</b><br><small>22:00:53 9/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773068453761', event)">×</span></div></div>
+        <button class="btn-action" style="background:#ef4444; margin-top:10px; font-size: 0.7rem;" onclick="clearAllHistory()">XÓA TOÀN BỘ LỊCH SỬ</button>
+    </div>
+</aside>
+
+<main>
+    <header>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <div class="dropdown">
+                <button class="btn-action" style="font-size: 0.75rem;">☰ MENU</button>
+                <div class="dropdown-content">
+                    <div class="menu-item">
+                        <span>🇨🇳 Vocab Tiếng Trung</span>
+                        <label class="switch"><input type="checkbox" id="showZhVocab" checked="" onchange="updateSidebarRight(currentIdx); blurFocus(this)"><span class="slider"></span></label>
+                    </div>
+                    <div class="menu-item">
+                        <span>🇷🇺 Vocab Tiếng Nga</span>
+                        <label class="switch"><input type="checkbox" id="showRuVocab" onchange="updateSidebarRight(currentIdx); blurFocus(this)"><span class="slider"></span></label>
+                    </div>
+                    <hr style="border:0; border-top:1px solid var(--border); margin:5px 0;">
+                    <div class="menu-item" onclick="changeFontSize(1)"><span>➕ Tăng chữ</span><span class="menu-key">=</span></div>
+                    <div class="menu-item" onclick="changeFontSize(-1)"><span>➖ Giảm chữ</span><span class="menu-key">-</span></div>
+                    <div class="menu-item" onclick="changeWidth(50)"><span>↔️ Tăng rộng</span><span class="menu-key">.</span></div>
+                    <div class="menu-item" onclick="changeWidth(-50)"><span>⬅️ Giảm rộng</span><span class="menu-key">,</span></div>
+                    <div class="menu-item" onclick="cycleTheme()"><span>🎨 Đổi màu Theme</span><span class="menu-key">M</span></div>
+                    <div class="menu-item" onclick="toggleModal('noteModal')"><span>📝 Ghi chú</span><span class="menu-key">N</span></div>
+                    <div class="menu-item" onclick="togglePlayPause()"><span>⏯️ Tạm dừng âm</span><span class="menu-key">K</span></div>
+                    <div class="menu-item" onclick="replayCurrent()"><span>🔊 Đọc lại câu</span><span class="menu-key">Space</span></div>
+                    <div class="menu-item" onclick="toggleModal('updateModal')"><span>🕒 Cập nhật</span><span class="menu-key">U</span></div>
+                </div>
+            </div>
+            <button onclick="togglePlayPause()" id="playPauseBtn">⏯️</button>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div class="pagination">
+                <button onclick="nav(-1)">‹</button>
+                <input type="text" class="page-input" id="currPage" value="0" onchange="jumpToPage(this.value); blurFocus(this)">
+                <span id="totalPage" class="total-page">/ 212</span>
+                <button onclick="nav(1)">›</button>
+            </div>
+            <div id="appTimer" class="timer-display">01:22</div>
+        </div>
+        <select id="viVoice" style="max-width:120px; font-size:0.7rem;" onchange="blurFocus(this)"></select>
+    </header>
+    <div class="workspace" id="output"><div class="sentence-box active" id="s-0"><span class="text-orig">1. Chương 22: TOY STORY - CÂU CHUYỆN ĐỒ CHƠI</span><div class="trans-group" id="tg-0"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> Chapter 22: TOY STORY - TOY STORY </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('Chapter 22: TOY STORY - TOY STORY', 'en')">🔊</button></div></div></div><div class="sentence-box" id="s-1"><span class="text-orig">2. Buzz và Woody giải cứu</span><div class="trans-group" id="tg-1"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> Buzz and Woody to the rescue </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('Buzz and Woody to the rescue', 'en')">🔊</button></div></div></div><div class="sentence-box" id="s-2"><span class="text-orig">3. Jeffrey Katzenberg</span><div class="trans-group" id="tg-2"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> Jeffrey Katzenberg </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('Jeffrey Katzenberg', 'en')">🔊</button></div></div></div><div class="sentence-box" id="s-3"><span class="text-orig">4. “Làm những điều bất khả thi cũng vui theo cách riêng của nó,” Walt Disney đã có lần nói như vậy.</span><div class="trans-group" id="tg-3"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> “Doing the impossible is fun in its own way,” Walt Disney once said. </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('“Doing the impossible is fun in its own way,” Walt Disney once said.', 'en')">🔊</button></div></div></div><div class="sentence-box" id="s-4"><span class="text-orig">5. Và đó cũng là thái độ tiếp cận hấp dẫn Jobs.</span><div class="trans-group" id="tg-4"></div></div><div class="sentence-box" id="s-5"><span class="text-orig">6. Ông ngưỡng mộ sự ám ảnh với chi tiết và thiết kế của Disney và cảm thấy giữa Pixar và hãng phim ảnh mà Disney sáng lập vừa vặn phù hợp với nhau một cách rất tự nhiên.</span><div class="trans-group" id="tg-5"></div></div><div class="sentence-box" id="s-6"><span class="text-orig">7. Công ty Walt Disney đã cấp phép cho Hệ thống Sản phẩm Hoạt hình Máy tính Pixar và trở thành khách hàng lớn nhất của công ty máy tính Pixar.</span><div class="trans-group" id="tg-6"></div></div><div class="sentence-box" id="s-7"><span class="text-orig">8. Một ngày, Jeffrey Katzenberg, người đứng đầu phân nhánh phim của Disney mời Jobs tới mấy studio ở Burbak để xem sức mạnh của công nghệ trong quá trình vận hành.</span><div class="trans-group" id="tg-7"></div></div><div class="sentence-box" id="s-8"><span class="text-orig">9. Trong khi nhân viên của Disney đưa ông đi tham quan vòng vòng, Jobs quay ra Katzenberg và hỏi: “Disney có hài lòng với Pixar không?”</span><div class="trans-group" id="tg-8"></div></div><div class="sentence-box" id="s-9"><span class="text-orig">10. Với vẻ hồ hởi hết mức, Katzenberg trả lời có.</span><div class="trans-group" id="tg-9"></div></div><div class="sentence-box" id="s-10"><span class="text-orig">11. Sau đó Jobs lại hỏi: “Anh có nghĩ chúng tôi ở Pixar cũng hài lòng với Disney không?”</span><div class="trans-group" id="tg-10"></div></div><div class="sentence-box" id="s-11"><span class="text-orig">12. Katzenberg nói anh đoán vậy.</span><div class="trans-group" id="tg-11"></div></div><div class="sentence-box" id="s-12"><span class="text-orig">13. “Không, chúng tôi không hề,” Jobs trả lời.</span><div class="trans-group" id="tg-12"></div></div><div class="sentence-box" id="s-13"><span class="text-orig">14. “Chúng tôi muốn làm phim với các anh.</span><div class="trans-group" id="tg-13"></div></div><div class="sentence-box" id="s-14"><span class="text-orig">15. Điều đó mới khiến chúng tôi hài lòng.”</span><div class="trans-group" id="tg-14"></div></div><div class="sentence-box" id="s-15"><span class="text-orig">16. Katzenberg rất sẵn lòng.</span><div class="trans-group" id="tg-15"></div></div><div class="sentence-box" id="s-16"><span class="text-orig">17. Ông ngưỡng mộ những bộ phim ngắn của John Lasseter và đã từng cố gắng lôi kéo nhưng không thành công John về với Disney.</span><div class="trans-group" id="tg-16"></div></div><div class="sentence-box" id="s-17"><span class="text-orig">18. Thế là Katzenberg mời nhóm Pixar đến để thảo luận về việc trở thành đối tác làm chung một bộ phim.</span><div class="trans-group" id="tg-17"></div></div><div class="sentence-box" id="s-18"><span class="text-orig">19. Khi Catmull, Jobs và Lasseter đã yên vị trong phòng họp, Katzenberg thẳng thắn.</span><div class="trans-group" id="tg-18"></div></div><div class="sentence-box" id="s-19"><span class="text-orig">20. “John, vì ông không muốn sang làm việc cho tôi,” ông nói và nhìn Lasseter, “Tôi sẽ thực hiện điều đó theo cách này.”</span><div class="trans-group" id="tg-19"></div></div><div class="sentence-box" id="s-20"><span class="text-orig">21. Trong khi công ty Disney giới thiệu những đặc điểm chính của mình với Pixar, thì Katzenberg cũng chia sẻ vài điều với Jobs.</span><div class="trans-group" id="tg-20"></div></div><div class="sentence-box" id="s-21"><span class="text-orig">22. Cả hai đều có thể trở nên dễ chịu khi họ muốn như vậy và cũng nhanh chóng trở nên dữ dằn (hoặc tệ hơn) tùy thuộc thái độ ấy phản ánh đúng tâm trạng hoặc sự quan tâm của họ.</span><div class="trans-group" id="tg-21"></div></div><div class="sentence-box" id="s-22"><span class="text-orig">23. Alvy Ray Smith, lúc ấy đang sửa soạn rời khỏi Pixar cũng có mặt trong buổi gặp gỡ hôm ấy.</span><div class="trans-group" id="tg-22"></div></div><div class="sentence-box" id="s-23"><span class="text-orig">24. “Katzenberg và Jobs gây cho tôi một ấn tượng mạnh mẽ,” anh nhớ lại.</span><div class="trans-group" id="tg-23"></div></div><div class="sentence-box" id="s-24"><span class="text-orig">25. “Những nhà độc tài thường được trao tặng một món quà kì diệu là sự hoạt ngôn.”</span><div class="trans-group" id="tg-24"></div></div><div class="sentence-box" id="s-25"><span class="text-orig">26. Katzenberg tỏ ra thú vị khi nhận ra điều này.</span><div class="trans-group" id="tg-25"></div></div><div class="sentence-box" id="s-26"><span class="text-orig">27. “Tất cả mọi người đều nghĩ tôi là một kẻ độc tài,” ông nói với nhóm Pixar.</span><div class="trans-group" id="tg-26"></div></div><div class="sentence-box" id="s-27"><span class="text-orig">28. “Tôi đúng là một người độc tài.</span><div class="trans-group" id="tg-27"></div></div><div class="sentence-box" id="s-28"><span class="text-orig">29. Nhưng vấn đề là tôi luôn đúng.”</span><div class="trans-group" id="tg-28"></div></div><div class="sentence-box" id="s-29"><span class="text-orig">30. Ai cũng dễ dàng tưởng tượng ra Jobs cũng có thể nói y hệt như vậy.</span><div class="trans-group" id="tg-29"></div></div><div class="sentence-box" id="s-30"><span class="text-orig">31. Cả hai người đều tìm thấy niềm đam mê chung và cân bằng, các thoả thuận giữa Katzenberg và Jobs chỉ mất có mấy tháng.</span><div class="trans-group" id="tg-30"></div></div><div class="sentence-box" id="s-31"><span class="text-orig">32. Katzenberg khăng khăng rằng Disney sẽ cấp cho Pixar quyền sử dụng công nghệ để làm phim hoạt hình 3-D.</span><div class="trans-group" id="tg-31"></div></div><div class="sentence-box" id="s-32"><span class="text-orig">33. Jobs từ chối, và cuối cùng ông cũng có được thoả thuận.</span><div class="trans-group" id="tg-32"></div></div><div class="sentence-box" id="s-33"><span class="text-orig">34. Jobs cũng đưa ra đề nghị phía mình: Pixar cũng có phần sở hữu đối với bộ phim và các nhân vật của nó, cả hai bên cùng có quyền kiểm soát bản quyền của bộ phim và các tập tiếp theo.</span><div class="trans-group" id="tg-33"></div></div><div class="sentence-box" id="s-34"><span class="text-orig">35. “Nếu đó là những gì anh muốn,” Katzenberg nói, “thì chúng ta có thể dừng cuộc nói chuyện ở đây và các anh có thể ra về.”</span><div class="trans-group" id="tg-34"></div></div><div class="sentence-box" id="s-35"><span class="text-orig">36. Jobs đã ở lại, và chấp nhận điểm đó.</span><div class="trans-group" id="tg-35"></div></div><div class="sentence-box" id="s-36"><span class="text-orig">37. Lasseter chăm chú theo dõi cuộc đối thoại như thể đang quan sát những lưỡi gươm sáng loang loáng của hai đấu sĩ vung lên, hạ xuống.</span><div class="trans-group" id="tg-36"></div></div><div class="sentence-box" id="s-37"><span class="text-orig">38. “Chỉ nhìn cách Steve và Jeffrey trong cuộc thoả thuận ấy, tôi đã thấy kinh hãi,” ông nhớ lại.</span><div class="trans-group" id="tg-37"></div></div><div class="sentence-box" id="s-38"><span class="text-orig">39. “Y hệt một trận đấu kiếm.</span><div class="trans-group" id="tg-38"></div></div><div class="sentence-box" id="s-39"><span class="text-orig">40. Cả hai đều là anh tài.”</span><div class="trans-group" id="tg-39"></div></div><div class="sentence-box" id="s-40"><span class="text-orig">41. Nhưng Katzenberg vào trận với một lưỡi đao, còn Jobs chỉ có một chiếc lá mỏng.</span><div class="trans-group" id="tg-40"></div></div><div class="sentence-box" id="s-41"><span class="text-orig">42. Pixar đang trên bờ vực phá sản và cần một hợp đồng với Disney hơn là Disney cần một thoả thuận với Pixar.</span><div class="trans-group" id="tg-41"></div></div><div class="sentence-box" id="s-42"><span class="text-orig">43. Hơn nữa, Disney có khả năng tài chính cho cả hãng, còn Pixar thì không.</span><div class="trans-group" id="tg-42"></div></div><div class="sentence-box" id="s-43"><span class="text-orig">44. Kết quả vẫn là một thoả thuận, kí kết vào tháng Năm năm 1991, trong đó Disney sở hữu hình ảnh và toàn quyền khai thác nhân vật, được kiểm soát nội dung sáng tạo và chi cho Pixar 12,5% doanh thu bán vé.</span><div class="trans-group" id="tg-43"></div></div><div class="sentence-box" id="s-44"><span class="text-orig">45. Có khả năng (nhưng không phải là bắt buộc) làm tiếp với Pixar hai phim tiếp theo và có quyền làm tiếp (cùng hoặc không với Pixar) các phần tiếp theo, sử dụng các nhân vật của phim.</span><div class="trans-group" id="tg-44"></div></div><div class="sentence-box" id="s-45"><span class="text-orig">46. Disney cũng có quyền huỷ bỏ bộ phim vào bất cứ lúc nào nếu đối tác vi phạm những điều khoản quyết định.</span><div class="trans-group" id="tg-45"></div></div><div class="sentence-box" id="s-46"><span class="text-orig">47. Ý tưởng mà John Laseter nảy ra có tên gọi “Câu chuyện Đồ chơi” (Toy Story).</span><div class="trans-group" id="tg-46"></div></div><div class="sentence-box" id="s-47"><span class="text-orig">48. Nó xuất phát từ một niềm tin, mà cả ông và Jobs cùng chia sẻ, đó là tất cả các sản phẩm đều có giá trị tồn tại cốt lõi, là mục đích mà vì đó chúng mới được làm ra.</span><div class="trans-group" id="tg-47"></div></div><div class="sentence-box" id="s-48"><span class="text-orig">49. Nếu một vật có cảm xúc, thì cảm xúc đó phải dựa trên khát khao được thoả mãn giá trị tồn tại của nó.</span><div class="trans-group" id="tg-48"></div></div><div class="sentence-box" id="s-49"><span class="text-orig">50. Ví dụ, mục đích của cái cốc đựng nước, là được chứa nước bên trong; nếu nó có cảm xúc, nó sẽ hạnh phúc khi được chứa đầy nước và sẽ buồn tủi khi không có nước bên trong.</span><div class="trans-group" id="tg-49"></div></div><div class="sentence-box" id="s-50"><span class="text-orig">51. Giá trị cốt lõi của chiếc màn hình máy tính là giao tiếp với con người.</span><div class="trans-group" id="tg-50"></div></div><div class="sentence-box" id="s-51"><span class="text-orig">52. Giá trị cốt lõi của chiếc xe đạp một bánh là được biểu diễn ở trong rạp xiếc.</span><div class="trans-group" id="tg-51"></div></div><div class="sentence-box" id="s-52"><span class="text-orig">53. Đối với đồ chơi, mục đích tồn tại của chúng là để cho trẻ em chơi, và vì thế, tồn tại nỗi sợ hãi vốn có khi bị vứt bỏ hoặc bị “thất thế” trước những món đồ chơi mới.</span><div class="trans-group" id="tg-52"></div></div><div class="sentence-box" id="s-53"><span class="text-orig">54. Vậy là một bộ phim về tình bạn giữa một món đồ chơi yêu thích cũ với một món đồ chơi mới sáng loá sẽ ẩn chứa trong nó cái bi kịch cốt lõi, đặc biệt là khi cuộc đấu tranh xoay quanh những đồ chơi bị chia cắt với chủ nhân bé nhỏ của chúng.</span><div class="trans-group" id="tg-53"></div></div><div class="sentence-box" id="s-54"><span class="text-orig">55. Vấn đề cần giải quyết xuất phát từ quan điểm “Mọi người ai cũng từng trải qua cảm giác đau thương thuở nhỏ khi đánh mất đồ chơi.</span><div class="trans-group" id="tg-54"></div></div><div class="sentence-box" id="s-55"><span class="text-orig">56. Câu chuyện của chúng tôi được kể dưới góc nhìn của một anh bạn đồ chơi, khi anh ta bị đánh mất và cố gắng tìm kiếm lại cảm giác quan trọng nhất với mình: được chơi đùa với lũ trẻ.</span><div class="trans-group" id="tg-55"></div></div><div class="sentence-box" id="s-56"><span class="text-orig">57. Đó là lý do cho sự tồn tại của tất cả đồ chơi trên thế giới.</span><div class="trans-group" id="tg-56"></div></div><div class="sentence-box" id="s-57"><span class="text-orig">58. Đó là cơ sở cảm xúc cho sự tồn tại của chúng.”</span><div class="trans-group" id="tg-57"></div></div><div class="sentence-box" id="s-58"><span class="text-orig">59. Phải trải qua rất nhiều lượt tuyển chọn, cuối cùng mới chọn được ra hai nhân vật chính là Buzz Lightyear và Woody.</span><div class="trans-group" id="tg-58"></div></div><div class="sentence-box" id="s-59"><span class="text-orig">60. Cứ hai tuần một lần, Lasseter và nhóm của mình lại ngồi lại để ghép phân cảnh mới nhất hoặc chiếu thử cho người của Disney xem.</span><div class="trans-group" id="tg-59"></div></div><div class="sentence-box" id="s-60"><span class="text-orig">61. Trong những cảnh chiếu thử đầu tiên, Pixar đã trình chiếu kĩ xảo tuyệt vời của mình bằng cách, ví dụ là giới thiệu một cảnh Woody rón rén đi trên nóc tủ, trong khi ánh sáng lọt qua khe của tấm mành trên cửa sổ, phủ bóng xuống chiếc áo sơ mi sọc vuông của cậu – hiệu ứng này hầu như không thể thực hiện được bằng kĩ thuật thô sơ.</span><div class="trans-group" id="tg-60"></div></div><div class="sentence-box" id="s-61"><span class="text-orig">62. Tuy vậy, đưa ra được kịch bản làm Disney ấn tượng khó khăn hơn nhiều.</span><div class="trans-group" id="tg-61"></div></div><div class="sentence-box" id="s-62"><span class="text-orig">63. Mỗi lần Pixar trình bày, Katzenberg “chặt chém” không thương tiếc, xối xả đưa ra những nhận xét và ghi chú đến từng chi tiết.</span><div class="trans-group" id="tg-62"></div></div><div class="sentence-box" id="s-63"><span class="text-orig">64. Và lăm lăm trên tay những nhân viên cốt cán là cả tập hồ sơ theo dõi kịch bản để đảm bảo những ý kiến cũng như những ý tưởng bất chợt của Katzenberg không bị bỏ qua và được theo sát thực hiện.</span><div class="trans-group" id="tg-63"></div></div><div class="sentence-box" id="s-64"><span class="text-orig">65. Điều mà Katzenberg thúc ép nhiều nhất chính là phải tạo nên những chi tiết kịch tính hơn cho hai nhân vật chính.</span><div class="trans-group" id="tg-64"></div></div><div class="sentence-box" id="s-65"><span class="text-orig">66. Có thể đó là một bộ phim hoạt hình tên là Câu chuyện Đồ chơi, ông nói, nhưng nó không thể chỉ nhắm tới trẻ em.</span><div class="trans-group" id="tg-65"></div></div><div class="sentence-box" id="s-66"><span class="text-orig">67. “Lúc đầu, câu chuyện chả có kịch tính, không có câu chuyện cụ thể và chả có mâu thuẫn gì hết,” Katzenberg nhớ lại.</span><div class="trans-group" id="tg-66"></div></div><div class="sentence-box" id="s-67"><span class="text-orig">68. Ông gợi ý Lasseter nên xem vài bộ phim bằng hữu kinh điển như Những người nổi loạn (The Defiant Ones) và 48 Giờ (48 Hours), trong đó hai nhân vật chính với hai cách sống khác nhau lại buộc phải chung đường và ràng buộc với nhau.</span><div class="trans-group" id="tg-67"></div></div><div class="sentence-box" id="s-68"><span class="text-orig">69. Hơn nữa, ông tiếp tục thúc ép phải làm cho ra cái gọi là “cao trào”, tức là phải có gì làm nhân vật Woody trở nên đố kỵ, xấu xa và sẵn sàng đối đầu với Buzz, kẻ “tiếm ngôi” trong hộp đựng đồ chơi.</span><div class="trans-group" id="tg-68"></div></div><div class="sentence-box" id="s-69"><span class="text-orig">70. “Đây là thế giới đồ chơi nuốt đồ chơi,” Woody đã nói như vậy trong một cảnh, sau đó cậu đẩy Buzz ra ngoài cửa sổ.</span><div class="trans-group" id="tg-69"></div></div><div class="sentence-box" id="s-70"><span class="text-orig">71. Sau rất nhiều vòng thảo luận với Katzenberg và những chuyên gia khác của Disney, Woody bị lột dần hết vẻ dễ thương.</span><div class="trans-group" id="tg-70"></div></div><div class="sentence-box" id="s-71"><span class="text-orig">72. Trong một cảnh, cậu ném hết những đồ chơi khác xuống đất và yêu cầu Slinky đến giúp một tay.</span><div class="trans-group" id="tg-71"></div></div><div class="sentence-box" id="s-72"><span class="text-orig">73. Khi thấy Slinky chần chừ, Woody đã gào lên: “Việc của mày là nghĩ ngợi đấy chắc, con chó kia?”</span><div class="trans-group" id="tg-72"></div></div><div class="sentence-box" id="s-73"><span class="text-orig">74. Slinky khi đó đã hỏi một câu mà sau này chính nhóm làm phim của Pixar cũng phải tự hỏi mình: “Tại sao tên cao bồi này đáng sợ vậy trời?”</span><div class="trans-group" id="tg-73"></div></div><div class="sentence-box" id="s-74"><span class="text-orig">75. Và Tom Hanks, người được mời lồng tiếng cho Woody cũng công nhận điểm này, “Ôi hắn đúng là một tên khốn!”</span><div class="trans-group" id="tg-74"></div></div><div class="sentence-box" id="s-75"><span class="text-orig">76. Cắt!</span><div class="trans-group" id="tg-75"></div></div><div class="sentence-box" id="s-76"><span class="text-orig">77. Tháng Mười một năm 1993, Lasseter và nhóm Pixar đã hoàn thành xong nửa đầu bộ phim và sẵn sàng mang đi chiếu thử, họ mang phim của mình đến Burbank để chiếu cho Katzenberg và những chuyên gia khác của Disney xem.</span><div class="trans-group" id="tg-76"></div></div><div class="sentence-box" id="s-77"><span class="text-orig">78. Peter Schneider, giám đốc nhánh phim hoạt hình chưa bao giờ thích ý tưởng để người bên ngoài làm phim cho Disney của Katzenberg, ông tuyên bố bộ phim là một đống lộn xộn và yêu cầu ngừng sản xuất.</span><div class="trans-group" id="tg-77"></div></div><div class="sentence-box" id="s-78"><span class="text-orig">79. Katzenberg đồng ý.</span><div class="trans-group" id="tg-78"></div></div><div class="sentence-box" id="s-79"><span class="text-orig">80. “Tại sao nó lại kinh khủng như vậy?</span><div class="trans-group" id="tg-79"></div></div><div class="sentence-box" id="s-80"><span class="text-orig">81. ông hỏi một đồng nghiệp, Tom Schumacher.</span><div class="trans-group" id="tg-80"></div></div><div class="sentence-box" id="s-81"><span class="text-orig">82. “Bởi vì đó không còn là bộ phim của họ nữa,” Schumacher nói thẳng toẹt ra.</span><div class="trans-group" id="tg-81"></div></div><div class="sentence-box" id="s-82"><span class="text-orig">83. Sau này ông giải thích, “Họ làm theo những gì Katzenberg gợi ý, và dự án này đã hoàn toàn mất phương hướng.”</span><div class="trans-group" id="tg-82"></div></div><div class="sentence-box" id="s-83"><span class="text-orig">84. Lasseter nhận thấy Schumacher đã đúng.</span><div class="trans-group" id="tg-83"></div></div><div class="sentence-box" id="s-84"><span class="text-orig">85. “Tôi đứng ở đó và cảm thấy vô cùng xấu hổ với những gì được trình chiếu trên màn hình,” ông nhớ lại.</span><div class="trans-group" id="tg-84"></div></div><div class="sentence-box" id="s-85"><span class="text-orig">86. “Đó là một câu chuyện chỉ toàn những nhân vật bất hạnh, xấu xa mà tôi chưa từng thấy bao giờ.”</span><div class="trans-group" id="tg-85"></div></div><div class="sentence-box" id="s-86"><span class="text-orig">87. Ông đề nghị Disney cho Pixar thêm một cơ hội để sửa và xem lại kịch bản.</span><div class="trans-group" id="tg-86"></div></div><div class="sentence-box" id="s-87"><span class="text-orig">88. Katzenbers đã ủng hộ.</span><div class="trans-group" id="tg-87"></div></div><div class="sentence-box" id="s-88"><span class="text-orig">89. Jobs không can thiệp quá nhiều vào quá trình sáng tạo.</span><div class="trans-group" id="tg-88"></div></div><div class="sentence-box" id="s-89"><span class="text-orig">90. Với cá tính thích kiểm soát mọi thứ, đặc biệt là trong lĩnh vực phong cách và thiết kế của mình, thì sự tự kiềm chế này chính là minh chứng hùng hồn cho việc ông tôn trọng Lasseter và những nghệ sĩ làm việc tại Pixar như thế nào – cũng như tin tưởng vào khả năng Lasseter và Catmull sẽ không làm ông thất vọng.</span><div class="trans-group" id="tg-89"></div></div><div class="sentence-box" id="s-90"><span class="text-orig">91. Tuy nhiên, ông đã giúp đỡ họ xử lý mối quan hệ với Disney và điều này khiến nhóm Pixar vô cùng cảm kích.</span><div class="trans-group" id="tg-90"></div></div><div class="sentence-box" id="s-91"><span class="text-orig">92. Khi Katzenberg và Schneider thắt chặt sản xuất với Câu chuyện Đồ chơi, Jobs đã bỏ tiền riêng ra để duy trì hoạt động của studio.</span><div class="trans-group" id="tg-91"></div></div><div class="sentence-box" id="s-92"><span class="text-orig">93. Ông đứng về phía họ để chống lại Katzenberg.</span><div class="trans-group" id="tg-92"></div></div><div class="sentence-box" id="s-93"><span class="text-orig">94. “Chính ông ta làm Toy Story loạn hết cả lên,” Jobs nói.</span><div class="trans-group" id="tg-93"></div></div><div class="sentence-box" id="s-94"><span class="text-orig">95. “Ông ta muốn Woody trở thành nhân vật xấu, và khi ông ta muốn dẹp bỏ tụi tôi, chúng tôi thể hiện rằng chúng tôi sẵn sàng đá ông ta ra và nói ‘Đây không phải là những gì chúng tôi muốn’ và tiếp tục làm bộ phim theo cách mà chúng tôi vẫn theo đuổi.”</span><div class="trans-group" id="tg-94"></div></div><div class="sentence-box" id="s-95"><span class="text-orig">96. Ba tháng sau, nhóm Pixar trở lại với kịch bản mới.</span><div class="trans-group" id="tg-95"></div></div><div class="sentence-box" id="s-96"><span class="text-orig">97. Nhân vật Woody đã biến đổi, từ một gã đồ chơi bạo ngược trở thành người lãnh đạo khôn ngoan, dẫn dắt đám đồ chơi của Andy.</span><div class="trans-group" id="tg-96"></div></div><div class="sentence-box" id="s-97"><span class="text-orig">98. Thái độ hiềm khích của cậu với Buzz Lightyear được thể hiện một cách dễ thông cảm hơn, và nó được xây dựng trên nền những bản nhạc mới của Randy Newman Strange Things (Tạm dịch: Những thứ lạ lùng).</span><div class="trans-group" id="tg-97"></div></div><div class="sentence-box" id="s-98"><span class="text-orig">99. Cảnh Woody đẩy Buzz ra khỏi cửa sổ được viết lại, Buzz ngã do bị Woody vô tình xô vào khi cậu giằng co với đèn Luxo trước đó.</span><div class="trans-group" id="tg-98"></div></div><div class="sentence-box" id="s-99"><span class="text-orig">100. Katzenberg và Công ty chấp nhận cách tiếp cận mới này, và đến tháng Hai năm 1994, bộ phim được sản xuất trở lại.</span><div class="trans-group" id="tg-99"></div></div><div class="sentence-box" id="s-100"><span class="text-orig">101. Katzenberg rất ấn tượng với sự tập trung của Jobs để giữ chi phí cho bộ phim nằm trong tầm kiểm soát.</span><div class="trans-group" id="tg-100"></div></div><div class="sentence-box" id="s-101"><span class="text-orig">102. “Ngay từ những giai đoạn dự thảo ngân sách đầu tiên, Steve đã rất háo hức làm sao để tiền chi ra đạt hiệu quả nhất có thể,” ông nói.</span><div class="trans-group" id="tg-101"></div></div><div class="sentence-box" id="s-102"><span class="text-orig">103. Nhưng 17 triệu đô-la ngân sách dành cho sản xuất rõ ràng là không tương xứng, nhất là khi họ phải sửa lại phần lớn nội dung sau khi Katzenberg can thiệp và bắt Woody phải hung ác hơn.</span><div class="trans-group" id="tg-102"></div></div><div class="sentence-box" id="s-103"><span class="text-orig">104. Vì vậy Jobs đã yêu cầu cần thêm tiền đầu tư để hoàn thành bộ phim cho đúng kế hoạch.</span><div class="trans-group" id="tg-103"></div></div><div class="sentence-box" id="s-104"><span class="text-orig">105. “Nghe này, chúng ta đã thoả thuận,” Katzenberg nói với Jobs.</span><div class="trans-group" id="tg-104"></div></div><div class="sentence-box" id="s-105"><span class="text-orig">106. “Chúng tôi để các anh quyền kiểm soát kinh doanh, các anh đã đồng ý thực hiện với khoản tiền chúng tôi đề xuất.”</span><div class="trans-group" id="tg-105"></div></div><div class="sentence-box" id="s-106"><span class="text-orig">107. Jobs cáu điên lên.</span><div class="trans-group" id="tg-106"></div></div><div class="sentence-box" id="s-107"><span class="text-orig">108. Ông liên tục gọi điện hoặc bay thẳng đến gặp Katzenberg và giữ thái độ, như ngôn ngữ của Katzenberg là “đeo bám dữ dội như chỉ có ở Steve.”</span><div class="trans-group" id="tg-107"></div></div><div class="sentence-box" id="s-108"><span class="text-orig">109. Jobs khăng khăng cho rằng Disney cũng phải có trách nhiệm với việc chi phí đội lên do Katzenberg đã làm hỏng ý tưởng ban đầu và khiến họ phải mất thêm công sức sửa chữa sai lầm.</span><div class="trans-group" id="tg-108"></div></div><div class="sentence-box" id="s-109"><span class="text-orig">110. “Khoan đã!”</span><div class="trans-group" id="tg-109"></div></div><div class="sentence-box" id="s-110"><span class="text-orig">111. Katzenberg đáp trả.</span><div class="trans-group" id="tg-110"></div></div><div class="sentence-box" id="s-111"><span class="text-orig">112. “Chúng tôi chỉ cố gắng giúp các anh.</span><div class="trans-group" id="tg-111"></div></div><div class="sentence-box" id="s-112"><span class="text-orig">113. Các anh cũng hưởng lợi khi được các chuyên gia sáng tạo của chúng tôi giúp đỡ, và giờ các anh lại muốn chúng tôi phải trả tiền cho điều đó.”</span><div class="trans-group" id="tg-112"></div></div><div class="sentence-box" id="s-113"><span class="text-orig">114. Đó là cuộc đối đầu giữa hai vị lãnh đạo cứng rắn như nhau, để tranh luận xem cuối cùng thì bên nào đã gia ơn cho bên nào.</span><div class="trans-group" id="tg-113"></div></div><div class="sentence-box" id="s-114"><span class="text-orig">115. Ed Catmull, khôn khéo hơn Jobs, là người đạt được thoả hiệp về nguồn kinh phí mới.</span><div class="trans-group" id="tg-114"></div></div><div class="sentence-box" id="s-115"><span class="text-orig">116. “Tôi có cái nhìn lạc quan đối với Jeffrey hơn bất cứ ai trong số những người làm dự án này,” ông nói.</span><div class="trans-group" id="tg-115"></div></div><div class="sentence-box" id="s-116"><span class="text-orig">117. Nhưng sự cố này khiến Jobs bắt đầu suy tính đến cách thoả thuận có lợi hơn khi đàm phán với Disney trong tương lai.</span><div class="trans-group" id="tg-116"></div></div><div class="sentence-box" id="s-117"><span class="text-orig">118. Ông không muốn bị coi là một nhà đàm phán non kém; ông luôn muốn mọi thứ trong tầm kiểm soát.</span><div class="trans-group" id="tg-117"></div></div><div class="sentence-box" id="s-118"><span class="text-orig">119. Điều đó có nghĩa là Pixar sẽ phải tự mình đầu tư cho những dự án của mình trong tương lai, và như vậy thì cần một thoả thuận mới với Disney.</span><div class="trans-group" id="tg-118"></div></div><div class="sentence-box" id="s-119"><span class="text-orig">120. Khi bộ phim tiến triển, Jobs trở nên hào hứng với nó hơn bao giờ hết.</span><div class="trans-group" id="tg-119"></div></div><div class="sentence-box" id="s-120"><span class="text-orig">121. Ông đã từng nói chuyện với nhiều công ty, từ Hallmark tới Microsoft về chuyện bán Pixar, nhưng khi Woody và Buzz xuất hiện, ông nhận ra rằng mình đang ở rất gần cơ hội thay đổi ngành công nghiệp điện ảnh.</span><div class="trans-group" id="tg-120"></div></div><div class="sentence-box" id="s-121"><span class="text-orig">122. Khi những cảnh cuối cùng của bộ phim hoàn thành, ông xem đi xem lại và mời bạn bè đến nhà để chia sẻ niềm đam mê mới.</span><div class="trans-group" id="tg-121"></div></div><div class="sentence-box" id="s-122"><span class="text-orig">123. “Tôi không thể nhớ mình đã xem bao nhiêu phiên bản của Toy Story trước khi bộ phim được chính thức công chiếu,” Larry Ellison nói.</span><div class="trans-group" id="tg-122"></div></div><div class="sentence-box" id="s-123"><span class="text-orig">124. “Thực ra nó giống như một dạng tra tấn vậy.</span><div class="trans-group" id="tg-123"></div></div><div class="sentence-box" id="s-124"><span class="text-orig">125. Tôi đến đó và xem những bản chỉ cải tiến có 10% so với phiên bản trước.</span><div class="trans-group" id="tg-124"></div></div><div class="sentence-box" id="s-125"><span class="text-orig">126. Steve bị ám ảnh về chuyện làm thế nào cho đúng – cả nội dung lẫn công nghệ - và không chịu chấp nhận bất cứ điều gì ngoài sự hoàn hảo.”</span><div class="trans-group" id="tg-125"></div></div><div class="sentence-box" id="s-126"><span class="text-orig">127. Linh cảm của Jobs về việc đầu tư vào Pixar thực tế đã đơm hoa kết trái càng được củng cố khi Disney mời ông tới tham dự buổi chiếu phim ra mắt báo giới bộ phim hoạt hình Pocahontas vào tháng Một năm 1995, trong một rạp chiếu dựng lên trong công viên Center Park ở Manhattan.</span><div class="trans-group" id="tg-126"></div></div><div class="sentence-box" id="s-127"><span class="text-orig">128. Tại đây, CEO của Disney Michael Eisner công bố phim Pocahontas sẽ được trình chiếu suất đầu tiên trước 100.</span><div class="trans-group" id="tg-127"></div></div><div class="sentence-box" id="s-128"><span class="text-orig">129. 000 khán giả trên màn hình cao 2,4m tại Great Lawn ở Central Park.</span><div class="trans-group" id="tg-128"></div></div><div class="sentence-box" id="s-129"><span class="text-orig">130. Jobs là bậc thầy quảng cáo, ông thừa biết nên làm gì để có một buổi trình chiếu thành công, nhưng kế hoạch này cũng khiến ông sửng sốt.</span><div class="trans-group" id="tg-129"></div></div><div class="sentence-box" id="s-130"><span class="text-orig">131. Câu khẩu hiệu quen thuộc của Buzz Lightyear - “Bay vào không gian và hơn thế nữa!”</span><div class="trans-group" id="tg-130"></div></div><div class="sentence-box" id="s-131"><span class="text-orig">132. – bỗng nhiên đáng được lưu tâm.</span><div class="trans-group" id="tg-131"></div></div><div class="sentence-box" id="s-132"><span class="text-orig">133. Jobs quyết định thời điểm ra mắt Toy Story sẽ là cơ hội để phát hành cổ phiếu của Pixar ra công chúng.</span><div class="trans-group" id="tg-132"></div></div><div class="sentence-box" id="s-133"><span class="text-orig">134. Ngay cả những ngân hàng đầu tư hám lợi nhất cũng nghi ngại trước quyết định này và cho rằng chuyện đó không thể xảy ra.</span><div class="trans-group" id="tg-133"></div></div><div class="sentence-box" id="s-134"><span class="text-orig">135. Trong suốt 5 năm ròng, Pixar chỉ “chảy máu” đồng vốn.</span><div class="trans-group" id="tg-134"></div></div><div class="sentence-box" id="s-135"><span class="text-orig">136. Nhưng Jobs đã quyết.</span><div class="trans-group" id="tg-135"></div></div><div class="sentence-box" id="s-136"><span class="text-orig">137. “Tôi rất căng thẳng và lập luận rằng có lẽ chúng tôi nên chờ đến khi ra được bộ phim thứ hai,” Lasseter nhớ lại.</span><div class="trans-group" id="tg-136"></div></div><div class="sentence-box" id="s-137"><span class="text-orig">138. “Steve gạt phắt ý kiến của tôi và nói chúng tôi cần tiền mặt để có thể góp nửa số tiền để làm phim và để đàm phán lại thoả thuận với Disney.”</span><div class="trans-group" id="tg-137"></div></div><div class="sentence-box" id="s-138"><span class="text-orig">139. Bay vào không gian!</span><div class="trans-group" id="tg-138"></div></div><div class="sentence-box" id="s-139"><span class="text-orig">140. Có suất chiếu ra mắt Toy Story diễn ra vào tháng Mười Một năm 1995.</span><div class="trans-group" id="tg-139"></div></div><div class="sentence-box" id="s-140"><span class="text-orig">141. Disney tổ chức một buổi ở El Capitan, một rạp lớn cổ kính ở Los Angeles và dựng một ngôi nhà đồ chơi với các nhân vật trong phim ở ngay bên cạnh.</span><div class="trans-group" id="tg-140"></div></div><div class="sentence-box" id="s-141"><span class="text-orig">142. Pixar được trao cho ít vé vào cửa, nhưng buổi tối hôm đó và danh sách khách mời là người nổi tiếng đều mang tính đại diện cho sản phẩm của Disney rất cao; Jobs thậm chí không tham dự.</span><div class="trans-group" id="tg-141"></div></div><div class="sentence-box" id="s-142"><span class="text-orig">143. Thay vào đó, ngay tối hôm sau ông thuê Regency, một nhà hát tương tự ở San Francisco và tự tổ chức buổi công chiếu của mình.</span><div class="trans-group" id="tg-142"></div></div><div class="sentence-box" id="s-143"><span class="text-orig">144. Thay vì mời Tom Hanks và Steve Martin , khách mời là những ngôi sao công nghệ ở Thung lũng Silicon như Larry Ellison và Andy Grove.</span><div class="trans-group" id="tg-143"></div></div><div class="sentence-box" id="s-144"><span class="text-orig">145. Rõ ràng đó là sân khấu của Jobs; chính ông, chứ không phải Lasseter lên sân khấu để mở màn cho bộ phim.</span><div class="trans-group" id="tg-144"></div></div><div class="sentence-box" id="s-145"><span class="text-orig">146. Hai buổi công chiếu đình đám làm dấy lên một câu hỏi: Vậy thì Toy Story là phim của Disney hay Pixar?</span><div class="trans-group" id="tg-145"></div></div><div class="sentence-box" id="s-146"><span class="text-orig">147. Có phải Pixar chỉ đơn thuần là xưởng phim hoạt hình phụ giúp Disney làm phim?</span><div class="trans-group" id="tg-146"></div></div><div class="sentence-box" id="s-147"><span class="text-orig">148. Hay Disney đơn thuần là nhà phân phối và tiếp thị giúp Pixar quảng bá cho bộ phim của mình?</span><div class="trans-group" id="tg-147"></div></div><div class="sentence-box" id="s-148"><span class="text-orig">149. Câu trả lời nằm ở lưng chừng.</span><div class="trans-group" id="tg-148"></div></div><div class="sentence-box" id="s-149"><span class="text-orig">150. Dù thế nào, thì câu hỏi cần đặt ra ở đây là làm thế nào hai cái tôi ngạo nghễ, cụ thể ở đây là của Michael Eisner và Steve Jobs lại có thể trở thành đối tác của nhau như vậy.</span><div class="trans-group" id="tg-149"></div></div><div class="sentence-box" id="s-150"><span class="text-orig">151. Vấn đề được đặt ra khi Toy Story trở thành bộ phim bom tấn về thương mại và thành công rực rỡ.</span><div class="trans-group" id="tg-150"></div></div><div class="sentence-box" id="s-151"><span class="text-orig">152. Bộ phim thu hồi vốn ngay sau tuần đầu tiên trình chiếu, với tiền vé thu được riêng trong nước Mỹ là 30 triệu đô-la, và trở thành bộ phim có doanh thu cao nhất trong năm, đánh bại Batman Forever và Apollo 13 với 192 triệu đô-la doanh thu bán vé trong nước và 326 triệu đô-la trên toàn thế giới.</span><div class="trans-group" id="tg-151"></div></div><div class="sentence-box" id="s-152"><span class="text-orig">153. Theo trang web chuyên tổng hợp các bình luận phim Rotten Tomatoes, 100% trong số 73 nhà phê bình được hỏi ý kiến đều đưa ra bình luận tích cực cho bộ phim.</span><div class="trans-group" id="tg-152"></div></div><div class="sentence-box" id="s-153"><span class="text-orig">154. Nhà báo Richard Corliss của tạp chí Time cho rằng đó là “câu chuyện sáng tạo nhất năm”, David Ansen của tờ Newsweek tuyên bố đó là một “điều kì diệu” và Janet Masline của tờ New York Times thì giới thiệu bộ phim là “sản phẩm của sự thông minh lạ thường trong số những phim từng sản xuất trong lịch sử Disney.”</span><div class="trans-group" id="tg-153"></div></div><div class="sentence-box" id="s-154"><span class="text-orig">155. Điều duy nhất khiến Jobs nổi điên là những nhà bình luận như Maslin đã dám viết “lịch sử Disney”, chứ không phải là sự xuất hiện của Pixar.</span><div class="trans-group" id="tg-154"></div></div><div class="sentence-box" id="s-155"><span class="text-orig">156. Sau khi đọc bài bình luận của cô này, ông quyết định mình sẽ thực hiện một chiến dịch để nâng cao danh tiếng cho Pixar.</span><div class="trans-group" id="tg-155"></div></div><div class="sentence-box" id="s-156"><span class="text-orig">157. Khi ông và Lasseter đến chương trình truyền hình Charlie Rose, ông nhấn mạnh rằng Toy Story là phim của Pixar, thậm chí ông còn cố gắng làm nổi bật tính tự nhiên lịch sử của một xưởng phim mới ra đời.</span><div class="trans-group" id="tg-156"></div></div><div class="sentence-box" id="s-157"><span class="text-orig">158. “Kể từ khi Nàng Bạch Tuyết và Bảy chú lùn ra đời đến nay, tất cả các studio lớn đều cố gắng xâm nhập thị trường phim hoạt hình, nhưng cũng kể từ đó đến nay, Disney là hãng phim duy nhất cho ra đời những bộ phim hoạt hình trở thành bom tấn,” ông nói với Rose.</span><div class="trans-group" id="tg-157"></div></div><div class="sentence-box" id="s-158"><span class="text-orig">159. “Pixar giờ đây đã trở thành studio thứ hai làm được việc đó.”</span><div class="trans-group" id="tg-158"></div></div><div class="sentence-box" id="s-159"><span class="text-orig">160. Jobs xoáy vào điểm Disney chỉ đơn thuần là nhà phân phối cho bộ phim của Pixar.</span><div class="trans-group" id="tg-159"></div></div><div class="sentence-box" id="s-160"><span class="text-orig">161. “Ông ta cứ lải nhải ‘Chúng tôi ở Pixar mới là thực chất, còn Disney các anh chỉ là đống rác rưởi,” Michael Eisner nhớ lại.</span><div class="trans-group" id="tg-160"></div></div><div class="sentence-box" id="s-161"><span class="text-orig">162. “Nhưng chúng tôi mới là người khiến Toy Story thành công.</span><div class="trans-group" id="tg-161"></div></div><div class="sentence-box" id="s-162"><span class="text-orig">163. Chúng tôi định hình bộ phim, và chúng tôi dồn tổng lực vào, từ các nhà tiếp thị tiêu dùng vào kênh Disney, để biến nó trở thành hit.”</span><div class="trans-group" id="tg-162"></div></div><div class="sentence-box" id="s-163"><span class="text-orig">164. Jobs đi đến kết luận cho vấn đề cơ bản – Bộ phim thuộc về ai?</span><div class="trans-group" id="tg-163"></div></div><div class="sentence-box" id="s-164"><span class="text-orig">165. - sẽ cần phải ngồi xem xét lại bản hợp đồng hơn là nổ ra một cuộc chiến ngôn từ trên báo chí.</span><div class="trans-group" id="tg-164"></div></div><div class="sentence-box" id="s-165"><span class="text-orig">166. “Sau thành công của Toy Story,” ông nói, “Tôi nhận ra là mình cần phải tiến hành thoả thuận mới với Disney nếu chúng tôi đã mất công xây dựng một studio và không muốn trở thành lính-đánh-thuê.”</span><div class="trans-group" id="tg-165"></div></div><div class="sentence-box" id="s-166"><span class="text-orig">167. Nhưng để có thể ngồi lại với Disney ở thế cân bằng, Pixar cần phải mang tiền đến chồng trước mặt đối tác.</span><div class="trans-group" id="tg-166"></div></div><div class="sentence-box" id="s-167"><span class="text-orig">168. Đó là lý do vì sao cần một cuộc IPO thành công.</span><div class="trans-group" id="tg-167"></div></div><div class="sentence-box" id="s-168"><span class="text-orig">169. Kế hoạch chào bán Pixar ra công chúng phải tiến hành chính xác một tuần sau buổi ra mắt Toy Story.</span><div class="trans-group" id="tg-168"></div></div><div class="sentence-box" id="s-169"><span class="text-orig">170. Jobs đã đánh cược rằng bộ phim sẽ thành công, và chấp nhận mạo hiểm “liều ăn nhiều”, thời khắc vàng.</span><div class="trans-group" id="tg-169"></div></div><div class="sentence-box" id="s-170"><span class="text-orig">171. Cũng giống IPO của Apple, sự kiện được tổ chức tại trụ sở của bên bảo hiểm chính ở San Francisco lúc 7 giờ sáng, khi các cổ phiếu bắt đầu được chào bán.</span><div class="trans-group" id="tg-170"></div></div><div class="sentence-box" id="s-171"><span class="text-orig">172. Theo kế hoạch ban đầu, những cổ phiếu đầu tiên sẽ được chào bán với mức giá 14 đô-la, đó là mức giá đảm bảo sẽ có người mua.</span><div class="trans-group" id="tg-171"></div></div><div class="sentence-box" id="s-172"><span class="text-orig">173. Jobs nài nỉ tăng giá lên 22 đô-la, vì như thế công ty sẽ kiếm được nhiều tiền hơn nếu chào bán thành công.</span><div class="trans-group" id="tg-172"></div></div><div class="sentence-box" id="s-173"><span class="text-orig">174. Nhưng mọi sự đã diễn ra trên cả mong đợi điên rồ nhất của ông.</span><div class="trans-group" id="tg-173"></div></div><div class="sentence-box" id="s-174"><span class="text-orig">175. Nó vượt qua cả Netscape để trở thành vụ chào bán IPO lớn nhất trong năm.</span><div class="trans-group" id="tg-174"></div></div><div class="sentence-box" id="s-175"><span class="text-orig">176. Trong nửa giờ đầu, giá cổ phiếu vọt lên 45 đô-la và hoạt động giao dịch bị đình lại bởi vì có quá nhiều người đặt mua.</span><div class="trans-group" id="tg-175"></div></div><div class="sentence-box" id="s-176"><span class="text-orig">177. Thậm chí sau đó giá còn cao hơn, lên 49 đô-la, trước khi trở lại mức giá cuối cùng khi kết thúc phiên giao dịch là 39 đô-la.</span><div class="trans-group" id="tg-176"></div></div><div class="sentence-box" id="s-177"><span class="text-orig">178. Đầu năm đó, Jobs đã hi vọng sẽ tìm được một nhà đầu tư mua lại Pixar với giá 50 triệu đô-la, vừa đủ để hoàn số vốn ông đã bỏ ra.</span><div class="trans-group" id="tg-177"></div></div><div class="sentence-box" id="s-178"><span class="text-orig">179. Đến cuối năm, với số cổ phiếu ông sở hữu – 80% toàn công ty – đã trị giá nhiều gấp hơn 20 lần con số đó, một con số khổng lồ 1,2 tỷ đô-la.</span><div class="trans-group" id="tg-178"></div></div><div class="sentence-box" id="s-179"><span class="text-orig">180. Con số đó nhiều gấp năm lần so với những gì ông thu được khi Apple lên sàn chứng khoán năm 1980.</span><div class="trans-group" id="tg-179"></div></div><div class="sentence-box" id="s-180"><span class="text-orig">181. Nhưng Jobs nói với John Markoff của tờ New York Times rằng tiền không nhiều ý nghĩa với ông.</span><div class="trans-group" id="tg-180"></div></div><div class="sentence-box" id="s-181"><span class="text-orig">182. “Sẽ chẳng có chiếc du thuyền nào của tôi trong tương lai hết,” ông nói.</span><div class="trans-group" id="tg-181"></div></div><div class="sentence-box" id="s-182"><span class="text-orig">183. “Tôi không bao giờ làm những điều này chỉ vì tiền cả.”</span><div class="trans-group" id="tg-182"></div></div><div class="sentence-box" id="s-183"><span class="text-orig">184. Sự thành công nhất của Pixar khi lên sàn chứng khoán đó là họ sẽ không còn phải phụ thuộc tài chính vào Disney để làm phim của mình nữa.</span><div class="trans-group" id="tg-183"></div></div><div class="sentence-box" id="s-184"><span class="text-orig">185. Đó chính là cán cân thăng bằng mà Jobs muốn có.</span><div class="trans-group" id="tg-184"></div></div><div class="sentence-box" id="s-185"><span class="text-orig">186. “Giờ đây chúng tôi đã có thể góp một nửa chi phí làm phim của chúng tôi, cho nên tôi cũng có thể đòi hỏi một nửa lợi nhuận,” ông nhớ lại.</span><div class="trans-group" id="tg-185"></div></div><div class="sentence-box" id="s-186"><span class="text-orig">187. “Nhưng điều quan trọng hơn, tôi muốn hợp tác thương hiệu.</span><div class="trans-group" id="tg-186"></div></div><div class="sentence-box" id="s-187"><span class="text-orig">188. Đó sẽ là những bộ phim của cả Pixar và Disney.”</span><div class="trans-group" id="tg-187"></div></div><div class="sentence-box" id="s-188"><span class="text-orig">189. Jobs đáp máy bay đến để ăn trưa với Eisner đang choáng váng với sự táo bạo của ông.</span><div class="trans-group" id="tg-188"></div></div><div class="sentence-box" id="s-189"><span class="text-orig">190. Họ đã từng thoả thuận sẽ làm với nhau 3 bộ phim, và Pixar mới hoàn thành xong một.</span><div class="trans-group" id="tg-189"></div></div><div class="sentence-box" id="s-190"><span class="text-orig">191. Bên nào cũng có vũ khí hạng nặng.</span><div class="trans-group" id="tg-190"></div></div><div class="sentence-box" id="s-191"><span class="text-orig">192. Sau cuộc chia tay không mấy ngọt ngào với Eisner, Katzenberg đã rời khỏi Disney và trở thành người đồng sáng lập với Steven Spielberg và David Geffen thành lập DreamWorks SKG.</span><div class="trans-group" id="tg-191"></div></div><div class="sentence-box" id="s-192"><span class="text-orig">193. Nếu Eisner không chấp nhận thoả thuận mới với Pixar, Jobs nói, thì Pixar buộc lòng phải hợp tác studio khác, như của Katzenberg chẳng hạn, sau khi kết thúc hợp đồng hợp tác 3 phim.</span><div class="trans-group" id="tg-192"></div></div><div class="sentence-box" id="s-193"><span class="text-orig">194. “Vũ khí” trong tay Eisner đó là nếu chuyện đó xảy ra, thì Disney có thể tự mình làm các tập tiếp theo của Toy Story, sử dụng nhân vật Woody, Buzz và toàn bộ những nhân vật mà Lasseter đã sáng tạo ra.</span><div class="trans-group" id="tg-193"></div></div><div class="sentence-box" id="s-194"><span class="text-orig">195. “Điều đó như thể bán đi chính con cái của mình vậy,” Jobs sau này nhớ lại.</span><div class="trans-group" id="tg-194"></div></div><div class="sentence-box" id="s-195"><span class="text-orig">196. “John bắt đầu rơi nước mắt khi ông phải tính đến khả năng đó.”</span><div class="trans-group" id="tg-195"></div></div><div class="sentence-box" id="s-196"><span class="text-orig">197. Vậy nên họ cố công tìm ra cho được một thoả thuận mới.</span><div class="trans-group" id="tg-196"></div></div><div class="sentence-box" id="s-197"><span class="text-orig">198. Eisner đồng ý để Pixar góp một nửa vốn trong những bộ phim sau, và đổi lại, được nhận một nửa lợi nhuận.</span><div class="trans-group" id="tg-197"></div></div><div class="sentence-box" id="s-198"><span class="text-orig">199. “Ông ta không nghĩ chúng tôi có thể có bao nhiêu sản phẩm đình đám, chính vì thế ông ta nghĩ mình đã tiết kiệm được một số tiền,” Jobs nói.</span><div class="trans-group" id="tg-198"></div></div><div class="sentence-box" id="s-199"><span class="text-orig">200. “Rốt cục thì điều đó có lợi cho chúng tôi, bởi vì Pixar có những 10 ý tưởng bom tấn cả thảy.”</span><div class="trans-group" id="tg-199"></div></div><div class="sentence-box" id="s-200"><span class="text-orig">201. Họ cũng thống nhất với nhau về việc hợp tác thương hiệu, tuy nhiên cũng có rất nhiều cuộc tranh cãi nổ ra để xác định cho rõ.</span><div class="trans-group" id="tg-200"></div></div><div class="sentence-box" id="s-201"><span class="text-orig">202. “Quan điểm của tôi xuất phát từ chuyện đó là một bộ phim của Disney cơ mà, nhưng sau đó tôi cũng dịu lại,” Eisner nhớ lại.</span><div class="trans-group" id="tg-201"></div></div><div class="sentence-box" id="s-202"><span class="text-orig">203. “Chúng tôi bắt đầu thoả thuận về chuyện chữ Disney sẽ lớn đến mức nào, chữ ‘Pixar” lớn tới mức nào, hệt như mấy đứa bé 4 tuổi vậy.”</span><div class="trans-group" id="tg-202"></div></div><div class="sentence-box" id="s-203"><span class="text-orig">204. Nhưng đến đầu năm 1997, họ đã đạt được thoả thuận, với 5 bộ phim trong vòng 10 năm, hai thương hiệu sẽ có kích thước to bằng nhau, như những người bạn, ít nhất là trong thời gian ở bên nhau.</span><div class="trans-group" id="tg-203"></div></div><div class="sentence-box" id="s-204"><span class="text-orig">205. “Khi ấy Eisner khá biết điều và công bằng với tôi,” Jobs sau này thừa nhận.</span><div class="trans-group" id="tg-204"></div></div><div class="sentence-box" id="s-205"><span class="text-orig">206. “Nhưng thực ra, trong vòng 10 năm tiếp theo, tôi đã đi đến kết luận rằng ông ta là một người đen tối.”</span><div class="trans-group" id="tg-205"></div></div><div class="sentence-box" id="s-206"><span class="text-orig">207. Trong thư gửi cho những cổ đông của Pixar, Jobs giải thích việc thắng được quyền hợp tác thương hiệu ngang nhau với Disney đối với tất cả các bộ phim, cũng như trong quảng cáo và sản xuất đồ chơi chính là yếu tố quan trọng nhất của bản thoả thuận.</span><div class="trans-group" id="tg-206"></div></div><div class="sentence-box" id="s-207"><span class="text-orig">208. “Chúng ta muốn Pixar phát triển thành một thương hiệu ngang bằng, có cùng đẳng cấp chiếm được lòng tin như thương hiệu Disney đã làm được,” ông viết như vậy.</span><div class="trans-group" id="tg-207"></div></div><div class="sentence-box" id="s-208"><span class="text-orig">209. “Nhưng để Pixar có thể đạt được lòng tin ấy, khán giả phải biết rằng chính Pixar là người sáng tạo ra các bộ phim.”</span><div class="trans-group" id="tg-208"></div></div><div class="sentence-box" id="s-209"><span class="text-orig">210. Jobs luôn được biết đến trong suốt sự nghiệp của mình là người tạo ra những sản phẩm vĩ đại.</span><div class="trans-group" id="tg-209"></div></div><div class="sentence-box" id="s-210"><span class="text-orig">211. Nhưng điều đó cũng đồng nghĩa với việc ông có khả năng tạo ra những công ty vĩ đại với những thương hiệu giá trị.</span><div class="trans-group" id="tg-210"></div></div><div class="sentence-box" id="s-211"><span class="text-orig">212. Và ông đã tạo ra hai công ty tốt nhất trong thời đại của mình: Apple và Pixar.</span><div class="trans-group" id="tg-211"></div></div></div>
+    <footer>Icarus - kienspvl@gmail.com - 097.463.87.94</footer>
+</main>
+
+<aside class="sidebar-right" id="sideRight">
+    <div id="sidePlaceholder" style="text-align: center; opacity: 0.3; margin-top: 100px; display: none;">Chọn câu để xem chi tiết</div>
+    <div id="sideContent" style="display: block;">
+        <span class="preview-label">Bản gốc</span>
+        <div id="sideOrig" class="preview-text">Chương 22: TOY STORY - CÂU CHUYỆN ĐỒ CHƠI</div>
+        <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
+        <div id="sideTrans"><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span class="preview-label" style="margin:0">en</span><button class="btn-mini-speak" onclick="speak('Chapter 22: TOY STORY - TOY STORY', 'en')">🔊</button></div><div class="preview-text">Chapter 22: TOY STORY - TOY STORY</div></div>
+        <div id="vocabAnalysis" class="vocab-section" style="display:none;">
+            <span class="preview-label">Phân tích từ vựng</span>
+            <div id="wordGrid" class="word-grid"></div>
+        </div>
+    </div>
+</aside>
+
+<div id="noteModal" class="modal" onclick="closeByOverlay(event, 'noteModal')">
+    <div class="modal-content">
+        <h3>Ghi chú (N)</h3>
+        <div class="note-tools">
+            <button class="btn-tool" onclick="insertTimestamp()">🕒 Thời gian</button>
+            <button class="btn-tool" onclick="insertCurrentText()">📄 Chèn câu</button>
+            <button class="btn-tool" style="background: #fbbf24; color: #000;" onclick="insertBookmark()">🔖 Đánh dấu vị trí</button>
+        </div>
+        <textarea id="noteArea" oninput="saveNote()" placeholder="Viết ghi chú..."></textarea>
+        <button class="btn-export-popup" onclick="exportNotes()">XUẤT GHI CHÚ (TXT)</button>
+        <button class="btn-full-close" onclick="closeModal('noteModal')">ĐÓNG (N)</button>
+    </div>
+</div>
+
+<div id="updateModal" class="modal" onclick="closeByOverlay(event, 'updateModal')">
+    <div class="modal-content">
+        <h3>Cập nhật (U)</h3>
+        <p><b>v13.5.6:</b> 
+           - Khôi phục kích thước cố định lớn cho Textarea nhập văn bản.<br>
+           - Sửa lỗi Save As: Dữ liệu hiện tại được "đóng băng" trực tiếp vào file HTML xuất ra, giúp file đã ngậm dữ liệu tự động nạp dữ liệu chính nó khi mở mà không bị ghi đè bởi localStorage chung.</p>
+        <button class="btn-full-close" onclick="closeModal('updateModal')">ĐÓNG (U)</button>
+    </div>
+</div>
+
+<script>
+    // --- FIREBASE INITIALIZATION ---
+    const firebaseConfig = {
+        databaseURL: "https://icarus-reader-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function syncToCloud() {
+        const txt = document.getElementById('input').value;
+        const savedIdx = parseInt(localStorage.getItem('icarus_last_idx') || "0");
+        if (!txt.trim()) { alert("Văn bản trống!"); return; }
+
+        db.ref('icarus_session').set({
+            content: txt,
+            lastIndex: savedIdx,
+            timestamp: Date.now()
+        }).then(() => {
+            alert("Đã đồng bộ lên Cloud thành công!");
+        }).catch(e => {
+            alert("Lỗi đồng bộ: " + e.message);
+        });
+    }
+
+    function fetchFromCloud() {
+        db.ref('icarus_session').once('value').then((snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('input').value = data.content;
+                localStorage.setItem('icarus_last_idx', data.lastIndex);
+                initSentences(true);
+                alert("Đã tải dữ liệu từ Cloud!");
+            } else {
+                alert("Không tìm thấy dữ liệu trên Cloud.");
+            }
+        });
+    }
+
+    // --- SỬA LỖI 2: SAVE AS ĐÓNG BĂNG DỮ LIỆU TRỰC TIẾP VÀO HTML ---
+    function saveFileWithData() {
+        const inputArea = document.getElementById('input');
+        const currentText = inputArea.value;
+        
+        // Cập nhật giá trị vào thuộc tính value của textarea DOM trước khi xuất HTML
+        inputArea.setAttribute('value', currentText);
+
+        const htmlContent = document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Icarus_Translator_Offline.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    // --- TÍNH NĂNG GIỮ MÀN HÌNH SÁNG (WAKE LOCK API CHO ANDROID) ---
+    let wakeLock = null;
+    async function toggleWakeLock() {
+        const toggle = document.getElementById('wakeLockToggle');
+        if (toggle.checked) {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Screen Wake Lock is active.');
+                } else {
+                    alert('Trình duyệt của bạn không hỗ trợ Wake Lock API.');
+                    toggle.checked = false;
+                }
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+                toggle.checked = false;
+            }
+        } else {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                    console.log('Screen Wake Lock released.');
+                });
+            }
+        }
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+        const toggle = document.getElementById('wakeLockToggle');
+        if (wakeLock !== null && document.visibilityState === 'visible' && toggle.checked) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    });
+
+    // --- LOGIC TOGGLE SIDEBARS ---
+    function toggleSidebars() {
+        document.body.classList.toggle('sidebars-hidden');
+        setTimeout(centerActiveSentence, 350);
+    }
+
+    let sentences = []; let currentIdx = -1; let fontSize = 16; let contentWidth = 1000;
+    let startTime = Date.now(); const synth = window.speechSynthesis; const { pinyin } = pinyinPro;
+
+    function blurFocus(e) { if(e) e.blur(); }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('btn-tab-'+t).classList.add('active');
+        document.getElementById('tab-'+t).classList.add('active');
+    }
+
+    function changeTheme(t) { 
+        document.body.className = t; 
+        document.getElementById('themeSelect').value = t;
+        if (currentIdx !== -1) updateSidebarRight(currentIdx); 
+    }
+    
+    function cycleTheme() {
+        const themes = ['theme-1', 'theme-2', 'theme-3', 'theme-4', 'theme-5'];
+        let current = document.body.className.replace('sidebars-hidden', '').trim() || 'theme-3';
+        let nextIdx = (themes.indexOf(current) + 1) % themes.length;
+        changeTheme(themes[nextIdx]);
+    }
+
+    function changeFontSize(d) { fontSize += d; document.documentElement.style.setProperty('--font-size', fontSize+'px'); }
+    function changeWidth(d) { contentWidth += d; document.documentElement.style.setProperty('--content-max-w', contentWidth+'px'); }
+
+    function updateTimer() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const secs = (elapsed % 60).toString().padStart(2, '0');
+        document.getElementById('appTimer').innerText = `${mins}:${secs}`;
+    }
+    setInterval(updateTimer, 1000);
+
+    async function googleTranslate(text, to) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${to}&dt=t&dt=rm&q=${encodeURIComponent(text)}`);
+            return await res.json();
+        } catch (e) { return null; }
+    }
+
+    function initSentences(isRestore = false) {
+        const txt = document.getElementById('input').value; if (!txt.trim()) return;
+        localStorage.setItem('icarus_last_session', txt);
+        if (!isRestore) saveHistory(txt);
+        const raw = txt.split(/\n+/).flatMap(p => p.match(/[^.!?]+[.!?]*["'”’)]*/g) || [p]);
+        sentences = raw.filter(s => s.trim()).map(s => ({ original: s.trim(), translations: {}, pinyin: "", enPinyin: "" }));
+        renderOutput(); document.getElementById('totalPage').innerText = "/ " + sentences.length;
+        const savedIdx = parseInt(localStorage.getItem('icarus_last_idx') || "0");
+        setTimeout(() => select(isRestore ? savedIdx : 0, true), 100);
+        document.getElementById('input').blur();
+    }
+
+    function renderOutput() {
+        const out = document.getElementById('output'); out.innerHTML = '';
+        sentences.forEach((s, i) => {
+            const div = document.createElement('div'); div.className = 'sentence-box'; div.id = `s-${i}`;
+            div.innerHTML = `<span class="text-orig">${i+1}. ${s.original}</span><div class="trans-group" id="tg-${i}"></div>`;
+            div.onclick = () => select(i, true); out.appendChild(div);
+        });
+    }
+
+    function centerActiveSentence() {
+        const el = document.getElementById(`s-${currentIdx}`);
+        const container = document.getElementById('output');
+        if (el && container) {
+            const elTop = el.offsetTop;
+            const elHeight = el.offsetHeight;
+            const containerHeight = container.clientHeight;
+            const targetScroll = elTop - (containerHeight / 2) + (elHeight / 2);
+            container.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        }
+    }
+
+    async function select(i, forceTrans = false) {
+        if (i < 0 || i >= sentences.length) return;
+        currentIdx = i; 
+        localStorage.setItem('icarus_last_idx', i);
+        document.getElementById('currPage').value = i + 1;
+        document.querySelectorAll('.sentence-box').forEach(b => b.classList.remove('active'));
+        const el = document.getElementById(`s-${i}`);
+        if (el) { el.classList.add('active'); centerActiveSentence(); }
+        if (forceTrans) {
+            await translateSentence(i);
+            if (document.getElementById('preTranslate').checked) {
+                for(let j=1; j<=3; j++) if(i+j < sentences.length) translateSentence(i+j);
+            }
+        }
+        updateSidebarRight(i);
+        if (document.getElementById('autoSpeak').checked) replayCurrent();
+    }
+
+    async function translateSentence(idx) {
+        const targets = Array.from(document.querySelectorAll('.target-lang:checked')).map(cb => cb.value);
+        const group = document.getElementById(`tg-${idx}`);
+        for (let lang of targets) {
+            if (!sentences[idx].translations[lang]) {
+                const data = await googleTranslate(sentences[idx].original, lang);
+                if (data) {
+                    const res = data[0].map(item => item[0]).join('');
+                    if (sentences[idx].translations[lang] === res) continue; 
+                    sentences[idx].translations[lang] = res;
+                    let pinyinHtml = '';
+                    if (lang === 'zh-CN') { 
+                        sentences[idx].pinyin = pinyin(res); 
+                        pinyinHtml = `<div class="pinyin">${sentences[idx].pinyin}</div>`; 
+                    }
+                    if (group) {
+                        const line = document.createElement('div');
+                        line.className = `trans-line lang-${lang.split('-')[0]}`;
+                        line.innerHTML = `<div style="flex:1;"><b>${lang.split('-')[0]}</b> ${res} ${pinyinHtml}</div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('${res.replace(/'/g, "\\'")}', '${lang}')">🔊</button>`;
+                        group.appendChild(line);
+                        if (idx === currentIdx) { requestAnimationFrame(centerActiveSentence); }
+                    }
+                }
+            }
+        }
+    }
+
+    function updateSidebarRight(i) {
+        if (i === -1) return;
+        document.getElementById('sidePlaceholder').style.display = 'none';
+        document.getElementById('sideContent').style.display = 'block';
+        document.getElementById('sideOrig').innerText = sentences[i].original;
+        let html = ''; let zhText = ''; let ruText = '';
+        for (let [lang, text] of Object.entries(sentences[i].translations)) {
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span class="preview-label" style="margin:0">${lang}</span><button class="btn-mini-speak" onclick="speak('${text.replace(/'/g, "\\'")}', '${lang}')">🔊</button></div><div class="preview-text">${text}</div>`;
+            if (lang === 'zh-CN') { zhText = text; if (sentences[i].pinyin) html += `<div class="pinyin">${sentences[i].pinyin}</div>`; }
+            if (lang === 'ru') { ruText = text; }
+        }
+        document.getElementById('sideTrans').innerHTML = html;
+        const showZh = document.getElementById('showZhVocab').checked;
+        const showRu = document.getElementById('showRuVocab').checked;
+        if ((showZh && zhText) || (showRu && ruText)) {
+            document.getElementById('vocabAnalysis').style.display = 'block';
+            let combinedText = (showZh ? zhText : "") + (showRu ? ruText : "");
+            breakdownWords(combinedText, showZh, showRu);
+        } else { document.getElementById('vocabAnalysis').style.display = 'none'; }
+    }
+
+    async function breakdownWords(text, isZh, isRu) {
+        const container = document.getElementById('wordGrid'); container.innerHTML = '';
+        let words = [];
+        if (isZh) words = words.concat(text.match(/[\u4e00-\u9fa5]/g) || []);
+        if (isRu) words = words.concat(text.match(/[а-яА-ЯёЁ]+/g) || []);
+        const uniqueWords = [...new Set(words)];
+        for (const w of uniqueWords) {
+            const card = document.createElement('div'); card.className = 'word-card';
+            let isCyrillic = /[а-яА-ЯёЁ]/.test(w);
+            card.innerHTML = `<span class="ana-word">${w}</span><span class="ana-pinyin" id="p-${w}">...</span><div class="ana-meaning" id="m-${w}">...</div>`;
+            card.onclick = () => speak(w, isCyrillic ? 'ru' : 'zh-CN');
+            container.appendChild(card);
+            fetchVocabInfo(w, isCyrillic ? 'ru' : 'zh-CN');
+        }
+    }
+
+    async function fetchVocabInfo(w, lang) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${lang}&tl=en&dt=t&dt=rm&q=${encodeURIComponent(w)}`);
+            const data = await res.json();
+            document.getElementById(`p-${w}`).innerText = data[0][1] ? (data[0][1][3] || data[0][1][2] || "") : '';
+            document.getElementById(`m-${w}`).innerText = data[0][0][0].toLowerCase();
+        } catch (e) { }
+    }
+
+    function speak(t, l) {
+        synth.cancel(); 
+        const u = new SpeechSynthesisUtterance(t);
+        const speed = parseFloat(document.getElementById('speechRate').value) || 1;
+        u.rate = speed;
+
+        if (l === 'vi') {
+            const v = synth.getVoices().find(x => x.name === document.getElementById('viVoice').value);
+            if (v) u.voice = v;
+        } else { u.lang = { 'en': 'en-US', 'zh-CN': 'zh-CN', 'ru': 'ru-RU' }[l] || 'en-US'; }
+        u.onend = () => { if (document.getElementById('autoNext').checked) nav(1); }; 
+        synth.speak(u);
+    }
+
+    function replayCurrent() {
+        if (currentIdx === -1) return;
+        const target = document.getElementById('voiceTarget').value;
+        const txt = (target === 'orig') ? sentences[currentIdx].original : (sentences[currentIdx].translations[target] || sentences[currentIdx].original);
+        speak(txt, target === 'orig' ? 'en' : target);
+    }
+
+    function nav(s) { select(currentIdx + s, true); }
+    function jumpToPage(v) { select(parseInt(v) - 1, true); }
+    function togglePlayPause() { synth.paused ? synth.resume() : synth.pause(); }
+
+    function saveHistory(text) {
+        let history = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        history = history.filter(h => h.full !== text);
+        history.unshift({ id: Date.now(), text: text.substring(0, 40) + '...', full: text, date: new Date().toLocaleString() });
+        localStorage.setItem('icarus_hist', JSON.stringify(history.slice(0, 20))); loadHistory();
+    }
+    function loadHistory() {
+        const container = document.getElementById('historyList');
+        const history = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        container.innerHTML = history.map(h => `<div class="history-item" onclick="restore('${h.id}')"><span><b>${h.text}</b><br><small>${h.date}</small></span><span style="color:#ef4444;" onclick="deleteHistory('${h.id}', event)">×</span></div>`).join('');
+    }
+    function restore(id) {
+        const h = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        const item = h.find(x => x.id == id);
+        if (item) { document.getElementById('input').value = item.full; initSentences(true); }
+    }
+    function deleteHistory(id, e) { e.stopPropagation(); let h = JSON.parse(localStorage.getItem('icarus_hist') || '[]'); h = h.filter(x => x.id != id); localStorage.setItem('icarus_hist', JSON.stringify(h)); loadHistory(); }
+    function clearAllHistory() { if(confirm("Xóa sạch?")) { localStorage.setItem('icarus_hist', '[]'); loadHistory(); } }
+    function saveNote() { localStorage.setItem('icarus_note', document.getElementById('noteArea').value); }
+    function loadNote() { document.getElementById('noteArea').value = localStorage.getItem('icarus_note') || ""; }
+    function insertTimestamp() { const area = document.getElementById('noteArea'); area.setRangeText(`[${new Date().toLocaleString()}] `, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function insertCurrentText() { if (currentIdx === -1) return; const area = document.getElementById('noteArea'); area.setRangeText(`\n"${sentences[currentIdx].original}"\n`, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function insertBookmark() { if (currentIdx === -1) return; const area = document.getElementById('noteArea'); const marker = `\n--- ĐÃ ĐỌC TỚI CÂU ${currentIdx + 1} ---\n`; area.setRangeText(marker, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function exportNotes() { const blob = new Blob([document.getElementById('noteArea').value], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Icarus_Notes.txt'; a.click(); }
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function toggleModal(id) { const m = document.getElementById(id); if (m.style.display === 'block') closeModal(id); else openModal(id); }
+    function closeByOverlay(e, id) { if(e.target.id === id) closeModal(id); }
+
+    document.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { if (e.key === 'Escape') { closeModal('noteModal'); closeModal('updateModal'); } return; }
+        if (e.key === 'ArrowRight') nav(1);
+        else if (e.key === 'ArrowLeft') nav(-1);
+        else if (key === 'n') toggleModal('noteModal');
+        else if (key === 'u') toggleModal('updateModal');
+        else if (key === 'm') cycleTheme();
+        else if (key === 'k') togglePlayPause();
+        else if (key === '=') changeFontSize(1);
+        else if (key === '-') changeFontSize(-1);
+        else if (key === '.') changeWidth(50);
+        else if (key === ',') changeWidth(-50);
+        else if (e.code === 'Space') { e.preventDefault(); replayCurrent(); }
+        else if (e.key === 'Escape') { closeModal('noteModal'); closeModal('updateModal'); }
+    });
+
+    // --- LOGIC KHỞI ĐỘNG ƯU TIÊN DỮ LIỆU NGẬM TRONG FILE SAVE AS ---
+    window.onload = () => {
+        const vs = synth.getVoices(); 
+        document.getElementById('viVoice').innerHTML = vs.filter(v => v.lang.includes('vi')).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        loadHistory(); 
+        loadNote();
+
+        const inputEl = document.getElementById('input');
+        // Kiểm tra xem file HTML này có đang "ngậm" sẵn dữ liệu trong thuộc tính value của thẻ textarea hay không
+        const embeddedText = inputEl.getAttribute('value');
+
+        if (embeddedText && embeddedText.trim() !== "") {
+            // Nếu có dữ liệu ngậm, dùng luôn dữ liệu ngậm và nạp thẳng vào session
+            inputEl.value = embeddedText;
+            initSentences(true);
+        } else {
+            // Nếu không có dữ liệu ngậm (file gốc), mới dùng logic khơi gợi từ localStorage cũ
+            const lastSession = localStorage.getItem('icarus_last_session');
+            if (lastSession) { 
+                inputEl.value = lastSession; 
+                initSentences(true); 
+            }
+        }
+    };
+
+    speechSynthesis.onvoiceschanged = () => {
+        const vs = synth.getVoices(); 
+        document.getElementById('viVoice').innerHTML = vs.filter(v => v.lang.includes('vi')).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+    };
+</script>
+
+</body></html>
