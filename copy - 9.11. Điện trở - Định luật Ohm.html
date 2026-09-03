@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Đọc Bài Giảng Markdown &amp; Word Chuyên Nghiệp v3.6</title>
+    <!-- MarkedJS: Chuyển Markdown sang HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Mammoth.js: Đọc file .docx Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js: Chuyển HTML từ Word sang Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    
+    <!-- KaTeX: Render Toán LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- MathJax v3 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            }
+        };
+    </script>
+    <script id="MathJax-script" async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #020617;
+            --card-bg: #1e293b;
+            --text-color: #94a3b8;
+            --text-active: #f8fafc;
+            --border-color: #334155;
+            --accent-color: #38bdf8;
+            --highlight-bg: rgba(56, 189, 248, 0.12);
+            --sidebar-width: 280px;
+            --font-size: 20px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #475569;
+            --text-active: #0f172a;
+            --border-color: #cbd5e1;
+            --accent-color: #0284c7;
+            --highlight-bg: rgba(2, 132, 199, 0.12);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 8px 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .controls-group { 
+            display: flex; 
+            gap: 6px; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+
+        button, label.btn {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover, label.btn:hover { border-color: var(--accent-color); }
+        button.active { background-color: var(--accent-color); color: #fff; }
+
+        input[type="text"], input[type="number"], select {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 8px; border-radius: 6px; font-size: 13px;
+        }
+
+        .toggle-switch-wrapper { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-active); }
+        .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .toggle-switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        #selection-popup {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-width: 380px;
+        }
+        #selection-popup button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #selection-popup input[type="text"] {
+            width: 150px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 5;
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        #sidebar.open { margin-left: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; font-weight: bold; color: var(--text-active);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item {
+            padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            cursor: pointer; font-size: 14px; color: var(--text-color);
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-item:hover { background-color: var(--card-bg); color: var(--text-active); }
+        .toc-item.active-toc {
+            background-color: var(--highlight-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            border-left: 3px solid var(--accent-color);
+        }
+        .toc-item.level-1 { font-weight: bold; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; }
+        .toc-item.level-3 { padding-left: 30px; font-style: italic; }
+        .toc-item.level-4 { padding-left: 40px; opacity: 0.8; }
+
+        main {
+            flex: 1; overflow-y: auto;
+            padding: 30px 20px 150px 20px;
+            scroll-behavior: smooth;
+        }
+
+        #lecture-paper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            font-size: var(--font-size); line-height: 1.8;
+            transition: font-size 0.2s ease, background-color 0.3s;
+        }
+
+        #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4 { 
+            color: var(--accent-color); 
+            margin-top: 1.2em; margin-bottom: 0.5em; 
+            line-height: 1.4;
+        }
+        #lecture-paper p { margin: 0.8em 0; color: inherit; }
+        #lecture-paper ul, #lecture-paper ol { padding-left: 28px; margin: 0.8em 0; }
+        #lecture-paper li { margin-bottom: 6px; }
+        #lecture-paper strong { color: var(--accent-color); font-weight: 700; }
+        
+        #lecture-paper blockquote {
+            margin: 1em 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        #lecture-paper blockquote p { margin: 0.4em 0; }
+
+        #lecture-paper hr {
+            border: none;
+            border-top: 2px dashed var(--border-color);
+            margin: 2em 0;
+        }
+
+        #lecture-paper img {
+            max-width: 100%; height: auto; max-height: 400px;
+            object-fit: contain; border-radius: 8px;
+            margin: 12px auto; display: block; cursor: zoom-in;
+            border: 1px solid var(--border-color);
+        }
+
+        #lecture-paper table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        #lecture-paper th, #lecture-paper td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+        #lecture-paper th { background-color: var(--highlight-bg); }
+
+        .markdown-unit {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            border-radius: 6px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .markdown-unit.revealed {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+
+        li.markdown-unit.revealed, li.markdown-unit.active {
+            display: list-item !important;
+        }
+
+        .markdown-unit.active {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        hr.markdown-unit.active {
+            border-top-color: var(--accent-color);
+            box-shadow: none;
+            background-color: transparent;
+        }
+
+        body.mode-expand .markdown-unit {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+        body.mode-expand li.markdown-unit {
+            display: list-item !important;
+        }
+        body.mode-expand .markdown-unit.active {
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        footer {
+            background-color: var(--header-bg); 
+            padding: 10px 20px; display: flex; 
+            justify-content: center; align-items: center;
+            position: relative; border-top: 1px solid var(--border-color); 
+            font-size: 14px; color: var(--text-color); z-index: 10;
+        }
+
+        .author-info { font-weight: 600; color: var(--accent-color); text-align: center; }
+        #progress-counter { 
+            position: absolute; right: 20px; font-size: 13px; 
+            display: flex; align-items: center; gap: 4px;
+        }
+        #page-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); padding: 24px; border-radius: 12px;
+            width: 85%; max-width: 800px; display: flex; flex-direction: column; gap: 15px;
+            border: 1px solid var(--border-color); max-height: 90vh;
+        }
+
+        textarea {
+            width: 100%; height: 350px; background: var(--bg-color);
+            color: var(--text-active); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 8px; font-family: monospace; resize: vertical;
+        }
+
+        input[type="file"] { display: none; }
+
+        .history-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-color); padding: 10px 14px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .changelog-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .changelog-item:last-child { border-bottom: none; }
+        .changelog-version { font-weight: bold; color: var(--accent-color); font-size: 16px; }
+        .changelog-date { font-size: 12px; color: var(--text-color); margin-left: 8px; }
+        .changelog-list { margin: 6px 0 0 20px; padding: 0; font-size: 14px; line-height: 1.6; }
+
+        #image-lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); z-index: 200;
+            justify-content: center; align-items: center; user-select: none;
+        }
+
+        #image-lightbox img { width: 95vw; height: 95vh; object-fit: contain; border-radius: 4px; }
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15); color: #fff;
+            border: none; padding: 16px 20px; font-size: 24px; cursor: pointer;
+            border-radius: 50%; transition: background 0.2s; z-index: 210;
+        }
+        .lightbox-nav:hover { background: var(--accent-color); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-size: 14px;
+        }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast {
+            background-color: var(--card-bg); color: var(--text-active); border: 1px solid var(--accent-color);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        body.slideshow-mode header, body.slideshow-mode footer, body.slideshow-mode #sidebar { display: none !important; }
+        body.slideshow-mode main { padding: 40px 20px; }
+        #exit-slideshow-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 99;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        #exit-slideshow-btn:hover { background: var(--accent-color); color: #fff; }
+        body.slideshow-mode #exit-slideshow-btn { display: block; }
+    </style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-math {
+  display: inline-block;
+  text-align: left;
+  line-height: 0;
+  text-indent: 0;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 100%;
+  font-size-adjust: none;
+  letter-spacing: normal;
+  border-collapse: collapse;
+  word-wrap: normal;
+  word-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  padding: 1px 0;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="CHTML"][display="true"][width="full"] {
+  display: flex;
+}
+
+mjx-container[jax="CHTML"][display="true"] mjx-math {
+  padding: 0;
+}
+
+mjx-container[jax="CHTML"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="CHTML"][justify="right"] {
+  text-align: right;
+}
+
+mjx-semantics {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mrow {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mi {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c {
+  display: inline-block;
+}
+
+mjx-utext {
+  display: inline-block;
+  padding: .75em 0 .2em 0;
+}
+
+mjx-msub {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mover {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mover:not([limits="false"]) {
+  padding-top: .1em;
+}
+
+mjx-mover:not([limits="false"]) > * {
+  display: block;
+  text-align: left;
+}
+
+mjx-mo {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-stretchy-h {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-stretchy-h > * {
+  display: table-cell;
+  width: 0;
+}
+
+mjx-stretchy-h > * > mjx-c {
+  display: inline-block;
+  transform: scalex(1.0000001);
+}
+
+mjx-stretchy-h > * > mjx-c::before {
+  display: inline-block;
+  width: initial;
+}
+
+mjx-stretchy-h > mjx-ext {
+  /* IE */ overflow: hidden;
+  /* others */ overflow: clip visible;
+  width: 100%;
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c::before {
+  transform: scalex(500);
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c {
+  width: 0;
+}
+
+mjx-stretchy-h > mjx-beg > mjx-c {
+  margin-right: -.1em;
+}
+
+mjx-stretchy-h > mjx-end > mjx-c {
+  margin-left: -.1em;
+}
+
+mjx-stretchy-v {
+  display: inline-block;
+}
+
+mjx-stretchy-v > * {
+  display: block;
+}
+
+mjx-stretchy-v > mjx-beg {
+  height: 0;
+}
+
+mjx-stretchy-v > mjx-end > mjx-c {
+  display: block;
+}
+
+mjx-stretchy-v > * > mjx-c {
+  transform: scaley(1.0000001);
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+mjx-stretchy-v > mjx-ext {
+  display: block;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0px solid transparent;
+  /* IE */ overflow: hidden;
+  /* others */ overflow: visible clip;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c::before {
+  width: initial;
+  box-sizing: border-box;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c {
+  transform: scaleY(500) translateY(.075em);
+  overflow: visible;
+}
+
+mjx-mark {
+  display: inline-block;
+  height: 0px;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+
+mjx-c.mjx-c1D437.TEX-I::before {
+  padding: 0.683em 0.828em 0 0;
+  content: "D";
+}
+
+mjx-c.mjx-c1D461.TEX-I::before {
+  padding: 0.626em 0.361em 0.011em 0;
+  content: "t";
+}
+
+mjx-c.mjx-c2CA::before {
+  padding: 0.699em 0.5em 0 0;
+  content: "\2CA";
+}
+
+mjx-c.mjx-c131::before {
+  padding: 0.442em 0.278em 0 0;
+  content: "\131";
+}
+
+mjx-c.mjx-c1D45A.TEX-I::before {
+  padding: 0.442em 0.878em 0.011em 0;
+  content: "m";
+}
+
+mjx-c.mjx-c3E::before {
+  padding: 0.54em 0.778em 0.04em 0;
+  content: ">";
+}
+
+mjx-c.mjx-c3C::before {
+  padding: 0.54em 0.778em 0.04em 0;
+  content: "<";
+}
+
+mjx-c.mjx-c1D450.TEX-I::before {
+  padding: 0.442em 0.433em 0.011em 0;
+  content: "c";
+}
+
+mjx-c.mjx-c1D44E.TEX-I::before {
+  padding: 0.441em 0.529em 0.01em 0;
+  content: "a";
+}
+
+mjx-c.mjx-c1D463.TEX-I::before {
+  padding: 0.443em 0.485em 0.011em 0;
+  content: "v";
+}
+
+mjx-c.mjx-c2CB::before {
+  padding: 0.699em 0.5em 0 0;
+  content: "\2CB";
+}
+
+mjx-c.mjx-c1D45B.TEX-I::before {
+  padding: 0.442em 0.6em 0.011em 0;
+  content: "n";
+}
+
+mjx-c.mjx-c1D454.TEX-I::before {
+  padding: 0.442em 0.477em 0.205em 0;
+  content: "g";
+}
+
+mjx-c.mjx-c1D459.TEX-I::before {
+  padding: 0.694em 0.298em 0.011em 0;
+  content: "l";
+}
+
+mjx-c.mjx-c210E.TEX-I::before {
+  padding: 0.694em 0.576em 0.011em 0;
+  content: "h";
+}
+</style></head>
+<body class="mode-expand">
+
+    <header>
+        <div class="controls-group">
+            <button onclick="toggleSidebar()" title="Ẩn/Hiện Mục lục">☰</button>
+            <button onclick="openImportModal()">📥 Import</button>
+            <button onclick="openHistoryModal()">📜 History</button>
+            <button onclick="openSaveModal()">💾 Save as</button>
+            <button onclick="openUpdateModal()" title="Xem lịch sử cập nhật (Phím tắt U)">🚀 U</button>
+            <button onclick="toggleSlideshow()" style="background-color: var(--accent-color); color: #fff;">📺 Slide</button>
+            
+            <div class="toggle-switch-wrapper" style="margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                <span title="Chế độ Mở Rộng / Hiện tất cả">📖 Expand</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="expand-toggle" checked="" onchange="toggleExpandMode(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- CẦN GẠT AUTOPLAY DẠNG SWITCH -->
+            <div class="toggle-switch-wrapper" style="margin-left: 6px;">
+                <span title="Tự động đọc đoạn tiếp theo">▶️ Autoplay</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoplay-toggle" onchange="toggleAutoplay(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 4px;">
+                <span>🌙</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-toggle" checked="" onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+                <span>☀️</span>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button id="btn-mute" onclick="toggleMute()" title="Âm thanh">🔊</button>
+            <select id="rate-select" onchange="updateRate(this.value)">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="controls-group">
+            <input type="text" id="prompt-topic" placeholder="Chủ đề..." style="width: 110px;">
+            <button id="btn-copy-prompt" onclick="copyPrompt()" class="">📋 Copy Prompt</button>
+        </div>
+    </header>
+
+    <!-- POPUP KHI BÔI ĐEN CHỮ -->
+    <div id="selection-popup" style="display: none;">
+        <button onclick="searchImageSelected()" title="Tìm kiếm hình ảnh">🔍 Ảnh</button>
+        <button onclick="searchGifSelected()" title="Tìm kiếm GIF">🎞️ GIF</button>
+        <button onclick="searchGoogleSelected()" title="Tìm kiếm trên Google">🌐 Google</button>
+        <input type="text" id="popup-img-url" placeholder="Nhập/Dán URL ảnh..." oninput="autoInsertImageFromPopup(this)" onchange="autoInsertImageFromPopup(this)">
+    </div>
+
+    <div class="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <span>📑 Mục Lục</span>
+                <button onclick="toggleSidebar()" style="padding: 2px 6px; font-size: 12px;">✕</button>
+            </div>
+            <div class="sidebar-content">
+                <ul id="toc-container" class="toc-list"><li class="toc-item level-1" data-unit-index="0">BÀI: ĐIỆN TRỞ – ĐỊNH LUẬT OHM</li><li class="toc-item level-2" data-unit-index="1">I. KHÁI NIỆM VỀ ĐIỆN TRỞ</li><li class="toc-item level-3 active-toc" data-unit-index="4">1. Điện trở là gì?</li><li class="toc-item level-3" data-unit-index="10">2. Kí hiệu và đơn vị</li><li class="toc-item level-2" data-unit-index="14">II. TÁC DỤNG CỦA ĐIỆN TRỞ</li><li class="toc-item level-3" data-unit-index="17">1. Điện trở làm giảm cường độ dòng điện</li><li class="toc-item level-3" data-unit-index="23">2. Ví dụ thực tế</li><li class="toc-item level-2" data-unit-index="31">III. THÍ NGHIỆM KHẢO SÁT TÁC DỤNG CỦA ĐIỆN TRỞ</li><li class="toc-item level-3" data-unit-index="34">1. Bố trí thí nghiệm</li><li class="toc-item level-3" data-unit-index="41">2. Kết quả</li><li class="toc-item level-3" data-unit-index="48">3. Kết luận</li><li class="toc-item level-2" data-unit-index="53">IV. CƯỜNG ĐỘ DÒNG ĐIỆN VÀ HIỆU ĐIỆN THẾ</li><li class="toc-item level-3" data-unit-index="54">1. Cường độ dòng điện</li><li class="toc-item level-3" data-unit-index="62">2. Hiệu điện thế</li><li class="toc-item level-2" data-unit-index="72">V. BIẾN TRỞ</li><li class="toc-item level-3" data-unit-index="75">1. Khái niệm</li><li class="toc-item level-3" data-unit-index="80">2. Ứng dụng</li><li class="toc-item level-2" data-unit-index="87">VI. QUAN HỆ GIỮA CƯỜNG ĐỘ DÒNG ĐIỆN VÀ HIỆU ĐIỆN THẾ</li><li class="toc-item level-3" data-unit-index="90">1. Quan hệ tỉ lệ thuận</li><li class="toc-item level-3" data-unit-index="101">2. Đồ thị <br>𝐼<br>I theo <br>𝑈<br>U</li><li class="toc-item level-2" data-unit-index="110">VII. ĐIỆN TRỞ VÀ ĐỊNH LUẬT OHM</li><li class="toc-item level-3" data-unit-index="113">1. Điện trở được xác định như thế nào?</li><li class="toc-item level-3" data-unit-index="120">2. Định luật Ohm</li><li class="toc-item level-2" data-unit-index="131">VIII. ĐƠN VỊ ÔM VÀ ĐỔI ĐƠN VỊ ĐIỆN TRỞ</li><li class="toc-item level-3" data-unit-index="134">1. Đơn vị ôm</li><li class="toc-item level-3" data-unit-index="142">2. Các đơn vị thường dùng</li><li class="toc-item level-2" data-unit-index="150">IX. VẬN DỤNG ĐỊNH LUẬT OHM</li><li class="toc-item level-3" data-unit-index="151">1. Tính hiệu điện thế</li><li class="toc-item level-3" data-unit-index="159">2. Tính cường độ dòng điện</li><li class="toc-item level-3" data-unit-index="167">3. Tính điện trở</li><li class="toc-item level-2" data-unit-index="176">X. QUAN HỆ TỈ LỆ THUẬN GIỮA <br>𝐼<br>I VÀ <br>𝑈<br>U</li><li class="toc-item level-3" data-unit-index="179">1. Nhận xét</li><li class="toc-item level-3" data-unit-index="189">2. Ý nghĩa</li><li class="toc-item level-2" data-unit-index="192">XI. ĐIỆN TRỞ CỦA DÂY DẪN</li><li class="toc-item level-3" data-unit-index="195">1. Điện trở suất</li><li class="toc-item level-3" data-unit-index="201">2. Sự phụ thuộc vào chiều dài dây</li><li class="toc-item level-3" data-unit-index="207">3. Sự phụ thuộc vào tiết diện</li><li class="toc-item level-2" data-unit-index="214">XII. CÔNG THỨC TÍNH ĐIỆN TRỞ DÂY DẪN</li><li class="toc-item level-3" data-unit-index="230">1. So sánh hai dây đồng</li><li class="toc-item level-3" data-unit-index="244">2. Tính điện trở dây đồng</li><li class="toc-item level-2" data-unit-index="257">XIII. VẬT LIỆU LÀM DÂY DẪN</li><li class="toc-item level-3" data-unit-index="258">1. Dây dẫn bằng đồng</li><li class="toc-item level-3" data-unit-index="270">2. Dây dẫn bằng nhôm</li><li class="toc-item level-2" data-unit-index="277">XIV. CHẬP ĐIỆN VÀ AN TOÀN ĐIỆN</li><li class="toc-item level-3" data-unit-index="280">1. Vì sao chập điện nguy hiểm?</li><li class="toc-item level-3" data-unit-index="293">2. Thiết bị bảo vệ mạch điện</li><li class="toc-item level-2" data-unit-index="299">XV. TỔNG KẾT KIẾN THỨC</li><li class="toc-item level-3" data-unit-index="300">1. Ba đại lượng quan trọng</li><li class="toc-item level-3" data-unit-index="310">2. Điện trở của dây dẫn</li><li class="toc-item level-3" data-unit-index="317">3. Ghi nhớ nhanh</li></ul>
+            </div>
+        </aside>
+
+        <button id="exit-slideshow-btn" onclick="toggleSlideshow()">✖ Thoát Slide Show (Esc)</button>
+
+        <main id="main-scroll">
+            <div id="lecture-paper">
+<div style="text-align: center; color: var(--text-color); margin-top: 50px;">
+<em>Nội dung bài giảng sẽ hiển thị tại đây.<br>Ấn <strong>Import</strong> để tải bài giảng hoặc chọn file Word (.docx).</em>
+</div>
+</div>
+        </main>
+    </div>
+
+    <footer>
+        <span class="author-info">Icarus - kienspvl@gmail.com - 097 463 8794</span>
+        <div id="progress-counter">
+            Mục: <input type="number" id="page-input" min="1" value="0" onkeydown="handlePageInputChange(event)" onblur="jumpToInputValue()" max="329"> / <span id="total-units-count">329</span>
+        </div>
+    </footer>
+
+    <div id="image-lightbox">
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image" onclick="closeLightbox()">
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div id="lightbox-counter" class="lightbox-counter">0 / 0</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="import-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập hoặc Chỉnh Sửa Bài Giảng</h3>
+            <textarea id="import-text" placeholder="Dán văn bản Markdown hoặc Import file Word vào đây..."></textarea>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <label class="btn">
+                        📄 Chọn File .txt / .md
+                        <input type="file" accept=".txt,.md" onchange="handleFileImport(event)">
+                    </label>
+                    <label class="btn" style="border-color: #22c55e;">
+                        📘 Import từ File Word (.docx)
+                        <input type="file" accept=".docx" onchange="handleWordImport(event)">
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="closeImportModal()">Hủy</button>
+                    <button onclick="processImport()" style="background-color: var(--accent-color); color: #fff;">Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SAVE AS HTML -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>💾 Lưu Bài Giảng Dưới Dạng HTML</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-color);">Nhập tên file HTML muốn lưu:</label>
+                <input type="text" id="save-filename-input" placeholder="Tên file..." onkeydown="if(event.key==='Enter') executeSaveAsHtml()">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeSaveModal()">Hủy</button>
+                <button onclick="executeSaveAsHtml()" style="background-color: var(--accent-color); color: #fff;">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Lịch Sử Bài Giảng Dưới LocalStorage</h3>
+                <button onclick="clearAllHistory()" style="background-color: #ef4444; color: #fff;">🗑️ Xóa Tất Cả</button>
+            </div>
+            <div id="history-container" class="history-list"></div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+    <div id="update-modal" class="modal">
+        <div class="modal-content">
+            <h3>🚀 Lịch Sử Cập Nhật Chương Trình (Changelog)</h3>
+            <div class="history-list" style="max-height: 400px; padding-right: 8px;">
+                <div class="changelog-item">
+                    <span class="changelog-version">v3.6</span><span class="changelog-date">(Cập nhật mới)</span>
+                    <ul class="changelog-list">
+                        <li><strong>Pagination linh hoạt:</strong> Cho phép gõ trực tiếp số câu/mục ở footer để nhảy nhanh.</li>
+                        <li><strong>Chọn câu bằng chuột:</strong> Click chuột vào bất kỳ đoạn văn bản nào để chọn trực tiếp.</li>
+                        <li><strong>Mặc định Expand &amp; Light Mode:</strong> Giao diện khởi động sáng sủa, hiển thị toàn bộ nội dung bài giảng.</li>
+                        <li><strong>Đồng bộ Mục Lục (TOC):</strong> Tự động highlight phần mục lục tương ứng với đoạn văn bản đang được chọn.</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeUpdateModal()">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <script id="embedded-data" type="application/json">"# BÀI: ĐIỆN TRỞ – ĐỊNH LUẬT OHM\n\n## I. KHÁI NIỆM VỀ ĐIỆN TRỞ\n\n![Điện trở trong mạch điện](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJcWSV_S-l1ziRxRDmFDkZFsfNGi4sCh7WlUDfx-w56zI2Hbvmk4iOcM5V&s=10)\n\n### 1. Điện trở là gì?\n\n**Điện trở** (*Resistance*) là đại lượng vật lí đặc trưng cho mức độ **cản trở dòng điện** của một đoạn mạch hoặc vật dẫn.\n\nTrong mạch điện, các điện trở khác nhau có khả năng cản trở dòng điện khác nhau. Khi **hiệu điện thế** (*Voltage*) giữa hai đầu điện trở không đổi:\n\n* Điện trở càng lớn thì **cường độ dòng điện** (*Electric current / Current intensity*) chạy qua càng nhỏ.\n* Điện trở càng nhỏ thì dòng điện chạy qua càng lớn.\n\nCó thể hình dung điện trở giống như một \"vật cản\" đối với dòng điện. Nếu vật cản lớn, dòng điện khó đi qua; nếu vật cản nhỏ, dòng điện đi qua dễ dàng hơn.\n\n### 2. Kí hiệu và đơn vị\n\nĐiện trở thường được kí hiệu là **R**.\n\nĐơn vị của điện trở trong hệ SI là **ôm** (*Ohm*), kí hiệu **Ω**.\n\n---\n\n## II. TÁC DỤNG CỦA ĐIỆN TRỞ\n\n![Tác dụng của điện trở đối với dòng điện](https://i.makeagif.com/media/9-25-2015/eZ6bn3.gif)\n\n### 1. Điện trở làm giảm cường độ dòng điện\n\nTác dụng cơ bản của điện trở là **cản trở dòng điện**, từ đó làm giảm **cường độ dòng điện** (*Current intensity*) trong mạch.\n\nKhi thay các điện trở khác nhau vào cùng một mạch điện, độ sáng của bóng đèn có thể thay đổi:\n\n* Điện trở nhỏ → dòng điện lớn → bóng đèn sáng hơn.\n* Điện trở lớn → dòng điện nhỏ → bóng đèn sáng yếu hơn.\n\nĐiều này cho thấy độ sáng của bóng đèn có thể được sử dụng để nhận biết sự thay đổi của dòng điện trong mạch.\n\n### 2. Ví dụ thực tế\n\nĐiện trở được sử dụng rất phổ biến trong các thiết bị điện và điện tử:\n\n* Điều chỉnh dòng điện trong mạch.\n* Bảo vệ các linh kiện điện tử.\n* Chia điện áp.\n* Điều chỉnh độ sáng của đèn.\n* Điều chỉnh tín hiệu trong các mạch điện tử.\n\n---\n\n## III. THÍ NGHIỆM KHẢO SÁT TÁC DỤNG CỦA ĐIỆN TRỞ\n\n![Thí nghiệm điện trở với bóng đèn](https://vietjack.com/khoa-hoc-tu-nhien-8-ct/images/cau-hoi-thao-luan-trang-115-khtn-8-chan-troi-176109.PNG)\n\n### 1. Bố trí thí nghiệm\n\nCó thể sử dụng:\n\n* Một nguồn điện.\n* Một bóng đèn (*Light bulb*).\n* Các điện trở $R_1$, $R_2$, $R_3$.\n* Dây nối và công tắc.\n\nLần lượt thay các điện trở khác nhau vào mạch rồi quan sát độ sáng của bóng đèn.\n\n### 2. Kết quả\n\nGiả sử kết quả quan sát được:\n\n* Với $R_1$: đèn sáng rõ.\n* Với $R_2$: đèn sáng mờ.\n* Với $R_3$: đèn rất mờ.\n\nNếu hiệu điện thế của nguồn không đổi và $R_1 < R_2 < R_3$ thì cường độ dòng điện có xu hướng:\n\n$I_1 > I_2 > I_3$\n\n### 3. Kết luận\n\n**Điện trở càng lớn thì khả năng cản trở dòng điện càng mạnh.**\n\nKhi hiệu điện thế không đổi:\n\n$R \\uparrow \\Rightarrow I \\downarrow$\n\n---\n\n## IV. CƯỜNG ĐỘ DÒNG ĐIỆN VÀ HIỆU ĐIỆN THẾ\n\n### 1. Cường độ dòng điện\n\n![Mô hình dòng điện](https://serpmedia.org/scigen/images/electrons-dc%20copy.gif?crc=57018027)\n\n**Cường độ dòng điện** (*Electric current / Current intensity*) cho biết mức độ mạnh, yếu của dòng điện.\n\n* Kí hiệu: **$I$**.\n* Đơn vị: **ampe**, kí hiệu **A**.\n* Dụng cụ đo: **ampe kế** (*Ammeter*).\n\nCường độ dòng điện phụ thuộc vào hiệu điện thế và điện trở của mạch.\n\n### 2. Hiệu điện thế\n\n![Hiệu điện thế và dòng điện](https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUybTdxbzc3NWt0cXhtYjh3bWp0aGN3emdkYXlhcjlzcmVtcm8zOWFqZiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/y5oetElpzdbToijNGL/200w.gif)\n\n**Hiệu điện thế** (*Voltage / Electric potential difference*) giữa hai đầu đoạn mạch là nguyên nhân tạo ra dòng điện qua đoạn mạch.\n\n* Kí hiệu: **$U$**.\n* Đơn vị: **vôn** (*Volt*), kí hiệu **V**.\n\nKhi điện trở không đổi:\n\n$U \\uparrow \\Rightarrow I \\uparrow$\n\nNói cách khác, hiệu điện thế càng lớn thì dòng điện chạy qua điện trở càng mạnh.\n\n---\n\n## V. BIẾN TRỞ\n\n![Biến trở điều chỉnh độ sáng đèn LED](https://www.engineersgarage.com/wp-content/uploads/2/2/1/5/22159166/potentiometer-fading-led-controlling-led-brightness_orig.gif)\n\n### 1. Khái niệm\n\n**Biến trở** (*Variable resistor / Rheostat*) là điện trở có thể thay đổi giá trị điện trở nhằm điều chỉnh cường độ dòng điện trong mạch.\n\nKhi thay đổi giá trị của biến trở:\n\n$R \\rightarrow \\text{thay đổi}$\n\ndo đó cường độ dòng điện cũng thay đổi.\n\n### 2. Ứng dụng\n\nBiến trở được sử dụng để:\n\n* Điều chỉnh độ sáng của bóng đèn.\n* Điều chỉnh âm lượng trong một số thiết bị.\n* Điều chỉnh dòng điện trong mạch.\n* Thực hiện các thí nghiệm khảo sát quan hệ giữa $I$, $U$ và $R$.\n\n---\n\n## VI. QUAN HỆ GIỮA CƯỜNG ĐỘ DÒNG ĐIỆN VÀ HIỆU ĐIỆN THẾ\n\n![Định luật Ohm – quan hệ giữa U và I](https://www.circuitbasics.com/wp-content/uploads/2020/08/Ohms-Law-cartoon.jpg)\n\n### 1. Quan hệ tỉ lệ thuận\n\nKhi điện trở $R$ của đoạn mạch không đổi, **cường độ dòng điện $I$ tỉ lệ thuận với hiệu điện thế $U$**.\n\n$I \\sim U$\n\nHay:\n\n$\\frac{I}{U}=\\text{hằng số}$\n\nVí dụ:\n\n* $U_1=3\\,V$, $I_1=0,5\\,A$.\n* Khi $U_2=6\\,V$, tức là hiệu điện thế tăng 2 lần.\n* Khi đó $I_2=1\\,A$, cũng tăng 2 lần.\n\nNhư vậy:\n\n$\\frac{I_1}{U_1}=\\frac{I_2}{U_2}$\n\n### 2. Đồ thị $I$ theo $U$\n\n![Đồ thị I theo U](https://electricalacademia.com/wp-content/uploads/2017/04/o7.jpg)\n\nKhi biểu diễn sự phụ thuộc của $I$ vào $U$:\n\n* Trục tung biểu diễn **$I$ (A)**.\n* Trục hoành biểu diễn **$U$ (V)**.\n* Các điểm thực nghiệm nằm trên một đường thẳng đi qua gốc tọa độ $O$.\n\nĐây là dấu hiệu quan trọng cho thấy $I$ tỉ lệ thuận với $U$ khi $R$ không đổi.\n\n---\n\n## VII. ĐIỆN TRỞ VÀ ĐỊNH LUẬT OHM\n\n![Công thức định luật Ohm](https://static.wixstatic.com/media/626574_41f21b723b124e78bf0ed28c2e6bb2de~mv2.gif)\n\n### 1. Điện trở được xác định như thế nào?\n\n**Điện trở** (*Electrical resistance*) của một đoạn dây dẫn được xác định bằng thương số giữa hiệu điện thế đặt vào hai đầu đoạn dây và cường độ dòng điện chạy qua nó:\n\n$R=\\frac{U}{I}$\n\nTrong đó:\n\n* $R$: điện trở, đơn vị Ω.\n* $U$: hiệu điện thế, đơn vị V.\n* $I$: cường độ dòng điện, đơn vị A.\n\n### 2. Định luật Ohm\n\n**Định luật Ohm** (*Ohm's law*) phát biểu:\n\n> Cường độ dòng điện chạy qua một đoạn mạch tỉ lệ thuận với hiệu điện thế giữa hai đầu đoạn mạch và tỉ lệ nghịch với điện trở của đoạn mạch.\n\nCông thức:\n\n$I=\\frac{U}{R}$\n\nTừ công thức này có thể suy ra:\n\n$U=I R$\n\nvà:\n\n$R=\\frac{U}{I}$\n\nĐây là ba công thức quan trọng nhất cần ghi nhớ.\n\n---\n\n## VIII. ĐƠN VỊ ÔM VÀ ĐỔI ĐƠN VỊ ĐIỆN TRỞ\n\n![Đơn vị ôm](https://upload.wikimedia.org/wikipedia/commons/e/e6/Georg_Simon_Ohm_%281789-1854%29.jpg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original)\n\n### 1. Đơn vị ôm\n\nĐơn vị SI của điện trở là **ôm** (*Ohm*), kí hiệu **Ω**.\n\nTừ:\n\n$R=\\frac{U}{I}$\n\nta có:\n\n$1\\,\\Omega=\\frac{1\\,V}{1\\,A}$\n\nVí dụ, một điện trở có $R=6\\,\\Omega$ khi đặt hiệu điện thế $U=6\\,V$ và dòng điện qua nó là:\n\n$I=\\frac{6}{6}=1\\,A$\n\n### 2. Các đơn vị thường dùng\n\n![Các đơn vị điện trở](https://preview.redd.it/electrical-engineer-how-do-i-insert-the-ohm-omega-symbol-v0-6he6fwfarpn41.png?width=442&format=png&auto=webp&s=09557d14b04e9df98b22fcda251edb819ce8b438)\n\nMột số đơn vị:\n\n* $1\\,m\\Omega=0,001\\,\\Omega$.\n* $1\\,k\\Omega=1000\\,\\Omega$.\n* $1\\,M\\Omega=1\\,000\\,000\\,\\Omega$.\n\n---\n\n## IX. VẬN DỤNG ĐỊNH LUẬT OHM\n\n### 1. Tính hiệu điện thế\n\n![Tính hiệu điện thế](https://i.makeagif.com/media/6-17-2022/LhzFH3.gif)\n\nTừ định luật Ohm:\n\n$U=IR$\n\nVí dụ: Với $I=0,5\\,A$ và $R=12\\,\\Omega$:\n\n$U=0,5\\times12=6\\,V$\n\nVậy hiệu điện thế giữa hai đầu điện trở là **$6\\,V$**.\n\n### 2. Tính cường độ dòng điện\n\n![Tính cường độ dòng điện](https://i.makeagif.com/media/6-17-2022/PvTJbs.gif)\n\nSử dụng:\n\n$I=\\frac{U}{R}$\n\nVí dụ: $U=12\\,V$, $R=6\\,\\Omega$:\n\n$I=\\frac{12}{6}=2\\,A$\n\nVậy cường độ dòng điện là **$2\\,A$**.\n\n### 3. Tính điện trở\n\n![Tính điện trở từ U và I](https://i.makeagif.com/media/11-13-2024/_DJaF9.gif)\n\nSử dụng:\n\n$R=\\frac{U}{I}$\n\nVí dụ: $U=2\\,V$, $I=0,4\\,A$:\n\n$R=\\frac{2}{0,4}=5\\,\\Omega$\n\nVậy điện trở của đoạn mạch là **$5\\,\\Omega$**.\n\n---\n\n## X. QUAN HỆ TỈ LỆ THUẬN GIỮA $I$ VÀ $U$\n\n![Quan hệ tỉ lệ thuận giữa I và U](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTd7fnt461MsuXzQ_59qkgftm1KhLkHrndcloQOR-Ojuw&s=10)\n\n### 1. Nhận xét\n\nVới $R$ không đổi:\n\n$I\\sim U$\n\nNếu $I$ tăng bao nhiêu lần thì $U$ cũng tăng bấy nhiêu lần.\n\nVí dụ:\n\n$I_1=0,4\\,A,\\quad U_1=2\\,V$\n\nNếu:\n\n$I_2=0,8\\,A=2I_1$\n\nthì:\n\n$U_2=2U_1=4\\,V$\n\n### 2. Ý nghĩa\n\nQuan hệ này cho phép dự đoán sự thay đổi của dòng điện khi thay đổi hiệu điện thế mà không cần thực hiện lại toàn bộ phép đo.\n\n---\n\n## XI. ĐIỆN TRỞ CỦA DÂY DẪN\n\n![Điện trở suất và dây dẫn](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh1qV-6EGUC2ZGzIsPIQLbu2PL9BuH3ZXJHyYaTl26bYBSaAsZg7oDMmbgf0MzPO6sFo_iNQRGmTMcuJl_DAqAkEtM-2zWScTDE3WX_c8YcWZPjLXahb5tc7bbTPSDII6LgutD6bx01haC1/s1600/res2.gif)\n\n### 1. Điện trở suất\n\n**Điện trở suất** (*Resistivity*) đặc trưng cho khả năng cản trở dòng điện của một vật liệu.\n\n* Kí hiệu: **$\\rho$**.\n* Đơn vị: **Ω·m**.\n* $\\rho$ phụ thuộc vào bản chất của vật liệu.\n\nVật liệu có điện trở suất càng nhỏ thì thường dẫn điện càng tốt.\n\n### 2. Sự phụ thuộc vào chiều dài dây\n\n![Ảnh hưởng của chiều dài dây đến điện trở](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXXhYbTeQaVyJNQiCIXzzvwk2VVuxLY8R4ll59QjFoKa_tY4NxnHk3sHfc&s=10)\n\nĐiện trở của dây dẫn **tỉ lệ thuận với chiều dài** (*Wire length*):\n\n$R\\sim l$\n\nNếu chiều dài tăng 2 lần thì điện trở tăng 2 lần, khi $\\rho$ và $S$ không đổi.\n\n### 3. Sự phụ thuộc vào tiết diện\n\n![Ảnh hưởng của tiết diện dây dẫn](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSuE5wWHZb8iTr1l48Gvo4C8NjWzVFIVFNBjyqlnm5pA&s=10)\n\nĐiện trở của dây dẫn **tỉ lệ nghịch với tiết diện** (*Cross-sectional area*):\n\n$R\\sim\\frac{1}{S}$\n\nNếu tiết diện tăng 2 lần thì điện trở giảm 2 lần khi $\\rho$ và $l$ không đổi.\n\n---\n\n## XII. CÔNG THỨC TÍNH ĐIỆN TRỞ DÂY DẪN\n\n![Công thức điện trở dây dẫn](https://pressbooks.bccampus.ca/collegephysics/wp-content/uploads/sites/29/2016/04/Figure_21_03_01a.jpg)\n\nĐiện trở của dây dẫn được xác định bởi:\n\n$R=\\rho\\frac{l}{S}$\n\nTrong đó:\n\n* $R$: điện trở của dây dẫn (Ω).\n* $\\rho$: điện trở suất của vật liệu (Ω·m).\n* $l$: chiều dài dây dẫn (m).\n* $S$: tiết diện dây dẫn (m²).\n\nTừ công thức:\n\n$R=\\rho\\frac{l}{S}$\n\nta rút ra:\n\n* $l$ tăng → $R$ tăng.\n* $S$ tăng → $R$ giảm.\n* $\\rho$ tăng → $R$ tăng.\n\n### 1. So sánh hai dây đồng\n\n![So sánh điện trở của hai dây đồng](https://assets-v2.lottiefiles.com/a/6f852d92-116d-11ee-a118-035253f4479e/DOAIIN2PgE.gif)\n\nVới hai dây cùng làm bằng đồng:\n\n$l_1=0,5l_2$\n\nvà:\n\n$S_1=2S_2$\n\nTa có:\n\n$\\frac{R_1}{R_2}\n=\\frac{l_1}{l_2}\\frac{S_2}{S_1}$\n\nSuy ra:\n\n$\\frac{R_1}{R_2}=0,5\\times\\frac{1}{2}=0,25$\n\nDo đó:\n\n$R_1=\\frac{R_2}{4}$\n\nDây thứ nhất có điện trở bằng **1/4 điện trở của dây thứ hai**.\n\n### 2. Tính điện trở dây đồng\n\n![Tính điện trở dây đồng](https://www.schoolphysics.co.uk/age14-16/Electricity%20and%20magnetism/Current%20electricity/text/Resistance_/images/2.png)\n\nCho:\n\n$\\rho=1,7\\times10^{-8}\\,\\Omega\\cdot m$\n\n$l=150\\,m$\n\n$S=2\\times10^{-6}\\,m^2$\n\nKhi đó:\n\n$R=\\rho\\frac{l}{S}$\n\n$R=\\frac{1,7\\times10^{-8}\\times150}{2\\times10^{-6}}$\n\n$R=1,275\\,\\Omega$\n\nVậy điện trở của dây đồng là **$1,275\\,\\Omega$**.\n\n---\n\n## XIII. VẬT LIỆU LÀM DÂY DẪN\n\n### 1. Dây dẫn bằng đồng\n\n![Dây dẫn bằng đồng](https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUyZG9jajd6YTdjamlnbXozdm9vM3h3eTg0eHZjbnZlcmJsbnJzaHk1aiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/zFMwVE0oKyufm/giphy_s.gif)\n\n**Đồng** (*Copper*) có điện trở suất nhỏ nên dẫn điện tốt.\n\nĐiện trở suất của đồng khoảng:\n\n$\\rho_{\\text{Cu}}\\approx1,7\\times10^{-8}\\,\\Omega\\cdot m$\n\nĐồng còn có ưu điểm:\n\n* Dẻo.\n* Dễ uốn.\n* Dẫn điện tốt.\n* Có thể chế tạo thành dây dẫn có kích thước nhỏ.\n\nVì vậy đồng được sử dụng phổ biến trong dây dẫn điện gia đình và các thiết bị điện.\n\n### 2. Dây dẫn bằng nhôm\n\n![Dây dẫn bằng nhôm](https://i.makeagif.com/media/3-22-2018/tmCzQG.gif)\n\n**Nhôm** (*Aluminum*) có điện trở suất lớn hơn đồng nhưng có khối lượng riêng nhỏ và giá thành tương đối thấp.\n\nNhôm được sử dụng nhiều trong **đường dây truyền tải điện** (*Power transmission*) trên khoảng cách lớn.\n\nƯu điểm quan trọng của dây nhôm là **nhẹ**, giúp giảm tải trọng tác dụng lên các cột điện.\n\n---\n\n## XIV. CHẬP ĐIỆN VÀ AN TOÀN ĐIỆN\n\n![Hiện tượng chập điện](https://media.tenor.com/3XPXsF304GgAAAAM/crazy.gif)\n\n### 1. Vì sao chập điện nguy hiểm?\n\n**Chập điện** (*Short circuit*) xảy ra khi hai điểm có hiệu điện thế khác nhau được nối với nhau bằng một đường dẫn có điện trở rất nhỏ.\n\nKhi đó:\n\n$R\\approx0$\n\nTheo định luật Ohm:\n\n$I=\\frac{U}{R}$\n\nnên khi $R$ giảm rất mạnh, cường độ dòng điện có thể tăng lên rất lớn.\n\nDòng điện lớn có thể làm:\n\n* Dây dẫn nóng lên mạnh.\n* Làm chảy lớp cách điện.\n* Gây tia lửa điện.\n* Gây cháy.\n* Làm hỏng thiết bị điện.\n\n### 2. Thiết bị bảo vệ mạch điện\n\nĐể bảo vệ mạch điện, người ta sử dụng:\n\n* **Cầu chì** (*Fuse*).\n* **Aptomat / bộ ngắt mạch** (*Circuit breaker*).\n\nKhi dòng điện vượt quá giới hạn cho phép, các thiết bị này có thể ngắt mạch, hạn chế nguy cơ cháy nổ và hư hỏng thiết bị.\n\n---\n\n## XV. TỔNG KẾT KIẾN THỨC\n\n### 1. Ba đại lượng quan trọng\n\nTrong mạch điện, ba đại lượng cần đặc biệt ghi nhớ là:\n\n* **Hiệu điện thế** $U$ (*Voltage*) – đơn vị V.\n* **Cường độ dòng điện** $I$ (*Current*) – đơn vị A.\n* **Điện trở** $R$ (*Resistance*) – đơn vị Ω.\n\nBa đại lượng liên hệ với nhau bởi **định luật Ohm** (*Ohm's law*):\n\n$I=\\frac{U}{R}$\n\nTừ đó:\n\n$U=IR$\n\n$R=\\frac{U}{I}$\n\n### 2. Điện trở của dây dẫn\n\nĐiện trở của dây dẫn phụ thuộc vào:\n\n$R=\\rho\\frac{l}{S}$\n\nTrong đó:\n\n* $\\rho$ càng lớn → $R$ càng lớn.\n* $l$ càng lớn → $R$ càng lớn.\n* $S$ càng lớn → $R$ càng nhỏ.\n\n### 3. Ghi nhớ nhanh\n\n**Nếu $U$ không đổi:**\n\n$R\\uparrow\\Rightarrow I\\downarrow$\n\n**Nếu $R$ không đổi:**\n\n$U\\uparrow\\Rightarrow I\\uparrow$\n\n**Nếu $I$ không đổi:**\n\n$U\\uparrow\\Rightarrow R\\uparrow$\n\nCó thể ghi nhớ định luật Ohm bằng \"tam giác công thức\":\n\n$U=IR$\n\nTừ đó dễ dàng suy ra hai công thức còn lại:\n\n$I=\\frac{U}{R},\\qquad R=\\frac{U}{I}$\n\n**Kết luận:** Điện trở là đại lượng đặc trưng cho khả năng cản trở dòng điện. Việc hiểu mối quan hệ giữa **$U$ – $I$ – $R$** là nền tảng để giải các bài toán về mạch điện và tìm hiểu nhiều ứng dụng điện – điện tử trong thực tế."</script>
+
+    <script>
+        let units = [];
+        let allImages = [];
+        let currentImageIndex = -1;
+        let isLightboxOpen = false;
+
+        let currentUnitIndex = -1;
+        let fontSize = 20;
+        let isMuted = false;
+        let speechRate = 1;
+        let synth = window.speechSynthesis;
+        let rawContent = "";
+        let lastSavedFilename = "BaiGiang_Complete.html";
+        
+        let isAutoplay = false;
+        let selectedText = "";
+        let selectedNodeParent = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const embeddedDataText = document.getElementById('embedded-data').textContent.trim();
+            if (embeddedDataText) {
+                try {
+                    rawContent = JSON.parse(embeddedDataText);
+                    if (rawContent) parseAndBuildDocument(rawContent);
+                } catch(e) {}
+            } else {
+                const lastContent = localStorage.getItem('current_lecture');
+                if (lastContent) {
+                    rawContent = lastContent;
+                    parseAndBuildDocument(lastContent);
+                }
+            }
+
+            const savedName = localStorage.getItem('last_saved_filename');
+            if (savedName) lastSavedFilename = savedName;
+
+            document.addEventListener('mouseup', handleTextSelection);
+        });
+
+        /* --- XỬ LÝ TRA CỨU & POPUP BÔI ĐEN VĂN BẢN --- */
+        function handleTextSelection(e) {
+            const popup = document.getElementById('selection-popup');
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+
+            if (popup.contains(e.target)) return;
+
+            if (text.length > 0 && document.getElementById('lecture-paper').contains(selection.anchorNode)) {
+                selectedText = text;
+                let node = selection.anchorNode;
+                while (node && node.nodeType !== 1) {
+                    node = node.parentNode;
+                }
+                selectedNodeParent = node.closest('p, li, h1, h2, h3, h4, blockquote') || node;
+
+                document.getElementById('popup-img-url').value = '';
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                popup.style.left = `${Math.max(10, rect.left + window.scrollX - 50)}px`;
+                popup.style.display = 'flex';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+
+        function searchImageSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function searchGifSelected() {
+            if (selectedText) {
+                window.open(`https://tenor.com/search/${encodeURIComponent(selectedText)}-gifs`, '_blank');
+            }
+        }
+
+        function searchGoogleSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function autoInsertImageFromPopup(inputEl) {
+            const url = inputEl.value.trim();
+            if (!url) return;
+
+            if (/^(http|https):\/\/[^ "]+$/i.test(url) || url.startsWith('data:image')) {
+                if (selectedNodeParent) {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = selectedText || "Hình ảnh bài giảng";
+                    img.onclick = () => openLightbox(img.src);
+
+                    selectedNodeParent.parentNode.insertBefore(img, selectedNodeParent.nextSibling);
+
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    rawContent = turndownService.turndown(document.getElementById('lecture-paper').innerHTML);
+                    localStorage.setItem('current_lecture', rawContent);
+
+                    reindexUnits();
+
+                    showToast("Đã chèn ảnh tự động!");
+                    inputEl.value = '';
+                    document.getElementById('selection-popup').style.display = 'none';
+                }
+            }
+        }
+
+        function toggleAutoplay(toggle) {
+            isAutoplay = toggle.checked;
+            if (isAutoplay) showToast("Đã bật Autoplay (Tự động chuyển đoạn)");
+            else showToast("Đã tắt Autoplay");
+        }
+
+        function toggleTheme(toggle) {
+            if (toggle.checked) document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+        }
+
+        function toggleExpandMode(toggle) {
+            if (toggle.checked) {
+                document.body.classList.add('mode-expand');
+                showToast("Đã bật chế độ Expand (Hiện tất cả)");
+            } else {
+                document.body.classList.remove('mode-expand');
+                showToast("Đã tắt chế độ Expand");
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function toggleSlideshow() {
+            document.body.classList.toggle('slideshow-mode');
+            const isSlideshow = document.body.classList.contains('slideshow-mode');
+            if (isSlideshow) {
+                showToast("Đã bật chế độ Slide Show (Ấn Esc để thoát)");
+            }
+        }
+
+        function openUpdateModal() { document.getElementById('update-modal').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('update-modal').style.display = 'none'; }
+
+        function openLightbox(imgSrc) {
+            allImages = Array.from(document.querySelectorAll('#lecture-paper img'));
+            currentImageIndex = allImages.findIndex(img => img.src === imgSrc);
+            if (currentImageIndex === -1 && allImages.length > 0) currentImageIndex = 0;
+
+            updateLightboxContent();
+            document.getElementById('image-lightbox').style.display = 'flex';
+            isLightboxOpen = true;
+        }
+
+        function updateLightboxContent() {
+            if (allImages.length === 0 || currentImageIndex < 0) return;
+            const img = document.getElementById('lightbox-img');
+            img.src = allImages[currentImageIndex].src;
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${allImages.length}`;
+        }
+
+        function nextImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function prevImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function closeLightbox() {
+            document.getElementById('image-lightbox').style.display = 'none';
+            isLightboxOpen = false;
+        }
+
+        function autoAddMarkdownHeaders(text) {
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+/i.test(trimmed)) {
+                    return '# ' + trimmed;
+                } else if (/^\d+\.\s+/.test(trimmed)) {
+                    return '## ' + trimmed;
+                } else if (/^([A-Z]\.|[a-z]\))\s+/.test(trimmed)) {
+                    return '### ' + trimmed;
+                }
+                return line;
+            });
+            return processedLines.join('\n');
+        }
+
+        function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                const options = {
+                    convertImage: mammoth.images.imgElement(function(image) {
+                        return image.read("base64").then(function(imageBuffer) {
+                            return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                        });
+                    })
+                };
+
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer}, options).then(function(result) {
+                    const html = result.value;
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    turndownService.addRule('keepImages', {
+                        filter: 'img',
+                        replacement: function (content, node) {
+                            return `\n\n![image](${node.getAttribute('src')})\n\n`;
+                        }
+                    });
+
+                    let markdown = turndownService.turndown(html);
+                    markdown = autoAddMarkdownHeaders(markdown);
+                    document.getElementById('import-text').value = markdown;
+                    processImport();
+                    showToast("Đã đọc xong file Word!");
+                }).catch(function(err) {
+                    showToast("Lỗi khi đọc file Word: " + err.message);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndBuildDocument(markdownText) {
+            rawContent = markdownText;
+            localStorage.setItem('current_lecture', markdownText);
+            saveToHistory(markdownText);
+
+            const container = document.getElementById('lecture-paper');
+            container.innerHTML = marked.parse(markdownText);
+
+            container.querySelectorAll('img').forEach(img => {
+                img.onclick = () => openLightbox(img.src);
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([container]).catch((err) => console.log('MathJax error:', err));
+            }
+
+            reindexUnits();
+            generateTOC();
+            updateCounter();
+        }
+
+        function reindexUnits() {
+            const container = document.getElementById('lecture-paper');
+            units = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, table, img, hr'));
+            
+            units = units.filter(el => {
+                if (el.tagName.toLowerCase() === 'img' && el.parentElement.tagName.toLowerCase() === 'p' && el.parentElement.childNodes.length === 1) {
+                    return true;
+                }
+                return !el.parentElement.closest('blockquote, table');
+            });
+
+            units.forEach((unit, idx) => {
+                unit.classList.add('markdown-unit');
+                
+                /* CHỌN CÂU BẰNG MÓC CHUỘT DIRECT CLICK */
+                unit.onclick = (e) => {
+                    if (window.getSelection().toString().trim().length > 0) return;
+                    jumpToUnit(idx);
+                };
+
+                if (idx < currentUnitIndex) {
+                    unit.classList.add('revealed');
+                } else if (idx === currentUnitIndex) {
+                    unit.classList.add('active');
+                }
+            });
+        }
+
+        function generateTOC() {
+            const tocContainer = document.getElementById('toc-container');
+            tocContainer.innerHTML = '';
+
+            const headings = units.filter(unit => ['H1', 'H2', 'H3', 'H4'].includes(unit.tagName));
+
+            if (headings.length === 0) {
+                tocContainer.innerHTML = '<li style="font-size: 13px; color: var(--text-color); padding: 8px;">Không tìm thấy mục lục tiêu đề.</li>';
+                return;
+            }
+
+            headings.forEach((heading) => {
+                const level = heading.tagName.substring(1);
+                const li = document.createElement('li');
+                li.className = `toc-item level-${level}`;
+                li.innerText = heading.innerText || heading.textContent;
+                li.dataset.unitIndex = units.indexOf(heading);
+                
+                li.onclick = () => {
+                    const targetIndex = units.indexOf(heading);
+                    if (targetIndex !== -1) {
+                        jumpToUnit(targetIndex);
+                    }
+                };
+
+                tocContainer.appendChild(li);
+            });
+        }
+
+        /* ĐỒNG BỘ MỤC LỤC TƯƠNG ỨNG VỚI ĐOẠN VĂN BẢN ĐANG CHỌN */
+        function highlightTOCForCurrentUnit() {
+            if (currentUnitIndex < 0 || units.length === 0) return;
+
+            let closestHeadingIndex = -1;
+            for (let i = currentUnitIndex; i >= 0; i--) {
+                if (['H1', 'H2', 'H3', 'H4'].includes(units[i].tagName)) {
+                    closestHeadingIndex = i;
+                    break;
+                }
+            }
+
+            const tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(item => {
+                item.classList.remove('active-toc');
+                if (closestHeadingIndex !== -1 && parseInt(item.dataset.unitIndex) === closestHeadingIndex) {
+                    item.classList.add('active-toc');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function jumpToUnit(index) {
+            if (index < 0 || index >= units.length) return;
+            
+            units.forEach((u, idx) => {
+                u.classList.remove('active');
+                if (idx < index) {
+                    u.classList.add('revealed');
+                } else {
+                    u.classList.remove('revealed');
+                }
+            });
+
+            currentUnitIndex = index;
+            const targetEl = units[currentUnitIndex];
+            targetEl.classList.add('active');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(targetEl);
+        }
+
+        /* XỬ LÝ NHẬP SỐ TRANG PAGINATION */
+        function handlePageInputChange(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        }
+
+        function jumpToInputValue() {
+            const inputEl = document.getElementById('page-input');
+            let val = parseInt(inputEl.value) - 1;
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val >= units.length) val = units.length - 1;
+            jumpToUnit(val);
+        }
+
+        function showNextSentence() {
+            if (units.length === 0) return;
+            if (currentUnitIndex < units.length - 1) {
+                if (currentUnitIndex >= 0) {
+                    units[currentUnitIndex].classList.remove('active');
+                    units[currentUnitIndex].classList.add('revealed');
+                }
+                currentUnitIndex++;
+                const activeEl = units[currentUnitIndex];
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateCounter();
+                highlightTOCForCurrentUnit();
+                speakUnit(activeEl);
+            }
+        }
+
+        function showPrevSentence() {
+            if (units.length === 0 || currentUnitIndex <= 0) return;
+            const activeEl = units[currentUnitIndex];
+            activeEl.classList.remove('active', 'revealed');
+
+            currentUnitIndex--;
+            const prevEl = units[currentUnitIndex];
+            prevEl.classList.remove('revealed');
+            prevEl.classList.add('active');
+            prevEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(prevEl);
+        }
+
+        function replayCurrentSentence() {
+            if (currentUnitIndex >= 0 && currentUnitIndex < units.length) {
+                speakUnit(units[currentUnitIndex]);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            if (isLightboxOpen) {
+                if (e.key === 'Escape') closeLightbox();
+                else if (e.key === 'ArrowRight') nextImage();
+                else if (e.key === 'ArrowLeft') prevImage();
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (document.getElementById('save-modal').style.display === 'flex') {
+                    closeSaveModal();
+                    return;
+                }
+                if (document.getElementById('update-modal').style.display === 'flex') {
+                    closeUpdateModal();
+                    return;
+                }
+                if (document.body.classList.contains('slideshow-mode')) {
+                    toggleSlideshow();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                const updateModal = document.getElementById('update-modal');
+                if (updateModal.style.display === 'flex') closeUpdateModal();
+                else openUpdateModal();
+                return;
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                replayCurrentSentence();
+            } else if (e.key === 'ArrowRight') {
+                showNextSentence();
+            } else if (e.key === 'ArrowLeft') {
+                showPrevSentence();
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(2);
+            } else if (e.key === '-') {
+                changeFontSize(-2);
+            }
+        });
+
+        function saveToHistory(text) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            if (history.length === 0 || history[0].content !== text) {
+                const title = text.slice(0, 40).replace(/[#*]/g, '').trim() + '...';
+                history.unshift({ id: Date.now(), title: title, content: text, date: new Date().toLocaleDateString('vi-VN') });
+                if (history.length > 20) history.pop();
+                localStorage.setItem('lecture_history', JSON.stringify(history));
+            }
+        }
+
+        function openHistoryModal() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px;">Lịch sử trống.</div>';
+            } else {
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size: 12px; color: var(--text-color);">${item.date}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="loadHistoryItem(${item.id})">Mở</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background:#ef4444; color:#fff;">Xóa</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+
+        function loadHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            const found = history.find(item => item.id === id);
+            if (found) {
+                parseAndBuildDocument(found.content);
+                closeHistoryModal();
+                showNextSentence();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('lecture_history', JSON.stringify(history));
+            openHistoryModal();
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem('lecture_history');
+            openHistoryModal();
+            showToast("Đã xóa toàn bộ lịch sử!");
+        }
+
+        function openImportModal() {
+            document.getElementById('import-text').value = rawContent;
+            document.getElementById('import-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('import-text').focus();
+            }, 50);
+        }
+
+        function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            if (text.trim()) {
+                parseAndBuildDocument(text);
+                closeImportModal();
+                showNextSentence();
+                showToast("Đã import thành công bài giảng!");
+            }
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById('import-text').value = e.target.result;
+                processImport();
+                showToast("Đã đọc xong file văn bản!");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('prompt-topic').value.trim() || '[TÊN CHỦ ĐỀ CỦA BẠN]';
+            const btn = document.getElementById('btn-copy-prompt');
+            const promptTemplate = `Hãy tạo một bài giảng chi tiết khoảng 1000 từ về chủ đề: "${topic}". 
+Yêu cầu:
+1. ĐÁNH SỐ VÀ PHÂN CẤP CÁC MỤC BÀI GIẢNG THEO THỨ TỰ CỤ THỂ:
+   - Cấp 1 dùng: I. II. III...
+   - Cấp 2 dùng: 1. 2. 3...
+   - Cấp 3 dùng: a) b) c)...
+2. THÊM TỪ KHÓA TIẾNG ANH TƯƠNG ỨNG CHO CÁC KHÁI NIỆM/TỪ KHÓA/NỘI DUNG QUAN TRỌNG VÀ ĐẶT TRONG DẤU NGOẶC ĐƠN ().
+3. Sử dụng định dạng Markdown đầy đủ: in đậm (**từ khóa**), in nghiêng (*chú thích*), danh sách (*).
+4. Thêm link ảnh minh họa dạng Markdown ![mô tả ảnh](https://url-anh.com) nếu phù hợp.
+5. Công thức toán học và phản ứng hóa học dùng chuẩn LaTeX bọc trong dấu $ (ví dụ $CaCO_3$) hoặc \\[...\\] / \\(...\\).
+6. Các url ảnh được cấp phía trên, đặt các url ảnh đó vào nội dung tương ứng (đặt dưới tiêu đề, nhưng trên nội dung), tất cả các url ảnh đều phải được gắn vào các nội dung phù hợp.
+7. Gửi tôi markdown nhưng dạng plain text để tôi copy.`;
+
+            navigator.clipboard.writeText(promptTemplate).then(() => {
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✅ Đã Copy!';
+                btn.classList.add('active');
+                showToast(`Đã copy Prompt AI cho chủ đề: ${topic}`);
+                
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.classList.remove('active');
+                }, 2000);
+            });
+        }
+
+        function speakUnit(element) {
+            if (!synth) return;
+            synth.cancel();
+            if (isMuted) return;
+
+            if (['img', 'hr'].includes(element.tagName.toLowerCase())) {
+                if (isAutoplay) setTimeout(showNextSentence, 1000);
+                return;
+            }
+
+            const textToSpeak = element.innerText || element.textContent;
+            if (!textToSpeak.trim()) {
+                if (isAutoplay) setTimeout(showNextSentence, 500);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechRate;
+            
+            utterance.onend = () => {
+                if (isAutoplay) {
+                    setTimeout(showNextSentence, 600);
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('btn-mute');
+            if (isMuted) {
+                btn.classList.add('active');
+                if (synth) synth.cancel();
+            } else {
+                btn.classList.remove('active');
+                replayCurrentSentence();
+            }
+        }
+
+        function updateRate(val) { speechRate = parseFloat(val); replayCurrentSentence(); }
+        function changeFontSize(delta) { fontSize = Math.max(14, Math.min(50, fontSize + delta)); document.documentElement.style.setProperty('--font-size', fontSize + 'px'); }
+        
+        function updateCounter() { 
+            const pageInput = document.getElementById('page-input');
+            const totalUnitsCount = document.getElementById('total-units-count');
+            pageInput.value = currentUnitIndex + 1;
+            pageInput.max = units.length;
+            totalUnitsCount.innerText = units.length;
+        }
+
+        function openSaveModal() {
+            if (!rawContent) return showToast("Chưa có nội dung để lưu!");
+            const saveModal = document.getElementById('save-modal');
+            const filenameInput = document.getElementById('save-filename-input');
+            
+            filenameInput.value = lastSavedFilename;
+            saveModal.style.display = 'flex';
+            
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 50);
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').style.display = 'none';
+        }
+
+        function executeSaveAsHtml() {
+            const inputEl = document.getElementById('save-filename-input');
+            let filename = inputEl.value.trim();
+            if (!filename) filename = "BaiGiang_Complete.html";
+            if (!filename.toLowerCase().endsWith('.html') && !filename.toLowerCase().endsWith('.htm')) {
+                filename += '.html';
+            }
+
+            lastSavedFilename = filename;
+            localStorage.setItem('last_saved_filename', filename);
+
+            closeSaveModal();
+
+            let cleanDocumentHTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<div id="lecture-paper">[\s\S]*?<\/div>/,
+                `<div id="lecture-paper">\n<div style="text-align: center; color: var(--text-color); margin-top: 50px;">\n<em>Nội dung bài giảng sẽ hiển thị tại đây.<br>Ấn <strong>Import</strong> để tải bài giảng hoặc chọn file Word (.docx).<\/em>\n<\/div>\n<\/div>`
+            );
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(/\s*/g, '');
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<div id="save-modal" class="modal" style="display:\s*flex;">/g,
+                '<div id="save-modal" class="modal">'
+            );
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<script id="embedded-data" type="application\/json">[\s\S]*?<\/script>/,
+                `<script id="embedded-data" type="application/json">${JSON.stringify(rawContent)}<\/script>`
+            );
+
+            const blob = new Blob([cleanDocumentHTML], { type: 'text/html;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Đã lưu file thành công: ${filename}`);
+        }
+    </script>
+
+</body></html>
