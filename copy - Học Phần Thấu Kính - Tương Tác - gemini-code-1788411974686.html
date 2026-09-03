@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Phần Thấu Kính - Tương Tác</title>
+    <style>
+        :root {
+            --font-size: 16px;
+            --primary-color: #007bff;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: var(--font-size);
+            margin: 0;
+            padding: 20px;
+            transition: font-size 0.2s ease;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* Control Bar */
+        .control-bar {
+            position: sticky;
+            top: 10px;
+            background: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+            flex-wrap: wrap;
+        }
+
+        .control-bar button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .control-bar button:hover {
+            opacity: 0.9;
+        }
+
+        .control-bar button.active {
+            background-color: #28a745;
+        }
+
+        /* Container & Cards */
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border-left: 5px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .card.highlight-card {
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.6);
+            border-color: #ffc107;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: calc(var(--font-size) + 4px);
+            color: #0056b3;
+        }
+
+        .subtitle {
+            font-style: italic;
+            color: #6c757d;
+            font-size: calc(var(--font-size) - 2px);
+        }
+
+        .card-body {
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 20px;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .card-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .content-text p {
+            margin: 0 0 8px 0;
+            line-height: 1.5;
+        }
+
+        .content-text ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        /* Highlight keywords */
+        .keyword {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .card-img img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .card-footer-action {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-speak {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-speak:hover {
+            background-color: #138496;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Hệ Thống Kiến Thức Thấu Kính</h1>
+        <p>Học tập tương tác trực quan với âm thanh và hình ảnh</p>
+    </header>
+
+    <div class="control-bar">
+        <div>
+            <button onclick="changeFontSize(1)" title="Phím '='">A+</button>
+            <button onclick="changeFontSize(-1)" title="Phím '-'">A-</button>
+        </div>
+        <button id="btnMute" onclick="toggleMute()">🔊 Bật Âm Thanh</button>
+        <button id="btnAutoPlay" onclick="toggleAutoPlay()">▶ Tự Động Đọc</button>
+        <button onclick="stopAllAudio()">⏹ Dừng Đọc</button>
+    </div>
+
+    <div class="container" id="cardContainer">
+        </div>
+
+    <script>
+        const rawData = [
+            ["Thấu kính", "Thấu kính là khối đồng chất trong suốt, giới hạn bởi hai mặt cong hoặc một mặt cong và một mặt phẳng.", "• Ví dụ: Thấu kính thủy tinh, thấu kính nhựa trong suốt.<br>• Dùng trong kính lúp, máy ảnh, kính hiển vi.", "Lens", "transparent", "convex", "surface", "https://m.media-amazon.com/images/I/61DnVa3k4NL._AC_UF894,1000_QL80_.jpg"],
+            ["Phân loại thấu kính", "Thấu kính được chia thành thấu kính rìa mỏng và thấu kính rìa dày.", "• Rìa mỏng hơn giữa → thấu kính hội tụ.<br>• Rìa dày hơn giữa → thấu kính phân kì.", "Lens classification", "edge", "thickness", "type", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKbS4rFT5M8ITqRxMagyAvrf5OqqZ-mcEZgcmQVDjinknf8zT6uH4U29g&s=10"],
+            ["Thấu kính hội tụ", "Thấu kính rìa mỏng làm chùm tia song song truyền qua trở thành chùm tia hội tụ.", "• Nhận biết: phần rìa mỏng hơn phần giữa.<br>• Chùm tia ló hội tụ tại một điểm.", "Converging lens", "convergence", "convex", "focus", "https://i.makeagif.com/media/12-17-2017/YahZ9b.gif"],
+            ["Thấu kính phân kì", "Thấu kính rìa dày làm chùm tia song song truyền qua trở thành chùm tia phân kì.", "• Nhận biết: phần rìa dày hơn phần giữa.<br>• Chùm tia ló phân kì, đường kéo dài đi qua tiêu điểm.", "Diverging lens", "divergence", "concave", "ray", "https://www.ncbi.nlm.nih.gov/books/NBK597385/bin/Concave_lens.jpg"],
+            ["Quang tâm", "Quang tâm O là điểm của thấu kính mà tia sáng tới O truyền thẳng qua thấu kính.", "• Kí hiệu: O.<br>• Tia sáng qua quang tâm truyền thẳng, không đổi hướng.", "Optical center", "optical", "center", "O", "https://cdn.britannica.com/01/189401-138-9C338E27/video-lenses-images-light.jpg"],
+            ["Trục chính", "Trục chính là đường thẳng đi qua quang tâm O và vuông góc với tiết diện phẳng của thấu kính.", "• Trục chính đi qua O.<br>• Đây là đường chuẩn để xác định tiêu điểm và dựng ảnh.", "Principal axis", "axis", "perpendicular", "optical", "https://i.ytimg.com/vi/_CT-wAIfOYQ/sddefault.jpg"],
+            ["Tiêu điểm chính", "Tiêu điểm chính F là điểm trên trục chính nơi chùm tia song song trục chính hội tụ hoặc đường kéo dài của tia ló hội tụ.", "• Thấu kính hội tụ: tia ló hội tụ tại F phía sau thấu kính.<br>• Thấu kính phân kì: đường kéo dài tia ló đi qua F phía trước thấu kính.", "Principal focus", "focus", "convergence", "divergence", "https://i.makeagif.com/media/4-23-2023/gO4nu6.gif"],
+            ["Tiêu cự", "Tiêu cự f là khoảng cách từ quang tâm O đến tiêu điểm chính F: OF = f.", "• Công thức: OF = f.<br>• Đơn vị thường dùng: mét (m) hoặc xentimét (cm).", "Focal length", "distance", "focus", "measurement", "https://ngsmagnified.com/wp-content/uploads/concave-convex-914x1024.jpg"],
+            ["Tia qua quang tâm", "Tia sáng đi qua quang tâm O truyền thẳng qua thấu kính và không bị lệch hướng.", "• Tia tới qua O → tia ló tiếp tục theo phương cũ.<br>• Đây là một trong các tia đặc biệt dùng để dựng ảnh.", "Ray through optical center", "straight", "ray", "optical center", "https://stickmanphysics.com/wp-content/uploads/2020/04/Concave-Moving-Lens.gif"],
+            ["Tia song song qua thấu kính hội tụ", "Tia tới song song với trục chính qua thấu kính hội tụ sẽ cho tia ló đi qua tiêu điểm chính phía sau thấu kính.", "• Tia tới // trục chính → tia ló đi qua F'.<br>• Dùng tia này để dựng ảnh của vật.", "Parallel ray through converging lens", "parallel", "focus", "converging", "https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif"],
+            ["Tia song song qua thấu kính phân kì", "Tia tới song song với trục chính qua thấu kính phân kì cho tia ló phân kì, đường kéo dài đi qua tiêu điểm trước thấu kính.", "• Tia tới // trục chính → tia ló phân kì.<br>• Đường kéo dài của tia ló đi qua F.", "Parallel ray through diverging lens", "parallel", "diverging", "focus", "https://stickmanphysics.com/wp-content/uploads/2020/04/Diverging-Lens-Light-Animation.gif"],
+            ["Giải thích thấu kính hội tụ", "Có thể coi thấu kính hội tụ gồm nhiều lăng kính nhỏ ghép lại với đáy hướng về phía trục chính.", "• Tia sáng qua lăng kính bị lệch về phía đáy.<br>• Các tia bị lệch về trục chính nên chùm tia trở thành hội tụ.", "Converging lens principle", "prism", "refraction", "convergence", "https://vietjack.com/khoa-hoc-tu-nhien-9-kn/images/ly-thuyet-bai-8-thau-kinh-224620.PNG"],
+            ["Giải thích thấu kính phân kì", "Có thể coi thấu kính phân kì gồm nhiều lăng kính nhỏ có đáy hướng ra phía rìa thấu kính.", "• Tia sáng bị lệch về phía đáy lăng kính.<br>• Các tia lệch ra xa trục chính nên tạo chùm tia phân kì.", "Diverging lens principle", "prism", "refraction", "divergence", "https://video.vietjack.com/upload2/quiz_source1/2024/06/as-1719539670.png"],
+            ["Độ lệch của tia sáng", "Tia sáng gần rìa thấu kính bị lệch nhiều hơn tia gần trục chính.", "• Lăng kính gần rìa có góc chiết quang lớn hơn.<br>• Vì vậy tia gần rìa bị lệch nhiều hơn.", "Light ray deviation", "deviation", "prism", "edge", "https://video.vietjack.com/upload2/quiz_source1/2024/07/15-1719916264.jpg"],
+            ["Ảnh thật", "Ảnh thật là ảnh hứng được trên màn chắn, được tạo bởi sự giao nhau thực của các tia ló.", "• Đặt màn tại vị trí ảnh thật → thu được ảnh rõ nét.<br>• Ảnh thật thường ngược chiều vật đối với thấu kính hội tụ.", "Real image", "screen", "inverted", "rays", "https://bizweb.dktcdn.net/100/274/817/files/he-tao-anh-qua-thau-kinh-1-compressed.jpg?v=1522901580215"],
+            ["Ảnh ảo", "Ảnh ảo là ảnh không hứng được trên màn chắn, được tạo bởi giao điểm của các đường kéo dài tia ló.", "• Không thể hứng ảnh ảo trên màn.<br>• Ảnh ảo thường cùng chiều với vật.", "Virtual image", "extension", "screen", "upright", "https://bizweb.dktcdn.net/100/274/817/files/he-tao-anh-qua-thau-kinh-7-compressed.jpg?v=1522901561229"],
+            ["Dựng ảnh điểm sáng", "Ảnh S' của điểm sáng S được xác định bằng giao điểm của các tia ló hoặc đường kéo dài của tia ló.", "• Vẽ tia từ S qua O → truyền thẳng.<br>• Vẽ tia từ S song song trục chính → dùng quy tắc tia đặc biệt.<br>• Giao điểm xác định S'.", "Image construction", "point", "ray", "intersection", "https://stickmanphysics.com/wp-content/uploads/2020/04/Converging-Lens-Light-Animation.gif"],
+            ["Dựng ảnh vật AB", "Để dựng ảnh AB, xác định ảnh B' của điểm B rồi hạ vuông góc xuống trục chính để xác định A'.", "• Vẽ tia qua O và tia song song trục chính từ B.<br>• Xác định B'.<br>• Hạ B'A' vuông góc trục chính.", "Object image construction", "object", "height", "perpendicular", "https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif"],
+            ["Ảnh qua thấu kính hội tụ khi d > f", "Vật đặt ngoài khoảng tiêu cự của thấu kính hội tụ cho ảnh thật, ngược chiều với vật.", "• d > f → ảnh thật.<br>• Ảnh ngược chiều vật.<br>• Kích thước ảnh có thể lớn hơn, nhỏ hơn hoặc bằng vật tùy vị trí.", "Converging lens real image", "object distance", "real", "inverted", "https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif"],
+            ["Ảnh qua thấu kính hội tụ khi d < f", "Vật đặt trong khoảng tiêu cự của thấu kính hội tụ cho ảnh ảo, cùng chiều và lớn hơn vật.", "• d < f → ảnh ảo.<br>• Ảnh cùng chiều vật.<br>• Ảnh lớn hơn vật.", "Converging lens virtual image", "virtual", "upright", "magnified", "https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif"],
+            ["Ảnh qua thấu kính phân kì", "Thấu kính phân kì luôn tạo ảnh ảo, cùng chiều và nhỏ hơn vật ở mọi vị trí của vật.", "• Với mọi d → ảnh ảo.<br>• Ảnh cùng chiều vật.<br>• Ảnh nhỏ hơn vật và nằm gần thấu kính hơn vật.", "Diverging lens image", "virtual", "upright", "reduced", "https://stickmanphysics.com/wp-content/uploads/2020/04/Diverging-Lens-Light-Animation.gif"],
+            ["Phân biệt thấu kính bằng hình dạng", "Có thể phân biệt hai loại thấu kính dựa vào độ dày ở rìa so với phần giữa.", "• Rìa mỏng, giữa dày → hội tụ.<br>• Rìa dày, giữa mỏng → phân kì.", "Identify lens by shape", "shape", "edge", "center", "https://i.ytimg.com/vi/fXN2lHBc6s4/maxresdefault.jpg"],
+            ["Phân biệt thấu kính bằng ảnh ảo", "Có thể phân biệt thấu kính bằng cách quan sát ảnh của vật nhỏ khi nhìn qua thấu kính.", "• Ảnh cùng chiều, lớn hơn vật → thấu kính hội tụ.<br>• Ảnh cùng chiều, nhỏ hơn vật → thấu kính phân kì.", "Identify lens by virtual image", "magnified", "reduced", "virtual", "https://stickmanphysics.com/wp-content/uploads/2020/04/Concave-Moving-Lens.gif"],
+            ["Phân biệt thấu kính bằng chùm tia", "Có thể phân biệt thấu kính bằng cách chiếu chùm tia sáng song song qua thấu kính.", "• Tia ló hội tụ → thấu kính hội tụ.<br>• Tia ló phân kì → thấu kính phân kì.", "Identify lens by light rays", "parallel", "converging", "diverging", "https://i.ebayimg.com/images/g/LdgAAOSwgq9bhMWX/s-l400.jpg"]
+        ];
+
+        let currentFontSize = 16;
+        let isMuted = false;
+        let isAutoPlay = false;
+        let autoPlayIndex = 0;
+        let currentUtterance = null;
+
+        // Highlight helper keywords in text
+        function highlightText(text) {
+            const keywords = ['thấu kính', 'hội tụ', 'phân kì', 'quang tâm', 'trục chính', 'tiêu điểm', 'tiêu cự', 'ảnh thật', 'ảnh ảo', 'tân', 'vật'];
+            let highlighted = text;
+            // Highlight specific physics keywords dynamically
+            const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
+            return highlighted.replace(regex, '<span class="keyword">$1</span>');
+        }
+
+        // Render Cards
+        const container = document.getElementById('cardContainer');
+        rawData.forEach((item, index) => {
+            const title = item[0];
+            const desc = highlightText(item[1]);
+            const details = highlightText(item[2]);
+            const englishTitle = item[3];
+            const imgUrl = item[7];
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `card-${index}`;
+            card.innerHTML = `
+                <div class="card-header">
+                    <div>
+                        <h2>${index + 1}. ${title}</h2>
+                        <span class="subtitle">(${englishTitle})</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="content-text">
+                        <p>${desc}</p>
+                        <div>${details}</div>
+                    </div>
+                    <div class="card-img">
+                        <img src="${imgUrl}" alt="${title}" loading="lazy" onerror="this.src='https://via.placeholder.com/250x150?text=No+Image'">
+                    </div>
+                </div>
+                <div class="card-footer-action">
+                    <button class="btn-speak" onclick="speakSection(${index})">🔊 Đọc phần này</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        // Font Size Manager
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(12, Math.min(28, currentFontSize + delta));
+            document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
+        }
+
+        // Keyboard Shortcuts (= and -)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '=' || e.key === '+') {
+                changeFontSize(1);
+            } else if (e.key === '-' || e.key === '_') {
+                changeFontSize(-1);
+            }
+        });
+
+        // Mute Toggle
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btnMute = document.getElementById('btnMute');
+            if (isMuted) {
+                btnMute.innerText = "🔇 Đã Tắt Âm";
+                btnMute.classList.add('active');
+                stopAllAudio();
+            } else {
+                btnMute.innerText = "🔊 Bật Âm Thanh";
+                btnMute.classList.remove('active');
+            }
+        }
+
+        // Speech Synthesis Handler
+        function speakText(text, onEndCallback) {
+            if (isMuted || !('speechSynthesis' in window)) {
+                if (onEndCallback) onEndCallback();
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            currentUtterance.lang = 'vi-VN';
+            currentUtterance.rate = 1.0;
+
+            currentUtterance.onend = () => {
+                if (onEndCallback) onEndCallback();
+            };
+
+            window.speechSynthesis.speak(currentUtterance);
+        }
+
+        function speakSection(index) {
+            stopAllAudio();
+            highlightCardVisual(index);
+            const item = rawData[index];
+            const textToRead = `${item[0]}. ${item[1]}. ${item[2].replace(/<[^>]*>?/gm, '')}`;
+            speakText(textToRead);
+        }
+
+        function stopAllAudio() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            isAutoPlay = false;
+            document.getElementById('btnAutoPlay').innerText = "▶ Tự Động Đọc";
+            document.getElementById('btnAutoPlay').classList.remove('active');
+            clearHighlights();
+        }
+
+        // Auto Play Feature
+        function toggleAutoPlay() {
+            if (isMuted) {
+                alert("Vui lòng bật âm thanh (Bật Mute) trước khi sử dụng tính năng Tự động đọc!");
+                return;
+            }
+
+            isAutoPlay = !isAutoPlay;
+            const btn = document.getElementById('btnAutoPlay');
+
+            if (isAutoPlay) {
+                btn.innerText = "⏸ Dừng Tự Động";
+                btn.classList.add('active');
+                autoPlayIndex = 0;
+                playNextInQueue();
+            } else {
+                stopAllAudio();
+            }
+        }
+
+        function playNextInQueue() {
+            if (!isAutoPlay) return;
+
+            if (autoPlayIndex >= rawData.length) {
+                stopAllAudio();
+                return;
+            }
+
+            highlightCardVisual(autoPlayIndex);
+            const item = rawData[autoPlayIndex];
+            const textToRead = `${item[0]}. ${item[1]}. ${item[2].replace(/<[^>]*>?/gm, '')}`;
+
+            speakText(textToRead, () => {
+                autoPlayIndex++;
+                if (isAutoPlay) {
+                    setTimeout(playNextInQueue, 800); // Khoảng nghỉ nhỏ giữa các phần
+                }
+            });
+        }
+
+        function highlightCardVisual(index) {
+            clearHighlights();
+            const card = document.getElementById(`card-${index}`);
+            if (card) {
+                card.classList.add('highlight-card');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('highlight-card'));
+        }
+    </script>
+</body>
+</html>
