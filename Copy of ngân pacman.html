@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pac-Man Mobile & PC</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation; /* Chống zoom khi bấm liên tục trên điện thoại */
+        }
+        body {
+            background-color: #111;
+            color: white;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        h2 {
+            font-size: 20px;
+            margin: 5px 0 10px 0;
+        }
+        #info {
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: yellow;
+        }
+        canvas {
+            border: 3px solid blue;
+            background-color: black;
+            box-shadow: 0 0 15px rgba(0, 0, 255, 0.6);
+            max-width: 100%;
+            height: auto;
+        }
+        /* Giao diện nút bấm cảm ứng cho Smartphone */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        .ctrl-btn {
+            background-color: #222;
+            color: yellow;
+            border: 2px solid yellow;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 4px #444;
+            transition: 0.1s;
+        }
+        .ctrl-btn:active {
+            background-color: yellow;
+            color: black;
+            box-shadow: 0 2px #222;
+            transform: translateY(2px);
+        }
+        /* Sắp xếp vị trí bàn phím ảo */
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+    </style>
+</head>
+<body>
+
+    <h2>Pac-Man Mobile & PC</h2>
+    <div id="info">
+        <span id="scoreText">Điểm: 0</span> | 
+        <span id="levelText">Level: 1</span>
+    </div>
+    
+    <canvas id="gameCanvas" width="510" height="510"></canvas>
+
+    <!-- Bảng điều khiển cảm ứng trên màn hình -->
+    <div class="controls">
+        <button class="ctrl-btn btn-up" onclick="changeDirection('Up')">⬆</button>
+        <button class="ctrl-btn btn-left" onclick="changeDirection('Left')">⬅</button>
+        <button class="ctrl-btn btn-down" onclick="changeDirection('Down')">⬇</button>
+        <button class="ctrl-btn btn-right" onclick="changeDirection('Right')">➡</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const tileSize = 30;
+        const rows = 17;
+        const cols = 17;
+
+        let score = 0;
+        let level = 1;
+        let ghostSpeedMs = 200;
+        let ghostInterval;
+
+        let map = [];
+        let dots = [];
+
+        function generateRandomMap() {
+            let newMap = [];
+            for (let r = 0; r < rows; r++) {
+                let row = [];
+                for (let c = 0; c < cols; c++) {
+                    if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
+                        row.push(1);
+                    } else {
+                        if ((r <= 2 && c <= 2) || (r >= rows - 3 && c >= cols - 3)) {
+                            row.push(0);
+                        } else {
+                            let isWall = Math.random() < 0.25 ? 1 : 0;
+                            row.push(isWall);
+                        }
+                    }
+                }
+                newMap.push(row);
+            }
+
+            for (let r = 2; r < rows - 2; r += 2) {
+                for (let c = 2; c < cols - 2; c += 2) {
+                    newMap[r][c] = 0;
+                }
+            }
+            return newMap;
+        }
+
+        function initLevel() {
+            map = generateRandomMap();
+            dots = [];
+            for (let r = 0; r < map.length; r++) {
+                for (let c = 0; c < map[r].length; c++) {
+                    if (map[r][c] === 0) {
+                        dots.push({ r: r, c: c });
+                    }
+                }
+            }
+        }
+
+        initLevel();
+
+        let pacman = {
+            x: 1 * tileSize + tileSize/2,
+            y: 1 * tileSize + tileSize/2,
+            radius: 12,
+            speed: 2.5,
+            dx: 0,
+            dy: 0,
+            nextDx: 0,
+            nextDy: 0,
+            direction: 0
+        };
+
+        let ghosts = [
+            { col: cols - 2, row: 1, x: (cols - 2)*tileSize+tileSize/2, y: 1*tileSize+tileSize/2, color: "red", r: 0, c: -1 },
+            { col: 1, row: rows - 2, x: 1*tileSize+tileSize/2, y: (rows - 2)*tileSize+tileSize/2, color: "pink", r: -1, c: 0 },
+            { col: cols - 2, row: rows - 2, x: (cols - 2)*tileSize+tileSize/2, y: (rows - 2)*tileSize+tileSize/2, color: "cyan", r: 0, c: -1 }
+        ];
+
+        // Hàm điều khiển hướng dùng chung cho cả Bàn phím máy tính và Cảm ứng điện thoại
+        function changeDirection(dir) {
+            let s = pacman.speed;
+            switch(dir) {
+                case "Left": 
+                    pacman.nextDx = -s; pacman.nextDy = 0; pacman.direction = 2; break;
+                case "Right": 
+                    pacman.nextDx = s; pacman.nextDy = 0; pacman.direction = 0; break;
+                case "Up": 
+                    pacman.nextDx = 0; pacman.nextDy = -s; pacman.direction = 3; break;
+                case "Down": 
+                    pacman.nextDx = 0; pacman.nextDy = s; pacman.direction = 1; break;
+            }
+        }
+
+        // Bắt sự kiện phím trên bàn phím PC
+        window.addEventListener("keydown", function(e) {
+            switch(e.key) {
+                case "ArrowLeft": changeDirection("Left"); break;
+                case "ArrowRight": changeDirection("Right"); break;
+                case "ArrowUp": changeDirection("Up"); break;
+                case "ArrowDown": changeDirection("Down"); break;
+            }
+        });
+
+        function checkWall(x, y, radius) {
+            let corners = [
+                {x: x - radius, y: y - radius},
+                {x: x + radius, y: y - radius},
+                {x: x - radius, y: y + radius},
+                {x: x + radius, y: y + radius}
+            ];
+            for (let corner of corners) {
+                let c = Math.floor(corner.x / tileSize);
+                let r = Math.floor(corner.y / tileSize);
+                if (r < 0 || r >= map.length || c < 0 || c >= map[0].length || map[r][c] === 1) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function update() {
+            if (pacman.nextDx !== 0 || pacman.nextDy !== 0) {
+                let testX = pacman.x + pacman.nextDx * 2;
+                let testY = pacman.y + pacman.nextDy * 2;
+                if (!checkWall(testX, testY, pacman.radius)) {
+                    pacman.dx = pacman.nextDx;
+                    pacman.dy = pacman.nextDy;
+                }
+            }
+
+            let nextX = pacman.x + pacman.dx;
+            let nextY = pacman.y + pacman.dy;
+            if (!checkWall(nextX, nextY, pacman.radius)) {
+                pacman.x = nextX;
+                pacman.y = nextY;
+            } else {
+                pacman.dx = 0;
+                pacman.dy = 0;
+            }
+
+            let pCol = Math.floor(pacman.x / tileSize);
+            let pRow = Math.floor(pacman.y / tileSize);
+
+            for (let i = dots.length - 1; i >= 0; i--) {
+                if (dots[i].r === pRow && dots[i].c === pCol) {
+                    dots.splice(i, 1);
+                    score += 10;
+                    document.getElementById("scoreText").innerText = "Điểm: " + score;
+
+                    if (dots.length === 0) {
+                        nextLevel();
+                    }
+                }
+            }
+        }
+
+        function nextLevel() {
+            level++;
+            document.getElementById("levelText").innerText = "Level: " + level;
+            alert(`Xuất sắc! Sang Level ${level} với Mê Cung Mới!`);
+            
+            initLevel();
+
+            pacman.x = 1 * tileSize + tileSize/2;
+            pacman.y = 1 * tileSize + tileSize/2;
+            pacman.dx = 0; pacman.dy = 0; pacman.nextDx = 0; pacman.nextDy = 0;
+            
+            ghosts[0].col = cols - 2; ghosts[0].row = 1;
+            ghosts[1].col = 1; ghosts[1].row = rows - 2;
+            ghosts[2].col = cols - 2; ghosts[2].row = rows - 2;
+
+            if (ghostSpeedMs > 100) ghostSpeedMs -= 15;
+            restartGhostLoop();
+        }
+
+        function startGhostLoop() {
+            ghostInterval = setInterval(() => {
+                ghosts.forEach(ghost => {
+                    let nextR = ghost.row + ghost.r;
+                    let nextC = ghost.col + ghost.c;
+
+                    if (map[nextR] && map[nextR][nextC] === 1 || Math.random() < 0.25) {
+                        let dirs = [
+                            {r: 0, c: 1}, {r: 0, c: -1}, {r: 1, c: 0}, {r: -1, c: 0}
+                        ];
+                        let valid = dirs.filter(d => map[ghost.row + d.r] && map[ghost.row + d.r][ghost.col + d.c] !== 1);
+                        if (valid.length > 0) {
+                            let chosen = valid[Math.floor(Math.random() * valid.length)];
+                            ghost.r = chosen.r;
+                            ghost.c = chosen.c;
+                        }
+                    }
+
+                    ghost.row += ghost.r;
+                    ghost.col += ghost.c;
+                    ghost.x = ghost.col * tileSize + tileSize/2;
+                    ghost.y = ghost.row * tileSize + tileSize/2;
+
+                    let pCol = Math.floor(pacman.x / tileSize);
+                    let pRow = Math.floor(pacman.y / tileSize);
+                    if (ghost.row === pRow && ghost.col === pCol) {
+                        pacman.x = 1 * tileSize + tileSize/2;
+                        pacman.y = 1 * tileSize + tileSize/2;
+                        pacman.dx = 0; pacman.dy = 0; pacman.nextDx = 0; pacman.nextDy = 0;
+                    }
+                });
+            }, ghostSpeedMs);
+        }
+
+        function restartGhostLoop() {
+            clearInterval(ghostInterval);
+            startGhostLoop();
+        }
+
+        startGhostLoop();
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < map.length; r++) {
+                for (let c = 0; c < map[r].length; c++) {
+                    if (map[r][c] === 1) {
+                        ctx.fillStyle = "blue";
+                        ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+
+            ctx.fillStyle = "#ffb8ae";
+            dots.forEach(d => {
+                ctx.beginPath();
+                ctx.arc(d.c * tileSize + tileSize/2, d.r * tileSize + tileSize/2, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.fillStyle = "yellow";
+            ctx.beginPath();
+            let angle = pacman.direction * 0.5;
+            ctx.arc(pacman.x, pacman.y, pacman.radius, (angle + 0.2) * Math.PI, (angle + 1.8) * Math.PI);
+            ctx.lineTo(pacman.x, pacman.y);
+            ctx.fill();
+
+            ghosts.forEach(ghost => {
+                ctx.fillStyle = ghost.color;
+                ctx.beginPath();
+                ctx.arc(ghost.x, ghost.y - 2, 11, Math.PI, 0, false);
+                ctx.lineTo(ghost.x + 11, ghost.y + 11);
+                ctx.lineTo(ghost.x - 11, ghost.y + 11);
+                ctx.fill();
+            });
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+
+</body>
+</html>
