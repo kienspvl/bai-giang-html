@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icarus Translator v13.5.7 - Cloud Sync &amp; ReadOnly Export</title>
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root { 
+            --sidebar-w: 300px; --sidebar-r: 320px; --font-size: 16px; --content-max-w: 1000px;
+            --bg: #f1f5f9; --text: #1e293b; --side-bg: #f8fafc; --side-text: #1e293b;
+            --primary: #e11d48; --border: #e2e8f0; --box-bg: #ffffff;
+            --pinyin-color: #e11d48; 
+        }
+
+        body.sidebars-hidden {
+            --sidebar-w: 0px;
+            --sidebar-r: 0px;
+        }
+
+        aside:first-of-type { 
+            --side-bg: #1e293b; 
+            --side-text: #f1f5f9; 
+            --border: #334155; 
+            --bg: #0a0f1d; 
+            background: var(--side-bg) !important;
+            color: var(--side-text) !important;
+            overflow: hidden; 
+        }
+        aside:first-of-type .sidebar-textarea, 
+        aside:first-of-type select {
+            background: #0a0f1d;
+            color: #f1f5f9;
+            border-color: #334155;
+        }
+
+        body.theme-1 { --bg: #f0f4f8; --text: #1e293b; --side-bg: #f8fafc; --side-text: #1e293b; --primary: #2563eb; --border: #e2e8f0; --box-bg: #ffffff; --pinyin-color: #2563eb; }
+        body.theme-2 { --bg: #0a0f1d; --text: #f1f5f9; --side-bg: #1e293b; --side-text: #f1f5f9; --primary: #fb7185; --border: #334155; --box-bg: #1e293b; --pinyin-color: #fb7185; }
+        body.theme-3 { --bg: #f7eed7; --text: #5d4037; --side-bg: #f5ecd5; --side-text: #4e342e; --primary: #d84315; --border: #d7ccc8; --box-bg: #fdf6e3; --pinyin-color: #1976d2; }
+        body.theme-4 { --bg: #dceada; --text: #2d3e2d; --side-bg: #d4e4d4; --side-text: #1a2a1a; --primary: #3e7a3e; --border: #bdcfbd; --box-bg: #e8f3e8; --pinyin-color: #4a90e2; }
+        body.theme-5 { --bg: #14110f; --text: #dccab8; --side-bg: #2a2421; --side-text: #f3e5d8; --primary: #a67c52; --border: #334155; --box-bg: #1a1614; --pinyin-color: #8e9aaf; }
+
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); display: flex; height: 100vh; color: var(--text); overflow: hidden; transition: 0.3s; }
+        aside { width: var(--sidebar-w); background: var(--side-bg); color: var(--side-text); display: flex; flex-direction: column; box-sizing: border-box; border-right: 1px solid var(--border); transition: 0.3s; z-index: 10; position: relative; }
+        .sidebar-right { width: var(--sidebar-r); background: var(--side-bg); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; color: var(--text); transition: 0.3s; display: flex; flex-direction: column; border-right: none; }
+        
+        body.sidebars-hidden aside { padding: 0; border: none; }
+        body.sidebars-hidden .sidebar-right { padding: 0; }
+
+        #hamburgerBtn {
+            position: fixed;
+            right: calc(var(--sidebar-r) - 20px);
+            top: 10px;
+            z-index: 1000;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: right 0.3s ease;
+        }
+        body.sidebars-hidden #hamburgerBtn {
+            right: 0px;
+            border-radius: 4px 0 0 4px;
+        }
+
+        select { width: 100%; padding: 5px; margin-top: 5px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
+        .tabs { display: flex; background: rgba(0,0,0,0.2); flex-shrink: 0; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: none; color: inherit; opacity: 0.6; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        .tab-btn.active { opacity: 1; border-bottom: 2px solid var(--primary); background: rgba(255,255,255,0.05); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; box-sizing: border-box; }
+        .tab-content:not(.active) { display: none; }
+        
+        .sidebar-textarea { width: 100%; height: 120px; min-height: 60px; background: var(--bg); color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 10px; box-sizing: border-box; resize: vertical; font-size: 0.9rem; outline: none; flex-shrink: 0; }
+        
+        .history-list { flex: 1; overflow-y: auto; }
+        .history-item { padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.75rem; display: flex; justify-content: space-between; gap: 10px; }
+        .history-item:hover { background: rgba(255,255,255,0.05); }
+
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        header { width: 100%; background: var(--side-bg); border-bottom: 1px solid var(--border); padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; gap: 10px; z-index: 15; flex-shrink: 0; padding-right: 50px; }
+        
+        .workspace { 
+            width: 100%; 
+            max-width: var(--content-max-w); 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 42vh 20px; 
+            box-sizing: border-box; 
+            scroll-behavior: smooth;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .sentence-box { 
+            padding: 15px 20px; 
+            background: var(--box-bg); 
+            margin-bottom: 12px; 
+            border-radius: 10px; 
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06); 
+            cursor: pointer; 
+            border-left: 5px solid transparent; 
+            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            opacity: 0.45; 
+            overflow: hidden;
+        }
+        .sentence-box .text-orig { font-weight: 400; } 
+        .sentence-box:hover { opacity: 0.8; transform: translateY(-1px); }
+        .sentence-box.active { 
+            opacity: 1; 
+            border-left-color: var(--primary); 
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1); 
+            transform: scale(1.01); 
+        }
+        .sentence-box.active .text-orig { font-weight: 600; } 
+
+        .text-orig { display: block; font-size: var(--font-size); margin-bottom: 8px; color: var(--text); line-height: 1.4; }
+        .trans-line { 
+            font-size: var(--font-size); 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            background: rgba(0,0,0,0.03); 
+            border-left: 3px solid var(--border); 
+            margin-top: 6px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .lang-en { border-left-color: #2563eb; }
+        .lang-ru { border-left-color: #ef4444; }
+        .lang-zh { border-left-color: #f59e0b; }
+        .lang-vi { border-left-color: #22c55e; }
+
+        .btn-mini-speak { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: 0.5; transition: 0.2s; color: var(--text); }
+        .btn-mini-speak:hover { opacity: 1; transform: scale(1.1); }
+        .pinyin { font-size: 0.85em; color: var(--pinyin-color); font-style: italic; margin-top: 2px; display: block; }
+
+        .pagination { display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.05); padding: 4px 12px; border-radius: 20px; }
+        .pagination button { background: none; border: none; padding: 2px 8px; font-size: 1.2rem; line-height: 1; color: var(--text); cursor: pointer; opacity: 0.6; }
+        .pagination button:hover { opacity: 1; color: var(--primary); }
+        .page-input { width: 35px; text-align: center; border: none; background: transparent; font-weight: bold; color: var(--primary); outline: none; font-size: 0.9rem; }
+        .total-page { font-size: 0.9rem; opacity: 0.5; font-weight: 500; }
+
+        .timer-display { font-size: 1.00rem; background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 20px; color: var(--primary); font-weight: bold; border: 1px solid var(--border); }
+        .preview-label { font-size: 0.7rem; font-weight: bold; color: var(--primary); margin-top: 15px; display: block; text-transform: uppercase; opacity: 0.8; }
+        .preview-text { font-size: 0.95rem; line-height: 1.5; margin-top: 5px; }
+
+        .vocab-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .word-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-top: 10px; }
+        .word-card { background: var(--bg); border: 1px solid var(--border); padding: 8px; border-radius: 6px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .ana-word { font-weight: bold; font-size: 1.1rem; color: var(--primary); display: block; }
+        .ana-pinyin { color: var(--pinyin-color); font-size: 0.75em; font-style: italic; display: block; margin: 2px 0; }
+        .ana-meaning { font-size: 0.75em; color: var(--text); opacity: 0.8; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; line-height: 1.2; }
+
+        .sw-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.8rem; }
+        .switch { position: relative; width: 34px; height: 18px; display: inline-block; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #cbd5e1; border-radius: 20px; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .4s; }
+        input:checked + .slider { background: var(--primary); }
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        button { cursor: pointer; border-radius: 6px; border: 1px solid var(--border); padding: 6px 12px; font-weight: 500; transition: 0.2s; background: var(--bg); color: var(--text); }
+        .btn-action { background: var(--primary); color: white; border: none; }
+        
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { 
+            display: none; position: absolute; left: 0; top: 100%; background-color: var(--side-bg); 
+            min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 100; 
+            border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+        }
+        .dropdown:hover .dropdown-content { display: block; }
+        .menu-item { padding: 8px 12px; color: var(--text); font-size: 0.85rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .menu-item:hover { background-color: rgba(0,0,0,0.05); }
+        .menu-key { opacity: 0.5; font-size: 0.75rem; font-weight: bold; background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+        
+        .modal-content { 
+            background: var(--bg); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 15px 25px 25px 25px; border-radius: 12px; width: 90%; max-width: 700px; color: var(--text); 
+            border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.3); box-sizing: border-box; 
+        }
+        .modal-content h3 { margin-top: 10px; margin-bottom: 15px; }
+        #noteArea { width: 100%; height: 300px; background: rgba(0,0,0,0.02); color: inherit; border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-sizing: border-box; resize: none; font-family: inherit; font-size: 1rem; margin: 10px 0; outline: none; }
+        
+        .note-tools { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .btn-tool { font-size: 0.75rem; padding: 5px 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: 4px; }
+        .btn-full-close { width: 100%; margin-top: 10px; padding: 12px; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 6px; }
+        .btn-export-popup { width: 100%; margin-top: 5px; padding: 10px; font-weight: bold; background: #6366f1; color: white; border: none; border-radius: 6px; }
+
+        footer { width: 100%; background: var(--side-bg); color: var(--text); padding: 8px; text-align: center; font-size: 0.75rem; opacity: 0.6; border-top: 1px solid var(--border); flex-shrink: 0; z-index: 15; }
+    </style>
+</head>
+<body class="theme-2"> 
+
+<button id="hamburgerBtn" onclick="toggleSidebars()">☰</button>
+
+<aside id="sidebarLeft">
+    <div class="tabs">
+        <button id="btn-tab-settings" class="tab-btn active" onclick="switchTab('settings')">CÀI ĐẶT</button>
+        <button id="btn-tab-history" class="tab-btn" onclick="switchTab('history')">LỊCH SỬ</button>
+    </div>
+
+    <div id="tab-settings" class="tab-content active">
+        
+
+        <div class="setting-item" style="margin-top:5px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">GIAO DIỆN</span>
+            <select id="themeSelect" onchange="changeTheme(this.value); blurFocus(this)">
+                <option value="theme-1">Light (Icarus Pro)</option>
+                <option value="theme-2" selected="">Dark (Icarus Pro)</option>
+                <option value="theme-3">Amber (Icarus Pro)</option>
+                <option value="theme-4">Saga Green (Icarus Pro)</option>
+                <option value="theme-5">Mocha (Icarus Pro)</option>
+            </select>
+        </div>
+
+        <div class="setting-item" style="margin-top:15px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">NGÔN NGỮ ĐÍCH</span>
+            <div class="sw-row">Tiếng Anh <label class="switch"><input type="checkbox" class="target-lang" value="en" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Nga <label class="switch"><input type="checkbox" class="target-lang" value="ru" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Trung <label class="switch"><input type="checkbox" class="target-lang" value="zh-CN" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Tiếng Việt <label class="switch"><input type="checkbox" class="target-lang" value="vi" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+        </div>
+
+        <div class="setting-item" style="margin-top:15px;">
+            <span style="font-size:0.75rem; opacity:0.7; font-weight: bold;">CHẾ ĐỘ ĐỌC</span>
+            <div class="sw-row">Autonext <label class="switch"><input type="checkbox" id="autoNext" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Dịch trước (3 câu) <label class="switch"><input type="checkbox" id="preTranslate" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            <div class="sw-row">Autoplay âm thanh <label class="switch"><input type="checkbox" id="autoSpeak" checked="" onchange="blurFocus(this)"><span class="slider"></span></label></div>
+            
+            <div class="sw-row">Giữ sáng màn hình <label class="switch"><input type="checkbox" id="wakeLockToggle" checked="" onchange="toggleWakeLock(); blurFocus(this)"><span class="slider"></span></label></div>
+
+            <span style="font-size:0.7rem; opacity:0.7; display:block; margin-top:10px;">TỐC ĐỘ ĐỌC</span>
+            <select id="speechRate" onchange="blurFocus(this)">
+                <option value="1">1x (Bình thường)</option>
+                <option value="1.25" selected="">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="2.5">2.5x</option>
+                <option value="3">3x</option>
+            </select>
+            
+            <span style="font-size:0.7rem; opacity:0.7; display:block; margin-top:10px;">GIỌNG ĐỌC MẶC ĐỊNH</span>
+            <select id="voiceTarget" onchange="blurFocus(this)">
+                <option value="orig">Ngôn ngữ gốc</option>
+                <option value="en" selected="">Tiếng Anh</option>
+                <option value="ru">Tiếng Nga</option>
+                <option value="zh-CN">Tiếng Trung</option>
+                <option value="vi">Tiếng Việt</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="tab-history" class="tab-content">
+        <div class="history-list" id="historyList"><div class="history-item" onclick="restore('1788527645638')"><span><b>Chương 28
+Cô gái đầu tiên “làm mẹ” của c...</b><br><small>20:14:05 4/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788527645638', event)">×</span></div><div class="history-item" onclick="restore('1788449265756')"><span><b>Chương 23: LẦN THỨ HAI TRỞ LẠI
+Quái thú,...</b><br><small>22:27:45 3/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788449265756', event)">×</span></div><div class="history-item" onclick="restore('1788449174213')"><span><b>Chương 22: TOY STORY - CÂU CHUYỆN ĐỒ CHƠ...</b><br><small>22:26:14 3/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788449174213', event)">×</span></div><div class="history-item" onclick="restore('1788449113622')"><span><b>Chương 21: NGƯỜI ĐÀN ÔNG CỦA GIA ĐÌNH
+Tổ...</b><br><small>22:25:13 3/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788449113622', event)">×</span></div><div class="history-item" onclick="restore('1788367337451')"><span><b>Chương 22
+Nếu nhìn từ góc độ tình cảm củ...</b><br><small>23:42:17 2/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788367337451', event)">×</span></div><div class="history-item" onclick="restore('1788279272173')"><span><b>Below is a student-friendly rewrite of t...</b><br><small>23:14:32 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788279272173', event)">×</span></div><div class="history-item" onclick="restore('1788256582931')"><span><b>Chương 19
+Hắn bế con xuống ga Bắc Giang ...</b><br><small>16:56:22 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788256582931', event)">×</span></div><div class="history-item" onclick="restore('1788252540877')"><span><b>Chương 16
+Lúc ăn ở với nhau đầu đường xó...</b><br><small>15:49:00 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788252540877', event)">×</span></div><div class="history-item" onclick="restore('1788252457158')"><span><b>Chương 13
+Suy cho cùng ông cũng không ph...</b><br><small>15:47:37 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788252457158', event)">×</span></div><div class="history-item" onclick="restore('1788223984081')"><span><b>PHẦN MỘT - PETER KEATING
+I.
+Howard Roak ...</b><br><small>07:53:04 1/9/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788223984081', event)">×</span></div><div class="history-item" onclick="restore('1788164691643')"><span><b>Chương 7
+Tiếng sấm như tiếng bom nổ ngan...</b><br><small>15:24:51 31/8/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788164691643', event)">×</span></div><div class="history-item" onclick="restore('1788158542150')"><span><b>Chương 4
+Cùng là khuya khoắt như mọi khi...</b><br><small>13:42:22 31/8/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1788158542150', event)">×</span></div><div class="history-item" onclick="restore('1785165202541')"><span><b>Nội dung của các chương từ 7 đến 9 trong...</b><br><small>22:13:22 27/7/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1785165202541', event)">×</span></div><div class="history-item" onclick="restore('1785162428419')"><span><b>I. TRẮC NGHIỆM LỰA CHỌN ĐƠN - PHƯƠNG TRÌ...</b><br><small>21:27:08 27/7/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1785162428419', event)">×</span></div><div class="history-item" onclick="restore('1779120851511')"><span><b>CHƯƠNG 2 Bồi Thường Cho Cái Chết Của Một...</b><br><small>23:14:11 18/5/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1779120851511', event)">×</span></div><div class="history-item" onclick="restore('1773764665357')"><span><b>SPIKE Prime LEGO Education Set
+https://y...</b><br><small>23:24:25 17/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773764665357', event)">×</span></div><div class="history-item" onclick="restore('1773505208019')"><span><b>Arduino MASTERCLASS | Full Programming W...</b><br><small>23:20:08 14/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773505208019', event)">×</span></div><div class="history-item" onclick="restore('1773452689800')"><span><b>Hi, this is Ben Finio with Science Buddi...</b><br><small>08:44:49 14/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773452689800', event)">×</span></div><div class="history-item" onclick="restore('1773410715066')"><span><b>I'm going to talk about what they are, w...</b><br><small>21:05:15 13/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773410715066', event)">×</span></div><div class="history-item" onclick="restore('1773190358964')"><span><b>But “to open your heart to pain is to op...</b><br><small>07:52:38 11/3/2026</small></span><span style="color:#ef4444;" onclick="deleteHistory('1773190358964', event)">×</span></div></div>
+        <button class="btn-action" style="background:#ef4444; margin-top:10px; font-size: 0.7rem;" onclick="clearAllHistory()">XÓA TOÀN BỘ LỊCH SỬ</button>
+    </div>
+</aside>
+
+<main>
+    <header>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <div class="dropdown">
+                <button class="btn-action" style="font-size: 0.75rem;">☰ MENU</button>
+                <div class="dropdown-content">
+                    <div class="menu-item">
+                        <span>🇨🇳 Vocab Tiếng Trung</span>
+                        <label class="switch"><input type="checkbox" id="showZhVocab" checked="" onchange="updateSidebarRight(currentIdx); blurFocus(this)"><span class="slider"></span></label>
+                    </div>
+                    <div class="menu-item">
+                        <span>🇷🇺 Vocab Tiếng Nga</span>
+                        <label class="switch"><input type="checkbox" id="showRuVocab" onchange="updateSidebarRight(currentIdx); blurFocus(this)"><span class="slider"></span></label>
+                    </div>
+                    <hr style="border:0; border-top:1px solid var(--border); margin:5px 0;">
+                    <div class="menu-item" onclick="changeFontSize(1)"><span>➕ Tăng chữ</span><span class="menu-key">=</span></div>
+                    <div class="menu-item" onclick="changeFontSize(-1)"><span>➖ Giảm chữ</span><span class="menu-key">-</span></div>
+                    <div class="menu-item" onclick="changeWidth(50)"><span>↔️ Tăng rộng</span><span class="menu-key">.</span></div>
+                    <div class="menu-item" onclick="changeWidth(-50)"><span>⬅️ Giảm rộng</span><span class="menu-key">,</span></div>
+                    <div class="menu-item" onclick="cycleTheme()"><span>🎨 Đổi màu Theme</span><span class="menu-key">M</span></div>
+                    <div class="menu-item" onclick="toggleModal('noteModal')"><span>📝 Ghi chú</span><span class="menu-key">N</span></div>
+                    <div class="menu-item" onclick="togglePlayPause()"><span>⏯️ Tạm dừng âm</span><span class="menu-key">K</span></div>
+                    <div class="menu-item" onclick="replayCurrent()"><span>🔊 Đọc lại câu</span><span class="menu-key">Space</span></div>
+                    <div class="menu-item" onclick="toggleModal('updateModal')"><span>🕒 Cập nhật</span><span class="menu-key">U</span></div>
+                </div>
+            </div>
+            <button onclick="togglePlayPause()" id="playPauseBtn">⏯️</button>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div class="pagination">
+                <button onclick="nav(-1)">‹</button>
+                <input type="text" class="page-input" id="currPage" value="0" onchange="jumpToPage(this.value); blurFocus(this)">
+                <span id="totalPage" class="total-page">/ 363</span>
+                <button onclick="nav(1)">›</button>
+            </div>
+            <div id="appTimer" class="timer-display">00:06</div>
+        </div>
+        <select id="viVoice" style="max-width:120px; font-size:0.7rem;" onchange="blurFocus(this)"></select>
+    </header>
+    <div class="workspace" id="output"><div class="sentence-box active" id="s-0"><span class="text-orig">1. Chương 28</span><div class="trans-group" id="tg-0"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> Chapter 28 </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('Chapter 28', 'en')">🔊</button></div></div></div><div class="sentence-box" id="s-1"><span class="text-orig">2. Cô gái đầu tiên “làm mẹ” của cháu là người hay cười nói năng thoải mái.</span><div class="trans-group" id="tg-1"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> The first girl to "become a mother" to me is someone who smiles and speaks freely. </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('The first girl to " become="" a="" mother"="" to="" me="" is="" someone="" who="" smiles="" and="" speaks="" freely.',="" 'en')"="">🔊</button></div></div></div><div class="sentence-box" id="s-2"><span class="text-orig">3. Năm nay cô hai mươi chín tuổi.</span><div class="trans-group" id="tg-2"></div></div><div class="sentence-box" id="s-3"><span class="text-orig">4. Có chồng và một con.</span><div class="trans-group" id="tg-3"><div class="trans-line lang-en"><div style="flex:1;"><b>en</b> Has a husband and one child. </div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('Has a husband and one child.', 'en')">🔊</button></div></div></div><div class="sentence-box" id="s-4"><span class="text-orig">5. Hai người bỏ nhau, con ở với chồng, cô rời quê hương Nam Định lên Hà Nội phục vụ trong quán bia hơi cạnh nhà văn hóa thanh niên ở Tăng Bạt Hổ.</span><div class="trans-group" id="tg-4"></div></div><div class="sentence-box" id="s-5"><span class="text-orig">6. Làm được một tháng, nười ba ngày cô lấy cắp của cửa hàng một tờ hai mươi ngàn đồng để ở trong dép, dưới lòng bàn chân.</span><div class="trans-group" id="tg-5"></div></div><div class="sentence-box" id="s-6"><span class="text-orig">7. Do đi lại, tờ tiền tòi ra, một đứa làm cùng trông thấy, nó báo cho chủ.</span><div class="trans-group" id="tg-6"></div></div><div class="sentence-box" id="s-7"><span class="text-orig">8. Cô bị mất việc.</span><div class="trans-group" id="tg-7"></div></div><div class="sentence-box" id="s-8"><span class="text-orig">9. Có người giới thiệu cô xuống Đồ Sơn làm nhân viên phục vụ cửa hàng ăn đặc sản Biển ở bãi I.</span><div class="trans-group" id="tg-8"></div></div><div class="sentence-box" id="s-9"><span class="text-orig">10. Xuống được ba ngày, chủ chưa khiến làm gì.</span><div class="trans-group" id="tg-9"></div></div><div class="sentence-box" id="s-10"><span class="text-orig">11. Ăn xong, cô mở băng xem phim cùng với mấy nhân viên cũ “đi qua đêm” ở các khách sạn về ngủ qua quýt rồi ngồi xem phim trong dáng mệt mỏi và ngáp vặt.</span><div class="trans-group" id="tg-10"></div></div><div class="sentence-box" id="s-11"><span class="text-orig">12. Đến ngày thứ tư chủ bảo:</span><div class="trans-group" id="tg-11"></div></div><div class="sentence-box" id="s-12"><span class="text-orig">13. – Nếu em đi được với khách thì đi.</span><div class="trans-group" id="tg-12"></div></div><div class="sentence-box" id="s-13"><span class="text-orig">14. Ở đây không có nhân viên chỉ chuyên chạy hàng mà phải kết hợp với các việc khác.</span><div class="trans-group" id="tg-13"></div></div><div class="sentence-box" id="s-14"><span class="text-orig">15. – Vâng, cô trả lương thế nào?</span><div class="trans-group" id="tg-14"></div></div><div class="sentence-box" id="s-15"><span class="text-orig">16. – Làm nhiều ăn nhiều, làm ít ăn ít.</span><div class="trans-group" id="tg-15"></div></div><div class="sentence-box" id="s-16"><span class="text-orig">17. Ăn nghỉ chị lo.</span><div class="trans-group" id="tg-16"></div></div><div class="sentence-box" id="s-17"><span class="text-orig">18. Chi các khoản điện nước, tiền thuế, tiền bao bảo vệ còn chị trả cho em bốn mươi phần trăm tổng thu nhập của em.</span><div class="trans-group" id="tg-17"></div></div><div class="sentence-box" id="s-18"><span class="text-orig">19. Thì đi.</span><div class="trans-group" id="tg-18"></div></div><div class="sentence-box" id="s-19"><span class="text-orig">20. Luật chung như thế cả.</span><div class="trans-group" id="tg-19"></div></div><div class="sentence-box" id="s-20"><span class="text-orig">21. Cô không đẹp nhưng dễ khêu gợi nên đạt “năng suất” cao hơn tất cả những đứa khác ở cửa hàng.</span><div class="trans-group" id="tg-20"></div></div><div class="sentence-box" id="s-21"><span class="text-orig">22. Được năm tháng, người cô rộc đi, “xuống nước” trông thấy.</span><div class="trans-group" id="tg-21"></div></div><div class="sentence-box" id="s-22"><span class="text-orig">23. Hai gò má nhô ra, hai mắt sâu xuống, da mặt tái đi, người lúc nào cũng nóng hâm hấp.</span><div class="trans-group" id="tg-22"></div></div><div class="sentence-box" id="s-23"><span class="text-orig">24. Cô biết chẳng mấy chốc mà ế ẩm, nên trong một lần “đi” với một người nước ngoài cô đã đánh cắp của anh ta năm tờ.</span><div class="trans-group" id="tg-23"></div></div><div class="sentence-box" id="s-24"><span class="text-orig">25. Bị phát hiện và cô ra tòa hưởng án tù hai tư tháng.</span><div class="trans-group" id="tg-24"></div></div><div class="sentence-box" id="s-25"><span class="text-orig">26. Cán bộ quản giáo nữ khi nghe ban giám thị bảo tìm một người nuôi cháu bé, họ chỉ nghĩ đơn giản lấy một người sắp hết hạn cải tạo.</span><div class="trans-group" id="tg-25"></div></div><div class="sentence-box" id="s-26"><span class="text-orig">27. Mà cô này trông cũng sáng sủa còn vài ba tháng nữa không sợ bỏ trốn.</span><div class="trans-group" id="tg-26"></div></div><div class="sentence-box" id="s-27"><span class="text-orig">28. Tiêu chuẩn ăn của cô cộng với tiêu chuẩn mọi người cho cháu, “hai mẹ con” tự nấu ăn trong một gian nhà tách biệt hẳn với những người tù nhưng vẫn ở trong hàng rào quản lý của trại.</span><div class="trans-group" id="tg-27"></div></div><div class="sentence-box" id="s-28"><span class="text-orig">29. Cô được ra trông cháu thì thích lắm, nhưng cơm nước, quét dọn cô toàn bắt cháu làm hết.</span><div class="trans-group" id="tg-28"></div></div><div class="sentence-box" id="s-29"><span class="text-orig">30. Còn cô, suốt ngày ngồi chép bài hát cải lương và thay vì dạy cháu, cô dạy cháu hát những câu hát xuyên tạc của thời “bia ôm” và “cuộc đời là con chó nướng”.</span><div class="trans-group" id="tg-29"></div></div><div class="sentence-box" id="s-30"><span class="text-orig">31. Rồi ngôn ngữ hàng ngày thì đại loại thế này: “Mày không rửa chân “ông” đ.</span><div class="trans-group" id="tg-30"></div></div><div class="sentence-box" id="s-31"><span class="text-orig">32. cho mày ngủ chung”.</span><div class="trans-group" id="tg-31"></div></div><div class="sentence-box" id="s-32"><span class="text-orig">33. “Mày nói náo, “ông” cứ cho mày úp mặt vào tường suốt đêm nay, để muỗi đốt chết mẹ cái thằng bố mày đi.”</span><div class="trans-group" id="tg-32"></div></div><div class="sentence-box" id="s-33"><span class="text-orig">34. Thấy việc làm nhân đạo của ban giám thị, nữ “phóng viên” đài truyền thanh của trại xin được đến thăm cháu và viết bài.</span><div class="trans-group" id="tg-33"></div></div><div class="sentence-box" id="s-34"><span class="text-orig">35. Giám thị trưởng và một cán bộ thi đua cùng đi với chị “phóng viên” đang là phạm của trại.</span><div class="trans-group" id="tg-34"></div></div><div class="sentence-box" id="s-35"><span class="text-orig">36. Cô chào ba người là “cán bộ”.</span><div class="trans-group" id="tg-35"></div></div><div class="sentence-box" id="s-36"><span class="text-orig">37. Cháu thì chào là các bác.</span><div class="trans-group" id="tg-36"></div></div><div class="sentence-box" id="s-37"><span class="text-orig">38. Cô quát cháu: “đ.</span><div class="trans-group" id="tg-37"></div></div><div class="sentence-box" id="s-38"><span class="text-orig">39. ai bảo mày chào cán bộ là các bác.</span><div class="trans-group" id="tg-38"></div></div><div class="sentence-box" id="s-39"><span class="text-orig">40. Chào nại đi không “ông” đánh bỏ mẹ mày bây giờ.”</span><div class="trans-group" id="tg-39"></div></div><div class="sentence-box" id="s-40"><span class="text-orig">41. Ba người đứng lặng đi, rồi không ai bảo ai đều hỏi han vài lời qua loa.</span><div class="trans-group" id="tg-40"></div></div><div class="sentence-box" id="s-41"><span class="text-orig">42. Họ đi hẳn.</span><div class="trans-group" id="tg-41"></div></div><div class="sentence-box" id="s-42"><span class="text-orig">43. Không thể làm việc gì được với một người “mẹ” của cháu như thế.</span><div class="trans-group" id="tg-42"></div></div><div class="sentence-box" id="s-43"><span class="text-orig">44. Ra đến đường, giám thị lắc đầu bảo anh cán bộ thi đua:</span><div class="trans-group" id="tg-43"></div></div><div class="sentence-box" id="s-44"><span class="text-orig">45. – Trong vòng hai ngày nữa anh bảo các cậu bên trại nữ tìm cho người khác trông cháu.</span><div class="trans-group" id="tg-44"></div></div><div class="sentence-box" id="s-45"><span class="text-orig">46. Chết thật.</span><div class="trans-group" id="tg-45"></div></div><div class="sentence-box" id="s-46"><span class="text-orig">47. Tôi không thể ngờ.</span><div class="trans-group" id="tg-46"></div></div><div class="sentence-box" id="s-47"><span class="text-orig">48. Chị phóng viên nói với hai cán bộ:</span><div class="trans-group" id="tg-47"></div></div><div class="sentence-box" id="s-48"><span class="text-orig">49. – Thưa hai “ban”.</span><div class="trans-group" id="tg-48"></div></div><div class="sentence-box" id="s-49"><span class="text-orig">50. Tôi xin được phép mạnh dạn đề đạt một ý kiến.</span><div class="trans-group" id="tg-49"></div></div><div class="sentence-box" id="s-50"><span class="text-orig">51. – Chị cứ nói.</span><div class="trans-group" id="tg-50"></div></div><div class="sentence-box" id="s-51"><span class="text-orig">52. – Nếu được “ban” tin vào sự tự giác của tôi cho phép tôi được trông cháu.</span><div class="trans-group" id="tg-51"></div></div><div class="sentence-box" id="s-52"><span class="text-orig">53. – Nếu không tin chị, chị cũng không thể trốn khỏi khu vực này kia mà – Vẫn giám thị trưởng nói: – Được, chị trông cháu thì tuyệt vời quá.</span><div class="trans-group" id="tg-52"></div></div><div class="sentence-box" id="s-53"><span class="text-orig">54. Nhưng mấy ngàn thính giả của đài truyền thanh không cho phép mất đi những bài thơ và phóng sự của chị.</span><div class="trans-group" id="tg-53"></div></div><div class="sentence-box" id="s-54"><span class="text-orig">55. – Tôi xin hứa, vẫn giữ đều hai chuyên mục “điều tra” và “văn nghệ” của tối thứ tư và tối chủ nhật.</span><div class="trans-group" id="tg-54"></div></div><div class="sentence-box" id="s-55"><span class="text-orig">56. – Chị cứ thử xem.</span><div class="trans-group" id="tg-55"></div></div><div class="sentence-box" id="s-56"><span class="text-orig">57. Nếu có người kêu chương trình bà Minh Vũ nhạt là tôi cắt ngay cái ý định của chị đấy.</span><div class="trans-group" id="tg-56"></div></div><div class="sentence-box" id="s-57"><span class="text-orig">58. – Vâng.</span><div class="trans-group" id="tg-57"></div></div><div class="sentence-box" id="s-58"><span class="text-orig">59. Cảm ơn “ban”.</span><div class="trans-group" id="tg-58"></div></div><div class="sentence-box" id="s-59"><span class="text-orig">60. Tôi hiểu tình cảm của “ban” và mọi người trong trại dành cho tôi.</span><div class="trans-group" id="tg-59"></div></div><div class="sentence-box" id="s-60"><span class="text-orig">61. Nhưng tôi nghĩ, không hiểu tại sao lại để một cháu bé cho một con người bụi bặm tận đáy xã hội như thế trông nom dạy dỗ cháu.</span><div class="trans-group" id="tg-60"></div></div><div class="sentence-box" id="s-61"><span class="text-orig">62. – Tôi mong chịu giúp cháu để đến khi đưa được cháu vào trại trẻ mồ côi, cháu không bị bỡ ngỡ tách ra khỏi các bạn.</span><div class="trans-group" id="tg-61"></div></div><div class="sentence-box" id="s-62"><span class="text-orig">63. Ngay ngày hôm sau, Minh Vũ được điều xuống trông cháu bé thay cho cô gái kia trong khi chị vẫn phải đi viết phóng sự và làm thơ, tổ chức hai chương trình trong một tuần cho đài truyền thanh của trại.</span><div class="trans-group" id="tg-62"></div></div><div class="sentence-box" id="s-63"><span class="text-orig">64. Rất vất vả.</span><div class="trans-group" id="tg-63"></div></div><div class="sentence-box" id="s-64"><span class="text-orig">65. Nhưng không ai nghi ngờ người phụ nữ này bất lực trước bất cứ việc gì.</span><div class="trans-group" id="tg-64"></div></div><div class="sentence-box" id="s-65"><span class="text-orig">66. Chị là người tốt nghiệp hai bằng đại học, tổng hợp hóa và kinh tế kế hoạch.</span><div class="trans-group" id="tg-65"></div></div><div class="sentence-box" id="s-66"><span class="text-orig">67. Vừa làm trưởng phòng kỹ thuật ở một tổng công ty nhà nước vừa là chủ tịch hội đồng quản trị của công ty cổ phần kinh doanh tổng hợp vừa dạy dỗ cả hai đứa con: đứa giỏi văn, đứa giỏi ngoại ngữ và môn toán thì đứng nhì thủ đô.</span><div class="trans-group" id="tg-66"></div></div><div class="sentence-box" id="s-67"><span class="text-orig">68. Trong khi ấy chị vẫn làm thơ, viết báo đều đặn, cùng chồng con dự các buổi biểu diễn nhạc giao hưởng ở Nhà hát lớn, nhạc thính phòng ở Câu lạc bộ Lý Thái Tổ, xem phim nghiên cứu ở 51 Trần Hưng Đạo, nghe hát trích đoạn chèo ở Nguyễn Đình Chiểu… Nghĩa là, con người ấy không cho mình nghỉ.</span><div class="trans-group" id="tg-67"></div></div><div class="sentence-box" id="s-68"><span class="text-orig">69. Không cho mình thiếu hụt ở bất cứ lĩnh vực nào.</span><div class="trans-group" id="tg-68"></div></div><div class="sentence-box" id="s-69"><span class="text-orig">70. Chị cố gắng học mọi chỗ, mọi thời gian bằng mọi hình thức để cân bằng giữa con người thương mại với con người của tâm hồn đầy nhậy cảm.</span><div class="trans-group" id="tg-69"></div></div><div class="sentence-box" id="s-70"><span class="text-orig">71. Nhưng số phận thật trớ trêu.</span><div class="trans-group" id="tg-70"></div></div><div class="sentence-box" id="s-71"><span class="text-orig">72. Con người đầy tài ba và tần tảo, dạn dĩ mọi bề lại khờ khạo đến mức khó tin: Giao toàn bộ cả vốn lẫn lãi của công ty Cổ Phần gồm hai trăm chín mươi triệu đồng cho đứa bạn của em mình đi lấy hàng hộ.</span><div class="trans-group" id="tg-71"></div></div><div class="sentence-box" id="s-72"><span class="text-orig">73. Đến khi nó “bùng”, tất cả mọi tội lỗi chỉ có một mình chị chịu.</span><div class="trans-group" id="tg-72"></div></div><div class="sentence-box" id="s-73"><span class="text-orig">74. Tội danh của chị là: “Lạm dụng tín nhiệm chiếm dụng vốn của công dân…” Bán toàn bộ nhà cửa và vật dụng cũng chưa trả hết nợ và lĩnh án năm năm tù giam.</span><div class="trans-group" id="tg-73"></div></div><div class="sentence-box" id="s-74"><span class="text-orig">75. Nếu không có hai đứa con, vì hai đứa con vô cùng thông minh và trong sáng chị đã tự tử ngay khi bị quy kết trách nhiệm.</span><div class="trans-group" id="tg-74"></div></div><div class="sentence-box" id="s-75"><span class="text-orig">76. Không oan.</span><div class="trans-group" id="tg-75"></div></div><div class="sentence-box" id="s-76"><span class="text-orig">77. Nhưng nghĩ đến con người đối với nhau sao nó lại táng tận lương tâm đến thế.</span><div class="trans-group" id="tg-76"></div></div><div class="sentence-box" id="s-77"><span class="text-orig">78. Đã không chết được, thì phải sống.</span><div class="trans-group" id="tg-77"></div></div><div class="sentence-box" id="s-78"><span class="text-orig">79. Đã sống, dù ở đâu, làm gì cũng phải xứng đáng với các con.</span><div class="trans-group" id="tg-78"></div></div><div class="sentence-box" id="s-79"><span class="text-orig">80. Nhiều đêm chị phải cắn răng lại , gạt nước mắt đi để làm thơ, viết báo ký tên con để các con yên tâm mẹ vẫn lạc quan, vẫn còn rất nhiều nghị lực để các con khong được đau đơn, buồn tủi và tuyệt vọng.</span><div class="trans-group" id="tg-79"></div></div><div class="sentence-box" id="s-80"><span class="text-orig">81. Chị đã được giảm án hai lần cộng lại là một năm rưỡi.</span><div class="trans-group" id="tg-80"></div></div><div class="sentence-box" id="s-81"><span class="text-orig">82. Chỉ còn gần một năm nữa chị vẫn mong được giảm án thêm.</span><div class="trans-group" id="tg-81"></div></div><div class="sentence-box" id="s-82"><span class="text-orig">83. Không ai hiểu được chị.</span><div class="trans-group" id="tg-82"></div></div><div class="sentence-box" id="s-83"><span class="text-orig">84. Mỗi ngày, mỗi giờ trong đêm chị vẫn mong được về với tổ ấm gia đình, với các con.</span><div class="trans-group" id="tg-83"></div></div><div class="sentence-box" id="s-84"><span class="text-orig">85. Còn bây giờ thì chị đang phải phấn đấu để vừa như người mẹ, vừa như bạn, như thầy của bé Uyển.</span><div class="trans-group" id="tg-84"></div></div><div class="sentence-box" id="s-85"><span class="text-orig">86. — Nào con viết xong chưa?</span><div class="trans-group" id="tg-85"></div></div><div class="sentence-box" id="s-86"><span class="text-orig">87. Bác kiểm tra.</span><div class="trans-group" id="tg-86"></div></div><div class="sentence-box" id="s-87"><span class="text-orig">88. – Xong rồi.</span><div class="trans-group" id="tg-87"></div></div><div class="sentence-box" id="s-88"><span class="text-orig">89. – Không được, con nói sai rồi đấy.</span><div class="trans-group" id="tg-88"></div></div><div class="sentence-box" id="s-89"><span class="text-orig">90. Nói lại bác nghe nào?</span><div class="trans-group" id="tg-89"></div></div><div class="sentence-box" id="s-90"><span class="text-orig">91. – Dạ, thưa bác, con viết xong rồi ạ.</span><div class="trans-group" id="tg-90"></div></div><div class="sentence-box" id="s-91"><span class="text-orig">92. – Đúng rồi.</span><div class="trans-group" id="tg-91"></div></div><div class="sentence-box" id="s-92"><span class="text-orig">93. Tốt lắm.</span><div class="trans-group" id="tg-92"></div></div><div class="sentence-box" id="s-93"><span class="text-orig">94. Từ mai Uyển còn quên nữa không?</span><div class="trans-group" id="tg-93"></div></div><div class="sentence-box" id="s-94"><span class="text-orig">95. – Dạ, thưa bác con không ạ.</span><div class="trans-group" id="tg-94"></div></div><div class="sentence-box" id="s-95"><span class="text-orig">96. – Con ngoan lắm.</span><div class="trans-group" id="tg-95"></div></div><div class="sentence-box" id="s-96"><span class="text-orig">97. Thế con yêu ai nhất.</span><div class="trans-group" id="tg-96"></div></div><div class="sentence-box" id="s-97"><span class="text-orig">98. – Dạ thưa, con yêu bố con nhất.</span><div class="trans-group" id="tg-97"></div></div><div class="sentence-box" id="s-98"><span class="text-orig">99. – Tại sao con lại yêu bố nhất, con có biết không?</span><div class="trans-group" id="tg-98"></div></div><div class="sentence-box" id="s-99"><span class="text-orig">100. – Thưa bác, con có biết ạ.</span><div class="trans-group" id="tg-99"></div></div><div class="sentence-box" id="s-100"><span class="text-orig">101. – Ồ, nói bác nghe nào.</span><div class="trans-group" id="tg-100"></div></div><div class="sentence-box" id="s-101"><span class="text-orig">102. – Thưa bác, con yêu bố nhất vì bố con yêu con nhất ạ.</span><div class="trans-group" id="tg-101"></div></div><div class="sentence-box" id="s-102"><span class="text-orig">103. – Đúng lắm.</span><div class="trans-group" id="tg-102"></div></div><div class="sentence-box" id="s-103"><span class="text-orig">104. Thế con ghét ai nhất?</span><div class="trans-group" id="tg-103"></div></div><div class="sentence-box" id="s-104"><span class="text-orig">105. – Dạ thưa, con ghét ông nội con nhất ạ.</span><div class="trans-group" id="tg-104"></div></div><div class="sentence-box" id="s-105"><span class="text-orig">106. – Tại sao con lại ghét ông nội nhất?</span><div class="trans-group" id="tg-105"></div></div><div class="sentence-box" id="s-106"><span class="text-orig">107. – Dạ.</span><div class="trans-group" id="tg-106"></div></div><div class="sentence-box" id="s-107"><span class="text-orig">108. Tại vì ông nội con đuổi bố con đi.</span><div class="trans-group" id="tg-107"></div></div><div class="sentence-box" id="s-108"><span class="text-orig">109. Ông nội cũng không cho con về nhà ở với ông nội.</span><div class="trans-group" id="tg-108"></div></div><div class="sentence-box" id="s-109"><span class="text-orig">110. – Thế ai nói cho con nghe những chuyện ấy?</span><div class="trans-group" id="tg-109"></div></div><div class="sentence-box" id="s-110"><span class="text-orig">111. – Dạ.</span><div class="trans-group" id="tg-110"></div></div><div class="sentence-box" id="s-111"><span class="text-orig">112. Thưa bác bố con nói thế.</span><div class="trans-group" id="tg-111"></div></div><div class="sentence-box" id="s-112"><span class="text-orig">113. Cả các ông, các bà, các cô, các chú cũng nói thế ạ.</span><div class="trans-group" id="tg-112"></div></div><div class="sentence-box" id="s-113"><span class="text-orig">114. – Thế con có nghe ai nói con phải ghét ông nội không?</span><div class="trans-group" id="tg-113"></div></div><div class="sentence-box" id="s-114"><span class="text-orig">115. – Dạ thưa không ạ.</span><div class="trans-group" id="tg-114"></div></div><div class="sentence-box" id="s-115"><span class="text-orig">116. – Không ai bảo con phải ghét ông nội là đúng.</span><div class="trans-group" id="tg-115"></div></div><div class="sentence-box" id="s-116"><span class="text-orig">117. Con biết vì sao không?</span><div class="trans-group" id="tg-116"></div></div><div class="sentence-box" id="s-117"><span class="text-orig">118. – Thưa bác con không biết ạ.</span><div class="trans-group" id="tg-117"></div></div><div class="sentence-box" id="s-118"><span class="text-orig">119. – Tại vì ông nội là cha của bố con, có đúng không?</span><div class="trans-group" id="tg-118"></div></div><div class="sentence-box" id="s-119"><span class="text-orig">120. – Thưa bác đúng ạ.</span><div class="trans-group" id="tg-119"></div></div><div class="sentence-box" id="s-120"><span class="text-orig">121. – Như thế có phải ông nội là bề trên của bố con không?</span><div class="trans-group" id="tg-120"></div></div><div class="sentence-box" id="s-121"><span class="text-orig">122. – Thưa bác đúng ạ.</span><div class="trans-group" id="tg-121"></div></div><div class="sentence-box" id="s-122"><span class="text-orig">123. – Thế bác bảo con đối với bề trên phải thế nào nhỉ?</span><div class="trans-group" id="tg-122"></div></div><div class="sentence-box" id="s-123"><span class="text-orig">124. – Dạ thưa bác, bác bảo con đối với bề trên phải kính cẩn, phải lễ phép ạ.</span><div class="trans-group" id="tg-123"></div></div><div class="sentence-box" id="s-124"><span class="text-orig">125. – Thế con bảo con ghét ông nội, thế có là kính cẩn lễ phép không?</span><div class="trans-group" id="tg-124"></div></div><div class="sentence-box" id="s-125"><span class="text-orig">126. – Thưa bác… Tự vì ông nội cứ ghét bố con, với con ạ.</span><div class="trans-group" id="tg-125"></div></div><div class="sentence-box" id="s-126"><span class="text-orig">127. – Người bề trên sai, người dưới phải lễ phép nói lại chứ không được phép nói hỗn.</span><div class="trans-group" id="tg-126"></div></div><div class="sentence-box" id="s-127"><span class="text-orig">128. Con bảo ghét ông nội là nói hỗn.</span><div class="trans-group" id="tg-127"></div></div><div class="sentence-box" id="s-128"><span class="text-orig">129. – Dạ, thưa bác, nhưng nói lễ phép rồi vẫn không được thì phải thế nào ạ.</span><div class="trans-group" id="tg-128"></div></div><div class="sentence-box" id="s-129"><span class="text-orig">130. – Nói lại mãi rồi cũng không được thì mình không nói nữa.</span><div class="trans-group" id="tg-129"></div></div><div class="sentence-box" id="s-130"><span class="text-orig">131. Không phải lạy lục van xin bất cứ một điều gì.</span><div class="trans-group" id="tg-130"></div></div><div class="sentence-box" id="s-131"><span class="text-orig">132. Nhưng không được phép nói hỗn, con hiểu không.</span><div class="trans-group" id="tg-131"></div></div><div class="sentence-box" id="s-132"><span class="text-orig">133. – Dạ thưa bác con… con… con lạy bác… con xin lạy bác.</span><div class="trans-group" id="tg-132"></div></div><div class="sentence-box" id="s-133"><span class="text-orig">134. Con không thể…</span><div class="trans-group" id="tg-133"></div></div><div class="sentence-box" id="s-134"><span class="text-orig">135. – Thôi được.</span><div class="trans-group" id="tg-134"></div></div><div class="sentence-box" id="s-135"><span class="text-orig">136. Như vậy là con chưa thoải mái lắm.</span><div class="trans-group" id="tg-135"></div></div><div class="sentence-box" id="s-136"><span class="text-orig">137. Đúng không?</span><div class="trans-group" id="tg-136"></div></div><div class="sentence-box" id="s-137"><span class="text-orig">138. Nhưng thôi, hôm khác bác với con sẽ bàn tiếp chuyện này.</span><div class="trans-group" id="tg-137"></div></div><div class="sentence-box" id="s-138"><span class="text-orig">139. Bây giờ là giờ gì rồi nhỉ.</span><div class="trans-group" id="tg-138"></div></div><div class="sentence-box" id="s-139"><span class="text-orig">140. – Dạ thưa bác, bây giờ là giờ đi ngâm chân, rồi con đánh răng, xúc miệng nước muối, mới lại rửa chân nước ấm rồi lau chân đi ngủ ạ.</span><div class="trans-group" id="tg-139"></div></div><div class="sentence-box" id="s-140"><span class="text-orig">141. – Trước khi tắt đèn ngủ còn làm gì?</span><div class="trans-group" id="tg-140"></div></div><div class="sentence-box" id="s-141"><span class="text-orig">142. – Con đọc lại một lần bài học hôm nay ạ.</span><div class="trans-group" id="tg-141"></div></div><div class="sentence-box" id="s-142"><span class="text-orig">143. – Đúng rồi.</span><div class="trans-group" id="tg-142"></div></div><div class="sentence-box" id="s-143"><span class="text-orig">144. Nào.</span><div class="trans-group" id="tg-143"></div></div><div class="sentence-box" id="s-144"><span class="text-orig">145. Con đi làm các việc đi.</span><div class="trans-group" id="tg-144"></div></div><div class="sentence-box" id="s-145"><span class="text-orig">146. Chương 29</span><div class="trans-group" id="tg-145"></div></div><div class="sentence-box" id="s-146"><span class="text-orig">147. Hắn hỏi:</span><div class="trans-group" id="tg-146"></div></div><div class="sentence-box" id="s-147"><span class="text-orig">148. – Con đã đọc được chữ in chưa?</span><div class="trans-group" id="tg-147"></div></div><div class="sentence-box" id="s-148"><span class="text-orig">149. – Dạ thưa bố con đọc được rồi ạ.</span><div class="trans-group" id="tg-148"></div></div><div class="sentence-box" id="s-149"><span class="text-orig">150. Hắn đang nhìn con cười cười một cách ngờ vực chị “phóng viên” bảo bé Uyển ra ngoài vườn hoa chơi để bác làm việc với bố.</span><div class="trans-group" id="tg-149"></div></div><div class="sentence-box" id="s-150"><span class="text-orig">151. – Dạ thưa bác, con xin phép đi ạ.</span><div class="trans-group" id="tg-150"></div></div><div class="sentence-box" id="s-151"><span class="text-orig">152. Chị biết hắn ngạc nhiên về con mình, chị hỏi ngay:</span><div class="trans-group" id="tg-151"></div></div><div class="sentence-box" id="s-152"><span class="text-orig">153. – Anh thấy cháu thay đổi nhiều không?</span><div class="trans-group" id="tg-152"></div></div><div class="sentence-box" id="s-153"><span class="text-orig">154. – Dạ… thưa chị.</span><div class="trans-group" id="tg-153"></div></div><div class="sentence-box" id="s-154"><span class="text-orig">155. Quả thật tôi không thể ngờ, chỉ có mấy tháng trời.</span><div class="trans-group" id="tg-154"></div></div><div class="sentence-box" id="s-155"><span class="text-orig">156. Chị cười:</span><div class="trans-group" id="tg-155"></div></div><div class="sentence-box" id="s-156"><span class="text-orig">157. – Anh thấy tôi có giỏi không?</span><div class="trans-group" id="tg-156"></div></div><div class="sentence-box" id="s-157"><span class="text-orig">158. – Dạ.</span><div class="trans-group" id="tg-157"></div></div><div class="sentence-box" id="s-158"><span class="text-orig">159. Ngày xưa chị cũng làm nhà giáo à.</span><div class="trans-group" id="tg-158"></div></div><div class="sentence-box" id="s-159"><span class="text-orig">160. – Làm gì không quan trọng.</span><div class="trans-group" id="tg-159"></div></div><div class="sentence-box" id="s-160"><span class="text-orig">161. Bí quyết mới là quyết định.</span><div class="trans-group" id="tg-160"></div></div><div class="sentence-box" id="s-161"><span class="text-orig">162. Anh biết tôi có bí quyết gì không?</span><div class="trans-group" id="tg-161"></div></div><div class="sentence-box" id="s-162"><span class="text-orig">163. – Dạ…</span><div class="trans-group" id="tg-162"></div></div><div class="sentence-box" id="s-163"><span class="text-orig">164. – Bí quyết của tôi chỉ đơn giản là tôi không cho phép cháu nói bậy, nói tục tằn và thô lỗ, hỗn láo.</span><div class="trans-group" id="tg-163"></div></div><div class="sentence-box" id="s-164"><span class="text-orig">165. Nhất là với người lớn.</span><div class="trans-group" id="tg-164"></div></div><div class="sentence-box" id="s-165"><span class="text-orig">166. Vừa thấy anh nói chuyện với cháu tôi biết là anh cũng thích con mình được như thế.</span><div class="trans-group" id="tg-165"></div></div><div class="sentence-box" id="s-166"><span class="text-orig">167. – Thật tình, tôi vô cùng sung sướng.</span><div class="trans-group" id="tg-166"></div></div><div class="sentence-box" id="s-167"><span class="text-orig">168. Xin chị tin vào lời nói thật thà của tôi.</span><div class="trans-group" id="tg-167"></div></div><div class="sentence-box" id="s-168"><span class="text-orig">169. – Tôi tin.</span><div class="trans-group" id="tg-168"></div></div><div class="sentence-box" id="s-169"><span class="text-orig">170. Nhưng tôi hỏi, anh đừng tự ái nhé.</span><div class="trans-group" id="tg-169"></div></div><div class="sentence-box" id="s-170"><span class="text-orig">171. Chúng ta phải thẳng thắn với nhau.</span><div class="trans-group" id="tg-170"></div></div><div class="sentence-box" id="s-171"><span class="text-orig">172. Ít nhất là một lần.</span><div class="trans-group" id="tg-171"></div></div><div class="sentence-box" id="s-172"><span class="text-orig">173. Tôi hỏi: Tại sao anh lại có thể nói xấu bố mình trước mặt con gái mình.</span><div class="trans-group" id="tg-172"></div></div><div class="sentence-box" id="s-173"><span class="text-orig">174. Mặt hắn đỏ bừng lên.</span><div class="trans-group" id="tg-173"></div></div><div class="sentence-box" id="s-174"><span class="text-orig">175. – Thưa… lúc nào có điều kiện tôi xin kể hết hoàn cảnh của tôi để chị nghe.</span><div class="trans-group" id="tg-174"></div></div><div class="sentence-box" id="s-175"><span class="text-orig">176. – Đọc bản trình bày của bà mợ anh tôi hiểu và chính tôi cũng phẫn nộ về một người cha như thế.</span><div class="trans-group" id="tg-175"></div></div><div class="sentence-box" id="s-176"><span class="text-orig">177. Nhưng xử lý như thái độ của anh thì cũng chả hơn gì.</span><div class="trans-group" id="tg-176"></div></div><div class="sentence-box" id="s-177"><span class="text-orig">178. Vì sao?</span><div class="trans-group" id="tg-177"></div></div><div class="sentence-box" id="s-178"><span class="text-orig">179. Vì cha anh đã “cạn tàu ráo máng” là sai lầm.</span><div class="trans-group" id="tg-178"></div></div><div class="sentence-box" id="s-179"><span class="text-orig">180. Nếu anh cũng làm như cha anh tức là lại tiếp tục sai lầm nữa.</span><div class="trans-group" id="tg-179"></div></div><div class="sentence-box" id="s-180"><span class="text-orig">181. Rồi đến con anh, cháu anh.</span><div class="trans-group" id="tg-180"></div></div><div class="sentence-box" id="s-181"><span class="text-orig">182. Anh dạy cho con anh suốt đời thù bố mình… Cha truyền con nối thù ghét nhau, khinh bỉ nhau.</span><div class="trans-group" id="tg-181"></div></div><div class="sentence-box" id="s-182"><span class="text-orig">183. Tôi căm ghét những kẻ mồm cứ xoen xoét nói rằng yêu người ngoài lắm, yêu tổ quốc, nhân dân lắm, dốc hết đời mình cho dân tộc, cho đất nước mình mà nó lại sỉ nhục bố mẹ nó.</span><div class="trans-group" id="tg-182"></div></div><div class="sentence-box" id="s-183"><span class="text-orig">184. Nó vô ơn bạc nghĩa với bố mẹ nó.</span><div class="trans-group" id="tg-183"></div></div><div class="sentence-box" id="s-184"><span class="text-orig">185. Nó nói với bố mẹ nó như kiểu hàng tôm hàng cá.</span><div class="trans-group" id="tg-184"></div></div><div class="sentence-box" id="s-185"><span class="text-orig">186. Cãi lại bố mẹ sam sảm: “Con khinh bố lắm.</span><div class="trans-group" id="tg-185"></div></div><div class="sentence-box" id="s-186"><span class="text-orig">187. Com tởm lợm bố mẹ lắm.</span><div class="trans-group" id="tg-186"></div></div><div class="sentence-box" id="s-187"><span class="text-orig">188. Ông bà là cái quái gì.</span><div class="trans-group" id="tg-187"></div></div><div class="sentence-box" id="s-188"><span class="text-orig">189. Tôi đếch cần ông bà…” Anh có yêu thành phố này, có yêu bà con phường xóm và bè bạn của anh không?</span><div class="trans-group" id="tg-188"></div></div><div class="sentence-box" id="s-189"><span class="text-orig">190. Anh nói đi tôi xem nào.</span><div class="trans-group" id="tg-189"></div></div><div class="sentence-box" id="s-190"><span class="text-orig">191. Dường như nỗi căm giận sự giả dối đã nhập vào chị như nhập “đồng”.</span><div class="trans-group" id="tg-190"></div></div><div class="sentence-box" id="s-191"><span class="text-orig">192. Chị nói không kiêng nể gì hắn.</span><div class="trans-group" id="tg-191"></div></div><div class="sentence-box" id="s-192"><span class="text-orig">193. Hắn im lặng vì xấu hổ.</span><div class="trans-group" id="tg-192"></div></div><div class="sentence-box" id="s-193"><span class="text-orig">194. – Anh thấy tôi nói gì sai, anh cứ phản đối đi.</span><div class="trans-group" id="tg-193"></div></div><div class="sentence-box" id="s-194"><span class="text-orig">195. Tôi với anh đều là “phạm”.</span><div class="trans-group" id="tg-194"></div></div><div class="sentence-box" id="s-195"><span class="text-orig">196. Bình đẳng trong quyền lợi của “phạm”, không có gì phải dè dặt phải kiêng nể.</span><div class="trans-group" id="tg-195"></div></div><div class="sentence-box" id="s-196"><span class="text-orig">197. Mai kia ra đường không chào nhau nữa thì thôi, không việc gì phải ý tứ, xã giao một cách giả dối.</span><div class="trans-group" id="tg-196"></div></div><div class="sentence-box" id="s-197"><span class="text-orig">198. – Dạ thưa chị.</span><div class="trans-group" id="tg-197"></div></div><div class="sentence-box" id="s-198"><span class="text-orig">199. Dù thế nào tôi cũng rất biết ơn chị đã dạy dỗ cháu.</span><div class="trans-group" id="tg-198"></div></div><div class="sentence-box" id="s-199"><span class="text-orig">200. – Tôi giả lại anh cái ơn ấy.</span><div class="trans-group" id="tg-199"></div></div><div class="sentence-box" id="s-200"><span class="text-orig">201. Tôi quan tâm đến chuyện chúng ta đang bàn kia.</span><div class="trans-group" id="tg-200"></div></div><div class="sentence-box" id="s-201"><span class="text-orig">202. – Tôi nghe chị rất thấm thía.</span><div class="trans-group" id="tg-201"></div></div><div class="sentence-box" id="s-202"><span class="text-orig">203. Nhưng…</span><div class="trans-group" id="tg-202"></div></div><div class="sentence-box" id="s-203"><span class="text-orig">204. – Do cha anh chứ gì?</span><div class="trans-group" id="tg-203"></div></div><div class="sentence-box" id="s-204"><span class="text-orig">205. – Chị hiểu là đã bao nhiêu lần tôi van xin.</span><div class="trans-group" id="tg-204"></div></div><div class="sentence-box" id="s-205"><span class="text-orig">206. – Được rồi, tôi hỏi nhé: Cụ mất anh có đi chôn không?</span><div class="trans-group" id="tg-205"></div></div><div class="sentence-box" id="s-206"><span class="text-orig">207. – Nếu ra tù và được cụ cho phép.</span><div class="trans-group" id="tg-206"></div></div><div class="sentence-box" id="s-207"><span class="text-orig">208. – Nếu cụ không cho.</span><div class="trans-group" id="tg-207"></div></div><div class="sentence-box" id="s-208"><span class="text-orig">209. Sau này giỗ tết anh có thắp cho cụ nén hương không?</span><div class="trans-group" id="tg-208"></div></div><div class="sentence-box" id="s-209"><span class="text-orig">210. – Có chứ ạ.</span><div class="trans-group" id="tg-209"></div></div><div class="sentence-box" id="s-210"><span class="text-orig">211. – Lúc ấy anh khấn như thế nào?</span><div class="trans-group" id="tg-210"></div></div><div class="sentence-box" id="s-211"><span class="text-orig">212. Quả thật hắn không ngờ những câu hỏi “sát phạt” dồn hắn đến tận cùng một cách đột ngột như thế.</span><div class="trans-group" id="tg-211"></div></div><div class="sentence-box" id="s-212"><span class="text-orig">213. Nhưng từ sâu xa hắn vẫn nhận ra sự sôi sục của một tấm lòng nhân hậu và đại lượng, không có tâm địa gì ngoài ý muốn cho hắn làm kẻ lương thiện, tốt đẹp hơn.</span><div class="trans-group" id="tg-212"></div></div><div class="sentence-box" id="s-213"><span class="text-orig">214. Hắn vẫn im lặng, không dám nhìn chị nữa.</span><div class="trans-group" id="tg-213"></div></div><div class="sentence-box" id="s-214"><span class="text-orig">215. – Đã lòng thành thắp nén hương cho người chết thì không kẻ nào nhẫn tâm làm điều bậy bạ, thô bỉ nữa.</span><div class="trans-group" id="tg-214"></div></div><div class="sentence-box" id="s-215"><span class="text-orig">216. Bởi vì, có sỉ nhục và tìm mọi cách trả thù người chết thì người chết cũng không làm sao.</span><div class="trans-group" id="tg-215"></div></div><div class="sentence-box" id="s-216"><span class="text-orig">217. Mà có làm sao thì kẻ sống cũng không biết gì.</span><div class="trans-group" id="tg-216"></div></div><div class="sentence-box" id="s-217"><span class="text-orig">218. Còn người sống có hành động bỉ báng người đã chết, nhất định sẽ nơm nớp sợ hãi người chết về bóp cổ mình.</span><div class="trans-group" id="tg-217"></div></div><div class="sentence-box" id="s-218"><span class="text-orig">219. Đúng không?</span><div class="trans-group" id="tg-218"></div></div><div class="sentence-box" id="s-219"><span class="text-orig">220. Thế là tự mình tạo ra nỗi hoảng loạn trong mình mà lại mang tiếng kẻ tiểu nhân, vô ơn bạc nghĩa.</span><div class="trans-group" id="tg-219"></div></div><div class="sentence-box" id="s-220"><span class="text-orig">221. Vậy thì làm như thế để làm gì?</span><div class="trans-group" id="tg-220"></div></div><div class="sentence-box" id="s-221"><span class="text-orig">222. Chín tháng sau, chị hết hạn cải tạo.</span><div class="trans-group" id="tg-221"></div></div><div class="sentence-box" id="s-222"><span class="text-orig">223. Buổi liên hoan tiễn chị, ai cũng bịn rịn trước cảnh con gái hắn cứ gào lên: “Bác ơi, Bác đừng bỏ con.</span><div class="trans-group" id="tg-222"></div></div><div class="sentence-box" id="s-223"><span class="text-orig">224. Bác ơi, bác ở lại đây với con.</span><div class="trans-group" id="tg-223"></div></div><div class="sentence-box" id="s-224"><span class="text-orig">225. Bác đừng bỏ con bác đi, bác ơi…” Hắn đứng lặng như một đứa em ngu si, tội lỗi chỉ muốn cất lời nói để chịu hiểu rằng em đã nghĩ đến những điều sâu xa chị nói với em.</span><div class="trans-group" id="tg-224"></div></div><div class="sentence-box" id="s-225"><span class="text-orig">226. Tuy hiểu được đến tận cùng con người phải như thế nào thì con người ăn ở với nhau đỡ đen tối, độc ác, đỡ âm mưu, thủ đoạn đối phó với nhau.</span><div class="trans-group" id="tg-225"></div></div><div class="sentence-box" id="s-226"><span class="text-orig">227. “Cứ sống có nghĩa cử, có nhân tâm đi.</span><div class="trans-group" id="tg-226"></div></div><div class="sentence-box" id="s-227"><span class="text-orig">228. Ông cụ không thương, sẽ có những tình thương khác lớn hơn đem đến cho mình”.</span><div class="trans-group" id="tg-227"></div></div><div class="sentence-box" id="s-228"><span class="text-orig">229. Mãi khi chị lên xe, hắn đỡ lấy đứa con cứ nhoài người theo chị, hắn mới nói trong nước mắt:</span><div class="trans-group" id="tg-228"></div></div><div class="sentence-box" id="s-229"><span class="text-orig">230. – Chị ơi, chị cho phép em như một đứa em của chị và cho cháu…</span><div class="trans-group" id="tg-229"></div></div><div class="sentence-box" id="s-230"><span class="text-orig">231. – Cậu cứ phấn đấu thành “ông chủ” đi.</span><div class="trans-group" id="tg-230"></div></div><div class="sentence-box" id="s-231"><span class="text-orig">232. Nhất định sẽ gặp lại nhau.</span><div class="trans-group" id="tg-231"></div></div><div class="sentence-box" id="s-232"><span class="text-orig">233. Biết đâu, chúng mình lại có liên quan đến nhau bằng một cái hợp đồng kinh doanh nào đó.</span><div class="trans-group" id="tg-232"></div></div><div class="sentence-box" id="s-233"><span class="text-orig">234. Nhớ xin các anh ấy cho con vào trại trẻ mồ côi nhé.</span><div class="trans-group" id="tg-233"></div></div><div class="sentence-box" id="s-234"><span class="text-orig">235. Để mãi ở đây không được đâu.</span><div class="trans-group" id="tg-234"></div></div><div class="sentence-box" id="s-235"><span class="text-orig">236. Nào con ngoan.</span><div class="trans-group" id="tg-235"></div></div><div class="sentence-box" id="s-236"><span class="text-orig">237. Buông bác ra.</span><div class="trans-group" id="tg-236"></div></div><div class="sentence-box" id="s-237"><span class="text-orig">238. Bác sẽ về trại trẻ mồ côi thành phố thăm con.</span><div class="trans-group" id="tg-237"></div></div><div class="sentence-box" id="s-238"><span class="text-orig">239. Chương 30</span><div class="trans-group" id="tg-238"></div></div><div class="sentence-box" id="s-239"><span class="text-orig">240. Hắn vừa ăn cơm trưa xong được báo có cô em gái tên là Hồng ở quê lên thăm.</span><div class="trans-group" id="tg-239"></div></div><div class="sentence-box" id="s-240"><span class="text-orig">241. Quãng đường từ nhà ăn ra phòng thường trực chừng một cây số.</span><div class="trans-group" id="tg-240"></div></div><div class="sentence-box" id="s-241"><span class="text-orig">242. Hắn đi như chạy, vẫn sợ chậm, sợ Hồng không thể đợi mình.</span><div class="trans-group" id="tg-241"></div></div><div class="sentence-box" id="s-242"><span class="text-orig">243. Đã gần ba năm trời, kể từ đêm đến nhà cô, hắn không hề biết tin gì của cô và những chuyện cô nói với hắn về Hiền, về đứa con của hắn, về những lời gán ghép như những tia sáng làm bừng lên nỗi khát khao của hắn.</span><div class="trans-group" id="tg-242"></div></div><div class="sentence-box" id="s-243"><span class="text-orig">244. Từ ngày ấy, hắn vẫn nung nấu những dự định, vẫn mơ màng đến một ngày nào đó hắn và Hiền gặp lại nhau dù biết là mờ mịt, biết là viển vông, nhưng không bằng cách nào quên được.</span><div class="trans-group" id="tg-243"></div></div><div class="sentence-box" id="s-244"><span class="text-orig">245. Nhưng cũng chẳng làm được việc gì, dù chỉ là một lá thư.</span><div class="trans-group" id="tg-244"></div></div><div class="sentence-box" id="s-245"><span class="text-orig">246. Hắn rất thèm được viết thư cho Hiền, cho con trai mà địa chỉ lại không biết.</span><div class="trans-group" id="tg-245"></div></div><div class="sentence-box" id="s-246"><span class="text-orig">247. Gửi qua Hồng thì sợ… không tiện.</span><div class="trans-group" id="tg-246"></div></div><div class="sentence-box" id="s-247"><span class="text-orig">248. Hồng đến, nhất định không phải là chuyện thăm hỏi thông thường.</span><div class="trans-group" id="tg-247"></div></div><div class="sentence-box" id="s-248"><span class="text-orig">249. Hiền có chuyện gì?</span><div class="trans-group" id="tg-248"></div></div><div class="sentence-box" id="s-249"><span class="text-orig">250. Con trai hắn có chuyện gì không thể trì hoãn được?</span><div class="trans-group" id="tg-249"></div></div><div class="sentence-box" id="s-250"><span class="text-orig">251. Hay chính Hồng có điều gì đổ vỡ, sứt mẻ về chuyện chồng con?</span><div class="trans-group" id="tg-250"></div></div><div class="sentence-box" id="s-251"><span class="text-orig">252. Cái tình cảm trong mối quan hệ giữa hắn với cô, hắn tự cảm thấy nó rất nhập nhằng, rối rắm.</span><div class="trans-group" id="tg-251"></div></div><div class="sentence-box" id="s-252"><span class="text-orig">253. Cô là người bạn tốt nhất của Hiền và con hắn.</span><div class="trans-group" id="tg-252"></div></div><div class="sentence-box" id="s-253"><span class="text-orig">254. Lo toan cho “vợ chồng” và con cái hắn được đoàn tụ hạnh phúc?</span><div class="trans-group" id="tg-253"></div></div><div class="sentence-box" id="s-254"><span class="text-orig">255. Hay chính cô không thể quên được những ngày sống với hắn, từng rên siết van nài hắn dành tất cả cuộc đời còn lại cho cô.</span><div class="trans-group" id="tg-254"></div></div><div class="sentence-box" id="s-255"><span class="text-orig">256. Những cử chỉ của cô âu yếm chiều chuộng chồng trước mặt hắn là thật lòng hay muốn tỏ ra với hắn là cô đang sống đầm ấm, hạnh phúc?</span><div class="trans-group" id="tg-255"></div></div><div class="sentence-box" id="s-256"><span class="text-orig">257. Nếu Hiền đã quá đủ thời gian và nỗi đắng cay để vượt qua ràng buộc của họ hàng, làng xóm trở về với hắn, trong khi cô cũng lại có ý định như thế thì sao?</span><div class="trans-group" id="tg-256"></div></div><div class="sentence-box" id="s-257"><span class="text-orig">258. Phòng thường trực đã ở trước mặt và cô đang nhìn hắn cười cười chờ đợi.</span><div class="trans-group" id="tg-257"></div></div><div class="sentence-box" id="s-258"><span class="text-orig">259. – Trời ơi, tù gì mà lại béo khỏe ra.</span><div class="trans-group" id="tg-258"></div></div><div class="sentence-box" id="s-259"><span class="text-orig">260. – Cô nói – Lại đỏ đắn hẳn lên.</span><div class="trans-group" id="tg-259"></div></div><div class="sentence-box" id="s-260"><span class="text-orig">261. – Ở đây ăn uống không thất thường như ở nhà.</span><div class="trans-group" id="tg-260"></div></div><div class="sentence-box" id="s-261"><span class="text-orig">262. Cũng không phải lo sợ như ngày trước.</span><div class="trans-group" id="tg-261"></div></div><div class="sentence-box" id="s-262"><span class="text-orig">263. – Thế thì anh xin cho em vào tù với.</span><div class="trans-group" id="tg-262"></div></div><div class="sentence-box" id="s-263"><span class="text-orig">264. Ở nhà vất vả mà phải lo nghĩ nhiều lắm.</span><div class="trans-group" id="tg-263"></div></div><div class="sentence-box" id="s-264"><span class="text-orig">265. “Có thật cô ta có chuyện “trục trặc” mà nghĩ đến hắn thật không?”</span><div class="trans-group" id="tg-264"></div></div><div class="sentence-box" id="s-265"><span class="text-orig">266. Hắn hỏi một câu cốt để giải tỏa nỗi nghi hoặc của hắn:</span><div class="trans-group" id="tg-265"></div></div><div class="sentence-box" id="s-266"><span class="text-orig">267. – Đời sống gia đình thế nào?</span><div class="trans-group" id="tg-266"></div></div><div class="sentence-box" id="s-267"><span class="text-orig">268. Anh ấy khỏe chứ?</span><div class="trans-group" id="tg-267"></div></div><div class="sentence-box" id="s-268"><span class="text-orig">269. Còn nuôi nhiều lợn nữa không?</span><div class="trans-group" id="tg-268"></div></div><div class="sentence-box" id="s-269"><span class="text-orig">270. – Em có cháu rồi, cháu trai được một tuổi.</span><div class="trans-group" id="tg-269"></div></div><div class="sentence-box" id="s-270"><span class="text-orig">271. Cả hai vợ chồng chạy ăn rạc người chưa xong làm sao nuôi nổi lợn.</span><div class="trans-group" id="tg-270"></div></div><div class="sentence-box" id="s-271"><span class="text-orig">272. – Anh chúc mừng em.</span><div class="trans-group" id="tg-271"></div></div><div class="sentence-box" id="s-272"><span class="text-orig">273. Thiếu thốn, nhưng là mừng.</span><div class="trans-group" id="tg-272"></div></div><div class="sentence-box" id="s-273"><span class="text-orig">274. – Mừng sao bằng anh được.</span><div class="trans-group" id="tg-273"></div></div><div class="sentence-box" id="s-274"><span class="text-orig">275. – Mừng anh được đi cải tạo?</span><div class="trans-group" id="tg-274"></div></div><div class="sentence-box" id="s-275"><span class="text-orig">276. – Lại giả vờ, giả vịt.</span><div class="trans-group" id="tg-275"></div></div><div class="sentence-box" id="s-276"><span class="text-orig">277. Có khi phải cho anh cải tạo vài chục năm nữa cho hết cái tính giả vờ ấy đi.</span><div class="trans-group" id="tg-276"></div></div><div class="sentence-box" id="s-277"><span class="text-orig">278. Em hỏi thật nhé.</span><div class="trans-group" id="tg-277"></div></div><div class="sentence-box" id="s-278"><span class="text-orig">279. Ở đây có lúc nào anh nghĩ những gì ở quê em không?</span><div class="trans-group" id="tg-278"></div></div><div class="sentence-box" id="s-279"><span class="text-orig">280. – Có chứ.</span><div class="trans-group" id="tg-279"></div></div><div class="sentence-box" id="s-280"><span class="text-orig">281. – Nghĩ gì, nghĩ đến ai?</span><div class="trans-group" id="tg-280"></div></div><div class="sentence-box" id="s-281"><span class="text-orig">282. – Nghĩ đến em.</span><div class="trans-group" id="tg-281"></div></div><div class="sentence-box" id="s-282"><span class="text-orig">283. – Bậy.</span><div class="trans-group" id="tg-282"></div></div><div class="sentence-box" id="s-283"><span class="text-orig">284. Hay vạ miệng, mai kia có đứa nó cắt tai.</span><div class="trans-group" id="tg-283"></div></div><div class="sentence-box" id="s-284"><span class="text-orig">285. – Anh cũng chỉ mong được có người cắt tai.</span><div class="trans-group" id="tg-284"></div></div><div class="sentence-box" id="s-285"><span class="text-orig">286. – Thật nhá.</span><div class="trans-group" id="tg-285"></div></div><div class="sentence-box" id="s-286"><span class="text-orig">287. Nếu có người nó cắt tai thì mất gì cho em?</span><div class="trans-group" id="tg-286"></div></div><div class="sentence-box" id="s-287"><span class="text-orig">288. – Anh còn gì nữa mà mất.</span><div class="trans-group" id="tg-287"></div></div><div class="sentence-box" id="s-288"><span class="text-orig">289. Nhưng mà nếu được như thế, em muốn bất cứ cái gì, anh cũng xin biết em.</span><div class="trans-group" id="tg-288"></div></div><div class="sentence-box" id="s-289"><span class="text-orig">290. – Được.</span><div class="trans-group" id="tg-289"></div></div><div class="sentence-box" id="s-290"><span class="text-orig">291. Nói lời, phải giữ lấy lời đấy.</span><div class="trans-group" id="tg-290"></div></div><div class="sentence-box" id="s-291"><span class="text-orig">292. “Có thể có tin tức gì về Hiền hoặc con hắn?</span><div class="trans-group" id="tg-291"></div></div><div class="sentence-box" id="s-292"><span class="text-orig">293. Nhưng chắc là chuyện của Hiền.”</span><div class="trans-group" id="tg-292"></div></div><div class="sentence-box" id="s-293"><span class="text-orig">294. Sự linh cảm của hắn là chính xác.</span><div class="trans-group" id="tg-293"></div></div><div class="sentence-box" id="s-294"><span class="text-orig">295. Gần hai giờ đồng hồ cô đã kể cho hắn nghe toàn bộ câu chuyện về quê của mẹ con Hiền hơn mười ngày trước và “lục vấn” hắn.</span><div class="trans-group" id="tg-294"></div></div><div class="sentence-box" id="s-295"><span class="text-orig">296. Cô kể rằng chôn cất mẹ xong, Hiền ở nhà cúng ba ngày cụ rồi đi cám ơn, thăm hỏi bà con chòm xóm đến năm ngày sau mới đi.</span><div class="trans-group" id="tg-295"></div></div><div class="sentence-box" id="s-296"><span class="text-orig">297. Tất cả những đêm Hiền ở nhà cô đều mang con đến ngủ với nó.</span><div class="trans-group" id="tg-296"></div></div><div class="sentence-box" id="s-297"><span class="text-orig">298. Đêm nào hai chị em cũng nói chuyện đến hai ba giờ sáng, nhưng toàn là những chuyện có liên quan đến hắn.</span><div class="trans-group" id="tg-297"></div></div><div class="sentence-box" id="s-298"><span class="text-orig">299. Suốt mấy chục năm trời cùi cũi nuôi con, đã bao nhiêu đêm nó ôm con khóc hết nước mắt.</span><div class="trans-group" id="tg-298"></div></div><div class="sentence-box" id="s-299"><span class="text-orig">300. Đã bao nhiêu lần nó ôm con định nhảy xuống suối tự tử hoặc bỏ vào rừng cho đỡ tủi nhục.</span><div class="trans-group" id="tg-299"></div></div><div class="sentence-box" id="s-300"><span class="text-orig">301. Nhưng nghĩ đến mẹ, nghĩ đến con và nghĩ cả đến hắn nữa.</span><div class="trans-group" id="tg-300"></div></div><div class="sentence-box" id="s-301"><span class="text-orig">302. Vì thế, mà Hiền chưa chết được.</span><div class="trans-group" id="tg-301"></div></div><div class="sentence-box" id="s-302"><span class="text-orig">303. Cô đang kể dừng lại, rồi hỏi hắn:</span><div class="trans-group" id="tg-302"></div></div><div class="sentence-box" id="s-303"><span class="text-orig">304. – Cái Hiền nó bảo vì nó bỏ đi mà anh thất chí đi vào con đường trộm cắp, tù tội có đúng không?</span><div class="trans-group" id="tg-303"></div></div><div class="sentence-box" id="s-304"><span class="text-orig">305. – Điều đó chắc Hiền nghĩ không sai.</span><div class="trans-group" id="tg-304"></div></div><div class="sentence-box" id="s-305"><span class="text-orig">306. – Thế những ngày đi với con đĩ ở phường lầu xanh có nghĩ đến nó không?</span><div class="trans-group" id="tg-305"></div></div><div class="sentence-box" id="s-306"><span class="text-orig">307. – Hoàn cảnh xô đẩy, anh đâu muốn thế.</span><div class="trans-group" id="tg-306"></div></div><div class="sentence-box" id="s-307"><span class="text-orig">308. – Hoàn cảnh bắt anh phải ăn nằm với bao nhiêu con đĩ điếm, đẻ con vung vãi khắp nơi?</span><div class="trans-group" id="tg-307"></div></div><div class="sentence-box" id="s-308"><span class="text-orig">309. – Anh biết là Hồng vẫn nghĩ về anh như thế.</span><div class="trans-group" id="tg-308"></div></div><div class="sentence-box" id="s-309"><span class="text-orig">310. Anh công nhận là mình cũng yếu đuối, thiếu bản lĩnh, cứ nói thẳng là một thằng đàn ông hèn.</span><div class="trans-group" id="tg-309"></div></div><div class="sentence-box" id="s-310"><span class="text-orig">311. Nhưng anh đâu phải là một thằng lăng nhăng, vô trách nhiệm.</span><div class="trans-group" id="tg-310"></div></div><div class="sentence-box" id="s-311"><span class="text-orig">312. – Con Hiền nó biết cả.</span><div class="trans-group" id="tg-311"></div></div><div class="sentence-box" id="s-312"><span class="text-orig">313. Nhưng nó bảo để khi nào nó gặp rồi sẽ hay.</span><div class="trans-group" id="tg-312"></div></div><div class="sentence-box" id="s-313"><span class="text-orig">314. – Tôi chỉ mong đến một lúc nào đó tôi gặp được Hiền và kể lại những lỗi lầm của tôi cho Hiền nghe.</span><div class="trans-group" id="tg-313"></div></div><div class="sentence-box" id="s-314"><span class="text-orig">315. – Rồi để làm gì?</span><div class="trans-group" id="tg-314"></div></div><div class="sentence-box" id="s-315"><span class="text-orig">316. – Tôi không biết được.</span><div class="trans-group" id="tg-315"></div></div><div class="sentence-box" id="s-316"><span class="text-orig">317. Nhưng tôi mong mỏi tình cảm với Hiền thế nào thì Hồng biết đấy.</span><div class="trans-group" id="tg-316"></div></div><div class="sentence-box" id="s-317"><span class="text-orig">318. Tôi chỉ muốn có gì tốt, xấu tôi cũng sẽ nói hết với Hiền.</span><div class="trans-group" id="tg-317"></div></div><div class="sentence-box" id="s-318"><span class="text-orig">319. – Hồng biết là tình cảm của anh dành cho Hiền rất nhiều, nhưng lại gửi vào những người khác.</span><div class="trans-group" id="tg-318"></div></div><div class="sentence-box" id="s-319"><span class="text-orig">320. – Bây giờ thì Hồng nói thế nào, tôi cũng phải chịu cả.</span><div class="trans-group" id="tg-319"></div></div><div class="sentence-box" id="s-320"><span class="text-orig">321. – Nhưng mà thôi.</span><div class="trans-group" id="tg-320"></div></div><div class="sentence-box" id="s-321"><span class="text-orig">322. Chuyện ấy hãy tạm cho qua.</span><div class="trans-group" id="tg-321"></div></div><div class="sentence-box" id="s-322"><span class="text-orig">323. Còn Hồng, anh biết rồi đấy.</span><div class="trans-group" id="tg-322"></div></div><div class="sentence-box" id="s-323"><span class="text-orig">324. Hồng tuy “bốp chát” khác hẳn với sự nín nhịn, chịu đựng của Hiền nhưng cũng không đến nỗi nông nổi nhìn người hời hợt ở cái mã bên ngoài đâu.</span><div class="trans-group" id="tg-323"></div></div><div class="sentence-box" id="s-324"><span class="text-orig">325. – Anh rất hiểu Hồng như thế.</span><div class="trans-group" id="tg-324"></div></div><div class="sentence-box" id="s-325"><span class="text-orig">326. – Lúc nào Hồng cũng chỉ muốn hai người trở lại với nhau.</span><div class="trans-group" id="tg-325"></div></div><div class="sentence-box" id="s-326"><span class="text-orig">327. – Hồng có biết được ý Hiền?</span><div class="trans-group" id="tg-326"></div></div><div class="sentence-box" id="s-327"><span class="text-orig">328. Cô lặng đi.</span><div class="trans-group" id="tg-327"></div></div><div class="sentence-box" id="s-328"><span class="text-orig">329. Rất khó trả lời hắn.</span><div class="trans-group" id="tg-328"></div></div><div class="sentence-box" id="s-329"><span class="text-orig">330. Hắn biết như thế là hỏng rồi.</span><div class="trans-group" id="tg-329"></div></div><div class="sentence-box" id="s-330"><span class="text-orig">331. Hồng cũng hiểu rằng hắn cảm nhận được điều mà cô chưa thể nói ra.</span><div class="trans-group" id="tg-330"></div></div><div class="sentence-box" id="s-331"><span class="text-orig">332. – Nhưng mà, em nghĩ anh cứ kiên trì.</span><div class="trans-group" id="tg-331"></div></div><div class="sentence-box" id="s-332"><span class="text-orig">333. Anh cũng chưa hết hạn ở trại.</span><div class="trans-group" id="tg-332"></div></div><div class="sentence-box" id="s-333"><span class="text-orig">334. Biết đâu sau này Hiền nó sẽ lại nghĩ khác.</span><div class="trans-group" id="tg-333"></div></div><div class="sentence-box" id="s-334"><span class="text-orig">335. Với lại, có thể con cái nó lại kéo được bố mẹ nó về với nhau.</span><div class="trans-group" id="tg-334"></div></div><div class="sentence-box" id="s-335"><span class="text-orig">336. – Cháu có thể nhận… anh?</span><div class="trans-group" id="tg-335"></div></div><div class="sentence-box" id="s-336"><span class="text-orig">337. – Chuyện ấy làm được hay không là ở anh!</span><div class="trans-group" id="tg-336"></div></div><div class="sentence-box" id="s-337"><span class="text-orig">338. – Ở anh?</span><div class="trans-group" id="tg-337"></div></div><div class="sentence-box" id="s-338"><span class="text-orig">339. Hồng có biết Hiền nói với cháu thế nào?</span><div class="trans-group" id="tg-338"></div></div><div class="sentence-box" id="s-339"><span class="text-orig">340. – Chính vì chuyện ấy mà Hồng phải đến đây.</span><div class="trans-group" id="tg-339"></div></div><div class="sentence-box" id="s-340"><span class="text-orig">341. Hiền nói rằng cháu rất thắc mắc tại sao người đứng tên khai sinh không nhận nó là con và mẹ cũng không cho con nhận người ấy là bố.</span><div class="trans-group" id="tg-340"></div></div><div class="sentence-box" id="s-341"><span class="text-orig">342. Còn bố thật của nó ở đâu thì mẹ nó bảo khi nào con ra trường có công ăn việc làm, rồi khắc biết.</span><div class="trans-group" id="tg-341"></div></div><div class="sentence-box" id="s-342"><span class="text-orig">343. Bây giờ nó đã ra trường, có công ăn việc làm, đón mẹ ra Hà Nội ở với nó rồi mà mẹ vẫn chưa kể cho nó.</span><div class="trans-group" id="tg-342"></div></div><div class="sentence-box" id="s-343"><span class="text-orig">344. – Tại sao Hiền không kể.</span><div class="trans-group" id="tg-343"></div></div><div class="sentence-box" id="s-344"><span class="text-orig">345. Hay là…</span><div class="trans-group" id="tg-344"></div></div><div class="sentence-box" id="s-345"><span class="text-orig">346. – Anh muốn nói Hiền không muốn con nó có một người bố như anh chứ gì?</span><div class="trans-group" id="tg-345"></div></div><div class="sentence-box" id="s-346"><span class="text-orig">347. – Anh nghĩ thế.</span><div class="trans-group" id="tg-346"></div></div><div class="sentence-box" id="s-347"><span class="text-orig">348. – Nhầm.</span><div class="trans-group" id="tg-347"></div></div><div class="sentence-box" id="s-348"><span class="text-orig">349. Nó muốn chính anh phải làm cho con hiểu anh có là bố của nó hay không.</span><div class="trans-group" id="tg-348"></div></div><div class="sentence-box" id="s-349"><span class="text-orig">350. – Hiền nói với Hồng như thế?</span><div class="trans-group" id="tg-349"></div></div><div class="sentence-box" id="s-350"><span class="text-orig">351. – Không nói thẳng ra.</span><div class="trans-group" id="tg-350"></div></div><div class="sentence-box" id="s-351"><span class="text-orig">352. Nhưng ý nó là thế.</span><div class="trans-group" id="tg-351"></div></div><div class="sentence-box" id="s-352"><span class="text-orig">353. Hồng ướm thử là Hồng sẽ đến thăm anh và nói chuyện này thì nó bảo: “Tùy mày.</span><div class="trans-group" id="tg-352"></div></div><div class="sentence-box" id="s-353"><span class="text-orig">354. Làm thế nào thì làm, nhưng không được để làng xóm người ta biết chuyện.</span><div class="trans-group" id="tg-353"></div></div><div class="sentence-box" id="s-354"><span class="text-orig">355. Đến bây giờ chẳng còn sợ gì nhưng mình không thích thế”.</span><div class="trans-group" id="tg-354"></div></div><div class="sentence-box" id="s-355"><span class="text-orig">356. – Hồng ơi, thế thì anh phải làm gì?</span><div class="trans-group" id="tg-355"></div></div><div class="sentence-box" id="s-356"><span class="text-orig">357. – Sao lại hỏi em chuyện ấy.</span><div class="trans-group" id="tg-356"></div></div><div class="sentence-box" id="s-357"><span class="text-orig">358. – Anh không thể đi gặp cháu được, anh viết thư cho cháu được không.</span><div class="trans-group" id="tg-357"></div></div><div class="sentence-box" id="s-358"><span class="text-orig">359. – Sao lại không?</span><div class="trans-group" id="tg-358"></div></div><div class="sentence-box" id="s-359"><span class="text-orig">360. – Hay là Hồng chịu khó đợi anh mượn bút viết thư cho cháu ngay bây giờ.</span><div class="trans-group" id="tg-359"></div></div><div class="sentence-box" id="s-360"><span class="text-orig">361. – Không nên vội vã.</span><div class="trans-group" id="tg-360"></div></div><div class="sentence-box" id="s-361"><span class="text-orig">362. Nghĩ không chín, có khi lại hỏng việc.</span><div class="trans-group" id="tg-361"></div></div><div class="sentence-box" id="s-362"><span class="text-orig">363. – Thế Hồng có thể cho anh xin địa chỉ và tên cháu được không?</span><div class="trans-group" id="tg-362"></div></div></div>
+    <footer>Icarus - kienspvl@gmail.com - 097.463.87.94</footer>
+</main>
+
+<aside class="sidebar-right" id="sideRight">
+    <div id="sidePlaceholder" style="text-align: center; opacity: 0.3; margin-top: 100px; display: none;">Chọn câu để xem chi tiết</div>
+    <div id="sideContent" style="display: block;">
+        <span class="preview-label">Bản gốc</span>
+        <div id="sideOrig" class="preview-text">Chương 28</div>
+        <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
+        <div id="sideTrans"><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span class="preview-label" style="margin:0">en</span><button class="btn-mini-speak" onclick="speak('Chapter 28', 'en')">🔊</button></div><div class="preview-text">Chapter 28</div></div>
+        <div id="vocabAnalysis" class="vocab-section" style="display:none;">
+            <span class="preview-label">Phân tích từ vựng</span>
+            <div id="wordGrid" class="word-grid"></div>
+        </div>
+    </div>
+</aside>
+
+<div id="noteModal" class="modal" onclick="closeByOverlay(event, 'noteModal')">
+    <div class="modal-content">
+        <h3>Ghi chú (N)</h3>
+        <div class="note-tools">
+            <button class="btn-tool" onclick="insertTimestamp()">🕒 Thời gian</button>
+            <button class="btn-tool" onclick="insertCurrentText()">📄 Chèn câu</button>
+            <button class="btn-tool" style="background: #fbbf24; color: #000;" onclick="insertBookmark()">🔖 Đánh dấu vị trí</button>
+        </div>
+        <textarea id="noteArea" oninput="saveNote()" placeholder="Viết ghi chú..."></textarea>
+        <button class="btn-export-popup" onclick="exportNotes()">XUẤT GHI CHÚ (TXT)</button>
+        <button class="btn-full-close" onclick="closeModal('noteModal')">ĐÓNG (N)</button>
+    </div>
+</div>
+
+<div id="updateModal" class="modal" onclick="closeByOverlay(event, 'updateModal')">
+    <div class="modal-content">
+        <h3>Cập nhật (U)</h3>
+        <p><b>v13.5.7:</b> 
+           - Chế độ Save As tự động loại bỏ các thành phần chỉnh sửa văn bản, nút Cloud và nút Save As, biến file thành dạng đọc độc lập.<br>
+           - Mặc định Dark Theme, tốc độ đọc 1.25x và tự động kích hoạt Wake Lock.</p>
+        <button class="btn-full-close" onclick="closeModal('updateModal')">ĐÓNG (U)</button>
+    </div>
+</div>
+
+<script>
+    // --- FIREBASE INITIALIZATION ---
+    const firebaseConfig = {
+        databaseURL: "https://icarus-reader-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function syncToCloud() {
+        const txt = document.getElementById('input').value;
+        const savedIdx = parseInt(localStorage.getItem('icarus_last_idx') || "0");
+        if (!txt.trim()) { alert("Văn bản trống!"); return; }
+
+        db.ref('icarus_session').set({
+            content: txt,
+            lastIndex: savedIdx,
+            timestamp: Date.now()
+        }).then(() => {
+            alert("Đã đồng bộ lên Cloud thành công!");
+        }).catch(e => {
+            alert("Lỗi đồng bộ: " + e.message);
+        });
+    }
+
+    function fetchFromCloud() {
+        db.ref('icarus_session').once('value').then((snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('input').value = data.content;
+                localStorage.setItem('icarus_last_idx', data.lastIndex);
+                initSentences(true);
+                alert("Đã tải dữ liệu từ Cloud!");
+            } else {
+                alert("Không tìm thấy dữ liệu trên Cloud.");
+            }
+        });
+    }
+
+    // --- XUẤT FILE SAVE AS (ĐÓNG BĂNG DỮ LIỆU VÀ XÓA CÁC NÚT EDIT) ---
+    function saveFileWithData() {
+        const inputArea = document.getElementById('input');
+        if (!inputArea || !inputArea.value.trim()) {
+            alert("Vui lòng nhập văn bản và tách câu trước khi lưu file!");
+            return;
+        }
+        const currentText = inputArea.value;
+        inputArea.setAttribute('value', currentText);
+
+        // Sao chép tài liệu hiện tại để xử lý xóa các nút nhập liệu trước khi export
+        const cloneDoc = document.cloneNode(true);
+        const containerInClone = cloneDoc.getElementById('editableControlsContainer');
+        if (containerInClone) {
+            containerInClone.remove(); // Xóa hoàn toàn khung textarea và các nút chỉnh sửa khỏi bản lưu
+        }
+
+        const htmlContent = "<!DOCTYPE html>\n" + cloneDoc.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Icarus_Translator_ReadOnly.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    // --- TÍNH NĂNG GIỮ MÀN HÌNH SÁNG (WAKE LOCK API CHO ANDROID) ---
+    let wakeLock = null;
+    async function toggleWakeLock() {
+        const toggle = document.getElementById('wakeLockToggle');
+        if (toggle && toggle.checked) {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Screen Wake Lock is active.');
+                } else {
+                    toggle.checked = false;
+                }
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+                toggle.checked = false;
+            }
+        } else {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                    console.log('Screen Wake Lock released.');
+                });
+            }
+        }
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+        const toggle = document.getElementById('wakeLockToggle');
+        if (wakeLock !== null && document.visibilityState === 'visible' && toggle && toggle.checked) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    });
+
+    function toggleSidebars() {
+        document.body.classList.toggle('sidebars-hidden');
+        setTimeout(centerActiveSentence, 350);
+    }
+
+    let sentences = []; let currentIdx = -1; let fontSize = 16; let contentWidth = 1000;
+    let startTime = Date.now(); const synth = window.speechSynthesis; const { pinyin } = pinyinPro;
+
+    function blurFocus(e) { if(e) e.blur(); }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('btn-tab-'+t).classList.add('active');
+        document.getElementById('tab-'+t).classList.add('active');
+    }
+
+    function changeTheme(t) { 
+        document.body.className = t; 
+        const themeSel = document.getElementById('themeSelect');
+        if (themeSel) themeSel.value = t;
+        if (currentIdx !== -1) updateSidebarRight(currentIdx); 
+    }
+    
+    function cycleTheme() {
+        const themes = ['theme-1', 'theme-2', 'theme-3', 'theme-4', 'theme-5'];
+        let current = document.body.className.replace('sidebars-hidden', '').trim() || 'theme-2';
+        let nextIdx = (themes.indexOf(current) + 1) % themes.length;
+        changeTheme(themes[nextIdx]);
+    }
+
+    function changeFontSize(d) { fontSize += d; document.documentElement.style.setProperty('--font-size', fontSize+'px'); }
+    function changeWidth(d) { contentWidth += d; document.documentElement.style.setProperty('--content-max-w', contentWidth+'px'); }
+
+    function updateTimer() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const secs = (elapsed % 60).toString().padStart(2, '0');
+        const timerEl = document.getElementById('appTimer');
+        if (timerEl) timerEl.innerText = `${mins}:${secs}`;
+    }
+    setInterval(updateTimer, 1000);
+
+    async function googleTranslate(text, to) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${to}&dt=t&dt=rm&q=${encodeURIComponent(text)}`);
+            return await res.json();
+        } catch (e) { return null; }
+    }
+
+    function initSentences(isRestore = false) {
+        const inputEl = document.getElementById('input');
+        const txt = inputEl ? inputEl.value : (inputEl ? inputEl.getAttribute('value') : "");
+        if (!txt || !txt.trim()) return;
+        
+        localStorage.setItem('icarus_last_session', txt);
+        if (!isRestore) saveHistory(txt);
+        const raw = txt.split(/\n+/).flatMap(p => p.match(/[^.!?]+[.!?]*["'”’)]*/g) || [p]);
+        sentences = raw.filter(s => s.trim()).map(s => ({ original: s.trim(), translations: {}, pinyin: "", enPinyin: "" }));
+        renderOutput(); 
+        const totalPageEl = document.getElementById('totalPage');
+        if (totalPageEl) totalPageEl.innerText = "/ " + sentences.length;
+        const savedIdx = parseInt(localStorage.getItem('icarus_last_idx') || "0");
+        setTimeout(() => select(isRestore ? savedIdx : 0, true), 100);
+        if (inputEl) inputEl.blur();
+    }
+
+    function renderOutput() {
+        const out = document.getElementById('output'); out.innerHTML = '';
+        sentences.forEach((s, i) => {
+            const div = document.createElement('div'); div.className = 'sentence-box'; div.id = `s-${i}`;
+            div.innerHTML = `<span class="text-orig">${i+1}. ${s.original}</span><div class="trans-group" id="tg-${i}"></div>`;
+            div.onclick = () => select(i, true); out.appendChild(div);
+        });
+    }
+
+    function centerActiveSentence() {
+        const el = document.getElementById(`s-${currentIdx}`);
+        const container = document.getElementById('output');
+        if (el && container) {
+            const elTop = el.offsetTop;
+            const elHeight = el.offsetHeight;
+            const containerHeight = container.clientHeight;
+            const targetScroll = elTop - (containerHeight / 2) + (elHeight / 2);
+            container.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        }
+    }
+
+    async function select(i, forceTrans = false) {
+        if (i < 0 || i >= sentences.length) return;
+        currentIdx = i; 
+        localStorage.setItem('icarus_last_idx', i);
+        const currPageEl = document.getElementById('currPage');
+        if (currPageEl) currPageEl.value = i + 1;
+        document.querySelectorAll('.sentence-box').forEach(b => b.classList.remove('active'));
+        const el = document.getElementById(`s-${i}`);
+        if (el) { el.classList.add('active'); centerActiveSentence(); }
+        if (forceTrans) {
+            await translateSentence(i);
+            const preTrans = document.getElementById('preTranslate');
+            if (preTrans && preTrans.checked) {
+                for(let j=1; j<=3; j++) if(i+j < sentences.length) translateSentence(i+j);
+            }
+        }
+        updateSidebarRight(i);
+        const autoSpeak = document.getElementById('autoSpeak');
+        if (autoSpeak && autoSpeak.checked) replayCurrent();
+    }
+
+    async function translateSentence(idx) {
+        const targets = Array.from(document.querySelectorAll('.target-lang:checked')).map(cb => cb.value);
+        const group = document.getElementById(`tg-${idx}`);
+        for (let lang of targets) {
+            if (!sentences[idx].translations[lang]) {
+                const data = await googleTranslate(sentences[idx].original, lang);
+                if (data) {
+                    const res = data[0].map(item => item[0]).join('');
+                    if (sentences[idx].translations[lang] === res) continue; 
+                    sentences[idx].translations[lang] = res;
+                    let pinyinHtml = '';
+                    if (lang === 'zh-CN') { 
+                        sentences[idx].pinyin = pinyin(res); 
+                        pinyinHtml = `<div class="pinyin">${sentences[idx].pinyin}</div>`; 
+                    }
+                    if (group) {
+                        const line = document.createElement('div');
+                        line.className = `trans-line lang-${lang.split('-')[0]}`;
+                        line.innerHTML = `<div style="flex:1;"><b>${lang.split('-')[0]}</b> ${res} ${pinyinHtml}</div><button class="btn-mini-speak" onclick="event.stopPropagation(); speak('${res.replace(/'/g, "\\'")}', '${lang}')">🔊</button>`;
+                        group.appendChild(line);
+                        if (idx === currentIdx) { requestAnimationFrame(centerActiveSentence); }
+                    }
+                }
+            }
+        }
+    }
+
+    function updateSidebarRight(i) {
+        if (i === -1) return;
+        document.getElementById('sidePlaceholder').style.display = 'none';
+        document.getElementById('sideContent').style.display = 'block';
+        document.getElementById('sideOrig').innerText = sentences[i].original;
+        let html = ''; let zhText = ''; let ruText = '';
+        for (let [lang, text] of Object.entries(sentences[i].translations)) {
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span class="preview-label" style="margin:0">${lang}</span><button class="btn-mini-speak" onclick="speak('${text.replace(/'/g, "\\'")}', '${lang}')">🔊</button></div><div class="preview-text">${text}</div>`;
+            if (lang === 'zh-CN') { zhText = text; if (sentences[i].pinyin) html += `<div class="pinyin">${sentences[i].pinyin}</div>`; }
+            if (lang === 'ru') { ruText = text; }
+        }
+        document.getElementById('sideTrans').innerHTML = html;
+        const showZhEl = document.getElementById('showZhVocab');
+        const showRuEl = document.getElementById('showRuVocab');
+        const showZh = showZhEl ? showZhEl.checked : false;
+        const showRu = showRuEl ? showRuEl.checked : false;
+        if ((showZh && zhText) || (showRu && ruText)) {
+            document.getElementById('vocabAnalysis').style.display = 'block';
+            let combinedText = (showZh ? zhText : "") + (showRu ? ruText : "");
+            breakdownWords(combinedText, showZh, showRu);
+        } else { document.getElementById('vocabAnalysis').style.display = 'none'; }
+    }
+
+    async function breakdownWords(text, isZh, isRu) {
+        const container = document.getElementById('wordGrid'); container.innerHTML = '';
+        let words = [];
+        if (isZh) words = words.concat(text.match(/[\u4e00-\u9fa5]/g) || []);
+        if (isRu) words = words.concat(text.match(/[а-яА-ЯёЁ]+/g) || []);
+        const uniqueWords = [...new Set(words)];
+        for (const w of uniqueWords) {
+            const card = document.createElement('div'); card.className = 'word-card';
+            let isCyrillic = /[а-яА-ЯёЁ]/.test(w);
+            card.innerHTML = `<span class="ana-word">${w}</span><span class="ana-pinyin" id="p-${w}">...</span><div class="ana-meaning" id="m-${w}">...</div>`;
+            card.onclick = () => speak(w, isCyrillic ? 'ru' : 'zh-CN');
+            container.appendChild(card);
+            fetchVocabInfo(w, isCyrillic ? 'ru' : 'zh-CN');
+        }
+    }
+
+    async function fetchVocabInfo(w, lang) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${lang}&tl=en&dt=t&dt=rm&q=${encodeURIComponent(w)}`);
+            const data = await res.json();
+            const pEl = document.getElementById(`p-${w}`);
+            const mEl = document.getElementById(`m-${w}`);
+            if(pEl) pEl.innerText = data[0][1] ? (data[0][1][3] || data[0][1][2] || "") : '';
+            if(mEl) mEl.innerText = data[0][0][0].toLowerCase();
+        } catch (e) { }
+    }
+
+    function speak(t, l) {
+        synth.cancel(); 
+        const u = new SpeechSynthesisUtterance(t);
+        const speechRateEl = document.getElementById('speechRate');
+        const speed = speechRateEl ? parseFloat(speechRateEl.value) || 1.25 : 1.25;
+        u.rate = speed;
+
+        if (l === 'vi') {
+            const viVoiceEl = document.getElementById('viVoice');
+            const v = synth.getVoices().find(x => viVoiceEl && x.name === viVoiceEl.value);
+            if (v) u.voice = v;
+        } else { u.lang = { 'en': 'en-US', 'zh-CN': 'zh-CN', 'ru': 'ru-RU' }[l] || 'en-US'; }
+        
+        u.onend = () => { 
+            const autoNext = document.getElementById('autoNext');
+            if (autoNext && autoNext.checked) nav(1); 
+        }; 
+        synth.speak(u);
+    }
+
+    function replayCurrent() {
+        if (currentIdx === -1) return;
+        const voiceTargetEl = document.getElementById('voiceTarget');
+        const target = voiceTargetEl ? voiceTargetEl.value : 'en';
+        const txt = (target === 'orig') ? sentences[currentIdx].original : (sentences[currentIdx].translations[target] || sentences[currentIdx].original);
+        speak(txt, target === 'orig' ? 'en' : target);
+    }
+
+    function nav(s) { select(currentIdx + s, true); }
+    function jumpToPage(v) { select(parseInt(v) - 1, true); }
+    function togglePlayPause() { synth.paused ? synth.resume() : synth.pause(); }
+
+    function saveHistory(text) {
+        let history = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        history = history.filter(h => h.full !== text);
+        history.unshift({ id: Date.now(), text: text.substring(0, 40) + '...', full: text, date: new Date().toLocaleString() });
+        localStorage.setItem('icarus_hist', JSON.stringify(history.slice(0, 20))); loadHistory();
+    }
+    function loadHistory() {
+        const container = document.getElementById('historyList');
+        if(!container) return;
+        const history = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        container.innerHTML = history.map(h => `<div class="history-item" onclick="restore('${h.id}')"><span><b>${h.text}</b><br><small>${h.date}</small></span><span style="color:#ef4444;" onclick="deleteHistory('${h.id}', event)">×</span></div>`).join('');
+    }
+    function restore(id) {
+        const h = JSON.parse(localStorage.getItem('icarus_hist') || '[]');
+        const item = h.find(x => x.id == id);
+        const inputEl = document.getElementById('input');
+        if (item && inputEl) { inputEl.value = item.full; initSentences(true); }
+    }
+    function deleteHistory(id, e) { e.stopPropagation(); let h = JSON.parse(localStorage.getItem('icarus_hist') || '[]'); h = h.filter(x => x.id != id); localStorage.setItem('icarus_hist', JSON.stringify(h)); loadHistory(); }
+    function clearAllHistory() { if(confirm("Xóa sạch?")) { localStorage.setItem('icarus_hist', '[]'); loadHistory(); } }
+    function saveNote() { 
+        const noteArea = document.getElementById('noteArea');
+        if (noteArea) localStorage.setItem('icarus_note', noteArea.value); 
+    }
+    function loadNote() { 
+        const noteArea = document.getElementById('noteArea');
+        if (noteArea) noteArea.value = localStorage.getItem('icarus_note') || ""; 
+    }
+    function insertTimestamp() { const area = document.getElementById('noteArea'); area.setRangeText(`[${new Date().toLocaleString()}] `, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function insertCurrentText() { if (currentIdx === -1) return; const area = document.getElementById('noteArea'); area.setRangeText(`\n"${sentences[currentIdx].original}"\n`, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function insertBookmark() { if (currentIdx === -1) return; const area = document.getElementById('noteArea'); const marker = `\n--- ĐÃ ĐỌC TỚI CÂU ${currentIdx + 1} ---\n`; area.setRangeText(marker, area.selectionStart, area.selectionEnd, 'end'); saveNote(); area.focus(); }
+    function exportNotes() { const blob = new Blob([document.getElementById('noteArea').value], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Icarus_Notes.txt'; a.click(); }
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function toggleModal(id) { const m = document.getElementById(id); if (m.style.display === 'block') closeModal(id); else openModal(id); }
+    function closeByOverlay(e, id) { if(e.target.id === id) closeModal(id); }
+
+    document.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { if (e.key === 'Escape') { closeModal('noteModal'); closeModal('updateModal'); } return; }
+        if (e.key === 'ArrowRight') nav(1);
+        else if (e.key === 'ArrowLeft') nav(-1);
+        else if (key === 'n') toggleModal('noteModal');
+        else if (key === 'u') toggleModal('updateModal');
+        else if (key === 'm') cycleTheme();
+        else if (key === 'k') togglePlayPause();
+        else if (key === '=') changeFontSize(1);
+        else if (key === '-') changeFontSize(-1);
+        else if (key === '.') changeWidth(50);
+        else if (key === ',') changeWidth(-50);
+        else if (e.code === 'Space') { e.preventDefault(); replayCurrent(); }
+        else if (e.key === 'Escape') { closeModal('noteModal'); closeModal('updateModal'); }
+    });
+
+    // --- LOGIC KHỞI ĐỘNG ---
+    window.onload = () => {
+        const vs = synth.getVoices(); 
+        const viVoiceEl = document.getElementById('viVoice');
+        if(viVoiceEl) {
+            viVoiceEl.innerHTML = vs.filter(v => v.lang.includes('vi')).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        }
+        loadHistory(); 
+        loadNote();
+        toggleWakeLock(); // Kích hoạt tính năng giữ sáng màn hình tự động
+
+        const inputEl = document.getElementById('input');
+        const embeddedText = inputEl ? inputEl.getAttribute('value') : null;
+
+        if (embeddedText && embeddedText.trim() !== "") {
+            inputEl.value = embeddedText;
+            initSentences(true);
+        } else if (inputEl && inputEl.value.trim() !== "") {
+            initSentences(true);
+        } else {
+            const lastSession = localStorage.getItem('icarus_last_session');
+            if (lastSession && inputEl) { 
+                inputEl.value = lastSession; 
+                initSentences(true); 
+            }
+        }
+    };
+
+    speechSynthesis.onvoiceschanged = () => {
+        const vs = synth.getVoices(); 
+        const viVoiceEl = document.getElementById('viVoice');
+        if(viVoiceEl) {
+            viVoiceEl.innerHTML = vs.filter(v => v.lang.includes('vi')).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        }
+    };
+</script>
+
+</body></html>
