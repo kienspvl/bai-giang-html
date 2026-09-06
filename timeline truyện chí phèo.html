@@ -1,0 +1,1058 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Icarus Presenter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 32px;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        /* Chế độ Fullscreen Minimalist */
+        body.fullscreen-mode .top-toolbar,
+        body.fullscreen-mode .manual-nav {
+            display: none !important;
+        }
+
+        body.fullscreen-mode {
+            padding: 20px 32px;
+            justify-content: center;
+            background: #111;
+        }
+
+        body.fullscreen-mode .container {
+            width: 100vw;
+            height: 94vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Nút thoát Fullscreen nhỏ ở góc trên */
+        .exit-fs-btn {
+            position: fixed;
+            top: 20px;
+            right: 32px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+            transition: 0.2s;
+        }
+        .exit-fs-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            color: #fff;
+        }
+        body.fullscreen-mode .exit-fs-btn {
+            display: block;
+        }
+
+        .top-toolbar {
+            width: 100%;
+            max-width: 1180px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1180px;
+            height: 70vh;
+            max-height: 600px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            background: #0b0b0b;
+        }
+
+        /* Hiển thị full ảnh, căn theo cạnh dài (object-fit: contain) để không bị xén, lem */
+        .image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-url-bar {
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 8px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 6px 10px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px 28px;
+        }
+
+        .title-area {
+            flex-shrink: 0;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ffd700;
+            cursor: pointer;
+            display: inline-block;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .scrollable-text-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+            position: relative;
+        }
+
+        .desc {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .manual-nav {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1180px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #ffd700;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: #000;
+        }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 250px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .container {
+                flex-direction: column;
+                height: 82vh;
+                max-height: none;
+                position: relative;
+            }
+            .image-panel {
+                flex: none;
+                height: 40vh;
+                width: 100%;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .content-box {
+                flex: 1;
+                overflow: hidden;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="exit-fs-btn" onclick="toggleFullscreenMode()">✕ Thoát Fullscreen</button>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Nhập chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy Prompt AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" onclick="toggleFullscreenMode()">📺 Fullscreen</button>
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save as HTML</button>
+            <button onclick="openImportModal()">Nhập dữ liệu (Import)</button>
+        </div>
+    </div>
+
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://dtv-ebook.com.vn/images/cover_1/chi-pheo-nam-cao.jpg" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh vào đây..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box">
+            <div class="title-area">
+                <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Bấm để tìm kiếm hình ảnh trên Google" style="font-size: 2.75rem;">Timeline Chí Phèo</h1>
+            </div>
+            <div class="scrollable-text-area" id="scrollableTextArea">
+                <div class="desc" id="slide-desc" style="font-size: 1.65rem;"><div class="clickable-paragraph" id="desc_0" onclick="readParagraphAt('Truyện Chí Phèo có thể được ghi nhớ qua chuỗi biến cố từ khi Chí bị bỏ rơi, bị đẩy vào tù, tha hóa, thức tỉnh đến cái chết bi thảm.')">Truyện Chí Phèo có thể được ghi nhớ qua chuỗi biến cố từ khi Chí bị bỏ rơi, bị đẩy vào tù, tha hóa, thức tỉnh đến cái chết bi thảm.</div></div>
+                <div class="bullets" id="slide-bullets" style="font-size: 1.5rem;"><div class="clickable-paragraph" id="bullets_0" onclick="readParagraphAt('• Điểm 1 – Chí Phèo bị bỏ rơi tại một cái lò gạch cũ và được người dân nuôi dưỡng.')">• Điểm 1 – Chí Phèo bị bỏ rơi tại một cái lò gạch cũ và được người dân nuôi dưỡng.</div><div class="clickable-paragraph" id="bullets_1" onclick="readParagraphAt('• Điểm 2 – Khi trưởng thành, Chí làm canh điền và từng là một người nông dân lương thiện, có ước mơ giản dị.')">• Điểm 2 – Khi trưởng thành, Chí làm canh điền và từng là một người nông dân lương thiện, có ước mơ giản dị.</div><div class="clickable-paragraph" id="bullets_2" onclick="readParagraphAt('• Điểm 3 – Chí bị Bá Kiến đẩy vào tù vì những mâu thuẫn và thủ đoạn của tên địa chủ.')">• Điểm 3 – Chí bị Bá Kiến đẩy vào tù vì những mâu thuẫn và thủ đoạn của tên địa chủ.</div><div class="clickable-paragraph" id="bullets_3" onclick="readParagraphAt('• Điểm 4 – Sau khi ra tù, Chí trở nên hung dữ, uống rượu, chửi bới và bị biến thành tay sai của Bá Kiến.')">• Điểm 4 – Sau khi ra tù, Chí trở nên hung dữ, uống rượu, chửi bới và bị biến thành tay sai của Bá Kiến.</div><div class="clickable-paragraph" id="bullets_4" onclick="readParagraphAt('• Điểm 5 – Chí gặp Thị Nở và được chăm sóc bằng bát cháo hành.')">• Điểm 5 – Chí gặp Thị Nở và được chăm sóc bằng bát cháo hành.</div><div class="clickable-paragraph" id="bullets_5" onclick="readParagraphAt('• Điểm 6 – Chí thức tỉnh, khao khát hoàn lương và mong muốn được sống cùng Thị Nở.')">• Điểm 6 – Chí thức tỉnh, khao khát hoàn lương và mong muốn được sống cùng Thị Nở.</div><div class="clickable-paragraph" id="bullets_6" onclick="readParagraphAt('• Điểm 7 – Thị Nở từ chối Chí dưới tác động của bà cô, khiến Chí tuyệt vọng.')">• Điểm 7 – Thị Nở từ chối Chí dưới tác động của bà cô, khiến Chí tuyệt vọng.</div><div class="clickable-paragraph" id="bullets_7" onclick="readParagraphAt('• Điểm 8 – Chí đến nhà Bá Kiến, giết Bá Kiến rồi tự sát.')">• Điểm 8 – Chí đến nhà Bá Kiến, giết Bá Kiến rồi tự sát.</div><div class="clickable-paragraph" id="bullets_8" onclick="readParagraphAt('• Điểm 9 – Hình ảnh cái lò gạch cũ ở cuối truyện gợi sự tiếp diễn của bi kịch nếu xã hội không thay đổi.')">• Điểm 9 – Hình ảnh cái lò gạch cũ ở cuối truyện gợi sự tiếp diễn của bi kịch nếu xã hội không thay đổi.</div></div>
+                <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Chí Phèo timeline')" title="Tìm hình ảnh">Chí Phèo timeline</span><span class="tag" onclick="searchGoogle('Life events')" title="Tìm hình ảnh">Life events</span><span class="tag" onclick="searchGoogle('Character arc')" title="Tìm hình ảnh">Character arc</span><span class="tag" onclick="searchGoogle('Tragedy')" title="Tìm hình ảnh">Tragedy</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseBtn" onclick="togglePauseRead()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Autoplay</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ màn hình luôn sáng khi đọc">
+            <span>Giữ màn hình sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">12 / 12</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated / Excel / Google Sheet)</h2>
+            <p style="font-size: 0.9rem; color: #ccc;">Dán dữ liệu gồm 8 cột (Từ khóa, Kiến thức, Chi tiết, 4 từ khóa Anh, URL ảnh) vào đây:</p>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật dữ liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Phân biệt File gốc và File Save As (Ngậm dữ liệu):
+        // - Ở file gốc: Biến này để trống (""). Khi khởi động, nếu trống, app sẽ lấy trực tiếp từ localStorage.
+        // - Ở file Save As: Nút Save as HTML sẽ tự động chèn dữ liệu ngậm vào biến này, và app sẽ ưu tiên đọc thẳng dữ liệu ngậm thay vì localStorage.
+        let embeddedInitialData = `Chí Phèo – xuất thân	Chí Phèo sinh ra là đứa trẻ bị bỏ rơi, lớn lên trong cảnh nghèo khổ nhưng ban đầu vẫn là người lương thiện.	• Chí Phèo xuất hiện trong cuộc đời với hoàn cảnh đặc biệt: một đứa trẻ bị bỏ rơi ở cái lò gạch cũ.<br>• Chí được người dân trong làng Vũ Đại chuyền tay nhau nuôi dưỡng rồi lớn lên trong cảnh nghèo khó.<br>• Khi trưởng thành, Chí làm thuê để kiếm sống, từng làm canh điền cho nhà Bá Kiến.<br>• Khác với hình ảnh Chí Phèo về sau, Chí lúc trẻ là một người nông dân hiền lành, có lòng tự trọng và mong muốn sống bằng sức lao động.<br>• Chí từng có những ước mơ rất giản dị về một gia đình nhỏ, chồng làm thuê, vợ dệt vải, cuộc sống bình thường và yên ổn.<br>• Những chi tiết này cho thấy bản chất ban đầu của Chí là một người lao động lương thiện.<br>• Đây là điểm khởi đầu quan trọng để hiểu quá trình Chí bị xã hội thực dân phong kiến đẩy vào con đường tha hóa.	Chí Phèo's origins	Poor childhood	Orphan	Nam Cao	https://photo-baomoi.bmcdn.me/w500_r1/2021_03_23_180_38295873/ea243d850dc7e499bdd6.jpg
+Chí Phèo làm canh điền	Chí Phèo làm canh điền cho nhà Bá Kiến và bị đẩy vào bi kịch bởi quyền lực của cường hào.	• Khi trưởng thành, Chí Phèo đi làm canh điền cho nhà Bá Kiến để kiếm sống.<br>• Công việc của Chí là lao động chân tay nặng nhọc nhưng giúp anh có một cuộc sống tương đối ổn định.<br>• Bá Kiến là một địa chủ già đời, nổi tiếng với thủ đoạn và khả năng thao túng người khác.<br>• Vì ghen tuông và bản chất độc đoán, Bá Kiến tìm cách đẩy Chí Phèo vào tù.<br>• Chí vốn là người lương thiện nhưng không có khả năng tự bảo vệ trước quyền lực của kẻ thống trị.<br>• Biến cố này trở thành bước ngoặt đầu tiên trong cuộc đời Chí.<br>• Nhà tù thực dân không cải tạo Chí thành người tốt mà góp phần biến đổi một người nông dân hiền lành thành một con người đầy tổn thương và thù hận.<br>• Sau khi ra tù, Chí Phèo trở về làng Vũ Đại với một diện mạo và tính cách hoàn toàn khác trước.	Canh-field worker	Bá Kiến	Exploitation	Imprisonment	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEgA0U5BG27a-GS1Ms-bf7okmM_T78gMcBSvzPzfV_grpOJunyQaKBlaU&s=10
+Chí Phèo đi tù	Chí Phèo bị Bá Kiến đẩy vào tù, mở đầu quá trình tha hóa của nhân vật.	• Chí Phèo bị Bá Kiến tìm cách đưa vào tù vì những mâu thuẫn và sự ghen tuông của tên địa chủ.<br>• Thời gian ở nhà tù thực dân đã làm Chí thay đổi sâu sắc cả về ngoại hình lẫn tâm lý.<br>• Khi trở về làng Vũ Đại, Chí không còn là người nông dân hiền lành ngày trước.<br>• Chí mang trên mình những dấu vết của nhà tù và trở nên hung dữ, ngang ngược.<br>• Chí bắt đầu uống rượu, chửi bới và gây gổ với mọi người.<br>• Bi kịch của Chí không chỉ nằm ở việc bị mất tự do mà còn ở quá trình bị tước mất nhân hình và nhân tính.<br>• Nhà tù trở thành một trong những nguyên nhân khiến Chí bị đẩy khỏi cộng đồng những người lương thiện.<br>• Qua biến cố này, Nam Cao phê phán xã hội đã biến một người lao động lương thiện thành kẻ lưu manh, đồng thời đặt ra câu hỏi về trách nhiệm của xã hội đối với số phận con người.	Imprisonment	Colonial prison	Transformation	Social injustice	https://danviet.ex-cdn.com/files/f1/upload/3-2018/images/2018-08-03/Hinh-anh-39Chi-Pheo39-de-doi-cua-Bui-Cuong-trong-39Lang-Vu-dai-ngay-ay39-c1-1533286135-width665height455.jpg
+Chí Phèo trở về	Chí Phèo trở về làng Vũ Đại với bộ dạng dữ tợn và bắt đầu cuộc đời của một kẻ lưu manh.	• Sau nhiều năm ở tù, Chí Phèo trở về làng Vũ Đại với ngoại hình khác hẳn trước đây.<br>• Trên người Chí có những hình xăm và dấu vết của cuộc sống tù tội, khuôn mặt trở nên dữ dằn.<br>• Chí tìm đến nhà Bá Kiến, người đã góp phần đẩy mình vào tù.<br>• Bá Kiến dùng những thủ đoạn khôn ngoan để đối phó và biến Chí thành tay sai cho mình.<br>• Từ đây, Chí thường xuyên uống rượu, rạch mặt ăn vạ, gây sự và đòi tiền người dân.<br>• Chí trở thành công cụ giúp Bá Kiến đàn áp những người khác trong làng.<br>• Người dân Vũ Đại ngày càng sợ hãi và xa lánh Chí.<br>• Chí tưởng như đã trở thành một con quỷ dữ, nhưng đằng sau sự hung hãn vẫn là một con người bị tổn thương sâu sắc.<br>• Quá trình này thể hiện rõ bi kịch bị tha hóa của người nông dân trong xã hội cũ.	Return to Vu Dai	Dehumanization	Bá Kiến	Villainization	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlyTGBI4oEreyg-GgHSaq386NWvQZEMq3LfVDRRduqppn0Z4FkwUoxjps&s=10
+Chí Phèo gặp Thị Nở	Cuộc gặp gỡ với Thị Nở trở thành bước ngoặt giúp Chí Phèo thức tỉnh phần người và khát vọng hoàn lương.	• Trong một đêm say rượu, Chí Phèo gặp Thị Nở ở vườn chuối.<br>• Thị Nở là một người phụ nữ nghèo, xấu xí và có hoàn cảnh đặc biệt trong làng Vũ Đại.<br>• Cuộc gặp gỡ giữa hai con người bị xã hội xa lánh tạo nên một bước ngoặt bất ngờ trong cuộc đời Chí.<br>• Sau đêm gặp Thị, Chí bị ốm và được Thị chăm sóc bằng một bát cháo hành.<br>• Bát cháo hành là chi tiết nghệ thuật giàu ý nghĩa, thể hiện tình người mộc mạc và sự chăm sóc chân thành.<br>• Lần đầu tiên sau nhiều năm, Chí cảm nhận được sự quan tâm của một con người khác.<br>• Chí bắt đầu nghe thấy âm thanh của cuộc sống và nhận ra mình đã từng có những ước mơ bình dị.<br>• Từ đó, Chí khao khát trở lại làm người lương thiện và được sống hòa nhập với cộng đồng.<br>• Thị Nở chính là người đánh thức phần người tưởng như đã bị vùi lấp trong Chí.	Meeting Thi No	Bát cháo hành	Love	Humanity	https://media-cdn-v2.laodong.vn/storage/newsportal/2018/8/3/622960/Chi-Pheo-Thi-No-1512.jpg
+Bát cháo hành	Bát cháo hành là biểu tượng của tình người, sự chăm sóc và khả năng đánh thức phần người trong Chí Phèo.	• Khi Chí Phèo bị ốm sau đêm gặp gỡ, Thị Nở đã nấu cháo hành và mang đến cho Chí.<br>• Đây là lần đầu tiên trong thời gian dài Chí nhận được sự chăm sóc chân thành từ một người khác.<br>• Bát cháo không có giá trị vật chất lớn nhưng mang ý nghĩa tinh thần đặc biệt.<br>• Hương vị cháo hành khiến Chí xúc động và cảm nhận được hơi ấm của tình người.<br>• Từ sự chăm sóc giản dị đó, Chí bắt đầu tỉnh táo và suy nghĩ về cuộc đời mình.<br>• Chí nghe thấy những âm thanh quen thuộc của cuộc sống và nhớ lại những ước mơ lương thiện khi còn trẻ.<br>• Chi tiết bát cháo hành cho thấy tình yêu thương có thể giúp con người thức tỉnh và tìm lại bản chất tốt đẹp.<br>• Đồng thời, nó làm nổi bật bi kịch của Chí: khi vừa muốn trở lại làm người thì cánh cửa xã hội lại đóng lại trước mặt anh.<br>• Đây là một trong những chi tiết nghệ thuật nổi tiếng nhất của tác phẩm.	Onion porridge	Compassion	Kindness	Awakening	https://media-cdn-v2.laodong.vn/storage/newsportal/2018/8/3/622960/Chi-Pheo-Thi-No-1512.jpg
+Chí Phèo muốn hoàn lương	Chí Phèo thức tỉnh và khao khát trở lại cuộc sống lương thiện, được mọi người chấp nhận.	• Sau khi được Thị Nở chăm sóc, Chí Phèo bắt đầu tỉnh táo và nhận thức rõ hơn về cuộc đời mình.<br>• Chí nghe thấy tiếng chim hót, tiếng người đi chợ và những âm thanh bình dị của cuộc sống.<br>• Anh nhớ lại những ước mơ khi còn trẻ: có một gia đình nhỏ và sống bằng lao động lương thiện.<br>• Chí nhận ra mình đã bị đẩy ra ngoài xã hội quá lâu.<br>• Lần đầu tiên sau nhiều năm, Chí có khát vọng được trở lại làm người bình thường.<br>• Chí đặt niềm tin vào Thị Nở và mong muốn hai người có thể sống cùng nhau.<br>• Đây là thời điểm phần người trong Chí được đánh thức mạnh mẽ nhất.<br>• Tuy nhiên, khát vọng hoàn lương của Chí phụ thuộc vào sự chấp nhận của cộng đồng.<br>• Khi xã hội không mở đường trở về, bi kịch của Chí chuyển sang một giai đoạn đau đớn hơn: bi kịch bị cự tuyệt quyền làm người.	Desire for redemption	Reform	Humanity	Social acceptance	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQf74S13F1yu_c9-tZy-AaEHDht_XXdSq-VIUkgCIwPhmpv3Ha9_V8tMBE&s=10
+Thị Nở từ chối Chí Phèo	Thị Nở từ chối Chí Phèo dưới ảnh hưởng của bà cô, khiến con đường trở lại làm người của Chí bị đóng lại.	• Sau khi Chí Phèo bày tỏ mong muốn sống chung, Thị Nở trở về hỏi ý kiến bà cô.<br>• Bà cô Thị Nở vốn định kiến và không chấp nhận việc cháu mình lấy một người như Chí Phèo.<br>• Những lời phản đối của bà cô khiến Thị Nở thay đổi thái độ.<br>• Thị quay lại từ chối Chí và cắt đứt hy vọng về một cuộc sống mới của anh.<br>• Đối với Chí, sự từ chối này không đơn giản là mất một người phụ nữ mà là mất đi cánh cửa cuối cùng để trở về với cộng đồng.<br>• Chí nhận ra xã hội vẫn coi mình là một kẻ lưu manh không thể thay đổi.<br>• Bi kịch bị cự tuyệt quyền làm người vì thế trở nên sâu sắc và đau đớn hơn.<br>• Nam Cao cho thấy định kiến xã hội có thể tiếp tục đẩy một con người vào tuyệt vọng ngay cả khi họ đã thức tỉnh.<br>• Đây là bước ngoặt trực tiếp dẫn đến hành động cuối cùng của Chí Phèo.	Rejection	Social prejudice	Thị Nở	Despair	https://st.download.vn/data/image/2020/11/12/Thi-No-700.jpg
+Chí Phèo đến nhà Bá Kiến	Trong tuyệt vọng, Chí Phèo đến nhà Bá Kiến, đối diện với kẻ đã góp phần đẩy mình vào bi kịch.	• Sau khi bị Thị Nở từ chối, Chí Phèo rơi vào trạng thái đau đớn và tuyệt vọng.<br>• Chí uống rượu nhưng càng uống càng tỉnh táo, bởi anh không thể tiếp tục chìm trong cơn say như trước.<br>• Chí nhận ra nguyên nhân sâu xa của bi kịch đời mình gắn với Bá Kiến và xã hội làng Vũ Đại.<br>• Chí cầm dao đến nhà Bá Kiến trong trạng thái bị kích động mạnh.<br>• Bá Kiến tiếp tục tìm cách đối phó nhưng lần này Chí không còn dễ dàng bị lợi dụng như trước.<br>• Chí nhận thức được rằng Bá Kiến đã góp phần biến mình từ một người lương thiện thành kẻ bị cả làng xa lánh.<br>• Cuộc đối đầu giữa Chí và Bá Kiến là sự đối đầu giữa nạn nhân bị tha hóa và kẻ đã góp phần gây ra bi kịch.<br>• Đây là cao trào quan trọng của truyện, chuẩn bị dẫn đến kết thúc bi thảm của cả hai nhân vật.	Confrontation with Ba Kien	Bá Kiến	Revenge	Conflict	https://st.download.vn/data/image/2022/12/04/ba-kien.jpg
+Chí Phèo giết Bá Kiến	Chí Phèo giết Bá Kiến rồi tự kết liễu đời mình, khép lại bi kịch của một con người bị cự tuyệt quyền làm người.	• Sau khi đến nhà Bá Kiến, Chí Phèo đã đâm chết Bá Kiến.<br>• Hành động này thể hiện sự phản kháng tuyệt vọng của một con người bị dồn đến bước đường cùng.<br>• Chí sau đó tự sát, kết thúc cuộc đời đầy đau khổ của mình.<br>• Cái chết của Bá Kiến cho thấy kẻ thống trị cũng có thể bị chính những mâu thuẫn và thủ đoạn của mình phản lại.<br>• Cái chết của Chí Phèo lại mang ý nghĩa bi kịch sâu sắc hơn: anh đã thức tỉnh nhưng không thể tìm được con đường trở về cuộc sống lương thiện.<br>• Chí không muốn tiếp tục làm quỷ dữ, nhưng xã hội cũng không cho anh cơ hội trở thành người bình thường.<br>• Vì vậy, cái chết trở thành hành động phản kháng cuối cùng và đồng thời là sự kết thúc đau đớn của một số phận bị tha hóa.<br>• Qua kết thúc này, Nam Cao tố cáo xã hội bất công đã đẩy người nông dân vào con đường lưu manh hóa và tước đoạt quyền sống, quyền làm người của họ.	Killing Ba Kien	Tragedy	Death	Social injustice	https://i.ytimg.com/vi/6pzoPZWZ6sY/hqdefault.jpg?sqp=-oaymwEmCOADEOgC8quKqQMa8AEB-AHeAoAChgKKAgwIABABGGQgZChkMA8=&rs=AOn4CLB5uBSJ-u6Uh-gMwEPIsTVHQ3Knyw
+Kết thúc truyện	Chí Phèo chết nhưng bi kịch về quyền làm người vẫn còn ám ảnh qua hình ảnh Thị Nở nhìn về cái lò gạch cũ.	• Sau cái chết của Chí Phèo và Bá Kiến, cuộc sống ở làng Vũ Đại dường như vẫn tiếp tục.<br>• Tuy nhiên, câu chuyện không kết thúc hoàn toàn bởi vấn đề mà Chí Phèo đặt ra vẫn còn đó.<br>• Thị Nở nhớ lại Chí Phèo và nghĩ đến hình ảnh cái lò gạch cũ.<br>• Chi tiết này gợi liên tưởng đến nơi Chí từng bị bỏ rơi khi mới sinh ra.<br>• Hình ảnh lò gạch cũ tạo nên kết cấu vòng tròn, nối điểm bắt đầu và kết thúc của cuộc đời Chí.<br>• Nó cũng gợi dự cảm về khả năng một Chí Phèo khác có thể xuất hiện nếu xã hội không thay đổi.<br>• Kết thúc mở khiến người đọc suy nghĩ về nguyên nhân sâu xa của bi kịch và trách nhiệm của cộng đồng đối với những con người bị đẩy ra bên lề.<br>• Giá trị hiện thực và nhân đạo của tác phẩm vì thế được đẩy lên cao.<br>• Câu chuyện không chỉ kể về cái chết của một cá nhân mà còn đặt ra câu hỏi về quyền được sống lương thiện của con người.	Open ending	Old brick kiln	Cycle of tragedy	Human rights	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGamAL2Zk9BweW26AVwDedA7_DOlZjOs5N8-4lmQLbYkDtZMRsJe0hRf--&s=10
+Timeline Chí Phèo	Truyện Chí Phèo có thể được ghi nhớ qua chuỗi biến cố từ khi Chí bị bỏ rơi, bị đẩy vào tù, tha hóa, thức tỉnh đến cái chết bi thảm.	• Điểm 1 – Chí Phèo bị bỏ rơi tại một cái lò gạch cũ và được người dân nuôi dưỡng.<br>• Điểm 2 – Khi trưởng thành, Chí làm canh điền và từng là một người nông dân lương thiện, có ước mơ giản dị.<br>• Điểm 3 – Chí bị Bá Kiến đẩy vào tù vì những mâu thuẫn và thủ đoạn của tên địa chủ.<br>• Điểm 4 – Sau khi ra tù, Chí trở nên hung dữ, uống rượu, chửi bới và bị biến thành tay sai của Bá Kiến.<br>• Điểm 5 – Chí gặp Thị Nở và được chăm sóc bằng bát cháo hành.<br>• Điểm 6 – Chí thức tỉnh, khao khát hoàn lương và mong muốn được sống cùng Thị Nở.<br>• Điểm 7 – Thị Nở từ chối Chí dưới tác động của bà cô, khiến Chí tuyệt vọng.<br>• Điểm 8 – Chí đến nhà Bá Kiến, giết Bá Kiến rồi tự sát.<br>• Điểm 9 – Hình ảnh cái lò gạch cũ ở cuối truyện gợi sự tiếp diễn của bi kịch nếu xã hội không thay đổi.	Chí Phèo timeline	Life events	Character arc	Tragedy	https://dtv-ebook.com.vn/images/cover_1/chi-pheo-nam-cao.jpg`;
+
+        let rawInitialData = "";
+        let isEmbeddedFile = (embeddedInitialData && embeddedInitialData.trim() !== "");
+
+        if (isEmbeddedFile) {
+            // Nếu là file Save As đã ngậm dữ liệu -> Lấy dữ liệu ngậm bên trong file
+            rawInitialData = embeddedInitialData;
+        } else {
+            // Nếu là file gốc -> Lấy ngay lập tức từ localStorage (nếu chưa có gì mới dùng bộ mẫu Tứ Bất Tử dự phòng)
+            let savedLocalStorageData = localStorage.getItem('icarus_raw_data');
+            if (savedLocalStorageData && savedLocalStorageData.trim() !== "") {
+                rawInitialData = savedLocalStorageData;
+            } else {
+                rawInitialData = `Sơn Tinh	Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.	• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên	Tản Vien Son Thanh	Ba Vi Mountain	Vietnamese mythology	Natural disaster	https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg`;
+                localStorage.setItem('icarus_raw_data', rawInitialData);
+            }
+        }
+
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                });
+            }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/;
+            const match = text.match(markdownLinkRegex);
+            if (match && match[2]) {
+                return match[2].trim();
+            }
+            return text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        function initData() {
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+            
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            requestWakeLock();
+        }
+
+        function saveConfigToLocalStorage() {
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+            // Chỉ lưu vào localStorage nếu đây là file gốc, file Save As chạy độc lập không ghi đè dữ liệu của file gốc ra ngoài
+            if (!isEmbeddedFile) {
+                localStorage.setItem('icarus_raw_data', rawInitialData);
+            }
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = `${typePrefix}_${index}`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" onclick="readParagraphAt('${escapeHtml(cleanedText)}')">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm hình ảnh">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('scrollableTextArea').scrollTop = 0;
+            saveConfigToLocalStorage();
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t1 = item.tags[0] || '';
+                let t2 = item.tags[1] || '';
+                let t3 = item.tags[2] || '';
+                let t4 = item.tags[3] || '';
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t1}\t${t2}\t${t3}\t${t4}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveConfigToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => {
+                el.classList.remove('active-speaking');
+            });
+        }
+
+        function highlightAndScrollParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                let elId = paragraphElementMap[paragraphIndex];
+                let el = document.getElementById(elId);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    
+                    const scrollArea = document.getElementById('scrollableTextArea');
+                    const elOffsetTop = el.offsetTop;
+                    const areaHeight = scrollArea.clientHeight;
+                    const elHeight = el.offsetHeight;
+                    
+                    scrollArea.scrollTo({
+                        top: elOffsetTop - (areaHeight / 2) + (elHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+
+        let currentQueue = [];
+        let currentQueueIndex = 0;
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0) {
+            if (!synth) return;
+            currentQueue = paragraphs;
+            currentQueueIndex = queueStartIndex;
+
+            if (currentQueueIndex >= currentQueue.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) {
+                    nextSlide();
+                }
+                return;
+            }
+
+            const textToSpeak = currentQueue[currentQueueIndex];
+            let utter = new SpeechSynthesisUtterance(textToSpeak);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            let isTitle = (currentQueueIndex === 0 && currentQueue === getFullQueue());
+            let paragraphMapIndex = isTitle ? -1 : (currentQueue === getFullQueue() ? currentQueueIndex - 1 : currentQueueIndex + getStartIndexOffset(currentQueue));
+
+            utter.onstart = function() {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                if (!isTitle) {
+                    highlightAndScrollParagraph(paragraphMapIndex);
+                }
+            };
+
+            utter.onend = function() {
+                if (!isPaused) {
+                    if (!isAutoplay && paragraphMapIndex >= 0) {
+                        clearActiveHighlights();
+                        return;
+                    }
+                    speakParagraphQueue(currentQueue, currentQueueIndex + 1);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function getFullQueue() {
+            const item = data[currentIndex];
+            return [item.title, ...currentSlideParagraphs];
+        }
+
+        function getStartIndexOffset(subQueue) {
+            let full = getFullQueue();
+            let firstText = subQueue[0];
+            return full.indexOf(firstText) - 1;
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            let fullQueue = getFullQueue();
+            speakParagraphQueue(fullQueue, 0);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            
+            let startIndex = currentSlideParagraphs.indexOf(textSnippet);
+            let queue = startIndex !== -1 ? currentSlideParagraphs.slice(startIndex) : [textSnippet];
+            
+            speakParagraphQueue(queue, 0);
+        }
+
+        function togglePauseRead() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) {
+                    synth.resume();
+                    isPaused = false;
+                    document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                } else {
+                    synth.pause();
+                    isPaused = true;
+                    document.getElementById('pauseBtn').innerText = '▶️ Tiếp tục';
+                }
+            } else if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+            }
+        }
+
+        function stopRead() {
+            if (synth) {
+                synth.cancel();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                clearActiveHighlights();
+            }
+        }
+
+        // Điều hướng đoạn bằng phím Up / Down
+        function jumpParagraph(direction) {
+            let activeEl = document.querySelector('.clickable-paragraph.active-speaking');
+            let paragraphs = Array.from(document.querySelectorAll('.clickable-paragraph'));
+            if (paragraphs.length === 0) return;
+
+            let nextIdx = 0;
+            if (!activeEl) {
+                nextIdx = (direction > 0) ? 0 : paragraphs.length - 1;
+            } else {
+                let currentIdx = paragraphs.indexOf(activeEl);
+                nextIdx = currentIdx + direction;
+                if (nextIdx < 0) nextIdx = 0;
+                if (nextIdx >= paragraphs.length) nextIdx = paragraphs.length - 1;
+            }
+
+            let targetText = paragraphs[nextIdx].innerText;
+            readParagraphAt(targetText);
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveConfigToLocalStorage();
+            if (synth && synth.speaking) {
+                readSlide();
+            }
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function toggleFullscreenMode() {
+            document.body.classList.toggle('fullscreen-mode');
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel += direction;
+            if (fontSizeLevel < -3) fontSizeLevel = -3;
+            if (fontSizeLevel > 5) fontSizeLevel = 5;
+            applyFontSize();
+            saveConfigToLocalStorage();
+        }
+
+        function applyFontSize() {
+            const descElem = document.getElementById('slide-desc');
+            const bulletsElem = document.getElementById('slide-bullets');
+            const titleElem = document.getElementById('slide-title');
+
+            let baseDesc = 1.15 + (fontSizeLevel * 0.1);
+            let baseBullets = 1.0 + (fontSizeLevel * 0.1);
+            let baseTitle = 2.0 + (fontSizeLevel * 0.15);
+
+            descElem.style.fontSize = `${baseDesc}rem`;
+            bulletsElem.style.fontSize = `${baseBullets}rem`;
+            titleElem.style.fontSize = `${baseTitle}rem`;
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                renderSlide();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            // Tự động đóng gói nội dung dữ liệu hiện tại vào biến embeddedInitialData để tạo thành file Save As hoàn chỉnh độc lập
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-tu-bat-tu.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy (Plain Text) phân tách nhau bằng dấu Tab gồm đúng 8 cột theo thứ tự sau (TUYỆT ĐỐI KHÔNG CÓ CỘT SỐ THỨ TỰ Ở ĐẦU):
+1. Từ khóa chính (tiếng Việt)
+2. Kiến thức trọng tâm ngắn gọn.
+3. Nội dung chi tiết (100-200 từ, dùng thẻ <br> nếu xuống dòng gạch đầu dòng)
+4. Từ khóa đáp án tiếng Anh ngắn gọn
+5. Từ khóa tiếng anh 1 liên quan
+6. Từ khóa tiếng anh 2 liên quan
+7. Từ khóa tiếng anh 3 liên quan
+8. URL hình ảnh minh họa thực tế dạng đường dẫn thuần túy hoặc dạng markdown [Alt](url) (để trống nếu không tìm được)
+
+Chỉ trả về dữ liệu thô dạng văn bản Tab-separated, không kèm theo bất kỳ lời dẫn hay định dạng markdown nào khác.`;
+
+            navigator.clipboard.writeText(promptContent).then(() => {
+                alert('Đã copy Prompt AI vào bộ nhớ tạm! Bạn có thể dán vào ChatGPT/Gemini để lấy dữ liệu.');
+            });
+        }
+
+        // Bổ sung phím tắt: Left/Right đổi slide, Up/Down nhảy đoạn, =/+ tăng chữ, -/_ giảm chữ, Esc thoát Fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                jumpParagraph(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                jumpParagraph(-1);
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(1);
+            } else if (e.key === '-' || e.key === '_') {
+                changeFontSize(-1);
+            } else if (e.key === 'Escape') {
+                if (document.body.classList.contains('fullscreen-mode')) {
+                    toggleFullscreenMode();
+                }
+            }
+        });
+
+        // Thao tác vuốt di động
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const threshold = 100; 
+
+        const slideBox = document.getElementById('slideContainerBox');
+        const leftIndicator = document.getElementById('swipeLeftIndicator');
+        const rightIndicator = document.getElementById('swipeRightIndicator');
+
+        slideBox.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        slideBox.addEventListener('touchmove', e => {
+            let currentX = e.changedTouches[0].screenX;
+            let diff = currentX - touchStartX;
+            
+            if (diff < -40) {
+                leftIndicator.style.display = 'block';
+                rightIndicator.style.display = 'none';
+            } else if (diff > 40) {
+                rightIndicator.style.display = 'block';
+                leftIndicator.style.display = 'none';
+            } else {
+                leftIndicator.style.display = 'none';
+                rightIndicator.style.display = 'none';
+            }
+        }, {passive: true});
+
+        slideBox.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            leftIndicator.style.display = 'none';
+            rightIndicator.style.display = 'none';
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - threshold) {
+                nextSlide();
+            } else if (touchEndX > touchStartX + threshold) {
+                prevSlide();
+            }
+        }
+
+        window.onload = () => {
+            initData();
+        };
+    </script>
+
+</body></html>
