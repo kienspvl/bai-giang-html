@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Tự Động - Tứ Bất Tử</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1100px;
+            height: 75vh;
+            max-height: 650px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .image-box {
+            flex: 1;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 250px;
+        }
+
+        .image-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: zoomEffect 10s infinite alternate;
+        }
+
+        @keyframes zoomEffect {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.08); }
+        }
+
+        .content-box {
+            flex: 1.2;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            color: #ffd700;
+            border-bottom: 2px solid #ffd700;
+            padding-bottom: 8px;
+        }
+
+        .desc {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .bullets {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        button {
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-2px);
+        }
+
+        /* Responsive cho Mobile và Tablet nhỏ */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+            }
+
+            .image-box {
+                height: 250px;
+                flex: none;
+            }
+
+            .content-box {
+                padding: 20px;
+                flex: none;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .desc {
+                font-size: 1.05rem;
+            }
+
+            .bullets {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="image-box">
+            <img id="slide-img" src="" alt="Hình ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Tai+Duoc+Anh'">
+        </div>
+        <div class="content-box">
+            <h1 id="slide-title">Đang tải...</h1>
+            <div class="desc" id="slide-desc"></div>
+            <div class="bullets" id="slide-bullets"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="playPauseBtn" onclick="togglePlay()">Tạm dừng</button>
+        <button onclick="nextSlide()">Chuyển tiếp</button>
+    </div>
+
+    <script>
+        // Dữ liệu đã gộp thành đoạn văn xuôi hoàn chỉnh (bao gồm cả nội dung chính và các ý gạch đầu dòng)
+        const data = [
+            {
+                title: "Sơn Tinh",
+                fullText: "Sơn Tinh. Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử. Các đặc điểm chính gồm: Còn gọi là Tản Viên Sơn Thánh. Gắn với núi Ba Vì. Là biểu tượng chinh phục và chung sống với tự nhiên.",
+                desc: "Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.",
+                bullets: "• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên",
+                img: "https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg"
+            },
+            {
+                title: "Thánh Gióng",
+                fullText: "Thánh Gióng. Phù Đổng Thiên Vương là biểu tượng chống giặc ngoại xâm. Các đặc điểm chính gồm: Còn gọi là Phù Đổng Thiên Vương. Đánh giặc Ân. Bay về trời sau chiến thắng.",
+                desc: "Phù Đổng Thiên Vương là biểu tượng chống giặc ngoại xâm.",
+                bullets: "• Còn gọi là Phù Đổng Thiên Vương<br>• Đánh giặc Ân<br>• Bay về trời sau chiến thắng",
+                img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRcVStxR3AbbnR1Ev1ZAdWy_JdBa0G1HWmf3KAyoMs-fbKGfEHynjKxp1sb&s=10"
+            },
+            {
+                title: "Chử Đồng Tử",
+                fullText: "Chử Đồng Tử. Chử Đồng Tử là hình tượng gắn với lao động, tình yêu và đạo hiếu. Các đặc điểm chính gồm: Kết duyên với Tiên Dung. Khai phá và buôn bán. Tu đạo thành tiên.",
+                desc: "Chử Đồng Tử là hình tượng gắn với lao động, tình yêu và đạo hiếu.",
+                bullets: "• Kết duyên với Tiên Dung<br>• Khai phá và buôn bán<br>• Tu đạo thành tiên",
+                img: "https://images.unsplash.com/photo-1543373077-1c0dc099756b?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                title: "Mẫu Liễu Hạnh",
+                fullText: "Mẫu Liễu Hạnh. Mẫu Liễu Hạnh là vị nữ thần được đưa vào Tứ Bất Tử về sau. Các đặc điểm chính gồm: Là tiên nữ giáng trần. Có nhiều quyền năng. Gắn với tín ngưỡng thờ Mẫu.",
+                desc: "Mẫu Liễu Hạnh là vị nữ thần được đưa vào Tứ Bất Tử về sau.",
+                bullets: "• Là tiên nữ giáng trần<br>• Có nhiều quyền năng<br>• Gắn với tín ngưỡng thờ Mẫu",
+                img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Mother_Goddess_of_Earth_M%E1%BA%ABu_%C4%90%E1%BB%87_Nh%E1%BB%8B_%C4%90%E1%BB%8Ba_Ti%C3%AAn_M%E1%BA%ABu_Li%E1%BB%85u_H%E1%BA%A1nh_Four_Palace_T%E1%BB%A9_Ph%E1%BB%A7.jpg/250px-Mother_Goddess_of_Earth_M%E1%BA%ABu_%C4%90%E1%BB%87_Nh%E1%BB%8B_%C4%90%E1%BB%8Ba_Ti%C3%AAn_M%E1%BA%ABu_Li%E1%BB%85u_H%E1%BA%A1nh_Four_Palace_T%E1%BB%A9_Ph%E1%BB%A7.jpg"
+            },
+            {
+                title: "Tứ Bất Tử",
+                fullText: "Tứ Bất Tử. Tứ Bất Tử chỉ bốn vị thánh bất tử tiêu biểu trong văn hóa dân gian Việt Nam, bao gồm: Sơn Tinh, Thánh Gióng, Chử Đồng Tử và Mẫu Liễu Hạnh.",
+                desc: "Tứ Bất Tử chỉ bốn vị thánh bất tử tiêu biểu trong văn hóa dân gian Việt Nam.",
+                bullets: "• Sơn Tinh<br>• Thánh Gióng<br>• Chử Đồng Tử<br>• Mẫu Liễu Hạnh",
+                img: "https://dx3zevcsvah5n.cloudfront.net/images/36/feature_image.webp"
+            },
+            {
+                title: "Danh sách ban đầu",
+                fullText: "Danh sách ban đầu. Danh sách Tứ Bất Tử từng thay đổi theo thời gian. Các giai đoạn gồm: Có thời gồm Từ Đạo Hạnh. Có thời gồm Nguyễn Minh Không. Danh sách hiện nay phổ biến từ đầu thế kỷ 20.",
+                desc: "Danh sách Tứ Bất Tử từng thay đổi theo thời gian.",
+                bullets: "• Có thời gồm Từ Đạo Hạnh<br>• Có thời gồm Nguyễn Minh Không<br>• Danh sách hiện nay phổ biến từ đầu thế kỷ 20",
+                img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHHPFgzofESaXf1DBRo6p0Wwz1SDvQcrrTOA3OPdSQqv0HWyG-OtSNjqu8&s=10"
+            },
+            {
+                title: "Từ Đạo Hạnh",
+                fullText: "Từ Đạo Hạnh. Từ Đạo Hạnh là thiền sư từng nằm trong một số phiên bản Tứ Bất Tử. Các thông tin chính: Tên thật là Từ Lộ. Gắn với chùa Láng và chùa Thầy. Có nhiều truyền thuyết kỳ bí.",
+                desc: "Từ Đạo Hạnh là thiền sư từng nằm trong một số phiên bản Tứ Bất Tử.",
+                bullets: "• Tên thật là Từ Lộ<br>• Gắn với chùa Láng và chùa Thầy<br>• Có nhiều truyền thuyết kỳ bí",
+                img: "https://media-cdn-v2.laodong.vn/storage/newsportal/2026/5/20/1705190/Chua-Lang-2..jpg"
+            },
+            {
+                title: "Nguyễn Minh Không",
+                fullText: "Nguyễn Minh Không. Nguyễn Minh Không là thiền sư nổi tiếng với khả năng chữa bệnh và đúc đồng. Các thông tin chính: Còn gọi là Lý Quốc Sư. Chữa bệnh cho Lý Thần Tông. Được tôn là tổ nghề đúc đồng.",
+                desc: "Nguyễn Minh Không là thiền sư nổi tiếng với khả năng chữa bệnh và đúc đồng.",
+                bullets: "• Còn gọi là Lý Quốc Sư<br>• Chữa bệnh cho Lý Thần Tông<br>• Được tôn là tổ nghề đúc đồng",
+                img: "https://storage-phatsuonline-v2.sgp1.digitaloceanspaces.com/files/2026/01/6017d5e4-8eae-4955-97df-2d591547b0ca-crop.JPEG"
+            },
+            {
+                title: "Ý nghĩa số bốn",
+                fullText: "Ý nghĩa số bốn. Số bốn mang tính ước lệ, dùng để chọn những đại diện tiêu biểu nhất. Gắn liền với các khái niệm: Tứ Trấn, An Nam Tứ Đại Khí, và Tứ đại tài.",
+                desc: "Số bốn mang tính ước lệ, dùng để chọn những đại diện tiêu biểu nhất.",
+                bullets: "• Tứ Trấn<br>• An Nam Tứ Đại Khí<br>• Tứ đại tài",
+                img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQECtf_oy6rCzcqM4Cv_ogY8syaKAHoKmHF7o-Md34xog&s=10"
+            },
+            {
+                title: "Ý nghĩa Sơn Tinh",
+                fullText: "Ý nghĩa Sơn Tinh. Sơn Tinh tượng trưng cho khát vọng chinh phục và hòa hợp với thiên nhiên. Ý nghĩa cụ thể: Chống thủy tai, khai phá đất đai và bảo trợ cộng đồng.",
+                desc: "Sơn Tinh tượng trưng cho khát vọng chinh phục và hòa hợp với thiên nhiên.",
+                bullets: "• Chống thủy tai<br>• Khai phá đất đai<br>• Bảo trợ cộng đồng",
+                img: "https://cdn.vungoi.vn/vungoi/1540865604561_ap_20090712024045595.jpg"
+            },
+            {
+                title: "Ý nghĩa Thánh Gióng",
+                fullText: "Ý nghĩa Thánh Gióng. Thánh Gióng tượng trưng cho lòng yêu nước và sức mạnh cộng đồng. Biểu hiện qua các yếu tố: Đánh giặc Ân, nhân dân góp sức và bảo vệ đất nước.",
+                desc: "Thánh Gióng tượng trưng cho lòng yêu nước và sức mạnh cộng đồng.",
+                bullets: "• Đánh giặc Ân<br>• Nhân dân góp sức<br>• Bảo vệ đất nước",
+                img: "https://icdn.dantri.com.vn/2024/01/29/tranh-thanh-giong-cua-tranh-dan-gian-dong-ho-153278-1706523795683.jpg"
+            },
+            {
+                title: "Ý nghĩa Chử Đồng Tử",
+                fullText: "Ý nghĩa Chử Đồng Tử. Chử Đồng Tử đại diện cho lao động, phồn vinh và đạo lý báo hiếu. Gồm các giá trị: Báo hiếu cha, kết hôn với Tiên Dung, khai phá và phát triển cộng đồng.",
+                desc: "Chử Đồng Tử đại diện cho lao động, phồn vinh và đạo lý báo hiếu.",
+                bullets: "• Báo hiếu cha<br>• Kết hôn với Tiên Dung<br>• Khai phá và phát triển cộng đồng",
+                img: "https://media.tapchinghiencuuphathoc.vn/uploads/2024/12/10/chu-dong-tu-tien-dung-7-1733821941.jpg"
+            }
+        ];
+
+        let currentIndex = 0;
+        let isPlaying = true;
+        let synth = window.speechSynthesis;
+        let currentUtterance = null;
+        let slideTimeout = null;
+
+        function updateSlide() {
+            if (currentIndex >= data.length) {
+                currentIndex = 0; // Vòng lặp lại từ đầu
+            }
+
+            const item = data[currentIndex];
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('slide-title').innerText = item.title;
+            document.getElementById('slide-desc').innerText = item.desc;
+            document.getElementById('slide-bullets').innerHTML = item.bullets;
+
+            if (isPlaying) {
+                speakText(item.fullText, () => {
+                    // Đọc xong toàn bộ văn xuôi của slide, đợi 2 giây rồi mới next
+                    if (isPlaying) {
+                        slideTimeout = setTimeout(() => {
+                            currentIndex++;
+                            updateSlide();
+                        }, 2000);
+                    }
+                });
+            }
+        }
+
+        function speakText(text, callback) {
+            if (!synth) {
+                if (callback) callback();
+                return;
+            }
+
+            synth.cancel(); // Hủy giọng đọc cũ nếu có
+
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            currentUtterance.lang = 'vi-VN';
+            currentUtterance.rate = 0.95; // Tốc độ đọc chuẩn
+
+            // Đảm bảo chỉ gọi callback khi trình duyệt báo ĐÃ ĐỌC XONG hoàn toàn
+            currentUtterance.onend = function() {
+                if (callback) callback();
+            };
+
+            currentUtterance.onerror = function() {
+                if (callback) callback();
+            };
+
+            synth.speak(currentUtterance);
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('playPauseBtn');
+            if (isPlaying) {
+                btn.innerText = "Tạm dừng";
+                updateSlide();
+            } else {
+                btn.innerText = "Tiếp tục";
+                synth.cancel();
+                clearTimeout(slideTimeout);
+            }
+        }
+
+        function nextSlide() {
+            synth.cancel();
+            clearTimeout(slideTimeout);
+            currentIndex++;
+            updateSlide();
+        }
+
+        // Tự động kích hoạt âm thanh khi người dùng chạm/click lần đầu (bắt buộc theo chính sách trình duyệt)
+        window.onload = () => {
+            document.body.addEventListener('click', () => {
+                if (!synth.speaking && isPlaying && currentIndex === 0 && !synth.pending) {
+                    updateSlide();
+                }
+            }, { once: true });
+
+            updateSlide();
+        };
+    </script>
+</body>
+</html>
