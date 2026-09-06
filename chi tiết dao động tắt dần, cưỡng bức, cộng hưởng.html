@@ -1,0 +1,1058 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Icarus Presenter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 32px;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        /* Chế độ Fullscreen Minimalist */
+        body.fullscreen-mode .top-toolbar,
+        body.fullscreen-mode .manual-nav {
+            display: none !important;
+        }
+
+        body.fullscreen-mode {
+            padding: 20px 32px;
+            justify-content: center;
+            background: #111;
+        }
+
+        body.fullscreen-mode .container {
+            width: 100vw;
+            height: 94vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Nút thoát Fullscreen nhỏ ở góc trên */
+        .exit-fs-btn {
+            position: fixed;
+            top: 20px;
+            right: 32px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+            transition: 0.2s;
+        }
+        .exit-fs-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            color: #fff;
+        }
+        body.fullscreen-mode .exit-fs-btn {
+            display: block;
+        }
+
+        .top-toolbar {
+            width: 100%;
+            max-width: 1180px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1180px;
+            height: 70vh;
+            max-height: 600px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            background: #0b0b0b;
+        }
+
+        /* Hiển thị full ảnh, căn theo cạnh dài (object-fit: contain) để không bị xén, lem */
+        .image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-url-bar {
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 8px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 6px 10px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px 28px;
+        }
+
+        .title-area {
+            flex-shrink: 0;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ffd700;
+            cursor: pointer;
+            display: inline-block;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .scrollable-text-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+            position: relative;
+        }
+
+        .desc {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .manual-nav {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1180px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #ffd700;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: #000;
+        }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 250px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .container {
+                flex-direction: column;
+                height: 82vh;
+                max-height: none;
+                position: relative;
+            }
+            .image-panel {
+                flex: none;
+                height: 40vh;
+                width: 100%;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .content-box {
+                flex: 1;
+                overflow: hidden;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body class="">
+
+    <button class="exit-fs-btn" onclick="toggleFullscreenMode()">✕ Thoát Fullscreen</button>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Nhập chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy Prompt AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" onclick="toggleFullscreenMode()">📺 Fullscreen</button>
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save as HTML</button>
+            <button onclick="openImportModal()">Nhập dữ liệu (Import)</button>
+        </div>
+    </div>
+
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://ars.els-cdn.com/content/image/3-s2.0-B9780120598601500199-f15-03-9780120598601.jpg" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh vào đây..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box">
+            <div class="title-area">
+                <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Bấm để tìm kiếm hình ảnh trên Google" style="font-size: 2.75rem;">mối liên hệ ba hiện tượng</h1>
+            </div>
+            <div class="scrollable-text-area" id="scrollableTextArea">
+                <div class="desc" id="slide-desc" style="font-size: 1.65rem;"><div class="clickable-paragraph" id="desc_0" onclick="readParagraphAt('Ba hiện tượng dao động tắt dần, dao động cưỡng bức và cộng hưởng có quan hệ chặt chẽ trong các hệ dao động thực tế.')">Ba hiện tượng dao động tắt dần, dao động cưỡng bức và cộng hưởng có quan hệ chặt chẽ trong các hệ dao động thực tế.</div></div>
+                <div class="bullets" id="slide-bullets" style="font-size: 1.5rem;"><div class="clickable-paragraph" id="bullets_0" onclick="readParagraphAt('• Một hệ dao động thực tế thường chịu ma sát hoặc lực cản nên dao động tự do có xu hướng tắt dần.')">• Một hệ dao động thực tế thường chịu ma sát hoặc lực cản nên dao động tự do có xu hướng tắt dần.</div><div class="clickable-paragraph" id="bullets_1" onclick="readParagraphAt('• Muốn duy trì dao động, người ta có thể tác dụng ngoại lực tuần hoàn lên hệ và tạo ra dao động cưỡng bức.')">• Muốn duy trì dao động, người ta có thể tác dụng ngoại lực tuần hoàn lên hệ và tạo ra dao động cưỡng bức.</div><div class="clickable-paragraph" id="bullets_2" onclick="readParagraphAt('• Khi tần số của ngoại lực được điều chỉnh gần tần số riêng của hệ, biên độ dao động cưỡng bức tăng mạnh và xuất hiện cộng hưởng.')">• Khi tần số của ngoại lực được điều chỉnh gần tần số riêng của hệ, biên độ dao động cưỡng bức tăng mạnh và xuất hiện cộng hưởng.</div><div class="clickable-paragraph" id="bullets_3" onclick="readParagraphAt('• Như vậy, có thể hình dung chuỗi liên hệ: lực cản gây tắt dần → ngoại lực tuần hoàn tạo dao động cưỡng bức → tần số phù hợp tạo cộng hưởng.')">• Như vậy, có thể hình dung chuỗi liên hệ: lực cản gây tắt dần → ngoại lực tuần hoàn tạo dao động cưỡng bức → tần số phù hợp tạo cộng hưởng.</div><div class="clickable-paragraph" id="bullets_4" onclick="readParagraphAt('• Trong dao động tắt dần, năng lượng cơ học giảm dần do lực cản.')">• Trong dao động tắt dần, năng lượng cơ học giảm dần do lực cản.</div><div class="clickable-paragraph" id="bullets_5" onclick="readParagraphAt('• Trong dao động cưỡng bức, năng lượng được bổ sung liên tục từ ngoại lực để bù lại phần năng lượng mất đi.')">• Trong dao động cưỡng bức, năng lượng được bổ sung liên tục từ ngoại lực để bù lại phần năng lượng mất đi.</div><div class="clickable-paragraph" id="bullets_6" onclick="readParagraphAt('• Trong cộng hưởng, sự truyền năng lượng từ ngoại lực vào hệ đạt hiệu quả đặc biệt cao.')">• Trong cộng hưởng, sự truyền năng lượng từ ngoại lực vào hệ đạt hiệu quả đặc biệt cao.</div><div class="clickable-paragraph" id="bullets_7" onclick="readParagraphAt('• Cộng hưởng có thể được khai thác để tăng hiệu quả hoạt động hoặc phải được hạn chế để bảo đảm an toàn.')">• Cộng hưởng có thể được khai thác để tăng hiệu quả hoạt động hoặc phải được hạn chế để bảo đảm an toàn.</div><div class="clickable-paragraph" id="bullets_8" onclick="readParagraphAt('• Hiểu mối liên hệ này giúp học sinh phân tích được nhiều hiện tượng rung động trong đời sống và kỹ thuật.')">• Hiểu mối liên hệ này giúp học sinh phân tích được nhiều hiện tượng rung động trong đời sống và kỹ thuật.</div></div>
+                <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Three oscillation phenomena')" title="Tìm hình ảnh">Three oscillation phenomena</span><span class="tag" onclick="searchGoogle('Damping')" title="Tìm hình ảnh">Damping</span><span class="tag" onclick="searchGoogle('Forced oscillation')" title="Tìm hình ảnh">Forced oscillation</span><span class="tag" onclick="searchGoogle('Resonance')" title="Tìm hình ảnh">Resonance</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseBtn" onclick="togglePauseRead()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Autoplay</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ màn hình luôn sáng khi đọc">
+            <span>Giữ màn hình sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">12 / 12</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated / Excel / Google Sheet)</h2>
+            <p style="font-size: 0.9rem; color: #ccc;">Dán dữ liệu gồm 8 cột (Từ khóa, Kiến thức, Chi tiết, 4 từ khóa Anh, URL ảnh) vào đây:</p>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật dữ liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Phân biệt File gốc và File Save As (Ngậm dữ liệu):
+        // - Ở file gốc: Biến này để trống (""). Khi khởi động, nếu trống, app sẽ lấy trực tiếp từ localStorage.
+        // - Ở file Save As: Nút Save as HTML sẽ tự động chèn dữ liệu ngậm vào biến này, và app sẽ ưu tiên đọc thẳng dữ liệu ngậm thay vì localStorage.
+        let embeddedInitialData = `dao động tắt dần	Dao động tắt dần là dao động có biên độ giảm dần theo thời gian do lực cản hoặc ma sát.	• Dao động tắt dần (damped oscillation) xảy ra khi hệ dao động chịu tác dụng của lực cản hoặc ma sát.<br>• Trong quá trình dao động, cơ năng của hệ giảm dần và thường chuyển hóa thành nhiệt năng.<br>• Biên độ dao động giảm dần theo thời gian; nếu lực cản đủ lớn, vật cuối cùng dừng lại ở vị trí cân bằng.<br>• Ví dụ: con lắc đồng hồ khi không được cung cấp năng lượng sẽ dao động yếu dần rồi dừng; quả lắc treo trên dây dao động trong không khí cũng giảm biên độ; lò xo gắn vật dao động trên mặt bàn có ma sát sẽ dừng sau một thời gian.<br>• Trong thực tế, dao động tắt dần có thể có lợi hoặc có hại tùy trường hợp.<br>• Giảm chấn ô tô sử dụng hiện tượng này để hạn chế xe rung lắc sau khi đi qua ổ gà.<br>• Bộ phận giảm chấn trong máy móc giúp hạn chế rung động và tiếng ồn.<br>• Nếu không kiểm soát tốt, dao động tắt dần có thể làm giảm hiệu quả hoạt động của đồng hồ cơ hoặc các thiết bị cần dao động duy trì.	Damped oscillation	Friction	Energy loss	Amplitude	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQsLniK3kHx81KZebMPIwatcbdqAFwhgGiMYtVGD3iDMPBstLm6AtULbgb&s=10
+nguyên nhân dao động tắt dần	Lực ma sát và lực cản môi trường làm cơ năng của hệ dao động giảm dần.	• Nguyên nhân chủ yếu của dao động tắt dần là sự xuất hiện của lực cản hoặc ma sát.<br>• Khi con lắc dao động trong không khí, lực cản của không khí tác dụng lên vật và làm giảm năng lượng dao động.<br>• Khi vật gắn với lò xo dao động trên mặt bàn, ma sát giữa vật và mặt bàn làm cơ năng giảm dần.<br>• Một phần cơ năng ban đầu của hệ được chuyển thành nhiệt năng do ma sát và lực cản.<br>• Nếu lực cản nhỏ, vật có thể thực hiện nhiều dao động trước khi dừng.<br>• Nếu lực cản lớn, biên độ giảm nhanh và vật dừng lại sớm.<br>• Có thể quan sát rõ hiện tượng bằng cách kéo một con lắc lệch khỏi vị trí cân bằng rồi thả cho dao động tự do.<br>• Ban đầu con lắc dao động với biên độ lớn, sau đó biên độ nhỏ dần.<br>• Hiện tượng này cho thấy cơ năng không được bảo toàn trong hệ dao động có lực cản.	Cause of damping	Air resistance	Friction	Energy dissipation	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSoaS3GWso4rt5l-sUq06wvZfSA1PI0i0Oe6U1_KJDe4W5n-3JgHb46tW7H&s=10
+ứng dụng dao động tắt dần	Dao động tắt dần được ứng dụng để giảm rung, giảm chấn và bảo vệ thiết bị, phương tiện.	• Một ứng dụng quan trọng của dao động tắt dần là hệ thống giảm xóc của ô tô, xe máy và nhiều phương tiện giao thông.<br>• Khi bánh xe đi qua chỗ gồ ghề, lò xo có xu hướng làm xe dao động lên xuống. Bộ giảm chấn làm tiêu hao năng lượng dao động để xe nhanh chóng trở lại trạng thái ổn định.<br>• Trong máy móc công nghiệp, các bộ phận giảm chấn giúp hạn chế rung động do động cơ hoặc chuyển động cơ học gây ra.<br>• Trong các công trình xây dựng, thiết bị giảm chấn được sử dụng để giảm rung do gió, động đất hoặc hoạt động của máy móc.<br>• Một số thiết bị đo và dụng cụ cơ học cũng cần giảm dao động để kết quả ổn định hơn.<br>• Cửa tự động có bộ phận giảm chấn để tránh đóng mở quá mạnh.<br>• Tay co thủy lực của cửa là một ví dụ quen thuộc: nó làm cửa chuyển động chậm lại trước khi đóng hoàn toàn.<br>• Nhờ kiểm soát dao động tắt dần, thiết bị hoạt động êm hơn, an toàn hơn và bền hơn.	Applications of damping	Shock absorber	Vibration control	Damping system	https://www.trodo.com/media/magefan_blog/suspension_system.jpg
+dao động cưỡng bức	Dao động cưỡng bức là dao động của hệ dưới tác dụng của ngoại lực tuần hoàn biến thiên theo thời gian.	• Dao động cưỡng bức (forced oscillation) xảy ra khi một hệ dao động chịu tác dụng liên tục của ngoại lực tuần hoàn.<br>• Ví dụ, một người liên tục đẩy xích đu theo những khoảng thời gian đều nhau sẽ làm xích đu dao động cưỡng bức.<br>• Một con lắc có ma sát sẽ không thể dao động mãi nếu không được cung cấp năng lượng. Khi tác dụng lực tuần hoàn lên nó, dao động có thể được duy trì.<br>• Trong giai đoạn đầu, dao động thường gồm phần dao động riêng và phần dao động do ngoại lực tạo ra.<br>• Sau một thời gian, dao động riêng tắt dần và hệ chủ yếu dao động với tần số của ngoại lực.<br>• Biên độ dao động cưỡng bức phụ thuộc vào biên độ ngoại lực, tần số ngoại lực, tần số riêng của hệ và mức độ cản trở.<br>• Khi tần số ngoại lực gần bằng tần số riêng, biên độ có thể tăng rất mạnh, dẫn đến hiện tượng cộng hưởng.<br>• Dao động cưỡng bức được ứng dụng trong máy móc, thiết bị rung, kỹ thuật và nhiều hệ thống cơ học.	Forced oscillation	Periodic force	Driving frequency	Amplitude	https://cdn.savemyexams.com/uploads/2021/05/6.3.2-Forced-Vibration-Swing.png
+ví dụ dao động cưỡng bức	Các ví dụ điển hình gồm xích đu được đẩy đều, màng loa phát âm và máy rung hoạt động dưới tác dụng của lực tuần hoàn.	• Xích đu là ví dụ trực quan về dao động cưỡng bức khi người chơi liên tục tác dụng lực theo chu kỳ thích hợp.<br>• Màng loa dao động dưới tác dụng của lực điện từ biến thiên theo tín hiệu âm thanh và tạo ra sóng âm.<br>• Một chiếc điện thoại có mô-tơ rung cũng tạo ra dao động cưỡng bức do lực tuần hoàn của bộ phận quay lệch tâm.<br>• Máy đầm rung trong xây dựng sử dụng chuyển động rung cưỡng bức để làm vật liệu được nén chặt hơn.<br>• Máy giặt khi vắt có thể tạo rung mạnh nếu khối lượng quần áo phân bố không đều; chuyển động của lồng quay tạo ra lực tuần hoàn tác dụng lên hệ.<br>• Cầu hoặc sàn nhà có thể rung khi chịu tác động tuần hoàn từ máy móc hoặc bước chân của nhiều người.<br>• Trong các trường hợp trên, ngoại lực cung cấp năng lượng cho hệ để duy trì dao động.<br>• Nếu ngừng ngoại lực, dao động của hệ thực sẽ giảm dần do ma sát và lực cản.	Forced vibration	Swing	Speaker	Vibration motor	https://upload.wikimedia.org/wikipedia/commons/0/05/Wikipedia20_animated_Speakers.gif?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original
+ứng dụng dao động cưỡng bức	Dao động cưỡng bức được sử dụng để tạo rung, phát âm, truyền năng lượng và điều khiển chuyển động tuần hoàn.	• Dao động cưỡng bức có nhiều ứng dụng trong đời sống và kỹ thuật.<br>• Trong loa điện, tín hiệu điện tạo ra lực điện từ biến thiên, làm màng loa dao động và phát ra âm thanh.<br>• Trong máy rung, động cơ tạo lực tuần hoàn để tạo chuyển động rung phục vụ sản xuất hoặc xây dựng.<br>• Máy đầm bê tông sử dụng rung động để làm giảm khoảng trống và giúp bê tông phân bố đều hơn.<br>• Các thiết bị massage rung cũng dựa trên chuyển động cưỡng bức của động cơ.<br>• Trong kỹ thuật, người ta có thể chủ động điều chỉnh tần số của ngoại lực để hệ đạt biên độ mong muốn.<br>• Dao động cưỡng bức cũng được sử dụng trong nghiên cứu đặc tính của hệ dao động, từ đó xác định tần số riêng và mức độ giảm chấn.<br>• Tuy nhiên, nếu tần số ngoại lực gần tần số riêng, biên độ có thể tăng mạnh.<br>• Vì vậy, khi thiết kế máy móc và công trình, cần kiểm soát tần số làm việc để tránh rung động nguy hiểm do cộng hưởng.	Forced vibration applications	Vibration machine	Speaker	Engineering	https://i.ebayimg.com/images/g/INkAAeSwtJZpGyyT/s-l1200.jpg
+cộng hưởng	Cộng hưởng xảy ra khi tần số của ngoại lực cưỡng bức bằng hoặc rất gần tần số riêng của hệ, làm biên độ dao động đạt giá trị lớn.	• Cộng hưởng (resonance) là hiện tượng biên độ dao động cưỡng bức tăng mạnh khi tần số của ngoại lực gần bằng tần số riêng của hệ.<br>• Có thể hình dung bằng một chiếc xích đu: nếu người đẩy tác dụng lực đúng nhịp, xích đu sẽ ngày càng dao động với biên độ lớn hơn.<br>• Khi tần số ngoại lực lệch xa tần số riêng, biên độ thường nhỏ hơn.<br>• Khi tần số ngoại lực tiến gần tần số riêng, hệ nhận năng lượng từ ngoại lực hiệu quả hơn.<br>• Trong thực tế, cộng hưởng có thể có lợi hoặc gây nguy hiểm.<br>• Cộng hưởng có lợi trong các nhạc cụ, mạch điện, bộ lọc tín hiệu và một số thiết bị kỹ thuật.<br>• Cộng hưởng có hại có thể làm cầu, nhà cao tầng, máy móc hoặc các bộ phận cơ khí rung quá mạnh.<br>• Mức độ cộng hưởng phụ thuộc vào lực cản của hệ: lực cản càng nhỏ, đỉnh cộng hưởng thường càng cao và hiện tượng càng rõ.<br>• Vì vậy, kỹ sư phải tính toán tần số riêng và đặc tính giảm chấn khi thiết kế công trình, máy móc.	Resonance	Natural frequency	Forced oscillation	Amplitude	https://spacefed.com/wp-content/uploads/2024/09/image-5.jpeg
+điều kiện cộng hưởng	Điều kiện cộng hưởng cơ bản là tần số ngoại lực bằng hoặc gần bằng tần số riêng của hệ.	• Điều kiện quan trọng để xảy ra cộng hưởng là tần số của ngoại lực cưỡng bức phải bằng hoặc rất gần tần số riêng của hệ.<br>• Nếu ký hiệu tần số riêng của hệ là $f_0$ và tần số ngoại lực là $f$, điều kiện cộng hưởng được biểu diễn gần đúng là $f \\approx f_0$.<br>• Theo tần số góc, điều kiện tương ứng là $\\omega \\approx \\omega_0$.<br>• Khi đạt cộng hưởng, hệ nhận năng lượng từ ngoại lực với hiệu quả lớn, khiến biên độ dao động tăng đáng kể.<br>• Trong hệ có lực cản, biên độ cộng hưởng không tăng vô hạn mà đạt một giá trị cực đại hữu hạn.<br>• Ví dụ, khi đẩy xích đu đúng nhịp dao động riêng, mỗi lần đẩy bổ sung năng lượng đúng thời điểm và làm biên độ tăng.<br>• Ngược lại, nếu đẩy sai nhịp, năng lượng truyền vào hệ kém hiệu quả và biên độ không tăng mạnh.<br>• Hiểu điều kiện cộng hưởng giúp khai thác cộng hưởng trong thiết bị kỹ thuật và phòng tránh rung động nguy hiểm trong công trình.	Resonance condition	Natural frequency	Driving frequency	Energy transfer	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCS8pJDCloDJY324b0pFKk_vbeFxjxJQJp7ct-f3LA-_32jEUxmRWst8lI&s=10
+ví dụ cộng hưởng có lợi	Cộng hưởng được khai thác trong nhiều thiết bị như hộp cộng hưởng của nhạc cụ, mạch chọn sóng và các hệ dao động kỹ thuật.	• Hộp đàn guitar giúp tăng cường âm thanh nhờ các dao động cộng hưởng của không khí và thân đàn.<br>• Trong các nhạc cụ như violin, guitar hoặc đàn tranh, cấu tạo thân đàn được thiết kế để khuếch đại một số thành phần âm thanh.<br>• Trong radio truyền thống, mạch dao động có thể được điều chỉnh để cộng hưởng với tần số của sóng điện từ cần thu.<br>• Trong kỹ thuật điện, cộng hưởng được sử dụng để chọn hoặc lọc tín hiệu có tần số mong muốn.<br>• Trong các hệ cơ học, cộng hưởng có thể được sử dụng để làm tăng biên độ dao động mà không cần tăng quá lớn biên độ ngoại lực.<br>• Xích đu cũng là một ví dụ đơn giản: tác dụng lực đúng nhịp giúp đạt biên độ lớn hơn với mỗi lần đẩy tương đối nhỏ.<br>• Các ví dụ này cho thấy cộng hưởng không phải lúc nào cũng nguy hiểm.<br>• Khi được kiểm soát đúng, cộng hưởng giúp tăng hiệu quả truyền năng lượng và khuếch đại tín hiệu.<br>• Tuy nhiên, hệ thống cần được thiết kế phù hợp để tránh vượt quá giới hạn an toàn.	Useful resonance	Musical instrument	Radio circuit	Signal filtering	https://upload.wikimedia.org/wikipedia/commons/8/82/Historical_instruments.jpg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original
+ví dụ cộng hưởng có hại	Cộng hưởng có thể gây rung động mạnh và phá hỏng công trình, máy móc hoặc các bộ phận cơ khí nếu không được kiểm soát.	• Cộng hưởng có hại xảy ra khi ngoại lực tuần hoàn tác dụng lên hệ với tần số bằng hoặc gần tần số riêng của hệ.<br>• Một cây cầu có thể rung mạnh nếu chịu tác động tuần hoàn có tần số phù hợp với tần số riêng của cầu.<br>• Máy móc quay cũng có thể xuất hiện rung động mạnh khi tốc độ quay đi qua vùng tần số cộng hưởng.<br>• Các tòa nhà cao tầng chịu tác động của gió hoặc động đất có thể bị rung đáng kể nếu tần số kích thích phù hợp với một trong các tần số riêng của công trình.<br>• Động cơ hoặc quạt mất cân bằng có thể tạo lực tuần hoàn làm các bộ phận rung mạnh.<br>• Rung động lớn kéo dài có thể gây mỏi vật liệu, làm lỏng mối nối hoặc hư hỏng thiết bị.<br>• Để hạn chế cộng hưởng, kỹ sư có thể thay đổi khối lượng, độ cứng hoặc cấu trúc để thay đổi tần số riêng.<br>• Ngoài ra, người ta sử dụng bộ giảm chấn để tăng tiêu hao năng lượng dao động và giảm biên độ.<br>• Vì vậy, nhận biết cộng hưởng là yêu cầu quan trọng trong thiết kế công trình và máy móc.	Harmful resonance	Bridge vibration	Structural safety	Damping	https://i.makeagif.com/media/3-20-2014/Hj80vR.gif
+phân biệt dao động tắt dần và cưỡng bức	Dao động tắt dần giảm biên độ theo thời gian, còn dao động cưỡng bức được duy trì nhờ ngoại lực tuần hoàn.	• Dao động tắt dần xảy ra khi hệ dao động tự do nhưng chịu lực cản hoặc ma sát, khiến biên độ giảm dần theo thời gian.<br>• Dao động cưỡng bức xảy ra khi hệ chịu tác dụng liên tục của ngoại lực tuần hoàn.<br>• Với dao động tắt dần, nếu không được cung cấp năng lượng bổ sung, hệ cuối cùng sẽ dừng lại.<br>• Với dao động cưỡng bức, ngoại lực liên tục cung cấp năng lượng nên dao động có thể được duy trì.<br>• Trong trạng thái ổn định của dao động cưỡng bức, tần số dao động của vật bằng tần số của ngoại lực.<br>• Ví dụ dao động tắt dần là con lắc dao động trong không khí; ví dụ dao động cưỡng bức là màng loa dao động dưới tác dụng của tín hiệu điện.<br>• Hai hiện tượng có thể xuất hiện đồng thời: một hệ cưỡng bức vẫn có lực cản, và phần dao động riêng của nó sẽ tắt dần.<br>• Khi tần số ngoại lực gần tần số riêng, dao động cưỡng bức có thể xảy ra cộng hưởng.<br>• Đây là điểm khác biệt quan trọng cần ghi nhớ khi phân tích các hệ dao động thực tế.	Damped vs forced oscillation	Damping	External force	Natural frequency	https://www.schoolphysics.co.uk/age16-19/Mechanics/Simple%20harmonic%20motion/text/Free_damped_and_forced_oscillations/images/7.PNG
+mối liên hệ ba hiện tượng	Ba hiện tượng dao động tắt dần, dao động cưỡng bức và cộng hưởng có quan hệ chặt chẽ trong các hệ dao động thực tế.	• Một hệ dao động thực tế thường chịu ma sát hoặc lực cản nên dao động tự do có xu hướng tắt dần.<br>• Muốn duy trì dao động, người ta có thể tác dụng ngoại lực tuần hoàn lên hệ và tạo ra dao động cưỡng bức.<br>• Khi tần số của ngoại lực được điều chỉnh gần tần số riêng của hệ, biên độ dao động cưỡng bức tăng mạnh và xuất hiện cộng hưởng.<br>• Như vậy, có thể hình dung chuỗi liên hệ: lực cản gây tắt dần → ngoại lực tuần hoàn tạo dao động cưỡng bức → tần số phù hợp tạo cộng hưởng.<br>• Trong dao động tắt dần, năng lượng cơ học giảm dần do lực cản.<br>• Trong dao động cưỡng bức, năng lượng được bổ sung liên tục từ ngoại lực để bù lại phần năng lượng mất đi.<br>• Trong cộng hưởng, sự truyền năng lượng từ ngoại lực vào hệ đạt hiệu quả đặc biệt cao.<br>• Cộng hưởng có thể được khai thác để tăng hiệu quả hoạt động hoặc phải được hạn chế để bảo đảm an toàn.<br>• Hiểu mối liên hệ này giúp học sinh phân tích được nhiều hiện tượng rung động trong đời sống và kỹ thuật.	Three oscillation phenomena	Damping	Forced oscillation	Resonance	https://ars.els-cdn.com/content/image/3-s2.0-B9780120598601500199-f15-03-9780120598601.jpg`;
+
+        let rawInitialData = "";
+        let isEmbeddedFile = (embeddedInitialData && embeddedInitialData.trim() !== "");
+
+        if (isEmbeddedFile) {
+            // Nếu là file Save As đã ngậm dữ liệu -> Lấy dữ liệu ngậm bên trong file
+            rawInitialData = embeddedInitialData;
+        } else {
+            // Nếu là file gốc -> Lấy ngay lập tức từ localStorage (nếu chưa có gì mới dùng bộ mẫu Tứ Bất Tử dự phòng)
+            let savedLocalStorageData = localStorage.getItem('icarus_raw_data');
+            if (savedLocalStorageData && savedLocalStorageData.trim() !== "") {
+                rawInitialData = savedLocalStorageData;
+            } else {
+                rawInitialData = `Sơn Tinh	Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.	• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên	Tản Vien Son Thanh	Ba Vi Mountain	Vietnamese mythology	Natural disaster	https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg`;
+                localStorage.setItem('icarus_raw_data', rawInitialData);
+            }
+        }
+
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                });
+            }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/;
+            const match = text.match(markdownLinkRegex);
+            if (match && match[2]) {
+                return match[2].trim();
+            }
+            return text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        function initData() {
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+            
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            requestWakeLock();
+        }
+
+        function saveConfigToLocalStorage() {
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+            // Chỉ lưu vào localStorage nếu đây là file gốc, file Save As chạy độc lập không ghi đè dữ liệu của file gốc ra ngoài
+            if (!isEmbeddedFile) {
+                localStorage.setItem('icarus_raw_data', rawInitialData);
+            }
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = `${typePrefix}_${index}`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" onclick="readParagraphAt('${escapeHtml(cleanedText)}')">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm hình ảnh">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('scrollableTextArea').scrollTop = 0;
+            saveConfigToLocalStorage();
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t1 = item.tags[0] || '';
+                let t2 = item.tags[1] || '';
+                let t3 = item.tags[2] || '';
+                let t4 = item.tags[3] || '';
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t1}\t${t2}\t${t3}\t${t4}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveConfigToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => {
+                el.classList.remove('active-speaking');
+            });
+        }
+
+        function highlightAndScrollParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                let elId = paragraphElementMap[paragraphIndex];
+                let el = document.getElementById(elId);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    
+                    const scrollArea = document.getElementById('scrollableTextArea');
+                    const elOffsetTop = el.offsetTop;
+                    const areaHeight = scrollArea.clientHeight;
+                    const elHeight = el.offsetHeight;
+                    
+                    scrollArea.scrollTo({
+                        top: elOffsetTop - (areaHeight / 2) + (elHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+
+        let currentQueue = [];
+        let currentQueueIndex = 0;
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0) {
+            if (!synth) return;
+            currentQueue = paragraphs;
+            currentQueueIndex = queueStartIndex;
+
+            if (currentQueueIndex >= currentQueue.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) {
+                    nextSlide();
+                }
+                return;
+            }
+
+            const textToSpeak = currentQueue[currentQueueIndex];
+            let utter = new SpeechSynthesisUtterance(textToSpeak);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            let isTitle = (currentQueueIndex === 0 && currentQueue === getFullQueue());
+            let paragraphMapIndex = isTitle ? -1 : (currentQueue === getFullQueue() ? currentQueueIndex - 1 : currentQueueIndex + getStartIndexOffset(currentQueue));
+
+            utter.onstart = function() {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                if (!isTitle) {
+                    highlightAndScrollParagraph(paragraphMapIndex);
+                }
+            };
+
+            utter.onend = function() {
+                if (!isPaused) {
+                    if (!isAutoplay && paragraphMapIndex >= 0) {
+                        clearActiveHighlights();
+                        return;
+                    }
+                    speakParagraphQueue(currentQueue, currentQueueIndex + 1);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function getFullQueue() {
+            const item = data[currentIndex];
+            return [item.title, ...currentSlideParagraphs];
+        }
+
+        function getStartIndexOffset(subQueue) {
+            let full = getFullQueue();
+            let firstText = subQueue[0];
+            return full.indexOf(firstText) - 1;
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            let fullQueue = getFullQueue();
+            speakParagraphQueue(fullQueue, 0);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            
+            let startIndex = currentSlideParagraphs.indexOf(textSnippet);
+            let queue = startIndex !== -1 ? currentSlideParagraphs.slice(startIndex) : [textSnippet];
+            
+            speakParagraphQueue(queue, 0);
+        }
+
+        function togglePauseRead() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) {
+                    synth.resume();
+                    isPaused = false;
+                    document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                } else {
+                    synth.pause();
+                    isPaused = true;
+                    document.getElementById('pauseBtn').innerText = '▶️ Tiếp tục';
+                }
+            } else if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+            }
+        }
+
+        function stopRead() {
+            if (synth) {
+                synth.cancel();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                clearActiveHighlights();
+            }
+        }
+
+        // Điều hướng đoạn bằng phím Up / Down
+        function jumpParagraph(direction) {
+            let activeEl = document.querySelector('.clickable-paragraph.active-speaking');
+            let paragraphs = Array.from(document.querySelectorAll('.clickable-paragraph'));
+            if (paragraphs.length === 0) return;
+
+            let nextIdx = 0;
+            if (!activeEl) {
+                nextIdx = (direction > 0) ? 0 : paragraphs.length - 1;
+            } else {
+                let currentIdx = paragraphs.indexOf(activeEl);
+                nextIdx = currentIdx + direction;
+                if (nextIdx < 0) nextIdx = 0;
+                if (nextIdx >= paragraphs.length) nextIdx = paragraphs.length - 1;
+            }
+
+            let targetText = paragraphs[nextIdx].innerText;
+            readParagraphAt(targetText);
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveConfigToLocalStorage();
+            if (synth && synth.speaking) {
+                readSlide();
+            }
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function toggleFullscreenMode() {
+            document.body.classList.toggle('fullscreen-mode');
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel += direction;
+            if (fontSizeLevel < -3) fontSizeLevel = -3;
+            if (fontSizeLevel > 5) fontSizeLevel = 5;
+            applyFontSize();
+            saveConfigToLocalStorage();
+        }
+
+        function applyFontSize() {
+            const descElem = document.getElementById('slide-desc');
+            const bulletsElem = document.getElementById('slide-bullets');
+            const titleElem = document.getElementById('slide-title');
+
+            let baseDesc = 1.15 + (fontSizeLevel * 0.1);
+            let baseBullets = 1.0 + (fontSizeLevel * 0.1);
+            let baseTitle = 2.0 + (fontSizeLevel * 0.15);
+
+            descElem.style.fontSize = `${baseDesc}rem`;
+            bulletsElem.style.fontSize = `${baseBullets}rem`;
+            titleElem.style.fontSize = `${baseTitle}rem`;
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                renderSlide();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            // Tự động đóng gói nội dung dữ liệu hiện tại vào biến embeddedInitialData để tạo thành file Save As hoàn chỉnh độc lập
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-tu-bat-tu.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy (Plain Text) phân tách nhau bằng dấu Tab gồm đúng 8 cột theo thứ tự sau (TUYỆT ĐỐI KHÔNG CÓ CỘT SỐ THỨ TỰ Ở ĐẦU):
+1. Từ khóa chính (tiếng Việt)
+2. Kiến thức trọng tâm ngắn gọn.
+3. Nội dung chi tiết (100-200 từ, dùng thẻ <br> nếu xuống dòng gạch đầu dòng)
+4. Từ khóa đáp án tiếng Anh ngắn gọn
+5. Từ khóa tiếng anh 1 liên quan
+6. Từ khóa tiếng anh 2 liên quan
+7. Từ khóa tiếng anh 3 liên quan
+8. URL hình ảnh minh họa thực tế dạng đường dẫn thuần túy hoặc dạng markdown [Alt](url) (để trống nếu không tìm được)
+
+Chỉ trả về dữ liệu thô dạng văn bản Tab-separated, không kèm theo bất kỳ lời dẫn hay định dạng markdown nào khác.`;
+
+            navigator.clipboard.writeText(promptContent).then(() => {
+                alert('Đã copy Prompt AI vào bộ nhớ tạm! Bạn có thể dán vào ChatGPT/Gemini để lấy dữ liệu.');
+            });
+        }
+
+        // Bổ sung phím tắt: Left/Right đổi slide, Up/Down nhảy đoạn, =/+ tăng chữ, -/_ giảm chữ, Esc thoát Fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                jumpParagraph(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                jumpParagraph(-1);
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(1);
+            } else if (e.key === '-' || e.key === '_') {
+                changeFontSize(-1);
+            } else if (e.key === 'Escape') {
+                if (document.body.classList.contains('fullscreen-mode')) {
+                    toggleFullscreenMode();
+                }
+            }
+        });
+
+        // Thao tác vuốt di động
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const threshold = 100; 
+
+        const slideBox = document.getElementById('slideContainerBox');
+        const leftIndicator = document.getElementById('swipeLeftIndicator');
+        const rightIndicator = document.getElementById('swipeRightIndicator');
+
+        slideBox.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        slideBox.addEventListener('touchmove', e => {
+            let currentX = e.changedTouches[0].screenX;
+            let diff = currentX - touchStartX;
+            
+            if (diff < -40) {
+                leftIndicator.style.display = 'block';
+                rightIndicator.style.display = 'none';
+            } else if (diff > 40) {
+                rightIndicator.style.display = 'block';
+                leftIndicator.style.display = 'none';
+            } else {
+                leftIndicator.style.display = 'none';
+                rightIndicator.style.display = 'none';
+            }
+        }, {passive: true});
+
+        slideBox.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            leftIndicator.style.display = 'none';
+            rightIndicator.style.display = 'none';
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - threshold) {
+                nextSlide();
+            } else if (touchEndX > touchStartX + threshold) {
+                prevSlide();
+            }
+        }
+
+        window.onload = () => {
+            initData();
+        };
+    </script>
+
+</body></html>
