@@ -1,0 +1,932 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Tứ Bất Tử</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        .top-toolbar {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1100px;
+            height: 70vh;
+            max-height: 600px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-url-bar {
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 8px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 6px 10px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: 100%;
+            position: relative;
+        }
+
+        /* Tiêu đề được cố định ở top của khung văn bản, không bị trôi khi cuộn */
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: #ffd700;
+            border-bottom: 2px solid #ffd700;
+            padding-bottom: 8px;
+            cursor: pointer;
+            display: inline-block;
+            position: sticky;
+            top: 0;
+            background: rgba(20, 18, 30, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 5;
+            width: 100%;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .desc {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex-shrink: 0;
+            margin-top: auto;
+            padding-top: 10px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .manual-nav {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #ffd700;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: #000;
+        }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 250px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                flex-direction: column;
+                height: 82vh;
+                max-height: none;
+                position: relative;
+            }
+            .image-panel {
+                flex: none;
+                height: 40vh;
+                width: 100%;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .content-box {
+                flex: 1;
+                overflow-y: auto;
+                max-height: none;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Nhập chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy Prompt AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save as HTML</button>
+            <button onclick="openImportModal()">Nhập dữ liệu (Import)</button>
+        </div>
+    </div>
+
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh vào đây..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box" id="contentBox">
+            <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Bấm để tìm kiếm hình ảnh trên Google" style="font-size: 2rem;">Sơn Tinh</h1>
+            <div class="desc" id="slide-desc" style="font-size: 1.15rem;"><div class="clickable-paragraph" id="desc_0" onclick="readParagraphAt('Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.')">Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.</div></div>
+            <div class="bullets" id="slide-bullets" style="font-size: 1rem;"><div class="clickable-paragraph" id="bullets_0" onclick="readParagraphAt('• Sơn Tinh còn gọi là Tản Viên Sơn Thánh, là một trong những nhân vật thần thoại nổi bật của văn hóa dân gian Việt Nam.')">• Sơn Tinh còn gọi là Tản Viên Sơn Thánh, là một trong những nhân vật thần thoại nổi bật của văn hóa dân gian Việt Nam.</div><div class="clickable-paragraph" id="bullets_1" onclick="readParagraphAt('• Nhân vật gắn với núi Ba Vì, một không gian văn hóa và tín ngưỡng quan trọng ở vùng trung du Bắc Bộ.')">• Nhân vật gắn với núi Ba Vì, một không gian văn hóa và tín ngưỡng quan trọng ở vùng trung du Bắc Bộ.</div><div class="clickable-paragraph" id="bullets_2" onclick="readParagraphAt('• Trong truyền thuyết Sơn Tinh – Thủy Tinh, Sơn Tinh đại diện cho sức mạnh của núi non và con người trước thiên tai, đặc biệt là lũ lụt.')">• Trong truyền thuyết Sơn Tinh – Thủy Tinh, Sơn Tinh đại diện cho sức mạnh của núi non và con người trước thiên tai, đặc biệt là lũ lụt.</div><div class="clickable-paragraph" id="bullets_3" onclick="readParagraphAt('• Việc Sơn Tinh liên tục nâng núi chống nước thể hiện khát vọng chinh phục và thích nghi với môi trường tự nhiên.')">• Việc Sơn Tinh liên tục nâng núi chống nước thể hiện khát vọng chinh phục và thích nghi với môi trường tự nhiên.</div><div class="clickable-paragraph" id="bullets_4" onclick="readParagraphAt('• Hình tượng Sơn Tinh còn gắn với hoạt động khai phá đất đai, sản xuất nông nghiệp và bảo vệ cộng đồng.')">• Hình tượng Sơn Tinh còn gắn với hoạt động khai phá đất đai, sản xuất nông nghiệp và bảo vệ cộng đồng.</div><div class="clickable-paragraph" id="bullets_5" onclick="readParagraphAt('• Sơn Tinh được tôn là một trong Tứ Bất Tử, thể hiện sức sống lâu bền của hình tượng trong đời sống tinh thần người Việt.')">• Sơn Tinh được tôn là một trong Tứ Bất Tử, thể hiện sức sống lâu bền của hình tượng trong đời sống tinh thần người Việt.</div><div class="clickable-paragraph" id="bullets_6" onclick="readParagraphAt('• Nhân vật góp phần phản ánh ước mơ của cư dân nông nghiệp về cuộc sống ổn định, mùa màng thuận lợi và khả năng vượt qua thiên tai.')">• Nhân vật góp phần phản ánh ước mơ của cư dân nông nghiệp về cuộc sống ổn định, mùa màng thuận lợi và khả năng vượt qua thiên tai.</div></div>
+            <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Son Tinh')" title="Tìm hình ảnh">Son Tinh</span><span class="tag" onclick="searchGoogle('Ba Vi Mountain')" title="Tìm hình ảnh">Ba Vi Mountain</span><span class="tag" onclick="searchGoogle('Vietnamese mythology')" title="Tìm hình ảnh">Vietnamese mythology</span><span class="tag" onclick="searchGoogle('Natural disaster')" title="Tìm hình ảnh">Natural disaster</span></div>
+        </div>
+    </div>
+
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseResumeBtn" onclick="togglePauseResume()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Autoplay</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ màn hình luôn sáng khi đọc">
+            <span>Giữ màn hình sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">1 / 12</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated / Excel / Google Sheet)</h2>
+            <p style="font-size: 0.9rem; color: #ccc;">Dán dữ liệu gồm 8 cột (Từ khóa, Kiến thức, Chi tiết, 4 từ khóa Anh, URL ảnh) vào đây:</p>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật dữ liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let embeddedInitialData = `Sơn Tinh	Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.	• Sơn Tinh còn gọi là Tản Viên Sơn Thánh, là một trong những nhân vật thần thoại nổi bật của văn hóa dân gian Việt Nam.<br>• Nhân vật gắn với núi Ba Vì, một không gian văn hóa và tín ngưỡng quan trọng ở vùng trung du Bắc Bộ.<br>• Trong truyền thuyết Sơn Tinh – Thủy Tinh, Sơn Tinh đại diện cho sức mạnh của núi non và con người trước thiên tai, đặc biệt là lũ lụt.<br>• Việc Sơn Tinh liên tục nâng núi chống nước thể hiện khát vọng chinh phục và thích nghi với môi trường tự nhiên.<br>• Hình tượng Sơn Tinh còn gắn với hoạt động khai phá đất đai, sản xuất nông nghiệp và bảo vệ cộng đồng.<br>• Sơn Tinh được tôn là một trong Tứ Bất Tử, thể hiện sức sống lâu bền của hình tượng trong đời sống tinh thần người Việt.<br>• Nhân vật góp phần phản ánh ước mơ của cư dân nông nghiệp về cuộc sống ổn định, mùa màng thuận lợi và khả năng vượt qua thiên tai.	Son Tinh	Ba Vi Mountain	Vietnamese mythology	Natural disaster	https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg
+Thánh Gióng	Phù Đổng Thiên Vương là biểu tượng tiêu biểu cho tinh thần chống giặc ngoại xâm của người Việt.	• Thánh Gióng còn được gọi là Phù Đổng Thiên Vương, là một trong những hình tượng anh hùng nổi tiếng nhất của truyền thuyết Việt Nam.<br>• Theo truyền thuyết, Gióng sinh ra tại làng Phù Đổng và đến khi đất nước có giặc Ân mới vươn mình trở thành người anh hùng.<br>• Gióng cưỡi ngựa sắt, mặc áo giáp sắt, cầm roi sắt ra trận và đánh tan quân xâm lược.<br>• Khi roi sắt bị gãy, Gióng nhổ tre bên đường làm vũ khí tiếp tục chiến đấu.<br>• Chi tiết nhân dân góp gạo, góp ngựa, góp vũ khí thể hiện sức mạnh của cộng đồng trong công cuộc bảo vệ đất nước.<br>• Sau chiến thắng, Gióng bay về trời, trở thành biểu tượng thiêng liêng của người anh hùng dân tộc.<br>• Hình tượng Thánh Gióng thể hiện lòng yêu nước, ý chí bảo vệ quê hương và niềm tin vào sức mạnh đoàn kết của nhân dân.	Thanh Giong	Phu Dong Village	Foreign invaders	National hero	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRcVStxR3AbbnR1Ev1ZAdWy_JdBa0G1HWmf3KAyoMs-fbKGfEHynjKxp1sb&s=10
+Chử Đồng Tử	Chử Đồng Tử là hình tượng tiêu biểu gắn với lao động, tình yêu, đạo hiếu và khát vọng xây dựng cuộc sống tốt đẹp.	• Chử Đồng Tử là nhân vật truyền thuyết nổi tiếng trong văn hóa dân gian Việt Nam, thường được nhắc đến cùng công chúa Tiên Dung.<br>• Theo truyền thuyết, Chử Đồng Tử có hoàn cảnh nghèo khó nhưng giàu lòng hiếu thảo với cha.<br>• Sau khi gặp Tiên Dung, hai người kết duyên và cùng nhau khai phá, buôn bán, phát triển cuộc sống.<br>• Nhân vật đại diện cho người lao động có ý chí vươn lên, biết khai thác cơ hội và xây dựng cuộc sống bằng sức lao động.<br>• Chuyện tình Chử Đồng Tử – Tiên Dung thể hiện khát vọng tự do trong tình yêu và vượt qua những ràng buộc về địa vị xã hội.<br>• Chử Đồng Tử còn gắn với quá trình tu đạo và trở thành nhân vật có yếu tố thần tiên.<br>• Hình tượng này phản ánh nhiều giá trị truyền thống như tình yêu, lòng hiếu thảo, lao động, giao thương và khát vọng phồn vinh.	Chu Dong Tu	Tien Dung	Love	Filial piety	https://lh3.googleusercontent.com/-NzRzaj-FxxE/VmKGyZ-pVvI/AAAAAAAADDo/D2j9sbqQ8t8/s800-Ic42/chu-dong-tu-va-cong-chua-tien-dung.jpg?w=900
+Mẫu Liễu Hạnh	Mẫu Liễu Hạnh là vị nữ thần được đưa vào Tứ Bất Tử về sau và gắn bó sâu sắc với tín ngưỡng thờ Mẫu.	• Mẫu Liễu Hạnh, hay Thánh Mẫu Liễu Hạnh, là một trong những hình tượng nữ thần quan trọng của tín ngưỡng dân gian Việt Nam.<br>• Theo truyền thuyết, Liễu Hạnh vốn là một tiên nữ giáng trần, trải qua nhiều lần sinh hóa và để lại nhiều câu chuyện kỳ bí.<br>• Nhân vật được miêu tả có nhiều quyền năng và có khả năng bảo trợ, che chở cho con người.<br>• Liễu Hạnh gắn với tín ngưỡng thờ Mẫu, một thành tố quan trọng trong đời sống tâm linh của người Việt.<br>• Phủ Giầy ở Nam Định là một trong những trung tâm thờ Mẫu Liễu Hạnh nổi tiếng.<br>• Việc Liễu Hạnh được đưa vào Tứ Bất Tử cho thấy vị trí ngày càng quan trọng của hình tượng nữ thần trong văn hóa dân gian.<br>• Nhân vật thể hiện sự tôn kính đối với hình tượng người mẹ, người phụ nữ có quyền năng và khả năng bảo trợ cộng đồng.<br>• Đây cũng là biểu tượng cho sự kết hợp giữa truyền thuyết, tín ngưỡng và đời sống văn hóa dân gian Việt Nam.	Lieu Hanh	Dao Mau	Phu Giay	Mother Goddess	https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Mother_Goddess_of_Earth_M%E1%BA%ABu_%C4%90%E1%BB%87_Nh%E1%BB%8B_%C4%90%E1%BB%8Ba_Ti%C3%AAn_M%E1%BA%ABu_Li%E1%BB%85u_H%E1%BA%A1nh_Four_Palace_T%E1%BB%A9_Ph%E1%BB%A7.jpg/250px-Mother_Goddess_of_Earth_M%E1%BA%ABu_%C4%90%E1%BB%87_Nh%E1%BB%8B_%C4%91%E1%BB%8Ba_Ti%C3%AAn_M%E1%BA%ABu_Li%E1%BB%85u_H%E1%BA%A1nh_Four_Palace_T%E1%BB%A9_Ph%E1%BB%A7.jpg?utm_source=vi.wikipedia.org&utm_campaign=parser&utm_content=thumbnail
+Tứ Bất Tử	Tứ Bất Tử là danh xưng dành cho bốn vị thánh tiêu biểu, có vị trí đặc biệt trong văn hóa dân gian và đời sống tinh thần Việt Nam.	• Tứ Bất Tử là một hệ thống biểu tượng quan trọng trong văn hóa dân gian Việt Nam.<br>• Danh sách phổ biến hiện nay gồm Sơn Tinh, Thánh Gióng, Chử Đồng Tử và Mẫu Liễu Hạnh.<br>• Sơn Tinh tượng trưng cho sức mạnh chinh phục và thích nghi với thiên nhiên, đặc biệt là khả năng chống lại lũ lụt.<br>• Thánh Gióng tượng trưng cho lòng yêu nước, tinh thần chống ngoại xâm và sức mạnh đoàn kết cộng đồng.<br>• Chử Đồng Tử gắn với lao động, tình yêu, giao thương, đạo hiếu và khát vọng xây dựng cuộc sống phồn vinh.<br>• Mẫu Liễu Hạnh đại diện cho hình tượng nữ thần và tín ngưỡng thờ Mẫu trong văn hóa Việt Nam.<br>• Bốn nhân vật phản ánh những giá trị quan trọng của cộng đồng như bảo vệ quê hương, thích ứng với thiên nhiên, lao động và đời sống tâm linh.<br>• Khái niệm “bất tử” không chỉ mang nghĩa không chết mà còn thể hiện sức sống lâu dài của các biểu tượng trong ký ức văn hóa dân tộc.	Four Immortals	Vietnamese folklore	Saints	Spiritual belief	https://dx3zevcsvah5n.cloudfront.net/images/36/feature_image.webp
+Danh sách ban đầu	Danh sách Tứ Bất Tử từng có sự thay đổi theo thời gian và không phải lúc nào cũng giống danh sách phổ biến hiện nay.	• Tứ Bất Tử là một hệ thống tín ngưỡng và văn hóa được hình thành, phát triển qua nhiều giai đoạn lịch sử.<br>• Danh sách bốn vị thánh từng có những biến đổi tùy theo thời kỳ, địa phương và nguồn tư liệu.<br>• Một số phiên bản trước đây có thể kể đến các nhân vật như Từ Đạo Hạnh hoặc Nguyễn Minh Không.<br>• Những nhân vật này đều là các nhân vật có ảnh hưởng trong lịch sử, Phật giáo, tín ngưỡng và truyền thuyết dân gian Việt Nam.<br>• Theo thời gian, danh sách phổ biến dần ổn định với Sơn Tinh, Thánh Gióng, Chử Đồng Tử và Mẫu Liễu Hạnh.<br>• Sự thay đổi này cho thấy văn hóa dân gian không phải là hệ thống bất biến mà luôn được cộng đồng tiếp nhận, bổ sung và tái diễn giải.<br>• Việc nghiên cứu các phiên bản khác nhau giúp hiểu rõ quá trình hình thành của biểu tượng Tứ Bất Tử.<br>• Đây cũng là minh chứng cho sự đa dạng của đời sống tín ngưỡng và cách người Việt lựa chọn những nhân vật tiêu biểu để gửi gắm các giá trị văn hóa.	Early Four Immortals	Tu Dao Hanh	Nguyen Minh Khong	Historical change	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHHPFgzofESaXf1DBRo6p0Wwz1SDvQcrrTOA3OPdSQqv0HWyG-OtSNjqu8&s=10
+Từ Đạo Hạnh	Từ Đạo Hạnh là thiền sư nổi tiếng từng xuất hiện trong một số phiên bản của hệ thống Tứ Bất Tử.	• Từ Đạo Hạnh là một nhân vật nổi tiếng trong lịch sử và truyền thuyết Phật giáo Việt Nam thời Lý.<br>• Tên thật của ông được truyền lại là Từ Lộ, thường được biết đến với nhiều câu chuyện kỳ bí về tu hành và phép thuật.<br>• Ông gắn với chùa Láng ở Hà Nội và chùa Thầy ở Hà Nội, những địa điểm có giá trị lịch sử, văn hóa và tín ngưỡng quan trọng.<br>• Trong truyền thuyết, Từ Đạo Hạnh được miêu tả là người có khả năng tu luyện cao, có nhiều năng lực đặc biệt.<br>• Nhân vật vừa mang đặc điểm của một thiền sư lịch sử vừa được dân gian huyền thoại hóa qua nhiều thế hệ.<br>• Từ Đạo Hạnh từng được xem là một trong những nhân vật có thể nằm trong danh sách các vị thánh bất tử ở một số giai đoạn hoặc cách diễn giải.<br>• Hình tượng ông cho thấy sự giao thoa giữa Phật giáo, tín ngưỡng dân gian, lịch sử và truyền thuyết.<br>• Việc tìm hiểu Từ Đạo Hạnh giúp học sinh nhận thấy danh sách Tứ Bất Tử có quá trình hình thành và biến đổi lâu dài.	Tu Dao Hanh	Thay Pagoda	Buddhist monk	Legend	https://media-cdn-v2.laodong.vn/storage/newsportal/2026/5/20/1705190/Chua-Lang-2..jpg
+Nguyễn Minh Không	Nguyễn Minh Không là thiền sư nổi tiếng, thường được biết đến với danh hiệu Lý Quốc Sư và các truyền thuyết về chữa bệnh, đúc đồng.	• Nguyễn Minh Không là một thiền sư nổi tiếng trong lịch sử Việt Nam thời Lý và thường được gọi là Lý Quốc Sư.<br>• Ông gắn với nhiều truyền thuyết về khả năng chữa bệnh và những hoạt động liên quan đến nghề đúc đồng.<br>• Theo truyền thuyết, Nguyễn Minh Không từng chữa bệnh cho vua Lý Thần Tông, từ đó danh tiếng của ông càng được lưu truyền rộng rãi.<br>• Ông được nhiều nơi tôn kính như một vị thiền sư có tài năng và công đức lớn.<br>• Nguyễn Minh Không còn được dân gian gắn với nghề đúc đồng, góp phần hình thành hình tượng tổ nghề trong một số truyền thống địa phương.<br>• Nhân vật từng xuất hiện trong một số cách sắp xếp hoặc phiên bản liên quan đến Tứ Bất Tử.<br>• Hình tượng Nguyễn Minh Không thể hiện sự kết hợp giữa nhân vật lịch sử, Phật giáo, truyền thuyết và tín ngưỡng dân gian.<br>• Qua nhân vật này, có thể thấy người Việt thường tôn vinh những cá nhân có đóng góp đặc biệt cho cộng đồng thành các biểu tượng văn hóa lâu dài.	Nguyen Minh Khong	Ly Quoc Su	Casting bronze	Healing	https://storage-phatsuonline-v2.sgp1.digitaloceanspaces.com/files/2026/01/6017d5e4-8eae-4955-97df-2d591547b0ca-crop.JPEG
+Ý nghĩa số bốn	Số bốn trong Tứ Bất Tử mang tính biểu tượng và ước lệ, nhằm lựa chọn những đại diện tiêu biểu cho các giá trị văn hóa.	• Con số bốn xuất hiện khá phổ biến trong nhiều hệ thống biểu tượng của văn hóa Việt Nam.<br>• Tứ Bất Tử dùng số bốn để tạo thành một nhóm biểu tượng có tính khái quát, chứ không nhất thiết phản ánh toàn bộ các nhân vật linh thiêng trong dân gian.<br>• Trong văn hóa Việt Nam còn có nhiều khái niệm gắn với số bốn như Tứ Trấn, An Nam Tứ Đại Khí và Tứ đại tài.<br>• Cách tổ chức theo bốn thành tố giúp cộng đồng dễ ghi nhớ, truyền bá và biểu tượng hóa các giá trị văn hóa.<br>• Trong Tứ Bất Tử, mỗi nhân vật đảm nhận một ý nghĩa nổi bật: Sơn Tinh gắn với thiên nhiên, Thánh Gióng với chống ngoại xâm, Chử Đồng Tử với lao động và tình yêu, Mẫu Liễu Hạnh với tín ngưỡng thờ Mẫu.<br>• Vì vậy, số bốn có thể được hiểu như một cách sắp xếp mang tính biểu tượng và truyền thống.<br>• Điều quan trọng không nằm ở bản thân con số mà ở những giá trị văn hóa được cộng đồng gửi gắm qua các nhân vật.	Four as a symbol	Fourfold symbolism	Vietnamese culture	Four symbols	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQECtf_oy6rCzcqM4Cv_ogY8syaKAHoKmHF7o-Md34xog&s=10
+Ý nghĩa Sơn Tinh	Sơn Tinh tượng trưng cho khát vọng chinh phục, thích nghi và chung sống hài hòa với thiên nhiên.	• Sơn Tinh là hình tượng tiêu biểu cho mối quan hệ giữa con người với môi trường tự nhiên trong văn hóa dân gian Việt Nam.<br>• Trong truyền thuyết Sơn Tinh – Thủy Tinh, cuộc giao tranh giữa hai nhân vật được gắn với hiện tượng lũ lụt và công cuộc chống thủy tai của cư dân nông nghiệp.<br>• Sơn Tinh sử dụng sức mạnh để nâng núi, đắp lũy và bảo vệ con người trước nước lũ.<br>• Hình tượng này phản ánh ước mơ của người Việt về khả năng kiểm soát, thích nghi và giảm thiểu tác động của thiên tai.<br>• Sơn Tinh cũng gắn với việc khai phá đất đai, mở rộng không gian sinh sống và phát triển sản xuất nông nghiệp.<br>• Nhân vật không chỉ đại diện cho sức mạnh thần linh mà còn phản ánh kinh nghiệm và khát vọng của cộng đồng trong quá trình tồn tại trước môi trường tự nhiên.<br>• Vì vậy, Sơn Tinh có thể được xem là biểu tượng của tinh thần vượt khó, bảo vệ cộng đồng và tìm kiếm sự cân bằng giữa con người với thiên nhiên.<br>• Đây là một trong những giá trị nổi bật khiến hình tượng Sơn Tinh tồn tại lâu dài trong văn hóa Việt Nam.	Natural harmony	Son Tinh	Natural disasters	Agriculture	https://cdn.vungoi.vn/vungoi/1540865604561_ap_20090712024045595.jpg
+Ý nghĩa Thánh Gióng	Thánh Gióng tượng trưng cho lòng yêu nước, tinh thần chống ngoại xâm và sức mạnh đoàn kết của cộng đồng.	• Thánh Gióng là một trong những biểu tượng nổi bật nhất về tinh thần bảo vệ đất nước trong truyền thuyết Việt Nam.<br>• Nhân vật xuất hiện khi đất nước đứng trước nguy cơ bị giặc Ân xâm lược và lập tức trở thành người anh hùng cứu nước.<br>• Gióng lớn nhanh phi thường thể hiện sức mạnh tiềm ẩn của nhân dân chỉ được phát huy khi Tổ quốc cần.<br>• Trong cuộc chiến, Gióng sử dụng ngựa sắt, roi sắt và tre để đánh giặc, thể hiện sự kết hợp giữa sức mạnh cá nhân và sự hỗ trợ của cộng đồng.<br>• Nhân dân đóng góp gạo, vải, ngựa và các vật dụng cần thiết, qua đó làm nổi bật tinh thần đoàn kết toàn dân.<br>• Sau chiến thắng, Gióng bay về trời, trở thành biểu tượng thiêng liêng và bất tử.<br>• Hình tượng Thánh Gióng giáo dục thế hệ sau về lòng yêu nước, trách nhiệm với cộng đồng và ý thức bảo vệ quê hương.<br>• Nhân vật cũng thể hiện quan niệm dân gian rằng sức mạnh bảo vệ đất nước bắt nguồn từ chính nhân dân.	Patriotism	Thánh Gióng	Community strength	National defense	https://icdn.dantri.com.vn/2024/01/29/tranh-thanh-giong-cua-tranh-dan-gian-dong-ho-153278-1706523795683.jpg
+Ý nghĩa Chử Đồng Tử	Chử Đồng Tử đại diện cho lao động, tình yêu, sự phát triển cộng đồng và đạo lý báo hiếu.	• Chử Đồng Tử là hình tượng giàu ý nghĩa nhân văn trong kho tàng truyền thuyết dân gian Việt Nam.<br>• Xuất thân nghèo khó nhưng Chử Đồng Tử luôn thể hiện lòng hiếu thảo với cha, qua đó phản ánh truyền thống coi trọng đạo hiếu.<br>• Cuộc gặp gỡ và kết duyên với Tiên Dung thể hiện khát vọng tình yêu tự do, vượt qua những rào cản về địa vị và hoàn cảnh.<br>• Sau khi kết hôn, Chử Đồng Tử và Tiên Dung tham gia khai phá, buôn bán và phát triển cuộc sống.<br>• Hoạt động giao thương của nhân vật gắn với hình ảnh một cộng đồng đang mở rộng sản xuất, trao đổi hàng hóa và tìm kiếm sự phồn vinh.<br>• Chử Đồng Tử vì thế không chỉ là nhân vật tình yêu mà còn đại diện cho tinh thần lao động và ý chí vươn lên.<br>• Những yếu tố tu đạo và thành tiên tạo nên màu sắc thần kỳ, làm cho nhân vật trở thành biểu tượng văn hóa có sức sống lâu dài.<br>• Hình tượng Chử Đồng Tử kết hợp nhiều giá trị: hiếu thảo, tình yêu, lao động, giao thương và khát vọng xây dựng cuộc sống tốt đẹp.	Labor and prosperity	Chu Dong Tu	Tien Dung	Filial piety	https://media.tapchinghiencuuphathoc.vn/uploads/2024/12/10/chu-dong-tu-tien-dung-7-1733821941.jpg`;
+
+        let savedLocalStorageData = localStorage.getItem('icarus_raw_data');
+        let rawInitialData = (embeddedInitialData.trim() === "" && savedLocalStorageData) ? savedLocalStorageData : embeddedInitialData;
+
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                });
+            }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/;
+            const match = text.match(markdownLinkRegex);
+            if (match && match[2]) {
+                return match[2].trim();
+            }
+            return text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        function initData() {
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+            
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            requestWakeLock();
+        }
+
+        function saveConfigToLocalStorage() {
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+            localStorage.setItem('icarus_raw_data', rawInitialData);
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = `${typePrefix}_${index}`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" onclick="readParagraphAt('${escapeHtml(cleanedText)}')">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm hình ảnh">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('contentBox').scrollTop = 0;
+            saveConfigToLocalStorage();
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t1 = item.tags[0] || '';
+                let t2 = item.tags[1] || '';
+                let t3 = item.tags[2] || '';
+                let t4 = item.tags[3] || '';
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t1}\t${t2}\t${t3}\t${t4}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveConfigToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => {
+                el.classList.remove('active-speaking');
+            });
+        }
+
+        // Chỉ cuộn vùng hiển thị văn bản (contentBox) để căn đoạn văn ra giữa vùng chứa, giữ nguyên ảnh ở nửa trên
+        function highlightParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                let elId = paragraphElementMap[paragraphIndex];
+                let el = document.getElementById(elId);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    const contentBox = document.getElementById('contentBox');
+                    
+                    // Tính toán vị trí để căn giữa phần tử trong nội bộ khung contentBox thay vì cuộn toàn trang
+                    const elTop = el.offsetTop;
+                    const elHeight = el.offsetHeight;
+                    const boxHeight = contentBox.clientHeight;
+                    
+                    contentBox.scrollTo({
+                        top: elTop - (boxHeight / 2) + (elHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0) {
+            if (!synth) return;
+            if (queueStartIndex >= paragraphs.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) {
+                    nextSlide();
+                }
+                return;
+            }
+
+            const textToSpeak = paragraphs[queueStartIndex];
+            let utter = new SpeechSynthesisUtterance(textToSpeak);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            let isTitle = (queueStartIndex === 0 && paragraphs === getFullQueue());
+            let paragraphMapIndex = isTitle ? -1 : (paragraphs === getFullQueue() ? queueStartIndex - 1 : queueStartIndex + getStartIndexOffset(paragraphs));
+
+            utter.onstart = function() {
+                if (!isTitle) {
+                    highlightParagraph(paragraphMapIndex);
+                }
+            };
+
+            utter.onend = function() {
+                if (!isPaused) {
+                    speakParagraphQueue(paragraphs, queueStartIndex + 1);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function getFullQueue() {
+            const item = data[currentIndex];
+            return [item.title, ...currentSlideParagraphs];
+        }
+
+        function getStartIndexOffset(subQueue) {
+            let full = getFullQueue();
+            let firstText = subQueue[0];
+            return full.indexOf(firstText) - 1;
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            isPaused = false;
+            document.getElementById('pauseResumeBtn').innerText = "⏸️ Tạm dừng";
+            let fullQueue = getFullQueue();
+            speakParagraphQueue(fullQueue, 0);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            isPaused = false;
+            document.getElementById('pauseResumeBtn').innerText = "⏸️ Tạm dừng";
+            
+            let startIndex = currentSlideParagraphs.indexOf(textSnippet);
+            let queue = startIndex !== -1 ? currentSlideParagraphs.slice(startIndex) : [textSnippet];
+            
+            speakParagraphQueue(queue, 0);
+        }
+
+        // Ấn nút Pause lần nữa để tiếp tục phát phần đang đọc dở
+        function togglePauseResume() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) {
+                    synth.resume();
+                    isPaused = false;
+                    document.getElementById('pauseResumeBtn').innerText = "⏸️ Tạm dừng";
+                } else {
+                    synth.pause();
+                    isPaused = true;
+                    document.getElementById('pauseResumeBtn').innerText = "▶️ Tiếp tục";
+                }
+            }
+        }
+
+        function stopRead() {
+            if (synth) {
+                synth.cancel();
+                isPaused = false;
+                document.getElementById('pauseResumeBtn').innerText = "⏸️ Tạm dừng";
+                clearActiveHighlights();
+            }
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveConfigToLocalStorage();
+            if (synth && synth.speaking) {
+                readSlide();
+            }
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel += direction;
+            if (fontSizeLevel < -3) fontSizeLevel = -3;
+            if (fontSizeLevel > 5) fontSizeLevel = 5;
+            applyFontSize();
+            saveConfigToLocalStorage();
+        }
+
+        function applyFontSize() {
+            const descElem = document.getElementById('slide-desc');
+            const bulletsElem = document.getElementById('slide-bullets');
+            const titleElem = document.getElementById('slide-title');
+
+            let baseDesc = 1.15 + (fontSizeLevel * 0.1);
+            let baseBullets = 1.0 + (fontSizeLevel * 0.1);
+            let baseTitle = 2.0 + (fontSizeLevel * 0.15);
+
+            descElem.style.fontSize = `${baseDesc}rem`;
+            bulletsElem.style.fontSize = `${baseBullets}rem`;
+            titleElem.style.fontSize = `${baseTitle}rem`;
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                renderSlide();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-tu-bat-tu.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy (Plain Text) phân tách nhau bằng dấu Tab gồm đúng 8 cột theo thứ tự sau (TUYỆT ĐỐI KHÔNG CÓ CỘT SỐ THỨ TỰ Ở ĐẦU):
+1. Từ khóa chính (tiếng Việt)
+2. Kiến thức trọng tâm ngắn gọn.
+3. Nội dung chi tiết (100-200 từ, dùng thẻ <br> nếu xuống dòng gạch đầu dòng)
+4. Từ khóa đáp án tiếng Anh ngắn gọn
+5. Từ khóa tiếng anh 1 liên quan
+6. Từ khóa tiếng anh 2 liên quan
+7. Từ khóa tiếng anh 3 liên quan
+8. URL hình ảnh minh họa thực tế dạng đường dẫn thuần túy hoặc dạng markdown [Alt](url) (để trống nếu không tìm được)
+
+Chỉ trả về dữ liệu thô dạng văn bản Tab-separated, không kèm theo bất kỳ lời dẫn hay định dạng markdown nào khác.`;
+
+            navigator.clipboard.writeText(promptContent).then(() => {
+                alert('Đã copy Prompt AI vào bộ nhớ tạm! Bạn có thể dán vào ChatGPT/Gemini để lấy dữ liệu.');
+            });
+        }
+
+        // Hỗ trợ dùng phím mũi tên trái / phải trên bàn phím để chuyển slide
+        document.addEventListener('keydown', (e) => {
+            // Không bắt sự kiện nếu người dùng đang gõ trong ô input hoặc textarea
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const threshold = 100; 
+
+        const slideBox = document.getElementById('slideContainerBox');
+        const leftIndicator = document.getElementById('swipeLeftIndicator');
+        const rightIndicator = document.getElementById('swipeRightIndicator');
+
+        slideBox.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        slideBox.addEventListener('touchmove', e => {
+            let currentX = e.changedTouches[0].screenX;
+            let diff = currentX - touchStartX;
+            
+            if (diff < -40) {
+                leftIndicator.style.display = 'block';
+                rightIndicator.style.display = 'none';
+            } else if (diff > 40) {
+                rightIndicator.style.display = 'block';
+                leftIndicator.style.display = 'none';
+            } else {
+                leftIndicator.style.display = 'none';
+                rightIndicator.style.display = 'none';
+            }
+        }, {passive: true});
+
+        slideBox.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            leftIndicator.style.display = 'none';
+            rightIndicator.style.display = 'none';
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - threshold) {
+                nextSlide();
+            } else if (touchEndX > touchStartX + threshold) {
+                prevSlide();
+            }
+        }
+
+        window.onload = () => {
+            initData();
+        };
+    </script>
+
+</body></html>
