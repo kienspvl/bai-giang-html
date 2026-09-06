@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Trắc nghiệm Thông minh</title>
+    <style>
+        :root {
+            --primary-color: #2b6cb0;
+            --primary-hover: #1a4373;
+            --sidebar-bg: #1a202c;
+            --sidebar-text: #edf2f7;
+            --bg-color: #f7fafc;
+            --card-bg: #ffffff;
+            --text-color: #2d3748;
+            --border-color: #e2e8f0;
+            --success: #48bb78;
+            --error: #f56565;
+            --warning: #ed8936;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Giao diện thanh bên trái */
+        .sidebar {
+            width: 340px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background-color: #10141d;
+            border-bottom: 1px solid #2d3748;
+            text-align: center;
+        }
+
+        .sidebar-header h2 { margin: 0; font-size: 18px; color: #fff; }
+        
+        /* Đồng hồ bấm giờ */
+        .timer-box {
+            background-color: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fc8181;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #a0aec0;
+            margin: 15px 0 8px 5px;
+            font-weight: bold;
+        }
+
+        .menu-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+
+        .menu-item {
+            background: #2d3748; color: #cbd5e0; padding: 10px 12px; border-radius: 6px;
+            cursor: pointer; border: none; text-align: left; font-size: 13.5px; transition: all 0.2s;
+        }
+
+        .menu-item:hover { background: #4a5568; color: #fff; }
+        .menu-item.active { background: var(--primary-color); color: white; }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #2d3748;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #4a5568;
+        }
+        .switch-label { font-size: 13.5px; font-weight: bold; color: #edf2f7; }
+        .switch {
+            position: relative; display: inline-block; width: 48px; height: 24px; flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #718096; transition: .3s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Style riêng cho nút gạt Ngôn ngữ */
+        input:checked + .slider-lang { background-color: #e28743; }
+        input:checked + .slider-lang:before { transform: translateX(24px); }
+
+        .pagination-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; padding: 5px; }
+
+        .page-item {
+            background: #2d3748; color: #cbd5e0; border: 1px solid #4a5568; padding: 8px 0;
+            border-radius: 4px; text-align: center; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+
+        .page-item:hover { background: #4a5568; color: #fff; }
+        .page-item.active { box-shadow: 0 0 0 3px #fc8181; border-color: #fc8181 !important; }
+        .page-item.answered { background-color: #4a5568; color: #fff; border-color: #cbd5e0; }
+        .page-item.correct { background-color: var(--success) !important; color: white !important; border-color: #2f855a !important; }
+        .page-item.wrong { background-color: var(--error) !important; color: white !important; border-color: #9b2c2c !important; }
+
+        .action-group {
+            display: flex; flex-direction: column; gap: 10px; padding: 15px;
+            background-color: #10141d; border-top: 1px solid #2d3748;
+        }
+
+        .btn {
+            color: white; border: none; padding: 11px 15px; font-size: 14px; font-weight: bold;
+            border-radius: 6px; cursor: pointer; transition: background 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box;
+        }
+
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: var(--success); }
+        .btn-success:hover { background-color: #38a169; }
+        .btn-warning { background-color: var(--warning); }
+        .btn-warning:hover { background-color: #dd6b20; }
+        .btn-secondary { background-color: #4a5568; }
+        .btn-secondary:hover { background-color: #323c4d; }
+        .btn-info { background-color: #00b4d8; }
+        .btn-info:hover { background-color: #0096c7; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; box-sizing: border-box; scroll-behavior: smooth; }
+        .container-box { max-width: 850px; margin: 0 auto; padding-bottom: 200px; }
+
+        .section-card {
+            background: var(--card-bg); border-radius: 8px; padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px;
+        }
+
+        textarea {
+            width: 100%; height: 280px; padding: 15px; border: 2px solid var(--border-color);
+            border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        textarea:focus { border-color: var(--primary-color); outline: none; }
+
+        /* Cấu trúc Form sinh Prompt */
+        .prompt-generator-form {
+            background: #f8fafc; border: 1px solid var(--border-color);
+            border-radius: 6px; padding: 15px; margin-bottom: 20px;
+        }
+        .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; font-weight: bold; color: #4a5568; }
+        .form-group input {
+            padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px;
+        }
+
+        .quiz-title { color: var(--primary-color); border-left: 5px solid var(--primary-color); padding-left: 15px; margin-top: 0; margin-bottom: 25px; }
+
+        .question-card {
+            background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 20px; margin-bottom: 25px; outline: none; transition: all 0.2s; cursor: pointer;
+            position: relative;
+        }
+
+        .question-card.focused-card {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.25);
+            background-color: #f0f7ff;
+        }
+
+        .question-header {
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 15px;
+        }
+
+        .question-text { font-weight: 600; font-size: 16px; white-space: pre-wrap; flex: 1; }
+        
+        .header-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+
+        .action-tool-btn {
+            background: #edf2f7; color: #4a5568; border: 1px solid var(--border-color);
+            padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 14px;
+            display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .action-tool-btn:hover { background: #cbd5e0; color: #1a202c; }
+
+        .options-group { display: flex; flex-direction: column; gap: 10px; }
+
+        .option-label {
+            display: flex; align-items: flex-start; padding: 12px 15px;
+            border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: background 0.2s;
+        }
+        .option-label:hover { background-color: #e2e8f0; }
+        .option-label input { margin-right: 12px; margin-top: 5px; transform: scale(1.2); }
+
+        .tf-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 15px; border: 1px solid var(--border-color);
+            border-radius: 6px; margin-bottom: 8px; background: #fff; gap: 15px;
+        }
+        .tf-row.active-tf-row { border-color: #fc8181; box-shadow: 0 0 0 2px rgba(252, 129, 129, 0.2); }
+        .tf-text { flex: 1; font-size: 14.5px; }
+        .tf-buttons { display: flex; gap: 5px; flex-shrink: 0; }
+        .tf-btn {
+            border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 4px;
+            background: #edf2f7; cursor: pointer; font-weight: bold; font-size: 13px; transition: all 0.2s;
+        }
+        .tf-btn:hover { background: #e2e8f0; }
+        .tf-btn.selected-true { background-color: #3182ce; color: white; border-color: #2b6cb0; }
+        .tf-btn.selected-false { background-color: #e53e3e; color: white; border-color: #c53030; }
+        
+        .tf-row.correct-row { background-color: #c6f6d5 !important; border-color: var(--success) !important; }
+        .tf-row.wrong-row { background-color: #fed7d7 !important; border-color: var(--error) !important; }
+
+        .sa-group {
+            background: #f8fafc; border: 1px solid var(--border-color); padding: 15px; border-radius: 6px; margin-top: 10px;
+        }
+        .sa-input {
+            width: 100%; max-width: 300px; padding: 10px; border: 2px solid var(--border-color);
+            border-radius: 6px; font-size: 15px; font-weight: bold; box-sizing: border-box;
+        }
+        .sa-input:focus { border-color: var(--primary-color); outline: none; }
+        .sa-result-zone { margin-top: 10px; font-size: 14.5px; font-weight: bold; }
+
+        /* Gallery ảnh co dãn thống nhất */
+        .image-gallery { display: flex; flex-wrap: wrap; gap: 12px; margin: 15px 0; }
+        .quiz-image {
+            display: block; width: 220px; height: 160px; object-fit: contain;
+            border-radius: 6px; border: 1px solid var(--border-color); background: #fdfdfd;
+            transition: transform 0.2s; cursor: zoom-in;
+        }
+        .quiz-image:hover { transform: scale(1.03); }
+
+        .correct { background-color: #c6f6d5 !important; border-color: var(--success) !important; color: #22543d; font-weight: bold; }
+        .wrong { background-color: #fed7d7 !important; border-color: var(--error) !important; color: #742a2a; }
+        .hidden { display: none !important; }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 8px;
+            max-width: 720px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header { font-size: 19px; font-weight: bold; margin-bottom: 15px; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        .report-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .report-table th, .report-table td { border: 1px solid var(--border-color); padding: 9px; text-align: left; }
+        .report-table th { background-color: #edf2f7; }
+
+        .input-style {
+            width: 100%; padding: 10px; border: 1px solid var(--border-color);
+            border-radius: 6px; margin-top: 10px; box-sizing: border-box; font-size: 15px;
+        }
+
+        /* Toast Container */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background-color: #2d3748;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            pointer-events: auto;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast-success { background-color: #2f855a; border-left: 4px solid #48bb78; }
+        .toast-error { background-color: #9b2c2c; border-left: 4px solid #f56565; }
+        .toast-warning { background-color: #c05621; border-left: 4px solid #ed8936; }
+        .toast-info { background-color: #2b6cb0; border-left: 4px solid #4299e1; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>HỆ THỐNG TRẮC NGHIỆM</h2>
+        </div>
+        
+        <!-- Đồng hồ bấm giờ -->
+        <div class="timer-box id-timer" id="quiz-timer-container">
+            ⏱️ Thời gian: <span id="timer-display">00:13</span>
+        </div>
+        
+        <div class="sidebar-content">
+            <div id="menu-section" class="">
+                <div class="sidebar-section-title">Danh sách bài học</div>
+                <div class="menu-list" id="lesson-menu"><button class="menu-item ">I. DẠNG CÂU HỎI LÍ THUYẾT</button><button class="menu-item ">II. DẠNG CÁC ĐẠI LƯỢNG CƠ BẢN – VÍ DỤ...</button><button class="menu-item ">III. BÀI TẬP VỀ NHÀ</button><button class="menu-item ">IV. CÂU HỎI BỔ SUNG TỪ ĐỀ LUYỆN TẬP</button><button class="menu-item active">I. CÂU HỎI LÍ THUYẾT TRỌNG TÂM</button><button class="menu-item ">II. CÂU HỎI BÀI TẬP VỀ NHÀ</button><button class="menu-item ">III. CÂU HỎI TỔNG HỢP TỪ ĐỀ ÔN LUYỆN</button><button class="menu-item ">I. DẠNG CÁC ĐẠI LƯỢNG CƠ BẢN – VÍ DỤ ...</button><button class="menu-item ">II. DẠNG BÀI TẬP TRẢ LỜI NGẮN (PHẦN 3)</button><button class="menu-item ">III. DẠNG BÀI TẬP TỔNG HỢP (TRÍCH TỪ ...</button></div>
+                
+                <div class="sidebar-section-title">Cài đặt chế độ</div>
+                <div class="switch-container">
+                    <span class="switch-label">Chấm điểm ngay khi chọn</span>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-check-toggle" checked="">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="switch-container">
+                    <span class="switch-label" id="lang-label">🗣️ Giọng đọc: Tiếng Việt</span>
+                    <label class="switch">
+                        <input type="checkbox" id="language-speech-toggle" onchange="toggleSpeechLanguage()">
+                        <span class="slider slider-lang"></span>
+                    </label>
+                </div>
+
+                <div class="sidebar-section-title">Sơ đồ câu hỏi (Pagination)</div>
+                <div class="pagination-grid" id="question-pagination"><div class="page-item active">1</div><div class="page-item">2</div><div class="page-item">3</div><div class="page-item">4</div></div>
+                <p style="font-size: 11px; color:#a0aec0; text-align:left; margin:0; padding:0 5px; line-height: 1.5;">
+                    💡 <b>Phím tắt hệ thống:</b><br>
+                    • Di chuyển câu: Phím <kbd>←</kbd> và <kbd>→</kbd><br>
+                    • Chọn đáp án MCQ: Phím <kbd>A</kbd>, <kbd>B</kbd>, <kbd>C</kbd>, <kbd>D</kbd><br>
+                    • Chọn Đúng/Sai: Phím <kbd>D</kbd> (Đúng) hoặc <kbd>S</kbd> (Sai)<br>
+                    • Điền đáp số: Gõ xong nhấn <kbd>Enter</kbd> nhảy câu tiếp
+                </p>
+            </div>
+        </div>
+
+        <div class="action-group">
+            <div id="quiz-actions" class="" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <button class="btn btn-success" onclick="gradeQuiz()">📝 Nộp &amp; Chấm toàn bộ</button>
+                <button class="btn btn-warning" onclick="askForNameBeforeReport()">📊 Xuất kết quả báo cáo</button>
+                <button class="btn btn-info" onclick="saveCurrentDataAsHtml()">💾 Lưu file HTML chứa đề</button>
+                <button class="btn btn-secondary" onclick="confirmResetSystem()">↩ Nhập văn bản mới</button>
+            </div>
+            <div id="import-actions" class="hidden">
+                <button class="btn btn-primary" onclick="parseAndGenerateQuiz()">⚡ Tạo bài trắc nghiệm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content" id="main-content-pane">
+        <div class="container-box">
+            
+            <div id="import-container" class="section-card hidden">
+                <h3 style="margin-top:0; color: var(--primary-color);">🛠️ Cấu hình sinh bộ câu hỏi từ AI</h3>
+                <div class="prompt-generator-form">
+                    <div class="form-group">
+                        <label>Chủ đề nội dung mong muốn:</label>
+                        <input type="text" id="cfg-topic" placeholder="Ví dụ: Lịch sử Việt Nam thế kỷ 20, Hình học không gian 11, Lập trình Python cơ bản...">
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Số câu MCQ (Dạng 1):</label>
+                            <input type="number" id="cfg-mcq" value="60" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Số câu Đúng/Sai (Dạng 2):</label>
+                            <input type="number" id="cfg-tf" value="12" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Số câu Trả lời ngắn (Dạng 3):</label>
+                            <input type="number" id="cfg-sa" value="18" min="0">
+                        </div>
+                    </div>
+                    <button class="btn btn-info" id="btn-copy-prompt" style="margin-top: 15px;" onclick="copyGeneratedPromptToClipboard()">📋 Copy Prompt gửi AI</button>
+                </div>
+
+                <h3 style="margin-top:25px;">Dán văn bản kết quả từ AI vào đây</h3>
+                <textarea id="txt-input" placeholder="Sau khi có câu hỏi từ AI, hãy dán toàn bộ văn bản vào đây để làm bài..."></textarea>
+            </div>
+
+            <div id="quiz-container-box" class="">
+                <div id="questions-display"><h2 class="quiz-title">I. CÂU HỎI LÍ THUYẾT TRỌNG TÂM</h2><div class="question-card focused-card" id="q-card-id-1"><div class="question-header"><div class="question-text">Câu 1: Dao động điều hòa là dạng chuyển động cơ học cơ bản, trong đó vị trí của vật được mô tả bởi các hàm sin hoặc cos theo thời gian.</div><div class="header-buttons"><button class="action-tool-btn">🔊 Đọc</button><button class="action-tool-btn">🔍 Tra cứu</button></div></div><div style="display: flex; flex-direction: column;"><div class="tf-row tf-row-item-1-a active-tf-row"><div class="tf-text"><strong>a)</strong> Các đại lượng A, ω, φ dao động điều hòa cùng tần số.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-1-a ">Đúng</button><button class="tf-btn tf-btn-false-1-a ">Sai</button></div></div><div class="tf-row tf-row-item-1-b"><div class="tf-text"><strong>b)</strong> Pha dao động là hàm bậc nhất theo thời gian.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-1-b ">Đúng</button><button class="tf-btn tf-btn-false-1-b ">Sai</button></div></div><div class="tf-row tf-row-item-1-c"><div class="tf-text"><strong>c)</strong> Biên độ của vật luôn dương.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-1-c ">Đúng</button><button class="tf-btn tf-btn-false-1-c ">Sai</button></div></div><div class="tf-row tf-row-item-1-d"><div class="tf-text"><strong>d)</strong> Quỹ đạo dao động của vật là một đường thẳng.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-1-d ">Đúng</button><button class="tf-btn tf-btn-false-1-d ">Sai</button></div></div></div></div><div class="question-card" id="q-card-id-2"><div class="question-header"><div class="question-text">Câu 2: Dao động điều hòa thường xuất hiện ở các hệ cơ học đơn giản như con lắc lò xo hay con lắc đơn.</div><div class="header-buttons"><button class="action-tool-btn">🔊 Đọc</button><button class="action-tool-btn">🔍 Tra cứu</button></div></div><div style="display: flex; flex-direction: column;"><div class="tf-row tf-row-item-2-a"><div class="tf-text"><strong>a)</strong> Dao động tuần hoàn đơn giản nhất là dao động điều hòa.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-2-a ">Đúng</button><button class="tf-btn tf-btn-false-2-a ">Sai</button></div></div><div class="tf-row tf-row-item-2-b"><div class="tf-text"><strong>b)</strong> Pha dao động giúp ta xác định trạng thái dao động của vật.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-2-b ">Đúng</button><button class="tf-btn tf-btn-false-2-b ">Sai</button></div></div><div class="tf-row tf-row-item-2-c"><div class="tf-text"><strong>c)</strong> Biên độ là độ dịch chuyển của vật tính từ vị trí cân bằng.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-2-c ">Đúng</button><button class="tf-btn tf-btn-false-2-c ">Sai</button></div></div><div class="tf-row tf-row-item-2-d"><div class="tf-text"><strong>d)</strong> Chu kì là khoảng thời gian ngắn nhất để vật lặp lại một trạng thái dao động.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-2-d ">Đúng</button><button class="tf-btn tf-btn-false-2-d ">Sai</button></div></div></div></div><div class="question-card" id="q-card-id-3"><div class="question-header"><div class="question-text">Câu 3: Dao động điều hòa là chuyển động nền tảng của nhiều hệ cơ học (con lắc lò xo, con lắc đơn...).</div><div class="header-buttons"><button class="action-tool-btn">🔊 Đọc</button><button class="action-tool-btn">🔍 Tra cứu</button></div></div><div style="display: flex; flex-direction: column;"><div class="tf-row tf-row-item-3-a"><div class="tf-text"><strong>a)</strong> Khoảng thời gian ngắn nhất sau đó trạng thái dao động lặp lại như cũ gọi là tần số dao động.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-3-a ">Đúng</button><button class="tf-btn tf-btn-false-3-a ">Sai</button></div></div><div class="tf-row tf-row-item-3-b"><div class="tf-text"><strong>b)</strong> Đại lượng không đổi theo thời gian là biên độ dao động.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-3-b ">Đúng</button><button class="tf-btn tf-btn-false-3-b ">Sai</button></div></div><div class="tf-row tf-row-item-3-c"><div class="tf-text"><strong>c)</strong> Quỹ đạo dao động của vật biểu diễn dưới dạng hình sin.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-3-c ">Đúng</button><button class="tf-btn tf-btn-false-3-c ">Sai</button></div></div><div class="tf-row tf-row-item-3-d"><div class="tf-text"><strong>d)</strong> Pha ban đầu của dao động luôn dương.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-3-d ">Đúng</button><button class="tf-btn tf-btn-false-3-d ">Sai</button></div></div></div></div><div class="question-card" id="q-card-id-4"><div class="question-header"><div class="question-text">Câu 4: Ở những hệ quen thuộc như con lắc đồng hồ hay lò xo của hệ thống giảm xóc của xe máy, vật dao động qua lại quanh vị trí cân bằng.</div><div class="header-buttons"><button class="action-tool-btn">🔊 Đọc</button><button class="action-tool-btn">🔍 Tra cứu</button></div></div><div style="display: flex; flex-direction: column;"><div class="tf-row tf-row-item-4-a"><div class="tf-text"><strong>a)</strong> Dao động cơ học là chuyển động qua lại của một vật quanh vị trí cân bằng.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-4-a ">Đúng</button><button class="tf-btn tf-btn-false-4-a ">Sai</button></div></div><div class="tf-row tf-row-item-4-b"><div class="tf-text"><strong>b)</strong> Dao động cơ của một vật là dao động tuần hoàn.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-4-b ">Đúng</button><button class="tf-btn tf-btn-false-4-b ">Sai</button></div></div><div class="tf-row tf-row-item-4-c"><div class="tf-text"><strong>c)</strong> Dao động điều hòa là dao động trong đó li độ được mô tả bằng một định luật dạng cosin (hay sin) theo thời gian.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-4-c ">Đúng</button><button class="tf-btn tf-btn-false-4-c ">Sai</button></div></div><div class="tf-row tf-row-item-4-d"><div class="tf-text"><strong>d)</strong> Dao động điều hòa là trường hợp đặc biệt của dao động tuần hoàn.</div><div class="tf-buttons"><button class="tf-btn tf-btn-true-4-d ">Đúng</button><button class="tf-btn tf-btn-false-4-d ">Sai</button></div></div></div></div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notifications Zone -->
+    <div id="toast-container"></div>
+
+    <!-- Thống kê kết quả -->
+    <div id="report-modal" class="modal hidden">
+        <div class="modal-content" id="report-modal-inside">
+            <div class="modal-header" id="report-modal-header">📊 Bảng Thống Kê Kết Quả Làm Bài</div>
+            <div id="modal-body-content"></div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-warning" style="width: auto;" onclick="downloadWrongQuestionsTxt()">📥 Trích lọc các câu làm sai (Xuất file .txt)</button>
+                <button class="btn btn-secondary" style="width: auto;" onclick="closeModal('report-modal')">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const PRE_LOADED_RAW_DATA = `BÀI 1. DAO ĐỘNG ĐIỀU HÒA
+I. DẠNG CÂU HỎI LÍ THUYẾT
+Câu 1. Chuyển động nào sau đây không phải là dao động cơ học?
+A. Chuyển động đung đưa của con lắc của đồng hồ.
+B. Chuyển động đung đưa của lá cây.
+C. Chuyển động nhấp nhô của phao trên mặt nước.
+*D. Chuyển động thẳng đều của ôtô trên đường.
+Câu 2. Một vật dao động điều hòa theo phương trình x = A cos(ωt + φ) (ω > 0). Tần số góc của dao động là
+ 
+A. A.
+*B. ω.
+C. φ.
+D. x.
+ 
+Câu 3. Một vật dao động điều hòa theo phương trình x = A cos(ωt + φ) (A > 0). Biên độ dao động của vật là
+ 
+*A. A.
+B. φ.
+C. ω.
+D. x.
+ 
+Câu 4. Một chất điểm dao động điều hòa với phương trình x = A cos(ωt + φ), trong đó ω có giá trị dương. Đại lượng ω gọi là
+ 
+A. biên độ dao động.
+B. chu kì của dao động.
+*C. tần số góc của dao động.
+D. pha ban đầu của dao động.
+ 
+Câu 5. Một vật dao động điều hòa trên trục Ox quanh vị trí cân bằng O. Gọi A, ω và φ lần lượt là biên độ, tần số góc và pha ban đầu của dao động. Biểu thức li độ của vật theo thời gian t là
+ 
+*A. x = A cos(ωt + φ).
+B. x = ω cos(tφ + A).
+C. x = t cos(φA + ω).
+D. x = φ cos(Aω + t).
+ 
+Câu 6. Một vật dao động điều hoà theo phương trình x = A cos(ωt + φ) (A > 0, ω > 0). Pha của dao động ở thời điểm t là
+ 
+A. ω.
+B. cos(ωt + φ).
+*C. ωt + φ.
+D. φ.
+ 
+Câu 7. Một vật dao động điều hòa với biên độ A. Giá trị cực tiểu của li độ trong quá trình vật dao động là
+ 
+A. A.
+B. 0.
+*C. – A.
+D. – 2A.
+ 
+Câu 8. Chu kì dao động điều hòa là
+A. số dao động toàn phần vật thực hiện được trong 1 s.
+B. khoảng thời gian để vật đi từ bên này sang bên kia của quỹ đạo chuyển động.
+C. khoảng thời gian ngắn nhất để vật trở lại vị trí ban đầu.
+*D. khoảng thời gian ngắn nhất để vật lặp lại trạng thái dao động.
+Câu 9. Phát biểu nào sau đây là sai? Dao động cơ điều hòa là một
+A. chuyển động có giới hạn trong không gian.
+B. dao động cơ học.
+C. dao động tuần hoàn.
+*D. chuyển động có quỹ đạo hình sin.
+Câu 10. Tần số dao động điều hòa là
+*A. số dao động toàn phần vật thực hiện được trong 1 s.
+B. số dao động toàn phần vật thực hiện được trong một chu kì.
+C. khoảng thời gian ngắn nhất để vật trở lại vị trí ban đầu.
+D. khoảng thời gian vật thực hiện hết một dao động toàn phần.
+Câu 11. Phát biểu nào sau đây đúng về dao động điều hoà?
+ 
+A. Quỹ đạo là đường hình sin.
+*B. Quỹ đạo là một đoạn thẳng.
+C. Vận tốc tỉ lệ thuận với thời gian.
+D. Gia tốc tỉ lệ thuận với thời gian.
+ 
+Câu 12. Pha dao động của một chất điểm dao động điều hòa dùng để xác định
+ 
+A. chu kì dao động.
+B. tần số dao động.
+C. biên độ dao động.
+*D. trạng thái dao động.
+ 
+Câu 13. Khi một chất điểm dao động điều hòa thì li độ của chất điểm là
+ 
+*A. một hàm sin của thời gian.
+B. là một hàm tan của thời gian.
+C. là một hàm bậc nhất của thời gian.
+D. là một hàm bậc hai của thời gian.
+ 
+Câu 14. Một vật dao động điều hòa thì pha của dao động
+ 
+A. biến thiên điều hòa theo thời gian.
+*B. là hàm bậc nhất của thời gian.
+C. là hàm bậc hai của thời gian.
+D. không đổi theo thời gian.
+ 
+Câu 15. Một vật dao động điều hòa với phương trình li độ x = A cos(ωt + φ), đại lượng luôn tăng đều theo thời gian là
+ 
+*A. pha dao động ωt + φ.
+B. li độ x.
+C. biên độ A.
+D. pha ban đầu φ.
+ 
+Câu 16. Một vật dao động điều hòa theo phương trình x = 4 cos(4πt + π/3) (cm) (t tính bằng giây). Pha ban đầu của dao động là
+ 
+A. 4π rad.
+*B. π/3 rad.
+C. 4 rad.
+D. (4πt + π/3) rad.
+ 
+Câu 17. Một chất điểm dao động điều hòa có li độ phụ thuộc thời gian theo hàm cosin như hình vẽ (Trang 13). Chất điểm có biên độ là
+ 
+ 
+*A. 4 cm.
+B. 2 cm.
+C. – 4 cm.
+D. – 2 cm.
+ 
+Câu 18. Một chất điểm dao động điều hòa có đồ thị li độ – thời gian như hình vẽ (Trang 14). Chu kì dao động là
+ 
+ 
+A. 0,8 s.
+B. 0,1 s.
+C. 0,2 s.
+*D. 0,4 s.
+ 
+II. DẠNG CÁC ĐẠI LƯỢNG CƠ BẢN – VÍ DỤ MINH HỌA
+Câu 19. Một vật nhỏ dao động điều hòa với biên độ 3 cm. Vật dao động trên đoạn thẳng dài
+ 
+A. 12 cm.
+B. 9 cm.
+C. 3 cm.
+*D. 6 cm.
+ 
+Câu 20. Một chất điểm dao động điều hoà trong 10 dao động toàn phần đi được quãng đường dài 120 cm. Quỹ đạo của dao động có chiều dài là
+ 
+A. 6 cm.
+*B. 12 cm.
+C. 3 cm.
+D. 9 cm.
+ 
+Câu 21. Một vật nhỏ dao động điều hòa theo phương trình x = A cos 10t (t tính bằng s), A là biên độ. Tại t = 2, pha của dao động là
+ 
+A. 5 rad.
+B. 40 rad.
+C. 10 rad.
+*D. 20 rad.
+ 
+Câu 22. Một vật dao động điều hoà theo phương trình x = 3 cos(5πt + π/6) cm. Biên độ dao động và tần số góc của vật là
+ 
+A. – 3 cm và 5π rad/s.
+B. 3 cm và – 5π rad/s.
+*C. 3 cm và 5π rad/s.
+D. 37 cm và 5π rad/s.
+ 
+Câu 23. Một chất điểm dao động điều hòa với phương trình x = 2 cos(πt + π/3) cm. Chu kì và tần số của dao động là
+ 
+A. 0,5 s; 2 Hz.
+*B. 2 s; 0,5 Hz.
+C. 2 s, π Hz.
+D. 0,5 s, π rad/s.
+ 
+Câu 24. Chất điểm dao động điều hòa với phương trình x = 4 cos(10πt + π) cm. Pha ban đầu của chất điểm là
+ 
+*A. π rad.
+B. 0 rad.
+C. π/2 rad.
+D. 10πt + π rad.
+ 
+Câu 25. Một chất điểm dao động điều hòa với phương trình x = 2 sin(πt + π/2) cm. Pha ban đầu của dao động trên là
+ 
+*A. 0 rad.
+B. π/2 rad.
+C. 3π/2 rad.
+D. π rad.
+ 
+Câu 26. Một dao động điều hòa với phương trình x = 5 cos(2πt – 3π/2) cm. Pha ban đầu của dao động của vật là
+ 
+A. – π/2 rad.
+*B. π/2 rad.
+C. 3π/2 rad.
+D. – π rad.
+ 
+Câu 27. Cho phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Tần số của dao động là
+ 
+*A. 1 Hz.
+B. 2 Hz.
+C. 2π Hz.
+D. 0,5 Hz.
+ 
+Câu 28. Cho phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Chiều dài quỹ đạo của dao động là
+ 
+A. 5 cm.
+*B. 10 cm.
+C. 20 cm.
+D. 2,5 cm.
+ 
+Câu 29. Cho phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Quãng đường vật đi được sau 2 dao động là
+ 
+A. 20 cm.
+*B. 40 cm.
+C. 10 cm.
+D. 5 cm.
+ 
+Câu 30. Cho phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Pha ban đầu của dao động là
+ 
+A. π/3 rad.
+B. – π/3 rad.
+*C. – π/6 rad.
+D. π/2 rad.
+ 
+III. BÀI TẬP VỀ NHÀ
+Câu 31. Một chất điểm dao động có phương trình x = 10 cos(15t + π) (x tính bằng cm, t tính bằng s). Chất điểm này dao động với tần số góc là
+ 
+A. 20 rad/s.
+B. 10 rad/s.
+C. 5 rad/s.
+*D. 15 rad/s.
+ 
+Câu 32. Một chất điểm dao động điều hoà có phương trình li độ theo thời gian là x = 6 cos(4πt + π/3) cm. Chu kì của dao động là
+ 
+A. 4 s.
+B. 2 s.
+C. 0,25 s.
+*D. 0,5 s.
+ 
+Câu 33. Một chất điểm dao động điều hoà có tần số góc ω = 10π rad/s. Tần số của dao động là
+ 
+*A. 5 Hz.
+B. 10 Hz.
+C. 20 Hz.
+D. 5π Hz.
+ 
+Câu 34. Một chất điểm dao động theo phương trình x = 6 cos ωt cm. Quỹ đạo chất điểm có độ dài bằng
+ 
+A. 2 cm.
+B. 6 cm.
+C. 3 cm.
+*D. 12 cm.
+ 
+Câu 35. Một vật nhỏ dao động điều hòa theo một quỹ đạo dài 24 cm. Dao động có biên độ
+ 
+A. 6 cm.
+B. 3 cm.
+*C. 12 cm.
+D. 24 cm.
+ 
+Câu 36. Một chất điểm dao động tuần hoàn với chu kì 0,2 s. Biết rằng trong 2 s, chất điểm đi được tổng quãng đường dài 1,6 m. Độ dài quỹ đạo chuyển động của chất điểm là
+ 
+A. 4 cm.
+*B. 8 cm.
+C. 12 cm.
+D. 16 cm.
+ 
+Câu 37. Một vật dao động điều hòa đi được quãng đường 16 cm trong một chu kì dao động. Biên độ dao động của vật là
+ 
+*A. 4 cm.
+B. 8 cm.
+C. 16 cm.
+D. 2 cm.
+ 
+Câu 38. Một chất điểm dao động theo phương trình x = 10 cos 2πt cm có pha tại thời điểm t là
+ 
+*A. 2πt.
+B. 0.
+C. 2π.
+D. π.
+ 
+Câu 39. Một chất điểm dao động điều hoà với phương trình x = 5 cos(10πt + π/3) cm. Li độ của vật khi pha dao động bằng π là
+ 
+A. 5 cm.
+*B. – 5 cm.
+C. 2,5 cm.
+D. – 2,5 cm.
+ 
+Câu 40. Một chất điểm dao động điều hoà có phương trình li độ theo thời gian là x = 5√3 cos(10πt + π/3) cm. Tại thời điểm t = 1 s thì li độ của vật bằng
+ 
+*A. 2,5√3 cm.
+B. – 5√3 cm.
+C. 5 cm.
+D. 2,5 cm.
+ 
+Câu 41. Một vật nhỏ dao động điều hòa thực hiện 2016 dao động toàn phần trong 1008 s. Tần số dao động là
+ 
+A. 4π Hz.
+B. 0,5 Hz.
+*C. 2 Hz.
+D. 1 Hz.
+ 
+Câu 42. Một chất điểm dao động điều hoà. Trong thời gian 1 phút vật thực hiện được 30 dao động. Chu kì dao động của vật là
+ 
+*A. 2 s.
+B. 30 s.
+C. 0,5 s.
+D. 1 s.
+ 
+Câu 43. Phương trình dao động của một vật có dạng: x = – A cos(ωt + π/3) cm. Pha ban đầu của dao động là
+ 
+A. π/3 rad.
+B. – π/3 rad.
+C. 2π/3 rad.
+*D. – 2π/3 rad.
+ 
+Câu 44. Phương trình dao động điều hòa của một chất điểm có dạng: x = 5 sin(6t + π/3) cm. Pha ban đầu của dao động trên là
+ 
+*A. – π/6 rad.
+B. π/6 rad.
+C. π/3 rad.
+D. – π/3 rad.
+ 
+Câu 45. Một dao động điều hòa với phương trình x = 4 sin(πt + π/3) cm. Pha dao động ban đầu của vật là
+ 
+A. π/6 rad.
+B. – π/3 rad.
+C. π/3 rad.
+*D. – π/6 rad.
+ 
+Câu 46. Một vật dao động điều hòa với phương trình: x = 8 cos(4πt + 4π/3) cm. Pha ban đầu của dao động của vật là
+ 
+A. – π/3 rad.
+B. π/3 rad.
+*C. – 2π/3 rad.
+D. 2π/3 rad.
+ 
+Câu 47. Một dao động điều hòa với phương trình x = 4 cos(2πt + 6π/5) cm. Pha ban đầu của dao động của vật là
+ 
+A. – π/5 rad.
+B. 4π/5 rad.
+*C. – 4π/5 rad.
+D. π/5 rad.
+ 
+Câu 48. Một chất điểm dao động điều hòa có đồ thị biểu diễn sự phụ thuộc của li độ x theo thời gian t như hình bên (Trang 21). Tần số dao động của chất điểm bằng
+ 
+ 
+A. 0,5π rad/s.
+B. 0,5 Hz.
+C. π rad/s.
+*D. 0,25 Hz.
+ 
+IV. CÂU HỎI BỔ SUNG TỪ ĐỀ LUYỆN TẬP
+Câu 49. Một vật dao động điều hòa theo phương trình x = A cos(ωt + φ) (ω > 0). Tần số góc của dao động là
+ 
+A. A.
+*B. ω.
+C. φ.
+D. x.
+ 
+Câu 50. Một chất điểm dao động theo phương trình x = 6 cos ωt cm. Dao động của chất điểm có biên độ là
+ 
+*A. 6 cm.
+B. 3 cm.
+C. 2 cm.
+D. 12 cm.
+ 
+Câu 51. Biết pha ban đầu của một vật dao động điều hòa, ta xác định được
+ 
+A. quỹ đạo dao động.
+B. cách kích thích dao động.
+C. chu kì và trạng thái dao động.
+*D. chiều chuyển động của vật lúc ban đầu.
+ 
+Câu 52. Một vật dao động điều hòa theo phương trình x = A cos(ωt + φ) (A > 0). Biên độ dao động của vật là
+ 
+*A. A.
+B. φ.
+C. ω.
+D. x.
+ 
+Câu 53. Một chất điểm dao động có phương trình x = 10 cos(15t + π) (x tính bằng cm, t tính bằng s). Chất điểm này dao động với tần số góc là
+ 
+A. 20 rad/s.
+B. 10 rad/s.
+C. 5 rad/s.
+*D. 15 rad/s.
+ 
+Câu 54. Một chất điểm dao động điều hòa trên trục Ox. Trong thời gian 31,4 s chất điểm thực hiện được 100 dao động toàn phần. Lúc chất điểm đi qua vị trí có li độ 2 cm theo chiều âm với tốc độ là 40√3 cm/s. Lấy π = 3,14. Biên độ dao động của chất điểm là
+ 
+*A. 4 cm.
+B. 2√2 cm.
+C. 3 cm.
+D. 2√3 cm.
+ 
+Câu 55. Cho một chất điểm đang dao động điều hòa với biên độ A. Biết tại thời điểm ban đầu (t = 0) chất điểm đi qua vị trí có li độ A/2 và đang chuyển động theo chiều dương của trục tọa độ. Pha ban đầu của dao động là
+ 
+A. π/4 rad.
+B. π/6 rad.
+C. π/3 rad.
+*D. – π/3 rad.
+ 
+Câu 56. Tần số dao động điều hòa là
+*A. số dao động toàn phần vật thực hiện được trong 1 s.
+B. số dao động toàn phần vật thực hiện được trong một chu kì.
+C. khoảng thời gian ngắn nhất để vật trở lại vị trí ban đầu.
+D. khoảng thời gian vật thực hiện hết một dao động toàn phần.
+Câu 57. Một chất điểm dao động theo phương trình x = 10 cos 2πt cm có pha tại thời điểm t là
+ 
+*A. 2πt.
+B. 0.
+C. 2π.
+D. π.
+ 
+Câu 58. Một chất điểm dao động điều hoà với phương trình x = 5 cos(10πt + π/3) cm. Li độ của vật khi pha dao động bằng π là
+ 
+A. 5 cm.
+*B. – 5 cm.
+C. 2,5 cm.
+D. – 2,5 cm.
+ 
+Câu 59. Một chất điểm dao động điều hòa trên trục Ox quanh vị trí cân bằng O. Gọi A, ω và φ lần lượt là biên độ, tần số góc và pha ban đầu của dao động. Biểu thức li độ của vật theo thời gian t là
+ 
+*A. x = A cos(ωt + φ).
+B. x = ω cos(tφ + A).
+C. x = t cos(φ A + ω).
+D. x = φ cos(Aω + t).
+ 
+Câu 60. Một chất điểm dao động điều hoà có tần số góc ω = 10π rad/s. Tần số của dao động là
+ 
+*A. 5 Hz.
+B. 10 Hz.
+C. 20 Hz.
+D. 5π Hz.
+ 
+ 
+I. CÂU HỎI LÍ THUYẾT TRỌNG TÂM
+Câu 1. Dao động điều hòa là dạng chuyển động cơ học cơ bản, trong đó vị trí của vật được mô tả bởi các hàm sin hoặc cos theo thời gian.
+a) Các đại lượng A, ω, φ dao động điều hòa cùng tần số.
+*b) Pha dao động là hàm bậc nhất theo thời gian.
+*c) Biên độ của vật luôn dương.
+*d) Quỹ đạo dao động của vật là một đường thẳng.
+Câu 2. Dao động điều hòa thường xuất hiện ở các hệ cơ học đơn giản như con lắc lò xo hay con lắc đơn.
+*a) Dao động tuần hoàn đơn giản nhất là dao động điều hòa.
+*b) Pha dao động giúp ta xác định trạng thái dao động của vật.
+c) Biên độ là độ dịch chuyển của vật tính từ vị trí cân bằng.
+*d) Chu kì là khoảng thời gian ngắn nhất để vật lặp lại một trạng thái dao động.
+Câu 3. Dao động điều hòa là chuyển động nền tảng của nhiều hệ cơ học (con lắc lò xo, con lắc đơn...).
+a) Khoảng thời gian ngắn nhất sau đó trạng thái dao động lặp lại như cũ gọi là tần số dao động.
+*b) Đại lượng không đổi theo thời gian là biên độ dao động.
+c) Quỹ đạo dao động của vật biểu diễn dưới dạng hình sin.
+d) Pha ban đầu của dao động luôn dương.
+Câu 4. Ở những hệ quen thuộc như con lắc đồng hồ hay lò xo của hệ thống giảm xóc của xe máy, vật dao động qua lại quanh vị trí cân bằng.
+*a) Dao động cơ học là chuyển động qua lại của một vật quanh vị trí cân bằng.
+b) Dao động cơ của một vật là dao động tuần hoàn.
+*c) Dao động điều hòa là dao động trong đó li độ được mô tả bằng một định luật dạng cosin (hay sin) theo thời gian.
+*d) Dao động điều hòa là trường hợp đặc biệt của dao động tuần hoàn.
+II. CÂU HỎI BÀI TẬP VỀ NHÀ
+Câu 5. Một vật đang dao động điều hòa theo phương trình x = – 5 cos 5πt cm.
+a) Pha ban đầu của li độ bằng 0.
+*b) Biên độ dao động là 5 cm.
+*c) Tần số dao động là 2,5 Hz.
+*d) Chu kì dao động là 0,4 s.
+Câu 6. Một chất điểm dao động điều hòa với phương trình x = 2 cos(4πt – 0,5π) cm.
+*a) Pha dao động của chất điểm là 0,5 rad.
+*b) Tần số góc của chất điểm là 2 rad/s.
+*c) Chu kì dao động của chất điểm là 1 s.
+*d) Chất điểm dao động trên quỹ đạo có chiều dài 4 cm.
+Câu 7. Một vật dao động điều hòa trên trục Ox với phương trình x = 4 cos(2πt – π/6) cm (trong đó t tính bằng giây).
+*a) Biên độ dao động của vật là 4 cm.
+b) Pha ban đầu của dao động là π/6 rad.
+*c) Chiều dài quỹ đạo chuyển động của vật là 4 cm.
+*d) Tại thời điểm t = 1 s, vật cách vị trí cân bằng một đoạn 2√3 cm.
+Câu 8. Hình vẽ dưới đây mô tả dao động điều hòa của một vật.
+ 
+*a) Đồ thị dao động theo thời gian là một đường hình sin.
+b) Biên độ dao động của vật là 2 m.
+c) Vật ở tại vị trí biên âm vào thời điểm 0,4 s.
+*d) Chu kì của dao động là 0,4 s.
+III. CÂU HỎI TỔNG HỢP TỪ ĐỀ ÔN LUYỆN
+Câu 9. Cho một vật dao động điều hòa với phương trình x = A cos(ωt + φ).
+a) Khoảng thời gian ngắn nhất sau đó trạng thái dao động lặp lại như cũ gọi là tần số dao động.
+*b) Đại lượng không đổi theo thời gian là biên độ dao động.
+c) Quỹ đạo dao động của vật được biểu diễn dưới dạng hình sin.
+*d) Pha ban đầu của dao động phụ thuộc vào gốc thời gian và chiều dương của hệ tọa độ.
+Câu 10. Dao động cơ học xuất hiện trong nhiều hệ thống, từ dao động của con lắc đồng hồ đến sự nhún của lò xo giảm xóc ô tô.
+*a) Dao động cơ học là chuyển động qua lại của một vật xung quanh vị trí cân bằng.
+b) Dao động cơ của một vật luôn là dao động tuần hoàn.
+*c) Dao động điều hòa là dao động trong đó li độ được mô tả bằng một định luật dạng cosin (hay sin) theo thời gian.
+*d) Dao động điều hòa là trường hợp đặc biệt của dao động tuần hoàn.
+Câu 11. Một chất điểm dao động điều hòa với phương trình x = 8 cos 2πt cm.
+*a) Chu kì dao động của chất điểm là 1 s.
+b) Trong nửa chu kì đầu tiên, vận tốc của vật bằng không ở thời điểm t = 1/8 s.
+*c) Thời điểm thứ nhất vật đi qua vị trí cân bằng là 1/4 s.
+d) Từ thời điểm ban đầu, vật đi qua vị trí biên âm lần thứ 3 là 4 s.
+Câu 12. Một vật đang dao động điều hòa theo phương trình x = – 5 cos 5t cm.
+a) Pha ban đầu của li độ bằng 0 rad.
+*b) Biên độ dao động là 5 cm.
+*c) Tần số dao động là 2,5 Hz.
+*d) Chu kì dao động là 0,4 s.
+Câu 13. Một vật dao động điều hòa trên trục Ox. Hình bên là đồ thị biểu diễn sự phụ thuộc của li độ x vào thời gian t.
+*a) Biên độ của dao động là 4 cm.
+b) Vận tốc của vật lúc t = 2,5 s có giá trị là – √2 cm/s.
+*c) Phương trình dao động của vật có dạng x = 4 cos(π/2 t + π) (cm; s).
+d) Chu kì dao động của vật là 1 s.
+Câu 14. Cho vật dao động điều hoà có đồ thị li độ – thời gian như hình vẽ.
+*a) Dao động của vật có biên độ: A = 10 cm và tần số góc: ω = π/2 rad/s.
+*b) Gia tốc của vật tại thời điểm 3,5 s có giá trị: a = – 12,5√2 cm/s².
+*c) Vận tốc của vật tại thời điểm 3,5 s có giá trị – 5√5 cm/s.
+*d) Phương trình dao động: x = 10 cos(π/2 t) cm.
+Câu 15. Cho một chất điểm dao động điều hòa với phương trình x = A cos(ωt + φ).
+*a) Ở vị trí cân bằng, chất điểm có vận tốc cực đại.
+*b) Ở vị trí cân bằng, chất điểm có gia tốc bằng không.
+*c) Ở vị trí biên, chất điểm có vận tốc bằng không.
+d) Ở cả hai vị trí biên, chất điểm có gia tốc cực đại.
+Câu 16. Một chất điểm dao động điều hòa theo phương trình x = 3 cos(5πt – π/3) (x tính bằng cm, t tính bằng s).
+*a) Chu kì dao động của chất điểm là 0,2 s.
+b) Từ vị trí cân bằng ra biên chất điểm chuyển động chậm dần đều.
+*c) Trong giây đầu tiên kể từ lúc t = 0, chất điểm qua vị trí có li độ x = +1 cm là 4 lần.
+*d) Kể từ thời điểm t = 1 s tới thời điểm t = 2,25 s, chất điểm qua vị trí x = 2 cm theo chiều âm 3 lần.
+Câu 17. Trong dao động điều hòa, chất điểm chuyển động qua lại quanh vị trí cân bằng theo quy luật hình sin, với vận tốc và gia tốc biến thiên liên tục theo thời gian và phụ thuộc vào vị trí của vật.
+*a) Chuyển động của vật từ vị trí biên về vị trí cân bằng là chuyển động nhanh dần.
+*b) Khi đi từ vị trí cân bằng ra biên dương là chuyển động chậm dần.
+*c) Khi đi từ vị trí cân bằng ra biên âm là chuyển động chậm dần.
+d) Khi vật chuyển động nhanh dần theo chiều dương thì vật có li độ dương và vận tốc âm.
+Câu 18. Một chất điểm dao động điều hoà theo phương trình x = 8 cos(2πt + π/4) (x tính bằng cm và t tính bằng giây).
+*a) Quỹ đạo chuyển động của chất điểm có chiều dài là 16 cm.
+*b) Chu kì dao động của chất điểm là 2 s.
+c) Trong 3 s đầu tiên từ thời điểm t = 0, chất điểm đi qua vị trí có li độ – 4 cm là 8 lần.
+*d) Trong 3,5 s đầu tiên từ thời điểm t = 0, chất điểm đi qua vị trí có li độ – 3 cm là 7 lần.
+Câu 19. Xét một con lắc lò xo nằm ngang dao động điều hòa với lò xo có độ cứng k, vật nặng có khối lượng m.
+*a) Vị trí cân bằng của dao động cũng là vị trí lò xo có chiều dài tự nhiên.
+*b) Chu kì dao động là T = 2π√m/k.
+c) Tần số dao động là f = 1/2π√m/k.
+*d) Khoảng thời gian vật đi từ biên về vị trí cân bằng là t = T/4.
+Câu 20. Cho một chất điểm dao động điều hòa với phương trình x = 4 cos(4πt + π/6) cm.
+*a) Biên độ của vật là 4 cm.
+b) Từ vị trí cân bằng ra biên thì vật chuyển động nhanh dần đều.
+*c) Thời điểm lần thứ 3 khi vật qua vị trí có li độ 2 cm theo chiều dương là 9/8 s.
+*d) Các thời điểm vật chuyển động qua vị trí có toạ độ x = – 2 cm theo chiều dương Ox là t = 0,5 + 2k (s) (k = 1, 2, 3...).
+ 
+I. DẠNG CÁC ĐẠI LƯỢNG CƠ BẢN – VÍ DỤ MINH HỌA
+Câu 1. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Tần số của dao động là bao nhiêu héc?
+Đáp số: 1
+Câu 2. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Chu kì của dao động là bao nhiêu giây?
+Đáp số: 1
+Câu 3. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Pha ban đầu của dao động là bao nhiêu radian (viết kết quả theo số thập phân hoặc phân số)?
+Đáp số: – pi/6
+Câu 4. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Số dao động vật thực hiện trong 5 s là bao nhiêu?
+Đáp số: 5
+Câu 5. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Chiều dài quỹ đạo của dao động là bao nhiêu centimét?
+Đáp số: 10
+Câu 6. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Quãng đường vật đi được sau 2 dao động là bao nhiêu centimét?
+Đáp số: 40
+Câu 7. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Pha của vật khi t = 6 s là bao nhiêu radian?
+Đáp số: 11,83pi
+Câu 8. Phương trình dao động điều hoà là x = 5 sin(2πt + π/3) (cm). Li độ của vật khi t = 6 s là bao nhiêu centimét (làm tròn kết quả đến chữ số hàng phần trăm)?
+Đáp số: 4,33
+Câu 9. Một con ong mật đang bay tại chỗ trong không trung, đập cánh với tần số khoảng 300 Hz. Số dao động mà cánh ong mật thực hiện trong 1 s là bao nhiêu?
+Đáp số: 300
+Câu 10. Một con ong mật đang bay tại chỗ trong không trung, đập cánh với tần số khoảng 300 Hz. Chu kì dao động của cánh ong là bao nhiêu mili giây (làm tròn kết quả đến chữ số hàng phần trăm)?
+Đáp số: 3,33
+II. DẠNG BÀI TẬP TRẢ LỜI NGẮN (PHẦN 3)
+Câu 11. Một chất điểm dao động điều hoà với phương trình x = 5 cos(10πt + π/3) cm. Li độ của chất điểm khi pha dao động bằng π là bao nhiêu centimet?
+Đáp số: – 5
+Câu 12. Một chất điểm dao động điều hòa dọc theo trục Ox với phương trình x = 2 cos(2πt – π/6) cm. Li độ của chất điểm tại thời điểm t = 0,25 s bằng bao nhiêu centimet?
+Đáp số: 1
+Câu 13. Một chất điểm dao động điều hòa với phương trình x = 10 cos(2πt + π/6) cm. Chu kì dao động của chất điểm bằng bao nhiêu giây?
+Đáp số: 1
+Câu 14. Một chất điểm dao động có phương trình x = 10 cos(15t + π) (x tính bằng cm, t tính bằng s). Chất điểm này dao động với tần số góc bằng bao nhiêu rad/s?
+Đáp số: 15
+Câu 15. Một chất điểm dao động điều hòa trên trục Ox có phương trình x = 8 cos(πt + π/2) cm. Pha dao động của chất điểm khi t = 1 s bằng bao nhiêu rad (làm tròn kết quả đến chữ số hàng phần trăm)?
+Đáp số: 4,71
+Câu 16. Một chất điểm dao động điều hoà có phương trình li độ theo thời gian là x = 5√3 cos(10πt + π/3) cm. Tần số của dao động bằng bao nhiêu Hz?
+Đáp số: 5
+III. DẠNG BÀI TẬP TỔNG HỢP (TRÍCH TỪ VÍ DỤ VÀ BÀI TẬP VỀ NHÀ)
+Câu 17. Một vật nhỏ dao động điều hòa với biên độ 3 cm. Vật dao động trên đoạn thẳng dài bao nhiêu centimét?
+Đáp số: 6
+Câu 18. Một chất điểm dao động điều hoà trong 10 dao động toàn phần đi được quãng đường dài 120 cm. Quỹ đạo của dao động có chiều dài là bao nhiêu centimét?
+Đáp số: 12
+Câu 19. Một vật nhỏ dao động điều hòa theo phương trình x = A cos 10t (t tính bằng s), A là biên độ. Tại t = 2, pha của dao động là bao nhiêu radian?
+Đáp số: 20
+Câu 20. Một vật dao động điều hoà theo phương trình x = 3 cos(5πt + π/6) cm. Tần số góc của vật là bao nhiêu rad/s (lấy π = 3,14)?
+Đáp số: 15,7
+Câu 21. Một chất điểm dao động điều hòa với phương trình x = 2 cos(πt + π/3) cm. Tần số của dao động là bao nhiêu héc?
+Đáp số: 0,5
+Câu 22. Một chất điểm dao động điều hòa với phương trình x = 4 cos(10πt + π) cm. Pha ban đầu của chất điểm là bao nhiêu radian?
+Đáp số: 3,14
+Câu 23. Một chất điểm dao động theo phương trình x = 6 cos ωt cm. Quỹ đạo chất điểm có độ dài bằng bao nhiêu centimet?
+Đáp số: 12
+Câu 24. Một vật nhỏ dao động điều hòa theo một quỹ đạo dài 24 cm. Dao động có biên độ bằng bao nhiêu centimet?
+Đáp số: 12
+ 
+tất cả bài tập mcq và bài tập ví dụ, bài tập về nhà của bài 1. dao động điều hòa, dẫn nguyên văn, không giản lược câu hỏi, đặt tên và thứ tự câu hỏi và ví dụ đúng theo trình bày trong sách. phân dạng rõ ràng
+
+Bạn là một chuyên gia biên soạn đề thi. Hãy giúp tôi soạn thảo bộ câu hỏi trắc nghiệm theo đúng cấu trúc cú pháp của hệ thống phân tích dữ liệu tự động. Hãy tuân thủ nghiêm ngặt các quy tắc định dạng dưới đây:
+### 1. CẤU TRÚC PHÂN LOẠI & DẠNG BÀI:
+Phân loại nội dung theo từng dạng/mục. Mỗi tiêu đề mục/dạng bài phải đặt trên một dòng riêng, viết hoa và bắt đầu bằng ký tự La Mã (I. II. III...) hoặc từ "Dạng" (Ví dụ: Dạng 1. Dạng 2...).
+### 2. QUY TẮC ĐỊNH DẠNG 3 DẠNG CÂU HỎI:
+Mỗi câu hỏi phải bắt đầu bằng chữ "Câu X:" hoặc "Câu X." (với X là số).
+#### Dạng 1: Trắc nghiệm lựa chọn đơn (MCQ – 4 đáp án A, B, C, D)
+– Bắt đầu bằng Câu X.
+– Các đáp án bắt đầu bằng A. B. C. D. (phải có dấu chấm và dấu cách sau chữ cái phương án).
+– Đáp án ĐÚNG phải có thêm dấu ký tự hoa thị (*) đứng ngay trước chữ cái phương án (Ví dụ: *A. hoặc *B.).
+Ví dụ:
+Câu 1. Thủ đô của Việt Nam là gì?
+*A. Hà Nội
+B. TP. Hồ Chí Minh
+C. Đà Nẵng
+D. Hải Phòng
+#### Dạng 2: Trắc nghiệm Đúng / Sai (TF)
+– Mỗi câu gồm nhiều ý nhỏ, bắt đầu bằng chữ cái thường và dấu đóng ngoặc đơn: a), b), c), d).
+– Mệnh đề ĐÚNG: Thêm dấu hoa thị (*) vào đầu dòng trước chữ cái phương án (Ví dụ: *a)... hoặc *c)...).
+– Mệnh đề SAI: Không thêm dấu hoa thị (*) ở đầu dòng (Ví dụ: b)... hoặc d)...).
+– KHÔNG thêm chữ "Đúng:" hoặc "Sai:" trong câu.
+Ví dụ:
+Câu 2. Xét các mệnh đề sau về địa lý thế giới:
+*a) Trái Đất quay quanh Mặt Trời.
+b) Mặt Trăng tự phát ra ánh sáng.
+*c) Châu Á là châu lục có diện tích lớn nhất.
+d) Sông Nile chảy qua châu Âu.
+#### Dạng 3: Trả lời ngắn (SA)
+– Cuối câu hỏi, bắt buộc phải có một dòng ghi rõ chữ "Đáp số:" kèm theo câu trả lời ngắn (chữ hoặc số).
+Ví dụ:
+Câu 3. Kết quả của phép tính 15 + 25 bằng bao nhiêu?
+Đáp số: 40
+### 3. YÊU CẦU BỔ SUNG (NẾU CÓ CHÈN ẢNH):
+Hệ thống có tính năng tự động trích xuất link hình ảnh trong nội dung câu hỏi. Nếu câu hỏi nào cần hình ảnh minh họa, hãy chèn link URL trực tiếp của ảnh (đuôi .jpg, .png, .webp...) vào bất kỳ vị trí nào trong phần text của câu hỏi đó.
+– – – 
+BÂY GIỜ, hãy soạn cho tôi một bộ câu hỏi về chủ đề: tất cả bài tập mcq và bài tập ví dụ, bài tập về nhà của bài 1. dao động điều hòa, dẫn nguyên văn, không giản lược câu hỏi, đặt tên và thứ tự câu hỏi và ví dụ đúng theo trình bày trong sách. phân dạng rõ ràng
+– Số lượng câu hỏi mong muốn: 60 câu MCQ, 0 câu Đúng/Sai, 0 câu Trả lời ngắn
+– Đảm bảo không thêm bất kỳ văn bản giải thích, lời mở đầu hay ký tự Markdown thụt lề nào ngoài cấu trúc quy định trên.
+– Sắp xếp và phân loại các câu hỏi theo từng dạng (Dạng 1... Dạng 2...).
+ 
+
+tất cả bài tập mcq và bài tập ví dụ, bài tập về nhà của bài 1. dao động điều hòa, dẫn nguyên văn, không giản lược câu hỏi, đặt tên và thứ tự câu hỏi và ví dụ đúng theo trình bày trong sách. phân dạng rõ ràng
+
+Bạn là một chuyên gia biên soạn đề thi. Hãy giúp tôi soạn thảo bộ câu hỏi trắc nghiệm theo đúng cấu trúc cú pháp của hệ thống phân tích dữ liệu tự động. Hãy tuân thủ nghiêm ngặt các quy tắc định dạng dưới đây:
+### 1. CẤU TRÚC PHÂN LOẠI & DẠNG BÀI:
+Phân loại nội dung theo từng dạng/mục. Mỗi tiêu đề mục/dạng bài phải đặt trên một dòng riêng, viết hoa và bắt đầu bằng ký tự La Mã (I. II. III...) hoặc từ "Dạng" (Ví dụ: Dạng 1. Dạng 2...).
+### 2. QUY TẮC ĐỊNH DẠNG 3 DẠNG CÂU HỎI:
+Mỗi câu hỏi phải bắt đầu bằng chữ "Câu X:" hoặc "Câu X." (với X là số).
+#### Dạng 1: Trắc nghiệm lựa chọn đơn (MCQ – 4 đáp án A, B, C, D)
+– Bắt đầu bằng Câu X.
+– Các đáp án bắt đầu bằng A. B. C. D. (phải có dấu chấm và dấu cách sau chữ cái phương án).
+– Đáp án ĐÚNG phải có thêm dấu ký tự hoa thị (*) đứng ngay trước chữ cái phương án (Ví dụ: *A. hoặc *B.).
+Ví dụ:
+Câu 1. Thủ đô của Việt Nam là gì?
+*A. Hà Nội
+B. TP. Hồ Chí Minh
+C. Đà Nẵng
+D. Hải Phòng
+#### Dạng 2: Trắc nghiệm Đúng / Sai (TF)
+– Mỗi câu gồm nhiều ý nhỏ, bắt đầu bằng chữ cái thường và dấu đóng ngoặc đơn: a), b), c), d).
+– Mệnh đề ĐÚNG: Thêm dấu hoa thị (*) vào đầu dòng trước chữ cái phương án (Ví dụ: *a)... hoặc *c)...).
+– Mệnh đề SAI: Không thêm dấu hoa thị (*) ở đầu dòng (Ví dụ: b)... hoặc d)...).
+– KHÔNG thêm chữ "Đúng:" hoặc "Sai:" trong câu.
+Ví dụ:
+Câu 2. Xét các mệnh đề sau về địa lý thế giới:
+*a) Trái Đất quay quanh Mặt Trời.
+b) Mặt Trăng tự phát ra ánh sáng.
+*c) Châu Á là châu lục có diện tích lớn nhất.
+d) Sông Nile chảy qua châu Âu.
+#### Dạng 3: Trả lời ngắn (SA)
+– Cuối câu hỏi, bắt buộc phải có một dòng ghi rõ chữ "Đáp số:" kèm theo câu trả lời ngắn (chữ hoặc số).
+Ví dụ:
+Câu 3. Kết quả của phép tính 15 + 25 bằng bao nhiêu?
+Đáp số: 40
+### 3. YÊU CẦU BỔ SUNG (NẾU CÓ CHÈN ẢNH):
+Hệ thống có tính năng tự động trích xuất link hình ảnh trong nội dung câu hỏi. Nếu câu hỏi nào cần hình ảnh minh họa, hãy chèn link URL trực tiếp của ảnh (đuôi .jpg, .png, .webp...) vào bất kỳ vị trí nào trong phần text của câu hỏi đó.
+– – – 
+BÂY GIỜ, hãy soạn cho tôi một bộ câu hỏi về chủ đề: tất cả bài tập mcq và bài tập ví dụ, bài tập về nhà của bài 1. dao động điều hòa, dẫn nguyên văn, không giản lược câu hỏi, đặt tên và thứ tự câu hỏi và ví dụ đúng theo trình bày trong sách. phân dạng rõ ràng
+– Số lượng câu hỏi mong muốn: 60 câu MCQ, 0 câu Đúng/Sai, 0 câu Trả lời ngắn
+– Đảm bảo không thêm bất kỳ văn bản giải thích, lời mở đầu hay ký tự Markdown thụt lề nào ngoài cấu trúc quy định trên.
+– Sắp xếp và phân loại các câu hỏi theo từng dạng (Dạng 1... Dạng 2...).
+ 
+
+`;
+
+    let listLessons = []; 
+    let currentLessonIndex = 0;
+    let hasGraded = {}; 
+    let singleCheckedQuestions = {}; 
+    let activeQuestionNumber = "1"; 
+    let timerInterval = null;
+    let totalSeconds = 0;
+    let currentTFSubLabelIndex = 0; 
+    let currentSpeechLanguage = 'vi-VN';
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if(PRE_LOADED_RAW_DATA && PRE_LOADED_RAW_DATA.trim().length > 0) {
+            document.getElementById('txt-input').value = PRE_LOADED_RAW_DATA.trim();
+            parseAndGenerateQuiz();
+        }
+        window.addEventListener('keydown', handleGlobalKeydowns);
+    });
+
+    // HỆ THỐNG THÔNG BÁO TOAST THAY THẾ POPUP
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        let icon = 'ℹ️';
+        if (type === 'success') icon = '✓';
+        else if (type === 'error') icon = '✕';
+        else if (type === 'warning') icon = '⚠️';
+
+        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+        container.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 10);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    // CHUYỂN ĐỔI NGÔN NGỮ ĐỌC LOA
+    function toggleSpeechLanguage() {
+        const toggle = document.getElementById('language-speech-toggle');
+        const label = document.getElementById('lang-label');
+        if(toggle.checked) {
+            currentSpeechLanguage = 'en-US';
+            label.innerText = "🗣️ Giọng đọc: Tiếng Anh";
+            showToast('Đã đổi giọng đọc sang Tiếng Anh', 'info');
+        } else {
+            currentSpeechLanguage = 'vi-VN';
+            label.innerText = "🗣️ Giọng đọc: Tiếng Việt";
+            showToast('Đã đổi giọng đọc sang Tiếng Việt', 'info');
+        }
+    }
+
+    // TỰ ĐỘNG GENERATE PROMPT VÀ COPY
+    function copyGeneratedPromptToClipboard() {
+        const topic = document.getElementById('cfg-topic').value.trim() || "[Chủ đề bạn muốn biên soạn]";
+        const mcqCount = document.getElementById('cfg-mcq').value || "60";
+        const tfCount = document.getElementById('cfg-tf').value || "12";
+        const saCount = document.getElementById('cfg-sa').value || "18";
+
+        const basePrompt = `Bạn là một chuyên gia biên soạn đề thi. Hãy giúp tôi soạn thảo bộ câu hỏi trắc nghiệm theo đúng cấu trúc cú pháp của hệ thống phân tích dữ liệu tự động. Hãy tuân thủ nghiêm ngặt các quy tắc định dạng dưới đây:
+
+### 1. CẤU TRÚC PHÂN LOẠI & DẠNG BÀI:
+Phân loại nội dung theo từng dạng/mục. Mỗi tiêu đề mục/dạng bài phải đặt trên một dòng riêng, viết hoa và bắt đầu bằng ký tự La Mã (I., II., III...) hoặc từ "Dạng" (Ví dụ: Dạng 1., Dạng 2...).
+
+### 2. QUY TẮC ĐỊNH DẠNG 3 DẠNG CÂU HỎI:
+Mỗi câu hỏi phải bắt đầu bằng chữ "Câu X:" hoặc "Câu X." (với X là số).
+
+#### Dạng 1: Trắc nghiệm lựa chọn đơn (MCQ - 4 đáp án A, B, C, D)
+- Bắt đầu bằng Câu X.
+- Các đáp án bắt đầu bằng A., B., C., D. (phải có dấu chấm và dấu cách sau chữ cái phương án).
+- Đáp án ĐÚNG phải có thêm dấu ký tự hoa thị (*) đứng ngay trước chữ cái phương án (Ví dụ: *A. hoặc *B.).
+Ví dụ:
+Câu 1. Thủ đô của Việt Nam là gì?
+*A. Hà Nội
+B. TP. Hồ Chí Minh
+C. Đà Nẵng
+D. Hải Phòng
+
+#### Dạng 2: Trắc nghiệm Đúng / Sai (TF)
+- Mỗi câu gồm nhiều ý nhỏ, bắt đầu bằng chữ cái thường và dấu đóng ngoặc đơn: a), b), c), d).
+- Mệnh đề ĐÚNG: Thêm dấu hoa thị (*) vào đầu dòng trước chữ cái phương án (Ví dụ: *a)... hoặc *c)...).
+- Mệnh đề SAI: Không thêm dấu hoa thị (*) ở đầu dòng (Ví dụ: b)... hoặc d)...).
+- KHÔNG thêm chữ "Đúng:" hoặc "Sai:" trong câu.
+Ví dụ:
+Câu 2. Xét các mệnh đề sau về địa lý thế giới:
+*a) Trái Đất quay quanh Mặt Trời.
+b) Mặt Trăng tự phát ra ánh sáng.
+*c) Châu Á là châu lục có diện tích lớn nhất.
+d) Sông Nile chảy qua châu Âu.
+
+#### Dạng 3: Trả lời ngắn (SA)
+- Cuối câu hỏi, bắt buộc phải có một dòng ghi rõ chữ "Đáp số:" kèm theo câu trả lời ngắn (chữ hoặc số).
+Ví dụ:
+Câu 3. Kết quả của phép tính 15 + 25 bằng bao nhiêu?
+Đáp số: 40
+
+### 3. YÊU CẦU BỔ SUNG (NẾU CÓ CHÈN ẢNH):
+Hệ thống có tính năng tự động trích xuất link hình ảnh trong nội dung câu hỏi. Nếu câu hỏi nào cần hình ảnh minh họa, hãy chèn link URL trực tiếp của ảnh (đuôi .jpg, .png, .webp,...) vào bất kỳ vị trí nào trong phần text của câu hỏi đó.
+
+---
+BÂY GIỜ, hãy soạn cho tôi một bộ câu hỏi về chủ đề: ${topic}
+- Số lượng câu hỏi mong muốn: ${mcqCount} câu MCQ, ${tfCount} câu Đúng/Sai, ${saCount} câu Trả lời ngắn
+- Đảm bảo không thêm bất kỳ văn bản giải thích, lời mở đầu hay ký tự Markdown thụt lề nào ngoài cấu trúc quy định trên.
+- Sắp xếp và phân loại các câu hỏi theo từng dạng (Dạng 1..., Dạng 2...).
+- Chú ý, đặc biệt lưu ý, rằng trích dẫn nguyên văn đề, không giản lược hay rút gọn câu dẫn, nội dung đề.
+- Yêu cầu lấy câu MCQ thì lấy nội dung từ câu MCQ, yêu cầu lấy câu TF thì lấy từ câu TF, yêu cầu lấy câu SA thì lấy từ câu SA.
+- Yêu cầu trích dẫn giùm tôi là câu này lấy từ câu nào của đề gốc, trích rõ giùm. Theo form kiểu Câu X. (Câu Y - Trang z), hoặc Câu X. (Ví dụ Y - Trang z), Y là câu gốc trong tài liệu.`;
+
+        const copyBtn = document.getElementById('btn-copy-prompt');
+        navigator.clipboard.writeText(basePrompt).then(() => {
+            const originalText = copyBtn.innerText;
+            copyBtn.innerText = '✓ Đã copy!';
+            copyBtn.style.backgroundColor = '#38a169';
+            showToast('Đã sao chép Prompt vào bộ nhớ tạm!', 'success');
+            setTimeout(() => {
+                copyBtn.innerText = originalText;
+                copyBtn.style.backgroundColor = '';
+            }, 2000);
+        }).catch(err => {
+            showToast('Không thể tự động copy, vui lòng chọn thủ công.', 'error');
+        });
+    }
+
+    // XỬ LÝ PHÍM TẮT TOÀN CỤC
+    function handleGlobalKeydowns(e) {
+        if (e.target.tagName === 'TEXTAREA') return;
+        if (e.target.tagName === 'INPUT' && e.key !== 'Enter') return;
+
+        const lesson = listLessons[currentLessonIndex];
+        if (!lesson || lesson.questions.length === 0) return;
+
+        const currentIdx = lesson.questions.findIndex(q => q.numberStr === activeQuestionNumber);
+        if (currentIdx === -1) return;
+
+        const activeQ = lesson.questions[currentIdx];
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (currentIdx > 0) focusAndScrollToQuestion(lesson.questions[currentIdx - 1].numberStr);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (currentIdx < lesson.questions.length - 1) focusAndScrollToQuestion(lesson.questions[currentIdx + 1].numberStr);
+        }
+
+        if (activeQ.type === 'MCQ') {
+            const keyUpper = e.key.toUpperCase();
+            if (['A', 'B', 'C', 'D'].includes(keyUpper)) {
+                if (activeQ.options[keyUpper]) {
+                    e.preventDefault();
+                    const radio = document.querySelector(`input[name="q_ans_${currentLessonIndex}_${activeQ.numberStr}"][value="${keyUpper}"]`);
+                    if (radio && !radio.disabled) {
+                        radio.checked = true;
+                        handleSelectMCQ(activeQ.numberStr, keyUpper);
+                    }
+                }
+            }
+        }
+
+        if (activeQ.type === 'TF') {
+            const keyLower = e.key.toLowerCase();
+            if (keyLower === 'd' || keyLower === 's') {
+                e.preventDefault();
+                const subQuestions = activeQ.subQuestions;
+                if (currentTFSubLabelIndex < subQuestions.length) {
+                    const targetSub = subQuestions[currentTFSubLabelIndex];
+                    const choiceValue = (keyLower === 'd');
+                    const isLock = hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${activeQ.numberStr}`];
+                    if (!isLock) handleSelectTF(activeQ.numberStr, targetSub.label, choiceValue);
+                }
+            }
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval); totalSeconds = 0;
+        document.getElementById('quiz-timer-container').classList.remove('hidden');
+        timerInterval = setInterval(() => {
+            totalSeconds++;
+            const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const secs = String(totalSeconds % 60).padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+        }, 1000);
+    }
+
+    function stopTimer() { clearInterval(timerInterval); }
+
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function extractAllImageUrls(text) {
+        if (!text) return [];
+        const imgRegex = /(https?:\/\/[^\s]+(?:\.jpg|\.jpeg|\.png|\.gif|\.webp|\.bmp|\.png|\.PNG|\.JPG|\.JPEG|\.WEBP))/gi;
+        const matches = text.match(imgRegex);
+        return matches ? Array.from(new Set(matches)) : [];
+    }
+
+    function parseAndGenerateQuiz() {
+        const rawText = document.getElementById('txt-input').value.trim();
+        if (!rawText) { 
+            showToast('Vui lòng nhập nội dung văn bản trắc nghiệm!', 'warning'); 
+            return; 
+        }
+
+        // Cập nhật phân tách tiêu đề bao gồm I., II., III... hoặc Dạng 1., Dạng 2...
+        const parts = rawText.split(/(?=^[I|II|III|IV|V|VI|VII|VIII|IX|X]+\.\s+|^Dạng\s+\d+[\.:\s]|^[B-Z]\.\s+BÀI TẬP)/mi);
+        listLessons = []; hasGraded = {}; singleCheckedQuestions = {};
+        let globalIndex = 1;
+
+        parts.forEach((part) => {
+            if (!part.trim()) return;
+            let title = `Mục trắc nghiệm ${globalIndex}`;
+            const firstLine = part.trim().split('\n')[0];
+            if (firstLine.length < 100) title = firstLine.replace(/_+/g, '').trim();
+
+            const rawQuestions = part.split(/(?=^Câu\s+\d+(?:\.\d+)?[\.:\s])/m);
+            let questions = [];
+
+            rawQuestions.forEach(qBlock => {
+                const cleanBlock = qBlock.trim();
+                if (!cleanBlock || !cleanBlock.match(/^Câu\s+\d+(?:\.\d+)?[\.:]/i)) return;
+
+                const numMatch = cleanBlock.match(/^Câu\s+(\d+(?:\.\d+)?)/i);
+                const qNumberStr = numMatch ? numMatch[1] : String(questions.length + 1);
+                const lines = cleanBlock.split('\n').map(l => l.trim()).filter(l => l);
+                
+                let questionLines = [];
+                let options = {}; let mcqCorrect = null;
+                let tfSubQuestions = []; let isTFType = false;
+                let shortAnswerCorrect = null; let isShortAnswerType = false;
+
+                lines.forEach(line => {
+                    const saMatch = line.match(/(?:^|\.)\s*Đáp\s+số\s*:\s*(.*)$/i);
+                    if(saMatch) { isShortAnswerType = true; shortAnswerCorrect = saMatch[1].trim(); return; }
+
+                    // Regex nhận dạng câu Đúng/Sai mới: *a)... (Đúng) hoặc a)... (Sai)
+                    const tfMatch = line.match(/^(\*?)([a-d])\)\s*(.*)$/i);
+                    if (tfMatch) {
+                        isTFType = true;
+                        const isCorrect = (tfMatch[1] === '*');
+                        let contentText = tfMatch[3].trim();
+                        // Loại bỏ chữ "Đúng:" hoặc "Sai:" nếu vô tình có ở đầu
+                        contentText = contentText.replace(/^(Đúng|Sai)\s*[\.:]\s*/i, '');
+
+                        tfSubQuestions.push({
+                            label: tfMatch[2].toLowerCase(),
+                            text: contentText,
+                            correctValue: isCorrect
+                        });
+                        return;
+                    }
+
+                    const mcqMatch = line.match(/^(\*?)([A-D])\.\s*(.*)$/i);
+                    if (mcqMatch) {
+                        const optLetter = mcqMatch[2].toUpperCase();
+                        options[optLetter] = mcqMatch[3].trim();
+                        if (mcqMatch[1] === '*') mcqCorrect = optLetter;
+                        return;
+                    }
+                    questionLines.push(line);
+                });
+
+                if(isShortAnswerType) {
+                    questions.push({ numberStr: qNumberStr, type: 'SA', text: questionLines.join('\n'), correctAnswer: shortAnswerCorrect, rawBlock: cleanBlock });
+                } else if(isTFType) {
+                    questions.push({ numberStr: qNumberStr, type: 'TF', text: questionLines.join('\n'), subQuestions: tfSubQuestions, rawBlock: cleanBlock });
+                } else if (Object.keys(options).length > 0) {
+                    questions.push({ numberStr: qNumberStr, type: 'MCQ', text: questionLines.join('\n'), options: options, correctAnswer: mcqCorrect, rawBlock: cleanBlock });
+                }
+            });
+
+            if (questions.length > 0) {
+                listLessons.push({ title: title, questions: questions, userAnswers: {} });
+                globalIndex++;
+            }
+        });
+
+        if (listLessons.length === 0) { 
+            showToast('Không tìm thấy câu hỏi đúng cú pháp!', 'error'); 
+            return; 
+        }
+
+        document.getElementById('import-container').classList.add('hidden');
+        document.getElementById('import-actions').classList.add('hidden');
+        document.getElementById('menu-section').classList.remove('hidden');
+        document.getElementById('quiz-actions').classList.remove('hidden');
+        document.getElementById('quiz-container-box').classList.remove('hidden');
+
+        showToast(`Tạo thành công ${listLessons.length} mục bài tập!`, 'success');
+        renderSidebarMenu(); startTimer(); switchLesson(0);
+    }
+
+    function switchLesson(idx) {
+        currentLessonIndex = idx;
+        const lesson = listLessons[currentLessonIndex];
+        if (lesson && lesson.questions.length > 0) activeQuestionNumber = lesson.questions[0].numberStr;
+        currentTFSubLabelIndex = 0;
+        renderSidebarMenu(); renderQuestions();
+    }
+
+    function renderSidebarMenu() {
+        const menuContainer = document.getElementById('lesson-menu'); menuContainer.innerHTML = '';
+        listLessons.forEach((lesson, index) => {
+            const btn = document.createElement('button');
+            btn.className = `menu-item ${index === currentLessonIndex ? 'active' : ''}`;
+            let displayTitle = lesson.title;
+            if(displayTitle.length > 40) displayTitle = displayTitle.substring(0, 37) + '...';
+            btn.innerText = displayTitle; btn.onclick = () => switchLesson(index);
+            menuContainer.appendChild(btn);
+        });
+    }
+
+    function renderPagination() {
+        const pagContainer = document.getElementById('question-pagination'); pagContainer.innerHTML = '';
+        const lesson = listLessons[currentLessonIndex];
+        
+        lesson.questions.forEach(q => {
+            const item = document.createElement('div');
+            item.className = 'page-item'; item.innerText = q.numberStr;
+            if(q.numberStr === activeQuestionNumber) item.classList.add('active');
+
+            const uAns = lesson.userAnswers[q.numberStr];
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`];
+
+            if (hasGraded[currentLessonIndex] || isSingleChecked) {
+                let isCorrect = false;
+                if(q.type === 'MCQ') isCorrect = (uAns === q.correctAnswer);
+                else if(q.type === 'TF') {
+                    let allSubOk = true;
+                    q.subQuestions.forEach(sub => { if((uAns?.[sub.label]) !== sub.correctValue) allSubOk = false; });
+                    isCorrect = allSubOk;
+                } else if(q.type === 'SA') isCorrect = (uAns && uAns.trim().replace(',', '.') === q.correctAnswer.trim().replace(',', '.'));
+                item.classList.add(isCorrect ? 'correct' : 'wrong');
+            } else if (uAns) {
+                item.classList.add('answered');
+            }
+
+            item.onclick = (e) => { e.stopPropagation(); focusAndScrollToQuestion(q.numberStr); };
+            pagContainer.appendChild(item);
+        });
+    }
+
+    function searchQuestionOnGoogle(q) {
+        let textOnly = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:]/i, '').trim();
+        extractAllImageUrls(textOnly).forEach(url => { textOnly = textOnly.replace(url, ''); });
+        let fullQuery = textOnly.trim();
+        if (q.type === 'MCQ') {
+            ['A', 'B', 'C', 'D'].forEach(l => { if(q.options[l]) fullQuery += ` ${l}. ${q.options[l]}`; });
+        } else if (q.type === 'TF') {
+            q.subQuestions.forEach(sub => { fullQuery += ` ${sub.label}) ${sub.text}`; });
+        }
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(fullQuery)}`, '_blank');
+    }
+
+    function speakQuestion(q) {
+        window.speechSynthesis.cancel();
+        let textToSpeak = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:]/i, '').trim();
+        extractAllImageUrls(textToSpeak).forEach(url => { textToSpeak = textToSpeak.replace(url, ''); });
+
+        let content = currentSpeechLanguage === 'vi-VN' ? `Câu hỏi số ${q.numberStr}. ${textToSpeak}. ` : `Question number ${q.numberStr}. ${textToSpeak}. `;
+        if (q.type === 'MCQ') {
+            ['A', 'B', 'C', 'D'].forEach(l => { if(q.options[l]) content += `${l}: ${q.options[l]}. `; });
+        } else if (q.type === 'TF') {
+            q.subQuestions.forEach(sub => { content += `${sub.label}: ${sub.text}. `; });
+        }
+
+        const utterance = new SpeechSynthesisUtterance(content);
+        utterance.lang = currentSpeechLanguage;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function renderQuestions() {
+        const displayZone = document.getElementById('questions-display'); displayZone.innerHTML = '';
+        const lesson = listLessons[currentLessonIndex];
+        const isAllGraded = hasGraded[currentLessonIndex] || false;
+
+        const h2 = document.createElement('h2'); h2.className = 'quiz-title'; h2.innerText = lesson.title;
+        displayZone.appendChild(h2);
+
+        lesson.questions.forEach(q => {
+            const card = document.createElement('div');
+            card.className = 'question-card'; card.id = `q-card-id-${q.numberStr}`;
+            card.addEventListener('click', () => { if (activeQuestionNumber !== q.numberStr) focusAndScrollToQuestion(q.numberStr); });
+
+            let cleanQText = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:\s]/i, '').trim();
+            let imgUrls = extractAllImageUrls(cleanQText);
+            imgUrls.forEach(url => { cleanQText = cleanQText.replace(url, ''); });
+
+            const qHeader = document.createElement('div'); qHeader.className = 'question-header';
+            const qText = document.createElement('div'); qText.className = 'question-text'; qText.innerText = `Câu ${q.numberStr}: ${cleanQText.trim()}`;
+            qHeader.appendChild(qText);
+
+            const headerBtns = document.createElement('div'); headerBtns.className = 'header-buttons';
+            const speakBtn = document.createElement('button'); speakBtn.className = 'action-tool-btn'; speakBtn.innerHTML = '🔊 Đọc';
+            speakBtn.onclick = (e) => { e.stopPropagation(); speakQuestion(q); };
+            const searchBtn = document.createElement('button'); searchBtn.className = 'action-tool-btn'; searchBtn.innerHTML = '🔍 Tra cứu';
+            searchBtn.onclick = (e) => { e.stopPropagation(); searchQuestionOnGoogle(q); };
+            
+            headerBtns.appendChild(speakBtn); headerBtns.appendChild(searchBtn);
+            qHeader.appendChild(headerBtns); card.appendChild(qHeader);
+
+            if (imgUrls.length > 0) {
+                const gallery = document.createElement('div'); gallery.className = 'image-gallery';
+                imgUrls.forEach(url => {
+                    const img = document.createElement('img'); img.src = url; img.className = 'quiz-image';
+                    gallery.appendChild(img);
+                });
+                card.appendChild(gallery);
+            }
+
+            const savedAnswer = lesson.userAnswers[q.numberStr] || null;
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`] || false;
+            const lockOptions = isAllGraded || isSingleChecked;
+
+            if (q.type === 'MCQ') {
+                const optGroup = document.createElement('div'); optGroup.className = 'options-group';
+                ['A', 'B', 'C', 'D'].forEach(letter => {
+                    if (!q.options[letter]) return;
+                    const label = document.createElement('label'); label.className = 'option-label';
+                    label.innerHTML = `<input type="radio" name="q_ans_${currentLessonIndex}_${q.numberStr}" value="${letter}" ${savedAnswer === letter ? 'checked' : ''} ${lockOptions ? 'disabled' : ''}><div><span><strong>${letter}.</strong> ${q.options[letter]}</span></div>`;
+                    if (lockOptions) {
+                        if (letter === q.correctAnswer) label.classList.add('correct');
+                        if (savedAnswer === letter && letter !== q.correctAnswer) label.classList.add('wrong');
+                    }
+                    label.querySelector('input').addEventListener('change', (e) => handleSelectMCQ(q.numberStr, e.target.value));
+                    optGroup.appendChild(label);
+                });
+                card.appendChild(optGroup);
+            } else if (q.type === 'TF') {
+                const tfGroup = document.createElement('div'); tfGroup.style.display = 'flex'; tfGroup.style.flexDirection = 'column';
+                q.subQuestions.forEach((sub, sIdx) => {
+                    const row = document.createElement('div'); row.className = `tf-row tf-row-item-${q.numberStr}-${sub.label}`;
+                    if (q.numberStr === activeQuestionNumber && sIdx === currentTFSubLabelIndex && !lockOptions) row.classList.add('active-tf-row');
+
+                    const txtDiv = document.createElement('div'); txtDiv.className = 'tf-text'; txtDiv.innerHTML = `<strong>${sub.label})</strong> ${sub.text}`;
+                    row.appendChild(txtDiv);
+
+                    const btnGroup = document.createElement('div'); btnGroup.className = 'tf-buttons';
+                    const bT = document.createElement('button'); bT.className = `tf-btn tf-btn-true-${q.numberStr}-${sub.label} ${savedAnswer?.[sub.label] === true ? 'selected-true' : ''}`; bT.innerText = 'Đúng';
+                    const bF = document.createElement('button'); bF.className = `tf-btn tf-btn-false-${q.numberStr}-${sub.label} ${savedAnswer?.[sub.label] === false ? 'selected-false' : ''}`; bF.innerText = 'Sai';
+
+                    if(lockOptions) {
+                        bT.disabled = true; bF.disabled = true;
+                        row.classList.add(savedAnswer?.[sub.label] === sub.correctValue ? 'correct-row' : 'wrong-row');
+                    } else {
+                        bT.onclick = () => handleSelectTF(q.numberStr, sub.label, true);
+                        bF.onclick = () => handleSelectTF(q.numberStr, sub.label, false);
+                    }
+                    btnGroup.appendChild(bT); btnGroup.appendChild(bF); row.appendChild(btnGroup); tfGroup.appendChild(row);
+                });
+                card.appendChild(tfGroup);
+            } else if (q.type === 'SA') {
+                const saGroup = document.createElement('div'); saGroup.className = 'sa-group';
+                const inputEl = document.createElement('input'); inputEl.type = 'text';
+                inputEl.className = 'sa-input sa-input-field-selector';
+                inputEl.id = `sa-input-id-${q.numberStr}`;
+                inputEl.placeholder = 'Nhập đáp số...'; inputEl.value = savedAnswer || ''; inputEl.disabled = lockOptions;
+
+                inputEl.addEventListener('change', (e) => handleSelectSA(q.numberStr, e.target.value));
+                
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSelectSA(q.numberStr, inputEl.value);
+                        jumpToNextSAQuestion(q.numberStr);
+                    }
+                });
+
+                saGroup.appendChild(inputEl);
+                const resultZone = document.createElement('div'); resultZone.className = 'sa-result-zone';
+                if(lockOptions) {
+                    const isOk = (savedAnswer && savedAnswer.trim().replace(',', '.') === q.correctAnswer.trim().replace(',', '.'));
+                    resultZone.innerHTML = isOk ? `<span style="color:var(--success);">✓ Đúng. Gốc: ${q.correctAnswer}</span>` : `<span style="color:var(--error);">✗ Sai. Gốc: ${q.correctAnswer}</span>`;
+                    inputEl.classList.add(isOk ? 'correct' : 'wrong');
+                }
+                saGroup.appendChild(resultZone); card.appendChild(saGroup);
+            }
+            displayZone.appendChild(card);
+        });
+        highlightFocusedCard(); renderPagination();
+    }
+
+    function jumpToNextSAQuestion(currentNumStr) {
+        const lesson = listLessons[currentLessonIndex];
+        const currentIdx = lesson.questions.findIndex(q => q.numberStr === currentNumStr);
+        if (currentIdx === -1) return;
+
+        for (let i = currentIdx + 1; i < lesson.questions.length; i++) {
+            if (lesson.questions[i].type === 'SA') {
+                const nextQ = lesson.questions[i];
+                focusAndScrollToQuestion(nextQ.numberStr);
+                setTimeout(() => {
+                    const nextInput = document.getElementById(`sa-input-id-${nextQ.numberStr}`);
+                    if (nextInput && !nextInput.disabled) { nextInput.focus(); nextInput.select(); }
+                }, 300);
+                return;
+            }
+        }
+        jumpToNextQuestion(currentNumStr);
+    }
+
+    function handleSelectMCQ(qNumStr, letter) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        lesson.userAnswers[qNumStr] = letter;
+        if (document.getElementById('auto-check-toggle').checked) {
+            singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+            renderQuestions(); setTimeout(() => { jumpToNextQuestion(qNumStr); }, 400);
+        } else { renderPagination(); }
+    }
+
+    function handleSelectTF(qNumStr, subLabel, value) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        if (!lesson.userAnswers[qNumStr]) lesson.userAnswers[qNumStr] = {};
+        lesson.userAnswers[qNumStr][subLabel] = value;
+
+        const qData = lesson.questions.find(q => q.numberStr === qNumStr);
+        currentTFSubLabelIndex++;
+
+        if (Object.keys(lesson.userAnswers[qNumStr]).length === qData.subQuestions.length) {
+            if (document.getElementById('auto-check-toggle').checked) {
+                singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+                renderQuestions(); setTimeout(() => { jumpToNextQuestion(qNumStr); }, 400);
+            } else { renderQuestions(); }
+        } else { renderQuestions(); }
+    }
+
+    function handleSelectSA(qNumStr, value) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        lesson.userAnswers[qNumStr] = value;
+        if (document.getElementById('auto-check-toggle').checked && value.trim().length > 0) {
+            singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+            renderQuestions();
+        } else { renderPagination(); }
+    }
+
+    function jumpToNextQuestion(currentNumStr) {
+        const lesson = listLessons[currentLessonIndex];
+        const idx = lesson.questions.findIndex(q => q.numberStr === currentNumStr);
+        if (idx !== -1 && idx < lesson.questions.length - 1) {
+            focusAndScrollToQuestion(lesson.questions[idx + 1].numberStr);
+        }
+    }
+
+    function focusAndScrollToQuestion(qNumStr) {
+        activeQuestionNumber = qNumStr; currentTFSubLabelIndex = 0;
+        highlightFocusedCard(); renderQuestions();
+        const targetCard = document.getElementById(`q-card-id-${qNumStr}`);
+        if (targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function highlightFocusedCard() {
+        document.querySelectorAll('.question-card').forEach(card => card.classList.remove('focused-card'));
+        const currentCard = document.getElementById(`q-card-id-${activeQuestionNumber}`);
+        if(currentCard) currentCard.classList.add('focused-card');
+    }
+
+    function gradeQuiz() {
+        stopTimer(); const lesson = listLessons[currentLessonIndex];
+        let correctCount = 0;
+        lesson.questions.forEach(q => {
+            const uAns = lesson.userAnswers[q.numberStr];
+            if(q.type === 'MCQ' && uAns === q.correctAnswer) correctCount++;
+            else if(q.type === 'TF') {
+                let ok = true;
+                q.subQuestions.forEach(sub => { if(uAns?.[sub.label] !== sub.correctValue) ok = false; });
+                if(ok && uAns && Object.keys(uAns).length === q.subQuestions.length) correctCount++;
+            } else if(q.type === 'SA' && uAns && uAns.trim().replace(',', '.') === q.correctAnswer.trim().replace(',', '.')) correctCount++;
+        });
+        hasGraded[currentLessonIndex] = true; renderQuestions();
+        showToast(`Bạn làm đúng ${correctCount}/${lesson.questions.length} câu. Thời gian: ${document.getElementById('timer-display').innerText}`, 'success', 5000);
+    }
+
+    function askForNameBeforeReport() {
+        const userName = prompt('Nhập họ tên học viên:', 'Thí sinh');
+        if (userName !== null) {
+            generateFinalReport(userName.trim() || 'Ẩn danh');
+        }
+    }
+
+    function generateFinalReport(userName) {
+        document.getElementById('report-modal-header').innerText = `📊 Kết Quả Làm Bài - ${userName}`;
+        let htmlReport = `<p>⏱️ Thời gian làm bài: ${document.getElementById('timer-display').innerText}</p>`;
+        listLessons.forEach((lesson) => {
+            let detailsRows = '';
+            lesson.questions.forEach(q => {
+                const uAns = lesson.userAnswers[q.numberStr] || '';
+                let status = 'Sai';
+                if(q.type==='MCQ' && uAns===q.correctAnswer) status='Đúng';
+                else if(q.type==='SA' && uAns.trim?.().replace(',','.') === q.correctAnswer.trim().replace(',','.')) status='Đúng';
+                detailsRows += `<tr><td>Câu ${q.numberStr} (${q.type})</td><td>${q.type==='TF'?'Xem trên đề':uAns}</td><td>${q.type==='TF'?'Xem trên đề':q.correctAnswer}</td><td>${status}</td></tr>`;
+            });
+            htmlReport += `<h3>${lesson.title}</h3><table class="report-table"><thead><tr><th>Câu</th><th>Bạn chọn</th><th>Đáp án</th><th>Kết quả</th></tr></thead><tbody>${detailsRows}</tbody></table>`;
+        });
+        document.getElementById('modal-body-content').innerHTML = htmlReport;
+        document.getElementById('report-modal').classList.remove('hidden');
+    }
+
+    function downloadWrongQuestionsTxt() {
+        const lesson = listLessons[currentLessonIndex]; if (!lesson) return;
+        let out = `CÁC CÂU LÀM SAI:\n`;
+        lesson.questions.forEach(q => { out += `${q.rawBlock}\n\n`; });
+        const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cau_sai.txt`; a.click();
+        showToast('Đã tải xuống danh sách câu sai!', 'info');
+    }
+
+    function saveCurrentDataAsHtml() {
+        const rawData = document.getElementById('txt-input').value; if(!rawData.trim()) return;
+        let updated = document.documentElement.outerHTML.replace(/const\s+PRE_LOADED_RAW_DATA\s*=\s*`[\s\S]*?`;/, `const PRE_LOADED_RAW_DATA = \`${rawData.replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`;`);
+        const blob = new Blob(["<!DOCTYPE html>\n" + updated], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "trac_nghiem.html"; a.click();
+        showToast('Đã lưu file HTML chứa đề!', 'success');
+    }
+
+    function confirmResetSystem() {
+        if (confirm('Xóa đề hiện tại để nhập đề mới?')) {
+            stopTimer(); listLessons = []; currentLessonIndex = 0; hasGraded = {}; singleCheckedQuestions = {};
+            document.getElementById('txt-input').value = '';
+            document.getElementById('import-container').classList.remove('hidden');
+            document.getElementById('import-actions').classList.remove('hidden');
+            document.getElementById('menu-section').classList.add('hidden');
+            document.getElementById('quiz-actions').classList.add('hidden');
+            document.getElementById('quiz-container-box').classList.add('hidden');
+            showToast('Đã làm mới hệ thống', 'info');
+        }
+    }
+</script>
+
+</body></html>
