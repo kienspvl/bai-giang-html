@@ -1,0 +1,1070 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Icarus Presenter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 32px;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        /* Chế độ Fullscreen Minimalist */
+        body.fullscreen-mode .top-toolbar,
+        body.fullscreen-mode .manual-nav {
+            display: none !important;
+        }
+
+        body.fullscreen-mode {
+            padding: 20px 32px;
+            justify-content: center;
+            background: #111;
+        }
+
+        body.fullscreen-mode .container {
+            width: 100vw;
+            height: 94vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Nút thoát Fullscreen nhỏ ở góc trên */
+        .exit-fs-btn {
+            position: fixed;
+            top: 20px;
+            right: 32px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+            transition: 0.2s;
+        }
+        .exit-fs-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            color: #fff;
+        }
+        body.fullscreen-mode .exit-fs-btn {
+            display: block;
+        }
+
+        .top-toolbar {
+            width: 100%;
+            max-width: 1180px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1180px;
+            height: 70vh;
+            max-height: 600px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            background: #0b0b0b;
+        }
+
+        /* Hiển thị full ảnh, căn theo cạnh dài (object-fit: contain) để không bị xén, lem */
+        .image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-url-bar {
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 8px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 6px 10px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px 28px;
+        }
+
+        .title-area {
+            flex-shrink: 0;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ffd700;
+            cursor: pointer;
+            display: inline-block;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .scrollable-text-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+            position: relative;
+        }
+
+        .desc {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .manual-nav {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1180px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #ffd700;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: #000;
+        }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 250px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .container {
+                flex-direction: column;
+                height: 82vh;
+                max-height: none;
+                position: relative;
+            }
+            .image-panel {
+                flex: none;
+                height: 40vh;
+                width: 100%;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .content-box {
+                flex: 1;
+                overflow: hidden;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body class="">
+
+    <button class="exit-fs-btn" onclick="toggleFullscreenMode()">✕ Thoát Fullscreen</button>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Nhập chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy Prompt AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" onclick="toggleFullscreenMode()">📺 Fullscreen</button>
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save as HTML</button>
+            <button onclick="openImportModal()">Nhập dữ liệu (Import)</button>
+        </div>
+    </div>
+
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://m.media-amazon.com/images/I/61DnVa3k4NL._AC_UF894,1000_QL80_.jpg" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh vào đây..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box">
+            <div class="title-area">
+                <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Bấm để tìm kiếm hình ảnh trên Google" style="font-size: 2.75rem;">Thấu kính</h1>
+            </div>
+            <div class="scrollable-text-area" id="scrollableTextArea">
+                <div class="desc" id="slide-desc" style="font-size: 1.65rem;"><div class="clickable-paragraph" id="desc_0" onclick="readParagraphAt('Thấu kính là khối đồng chất trong suốt, được giới hạn bởi hai mặt cong hoặc một mặt cong và một mặt phẳng.')">Thấu kính là khối đồng chất trong suốt, được giới hạn bởi hai mặt cong hoặc một mặt cong và một mặt phẳng.</div></div>
+                <div class="bullets" id="slide-bullets" style="font-size: 1.5rem;"><div class="clickable-paragraph" id="bullets_0" onclick="readParagraphAt('• Thấu kính (lens) là một vật trong suốt, thường được chế tạo từ thủy tinh hoặc nhựa trong suốt.')">• Thấu kính (lens) là một vật trong suốt, thường được chế tạo từ thủy tinh hoặc nhựa trong suốt.</div><div class="clickable-paragraph" id="bullets_1" onclick="readParagraphAt('• Thấu kính có tác dụng làm thay đổi phương truyền của tia sáng nhờ hiện tượng khúc xạ ánh sáng.')">• Thấu kính có tác dụng làm thay đổi phương truyền của tia sáng nhờ hiện tượng khúc xạ ánh sáng.</div><div class="clickable-paragraph" id="bullets_2" onclick="readParagraphAt('• Về hình dạng, thấu kính có thể được giới hạn bởi hai mặt cong hoặc một mặt cong và một mặt phẳng.')">• Về hình dạng, thấu kính có thể được giới hạn bởi hai mặt cong hoặc một mặt cong và một mặt phẳng.</div><div class="clickable-paragraph" id="bullets_3" onclick="readParagraphAt('• Dựa vào hình dạng và tác dụng đối với chùm tia sáng, thấu kính được chia thành thấu kính hội tụ và thấu kính phân kì.')">• Dựa vào hình dạng và tác dụng đối với chùm tia sáng, thấu kính được chia thành thấu kính hội tụ và thấu kính phân kì.</div><div class="clickable-paragraph" id="bullets_4" onclick="readParagraphAt('• Thấu kính hội tụ thường có phần giữa dày hơn phần rìa, còn thấu kính phân kì có phần giữa mỏng hơn phần rìa.')">• Thấu kính hội tụ thường có phần giữa dày hơn phần rìa, còn thấu kính phân kì có phần giữa mỏng hơn phần rìa.</div><div class="clickable-paragraph" id="bullets_5" onclick="readParagraphAt('• Thấu kính được sử dụng rộng rãi trong đời sống và khoa học như kính lúp, kính mắt, máy ảnh, kính hiển vi, kính thiên văn và nhiều thiết bị quang học.')">• Thấu kính được sử dụng rộng rãi trong đời sống và khoa học như kính lúp, kính mắt, máy ảnh, kính hiển vi, kính thiên văn và nhiều thiết bị quang học.</div><div class="clickable-paragraph" id="bullets_6" onclick="readParagraphAt('• Việc nghiên cứu thấu kính giúp giải thích cách tạo ảnh và nguyên lí hoạt động của nhiều dụng cụ quang học quen thuộc.')">• Việc nghiên cứu thấu kính giúp giải thích cách tạo ảnh và nguyên lí hoạt động của nhiều dụng cụ quang học quen thuộc.</div></div>
+                <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Lens')" title="Tìm hình ảnh">Lens</span><span class="tag" onclick="searchGoogle('transparent')" title="Tìm hình ảnh">transparent</span><span class="tag" onclick="searchGoogle('convex')" title="Tìm hình ảnh">convex</span><span class="tag" onclick="searchGoogle('surface')" title="Tìm hình ảnh">surface</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseBtn" onclick="togglePauseRead()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Autoplay</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ màn hình luôn sáng khi đọc">
+            <span>Giữ màn hình sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">1 / 24</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated / Excel / Google Sheet)</h2>
+            <p style="font-size: 0.9rem; color: #ccc;">Dán dữ liệu gồm 8 cột (Từ khóa, Kiến thức, Chi tiết, 4 từ khóa Anh, URL ảnh) vào đây:</p>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật dữ liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Phân biệt File gốc và File Save As (Ngậm dữ liệu):
+        // - Ở file gốc: Biến này để trống (""). Khi khởi động, nếu trống, app sẽ lấy trực tiếp từ localStorage.
+        // - Ở file Save As: Nút Save as HTML sẽ tự động chèn dữ liệu ngậm vào biến này, và app sẽ ưu tiên đọc thẳng dữ liệu ngậm thay vì localStorage.
+        let embeddedInitialData = `Thấu kính	Thấu kính là khối đồng chất trong suốt, được giới hạn bởi hai mặt cong hoặc một mặt cong và một mặt phẳng.	• Thấu kính (lens) là một vật trong suốt, thường được chế tạo từ thủy tinh hoặc nhựa trong suốt.<br>• Thấu kính có tác dụng làm thay đổi phương truyền của tia sáng nhờ hiện tượng khúc xạ ánh sáng.<br>• Về hình dạng, thấu kính có thể được giới hạn bởi hai mặt cong hoặc một mặt cong và một mặt phẳng.<br>• Dựa vào hình dạng và tác dụng đối với chùm tia sáng, thấu kính được chia thành thấu kính hội tụ và thấu kính phân kì.<br>• Thấu kính hội tụ thường có phần giữa dày hơn phần rìa, còn thấu kính phân kì có phần giữa mỏng hơn phần rìa.<br>• Thấu kính được sử dụng rộng rãi trong đời sống và khoa học như kính lúp, kính mắt, máy ảnh, kính hiển vi, kính thiên văn và nhiều thiết bị quang học.<br>• Việc nghiên cứu thấu kính giúp giải thích cách tạo ảnh và nguyên lí hoạt động của nhiều dụng cụ quang học quen thuộc.	Lens	transparent	convex	surface	https://m.media-amazon.com/images/I/61DnVa3k4NL._AC_UF894,1000_QL80_.jpg
+Phân loại thấu kính	Thấu kính được chia thành thấu kính hội tụ và thấu kính phân kì dựa vào hình dạng và tác dụng đối với chùm tia sáng.	• Có thể phân loại thấu kính dựa vào độ dày của phần giữa và phần rìa.<br>• Thấu kính hội tụ (converging lens) thường có phần giữa dày hơn phần rìa, tức rìa mỏng hơn giữa.<br>• Khi một chùm tia sáng song song với trục chính truyền qua thấu kính hội tụ, các tia ló có xu hướng tiến lại gần nhau và hội tụ tại tiêu điểm.<br>• Thấu kính phân kì (diverging lens) thường có phần giữa mỏng hơn phần rìa, tức rìa dày hơn giữa.<br>• Khi chùm tia song song truyền qua thấu kính phân kì, các tia ló có xu hướng tách xa nhau.<br>• Có thể nhận biết nhanh hai loại thấu kính bằng hình dạng hoặc bằng cách quan sát chùm tia ló.<br>• Thấu kính hội tụ được dùng trong kính lúp, máy ảnh và nhiều dụng cụ tạo ảnh thật hoặc ảnh ảo.<br>• Thấu kính phân kì thường được sử dụng trong kính sửa tật cận thị và một số hệ quang học.<br>• Việc phân loại chính xác là cơ sở để xác định tính chất ảnh tạo bởi thấu kính.	Lens classification	edge	thickness	type	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKbS4rFT5M8ITqRxMagyAvrf5OqqZ-mcEZgcmQVDjinknf8zT6uH4U29g&s=10
+Thấu kính hội tụ	Thấu kính hội tụ là thấu kính có rìa mỏng hơn phần giữa và làm chùm tia song song trở thành chùm tia hội tụ.	• Thấu kính hội tụ (converging lens) thường có phần giữa dày, phần rìa mỏng.<br>• Khi một chùm tia sáng song song với trục chính đi qua thấu kính, các tia ló bị khúc xạ và có xu hướng hội tụ về một điểm.<br>• Điểm mà các tia ló hội tụ được gọi là tiêu điểm chính của thấu kính.<br>• Thấu kính hội tụ có thể tạo ảnh thật hoặc ảnh ảo tùy thuộc vào vị trí của vật so với tiêu cự.<br>• Nếu vật đặt ngoài tiêu cự, ảnh thường là ảnh thật và ngược chiều vật.<br>• Nếu vật đặt trong khoảng tiêu cự, ảnh là ảnh ảo, cùng chiều và lớn hơn vật.<br>• Thấu kính hội tụ được sử dụng trong kính lúp, máy ảnh, kính hiển vi và kính thiên văn.<br>• Kính lúp là ví dụ quen thuộc trong đó vật được đặt trong khoảng tiêu cự để tạo ảnh ảo lớn hơn vật.<br>• Khả năng hội tụ ánh sáng của loại thấu kính này có ý nghĩa quan trọng trong nhiều thiết bị quang học.	Converging lens	convergence	convex	focus	https://i.makeagif.com/media/12-17-2017/YahZ9b.gif
+Thấu kính phân kì	Thấu kính phân kì là thấu kính có rìa dày hơn phần giữa và làm chùm tia song song trở thành chùm tia phân kì.	• Thấu kính phân kì (diverging lens) thường có phần giữa mỏng hơn phần rìa.<br>• Khi chùm tia sáng song song với trục chính truyền qua thấu kính, các tia ló bị khúc xạ và phân kì ra xa nhau.<br>• Nếu kéo dài các tia ló theo hướng ngược lại, các đường kéo dài sẽ gặp nhau tại một điểm trên trục chính phía trước thấu kính.<br>• Điểm này được gọi là tiêu điểm chính của thấu kính phân kì.<br>• Khác với thấu kính hội tụ, thấu kính phân kì luôn tạo ảnh ảo đối với vật thật.<br>• Ảnh tạo bởi thấu kính phân kì luôn cùng chiều với vật và nhỏ hơn vật.<br>• Ảnh thường nằm giữa quang tâm và tiêu điểm phía trước thấu kính.<br>• Thấu kính phân kì được sử dụng phổ biến trong kính dành cho người cận thị.<br>• Nó cũng được kết hợp với các thấu kính khác trong nhiều hệ thống quang học để điều chỉnh đường truyền ánh sáng.<br>• Khả năng làm phân kì chùm tia là đặc điểm quan trọng để nhận biết loại thấu kính này.	Diverging lens	divergence	concave	ray	https://www.ncbi.nlm.nih.gov/books/NBK597385/bin/Concave_lens.jpg
+Quang tâm	Quang tâm O là điểm đặc biệt của thấu kính mà tia sáng truyền qua gần như không bị lệch hướng.	• Quang tâm (optical center) được kí hiệu là O và nằm trên trục chính của thấu kính.<br>• Trong mô hình thấu kính mỏng, tia sáng đi qua quang tâm được coi như truyền thẳng qua thấu kính mà không bị đổi hướng đáng kể.<br>• Đây là một trong những tia sáng đặc biệt được sử dụng để dựng ảnh qua thấu kính.<br>• Khi dựng ảnh của một vật, ta thường vẽ tia từ đỉnh vật đi qua quang tâm O.<br>• Sau khi đi qua O, tia ló tiếp tục theo phương của tia tới.<br>• Đường truyền đặc biệt này giúp việc dựng ảnh trở nên đơn giản và chính xác hơn.<br>• Quang tâm có vai trò quan trọng trong việc xác định vị trí ảnh của vật qua cả thấu kính hội tụ và thấu kính phân kì.<br>• Khi học hình học quang học, cần phân biệt quang tâm với tiêu điểm và tiêu cự.<br>• Quang tâm là một điểm trên thấu kính, trong khi tiêu điểm nằm trên trục chính ở một khoảng cách xác định so với quang tâm.<br>• Kí hiệu O cần được sử dụng thống nhất khi dựng hình.	Optical center	optical	center	O	https://cdn.britannica.com/01/189401-138-9C338E27/video-lenses-images-light.jpg
+Trục chính	Trục chính là đường thẳng đi qua quang tâm O và là đường chuẩn để xác định các điểm đặc biệt của thấu kính.	• Trục chính (principal axis) là đường thẳng đi qua quang tâm O của thấu kính.<br>• Trong mô hình thấu kính mỏng đối xứng, trục chính thường vuông góc với mặt phẳng chính của thấu kính tại quang tâm.<br>• Trên trục chính ta xác định các điểm quan trọng như quang tâm O, tiêu điểm F và tiêu điểm F'.<br>• Trục chính được sử dụng làm đường chuẩn khi dựng ảnh của vật qua thấu kính.<br>• Khi một tia sáng tới song song với trục chính, ta có thể áp dụng các quy tắc tia đặc biệt để xác định tia ló.<br>• Với thấu kính hội tụ, tia song song trục chính sau khi qua thấu kính sẽ đi qua tiêu điểm phía sau.<br>• Với thấu kính phân kì, đường kéo dài của tia ló sẽ đi qua tiêu điểm phía trước.<br>• Khi vẽ sơ đồ quang học, trục chính thường được biểu diễn bằng một đường thẳng nằm ngang.<br>• Hiểu đúng vị trí và vai trò của trục chính giúp học sinh dễ dàng dựng ảnh và xác định tiêu cự của thấu kính.	Principal axis	axis	perpendicular	optical	https://i.ytimg.com/vi/_CT-wAIfOYQ/sddefault.jpg
+Tiêu điểm chính	Tiêu điểm chính F là điểm trên trục chính liên quan đến sự hội tụ hoặc đường kéo dài của tia ló khi tia tới song song trục chính.	• Tiêu điểm chính (principal focus) là điểm đặc biệt nằm trên trục chính của thấu kính.<br>• Đối với thấu kính hội tụ, chùm tia tới song song với trục chính sau khi qua thấu kính sẽ hội tụ tại tiêu điểm phía sau thấu kính.<br>• Đối với thấu kính phân kì, chùm tia ló phân kì nhưng đường kéo dài của chúng về phía trước sẽ đi qua tiêu điểm.<br>• Tiêu điểm thường được kí hiệu là F hoặc F', tùy theo quy ước và phía xét tia sáng.<br>• Một thấu kính mỏng có thể có hai tiêu điểm chính nằm đối xứng hai bên quang tâm trong môi trường đồng nhất.<br>• Khoảng cách từ quang tâm đến tiêu điểm được gọi là tiêu cự.<br>• Tiêu điểm là cơ sở để xác định tiêu cự và dựng ảnh bằng các tia sáng đặc biệt.<br>• Khi dựng ảnh, chỉ cần sử dụng một số tia đặc biệt đi qua hoặc liên quan đến tiêu điểm là có thể xác định vị trí ảnh.<br>• Hiểu rõ sự khác nhau giữa tiêu điểm của thấu kính hội tụ và phân kì giúp tránh nhầm lẫn khi vẽ đường truyền ánh sáng.	Principal focus	focus	convergence	divergence	https://i.makeagif.com/media/4-23-2023/gO4nu6.gif
+Tiêu cự	Tiêu cự f là khoảng cách từ quang tâm O đến tiêu điểm chính F của thấu kính.	• Tiêu cự (focal length) là đại lượng đặc trưng cho khả năng hội tụ hoặc phân kì ánh sáng của thấu kính.<br>• Tiêu cự được xác định bằng khoảng cách từ quang tâm O đến tiêu điểm chính F.<br>• Công thức xác định là $OF=f$.<br>• Đơn vị SI của tiêu cự là mét (m), ngoài ra trong thực tế thường sử dụng centimet (cm) hoặc milimet (mm).<br>• Thấu kính có tiêu cự càng ngắn thì với thấu kính hội tụ, khả năng làm hội tụ tia sáng càng mạnh.<br>• Khi dựng ảnh, tiêu cự giúp xác định vị trí tiêu điểm trên trục chính.<br>• Ví dụ, nếu thấu kính có tiêu cự $f=10,cm$, tiêu điểm nằm cách quang tâm một khoảng $10,cm$.<br>• Tiêu cự còn được sử dụng trong các công thức thấu kính để tính vị trí ảnh, vị trí vật và độ phóng đại.<br>• Đối với thấu kính phân kì, khi sử dụng quy ước dấu trong công thức quang học, tiêu cự thường được lấy giá trị âm.<br>• Đây là đại lượng quan trọng khi phân tích và thiết kế các hệ quang học.	Focal length	distance	focus	measurement	https://ngsmagnified.com/wp-content/uploads/concave-convex-914x1024.jpg
+Tia qua quang tâm	Tia sáng đi qua quang tâm O truyền thẳng qua thấu kính và không bị lệch hướng trong mô hình thấu kính mỏng.	• Tia qua quang tâm (ray through optical center) là một trong những tia đặc biệt quan trọng khi dựng ảnh.<br>• Khi tia sáng đi qua quang tâm O, tia ló được coi là tiếp tục truyền theo đường thẳng ban đầu.<br>• Tia này không cần xác định góc lệch bằng các định luật khúc xạ phức tạp trong mô hình thấu kính mỏng.<br>• Khi dựng ảnh của vật AB, ta thường xuất phát từ điểm B và vẽ một tia đi qua O.<br>• Sau khi truyền qua thấu kính, tia ló tiếp tục theo phương cũ.<br>• Kết hợp tia này với một tia đặc biệt khác, ta có thể xác định ảnh B' của điểm B.<br>• Từ B', hạ đường vuông góc xuống trục chính để xác định điểm A' và ảnh A'B'.<br>• Quy tắc tia qua quang tâm áp dụng cho cả thấu kính hội tụ và thấu kính phân kì.<br>• Đây là một quy tắc đơn giản nhưng rất hữu ích trong bài toán dựng ảnh.<br>• Học sinh cần nhớ rằng tia này truyền thẳng trong mô hình thấu kính mỏng, không có nghĩa mọi tia sáng qua thấu kính đều truyền thẳng.	Ray through optical center	straight	ray	optical center	https://stickmanphysics.com/wp-content/uploads/2020/04/Concave-Moving-Lens.gif
+Tia song song qua thấu kính hội tụ	Tia tới song song với trục chính qua thấu kính hội tụ sẽ cho tia ló đi qua tiêu điểm chính phía sau thấu kính.	• Đây là một trong những tia sáng đặc biệt được sử dụng để dựng ảnh qua thấu kính hội tụ.<br>• Khi tia tới song song với trục chính, sau khi truyền qua thấu kính hội tụ, tia ló bị khúc xạ theo hướng tiến về trục chính.<br>• Tia ló sẽ đi qua tiêu điểm chính F' ở phía sau thấu kính.<br>• Quy tắc này cho phép xác định đường truyền của tia ló mà không cần tính toán góc khúc xạ.<br>• Khi dựng ảnh của vật AB, thường vẽ tia từ đỉnh B song song với trục chính.<br>• Sau thấu kính, tia này được vẽ đi qua tiêu điểm F'.<br>• Kết hợp với tia qua quang tâm O, giao điểm của hai tia ló xác định vị trí ảnh B'.<br>• Nếu các tia ló thực sự giao nhau, ảnh thu được là ảnh thật.<br>• Tia song song đặc biệt này cũng giúp học sinh nhận biết tính chất hội tụ của thấu kính.<br>• Đây là quy tắc cơ bản cần ghi nhớ khi giải các bài toán dựng ảnh bằng thấu kính hội tụ.	Parallel ray through converging lens	parallel	focus	converging	https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif
+Tia song song qua thấu kính phân kì	Tia tới song song với trục chính qua thấu kính phân kì cho tia ló phân kì, đường kéo dài của tia ló đi qua tiêu điểm trước thấu kính.	• Với thấu kính phân kì, tia tới song song với trục chính sau khi truyền qua thấu kính sẽ bị lệch theo hướng phân kì.<br>• Tia ló không đi trực tiếp qua tiêu điểm mà có đường kéo dài ngược về phía trước thấu kính đi qua tiêu điểm F.<br>• Đây là một tia sáng đặc biệt được sử dụng để dựng ảnh của vật qua thấu kính phân kì.<br>• Khi dựng ảnh, từ đỉnh vật B vẽ một tia song song với trục chính đến thấu kính.<br>• Sau thấu kính, vẽ tia ló phân kì sao cho đường kéo dài của nó đi qua tiêu điểm F phía trước.<br>• Kết hợp với tia qua quang tâm O, giao điểm của các đường kéo dài xác định ảnh B'.<br>• Vì các tia ló thực tế không giao nhau nên ảnh tạo bởi thấu kính phân kì là ảnh ảo.<br>• Quy tắc này giúp phân biệt rõ đường truyền thực của tia sáng và đường kéo dài của tia sáng.<br>• Học sinh cần chú ý không vẽ tia ló đi qua trực tiếp tiêu điểm phía trước thấu kính.	Parallel ray through diverging lens	parallel	diverging	focus	https://stickmanphysics.com/wp-content/uploads/2020/04/Diverging-Lens-Light-Animation.gif
+Giải thích thấu kính hội tụ	Có thể coi thấu kính hội tụ gồm nhiều lăng kính nhỏ có tác dụng làm các tia sáng lệch về phía trục chính.	• Có thể giải thích tác dụng của thấu kính hội tụ bằng cách tưởng tượng nó được ghép từ nhiều lăng kính nhỏ.<br>• Mỗi lăng kính làm tia sáng bị lệch về phía đáy của lăng kính do hiện tượng khúc xạ ánh sáng.<br>• Với cách hình dung này, các lăng kính ở hai phía của thấu kính có đáy hướng về phía trục chính.<br>• Vì vậy, các tia sáng truyền qua vùng rìa bị lệch nhiều hơn về phía trục chính.<br>• Các tia sáng song song với trục chính sau khi qua thấu kính có xu hướng tiến lại gần nhau và hội tụ.<br>• Điểm hội tụ của chùm tia được gọi là tiêu điểm chính.<br>• Phần giữa của thấu kính hội tụ dày hơn phần rìa là kết quả của hình dạng tổng thể được tạo bởi các lăng kính tưởng tượng.<br>• Cách giải thích này giúp học sinh hiểu bản chất hình học của sự hội tụ thay vì chỉ ghi nhớ quy tắc.<br>• Hiện tượng thực tế vẫn dựa trên sự khúc xạ ánh sáng khi tia truyền từ môi trường này sang môi trường khác.<br>• Đây là mô hình trực quan hữu ích khi học về thấu kính và đường truyền của tia sáng.	Converging lens principle	prism	refraction	convergence	https://vietjack.com/khoa-hoc-tu-nhien-9-kn/images/ly-thuyet-bai-8-thau-kinh-224620.PNG
+Giải thích thấu kính phân kì	Có thể coi thấu kính phân kì gồm nhiều lăng kính nhỏ có đáy hướng ra phía rìa, làm các tia sáng lệch xa trục chính.	• Có thể hình dung thấu kính phân kì như được tạo bởi nhiều lăng kính nhỏ ghép lại.<br>• Do hiện tượng khúc xạ, tia sáng qua mỗi lăng kính bị lệch về phía đáy của lăng kính.<br>• Trong mô hình thấu kính phân kì, các đáy tưởng tượng hướng ra phía rìa thấu kính.<br>• Vì vậy, các tia sáng sau khi truyền qua thấu kính bị lệch ra xa trục chính.<br>• Chùm tia song song với trục chính trở thành chùm tia phân kì sau khi truyền qua thấu kính.<br>• Nếu kéo dài các tia ló ngược về phía trước thấu kính, các đường kéo dài sẽ gặp nhau tại tiêu điểm.<br>• Cách giải thích bằng mô hình lăng kính giúp học sinh hình dung tại sao thấu kính có phần rìa dày lại làm phân kì ánh sáng.<br>• Sự phân kì không phải do ánh sáng bị mất đi mà do phương truyền của các tia bị thay đổi bởi khúc xạ.<br>• Mô hình này cũng giúp liên hệ kiến thức về lăng kính với kiến thức về thấu kính.<br>• Đây là cách giải thích trực quan, phù hợp để phân tích tác dụng quang học của thấu kính phân kì.	Diverging lens principle	prism	refraction	divergence	https://video.vietjack.com/upload2/quiz_source1/2024/06/as-1719539670.png
+Độ lệch của tia sáng	Tia sáng gần rìa thấu kính thường bị lệch nhiều hơn tia sáng gần trục chính do tác dụng khúc xạ mạnh hơn.	• Khi ánh sáng truyền qua thấu kính, các tia sáng bị khúc xạ và thay đổi phương truyền.<br>• Tia đi qua khu vực gần rìa thấu kính thường bị lệch nhiều hơn tia gần trục chính trong mô hình hình học đơn giản.<br>• Có thể giải thích bằng cách coi thấu kính gồm nhiều lăng kính nhỏ có góc chiết quang khác nhau.<br>• Các lăng kính tưởng tượng ở gần rìa thường có tác dụng làm tia sáng đổi hướng đáng kể hơn.<br>• Với thấu kính hội tụ, tia gần rìa bị lệch nhiều về phía trục chính.<br>• Với thấu kính phân kì, tia gần rìa bị lệch ra xa trục chính.<br>• Sự khác nhau về độ lệch của các tia góp phần tạo nên khả năng hội tụ hoặc phân kì của thấu kính.<br>• Trong thiết kế quang học thực tế, sự phụ thuộc của độ lệch vào vị trí tia còn liên quan đến các hiện tượng như quang sai.<br>• Việc nghiên cứu đường truyền của các tia giúp giải thích cách thấu kính tạo ảnh.<br>• Đây cũng là cơ sở để lựa chọn hình dạng thấu kính phù hợp với từng thiết bị quang học.	Light ray deviation	deviation	prism	edge	https://video.vietjack.com/upload2/quiz_source1/2024/07/15-1719916264.jpg
+Ảnh thật	Ảnh thật là ảnh được tạo bởi sự giao nhau thực của các tia ló và có thể hứng được trên màn chắn.	• Ảnh thật (real image) được tạo ra khi các tia sáng ló khỏi thấu kính thực sự giao nhau tại một vị trí.<br>• Vì các tia sáng thực sự đi qua vị trí tạo ảnh nên có thể đặt một màn chắn tại đó để thu được ảnh.<br>• Ảnh thật thường xuất hiện khi vật đặt ngoài tiêu cự của thấu kính hội tụ.<br>• Đặc điểm thường gặp của ảnh thật qua thấu kính hội tụ là ảnh ngược chiều với vật.<br>• Kích thước ảnh có thể lớn hơn, nhỏ hơn hoặc bằng vật tùy thuộc vị trí của vật so với tiêu điểm và điểm $2F$.<br>• Máy ảnh sử dụng thấu kính để tạo ảnh thật trên cảm biến hoặc phim.<br>• Máy chiếu cũng tạo ảnh thật lớn trên màn chiếu.<br>• Khi dựng ảnh, nếu các tia ló thực sự giao nhau tại B', ta xác định được ảnh thật của điểm B.<br>• Ảnh thật khác ảnh ảo ở khả năng hứng được trên màn chắn.<br>• Đây là khái niệm quan trọng khi phân tích các dụng cụ quang học và bài toán thấu kính.	Real image	screen	inverted	rays	https://bizweb.dktcdn.net/100/274/817/files/he-tao-anh-qua-thau-kinh-1-compressed.jpg?v=1522901580215
+Ảnh ảo	Ảnh ảo là ảnh được tạo bởi giao điểm của các đường kéo dài tia ló và không thể hứng được trên màn chắn.	• Ảnh ảo (virtual image) không được tạo bởi sự giao nhau thực tế của các tia sáng.<br>• Ảnh được xác định bởi giao điểm của các đường kéo dài của tia ló theo hướng ngược lại.<br>• Vì các tia sáng không thực sự đi qua vị trí ảnh nên không thể hứng ảnh ảo trực tiếp trên màn chắn.<br>• Với thấu kính hội tụ, ảnh ảo xuất hiện khi vật được đặt trong khoảng tiêu cự.<br>• Ảnh ảo trong trường hợp này cùng chiều với vật và lớn hơn vật, đây là nguyên lí hoạt động của kính lúp.<br>• Với thấu kính phân kì, ảnh tạo thành luôn là ảnh ảo, cùng chiều và nhỏ hơn vật.<br>• Khi dựng ảnh, cần phân biệt rõ tia ló thực với đường kéo dài của tia ló.<br>• Ảnh ảo vẫn có thể quan sát bằng mắt vì mắt nhận các tia sáng từ thấu kính và não bộ kéo dài chúng về vị trí biểu kiến.<br>• Khái niệm ảnh ảo rất quan trọng trong việc giải thích hoạt động của kính lúp, gương và nhiều hệ quang học.	Virtual image	extension	screen	upright	https://bizweb.dktcdn.net/100/274/817/files/he-tao-anh-qua-thau-kinh-7-compressed.jpg?v=1522901561229
+Dựng ảnh điểm sáng	Ảnh S' của điểm sáng S được xác định bằng giao điểm của các tia ló hoặc đường kéo dài của các tia ló.	• Khi dựng ảnh của một điểm sáng S qua thấu kính, cần vẽ ít nhất hai tia sáng đặc biệt xuất phát từ S.<br>• Một tia đi qua quang tâm O được coi là truyền thẳng qua thấu kính.<br>• Một tia khác có thể được chọn song song với trục chính để áp dụng quy tắc tia đặc biệt phù hợp với loại thấu kính.<br>• Với thấu kính hội tụ, tia song song trục chính sau khi qua thấu kính đi qua tiêu điểm phía sau.<br>• Với thấu kính phân kì, tia ló phân kì và đường kéo dài của nó đi qua tiêu điểm phía trước.<br>• Giao điểm thực của các tia ló xác định ảnh thật S'.<br>• Nếu các tia ló không giao nhau mà đường kéo dài của chúng giao nhau, điểm giao đó xác định ảnh ảo S'.<br>• Phương pháp này giúp xác định cả vị trí và tính chất của ảnh.<br>• Khi dựng hình, cần vẽ tia sáng bằng đường thẳng rõ ràng và đánh dấu các điểm O, F, F' chính xác.<br>• Đây là kỹ năng nền tảng để dựng ảnh của vật có kích thước qua thấu kính.	Image construction	point	ray	intersection	https://stickmanphysics.com/wp-content/uploads/2020/04/Converging-Lens-Light-Animation.gif
+Dựng ảnh vật AB	Để dựng ảnh của vật AB, xác định ảnh B' của điểm B bằng các tia đặc biệt rồi hạ vuông góc xuống trục chính để xác định A'.	• Vật AB thường được biểu diễn bằng một đoạn thẳng vuông góc với trục chính, trong đó A nằm trên trục chính và B là đỉnh vật.<br>• Để dựng ảnh, trước tiên từ B vẽ một số tia sáng đặc biệt đi qua thấu kính.<br>• Một tia qua quang tâm O truyền thẳng.<br>• Một tia song song với trục chính được xử lí theo quy tắc của thấu kính hội tụ hoặc phân kì.<br>• Với thấu kính hội tụ, các tia ló có thể giao nhau tại B' để tạo ảnh thật.<br>• Nếu vật nằm trong tiêu cự, các đường kéo dài của tia ló giao nhau tại B', tạo ảnh ảo.<br>• Với thấu kính phân kì, đường kéo dài của các tia ló xác định B', luôn cho ảnh ảo.<br>• Sau khi xác định B', từ B' hạ đường vuông góc với trục chính để xác định A'.<br>• Đoạn A'B' chính là ảnh của vật AB.<br>• Dựng ảnh đúng giúp xác định được vị trí, chiều và kích thước ảnh một cách trực quan.	Object image construction	object	height	perpendicular	https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif
+Ảnh qua thấu kính hội tụ khi d > f	Vật đặt ngoài tiêu cự của thấu kính hội tụ có thể tạo ảnh thật, ngược chiều vật; tính chất và kích thước ảnh phụ thuộc vị trí vật.	• Khi vật đặt trước thấu kính hội tụ với khoảng cách $d>f$, chùm tia từ mỗi điểm của vật sau khi qua thấu kính có thể hội tụ.<br>• Ảnh tạo thành là ảnh thật và có thể hứng được trên màn chắn.<br>• Ảnh thường ngược chiều với vật.<br>• Kích thước ảnh phụ thuộc vào vị trí vật so với tiêu điểm F và điểm $2F$.<br>• Nếu vật đặt ngoài $2F$, ảnh nằm giữa F và $2F$, nhỏ hơn vật.<br>• Nếu vật đặt tại $2F$, ảnh nằm tại $2F$, ngược chiều và bằng vật.<br>• Nếu vật nằm giữa F và $2F$, ảnh nằm ngoài $2F$, ngược chiều và lớn hơn vật.<br>• Như vậy, chỉ biết $d>f$ mới xác định được ảnh là ảnh thật và ngược chiều, còn kích thước cần xét cụ thể vị trí vật.<br>• Máy ảnh và máy chiếu là những thiết bị khai thác khả năng tạo ảnh thật của thấu kính hội tụ.<br>• Đây là trường hợp quan trọng trong các bài toán dựng ảnh và tính toán quang học.	Converging lens real image	object distance	real	inverted	https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif
+Ảnh qua thấu kính hội tụ khi d < f	Vật đặt trong khoảng tiêu cự của thấu kính hội tụ tạo ảnh ảo, cùng chiều và lớn hơn vật.	• Khi vật đặt trước thấu kính hội tụ với khoảng cách $d<f$, các tia ló sau thấu kính không giao nhau thực tế.<br>• Nếu kéo dài các tia ló về phía trước thấu kính, chúng giao nhau tại một điểm tạo thành ảnh ảo.<br>• Ảnh ảo không thể hứng được trên màn chắn.<br>• Ảnh cùng chiều với vật và lớn hơn vật.<br>• Đây là nguyên lí hoạt động cơ bản của kính lúp.<br>• Khi sử dụng kính lúp, vật được đặt trong khoảng tiêu cự để tạo ảnh ảo phóng đại giúp mắt quan sát chi tiết rõ hơn.<br>• Khi vật tiến gần tiêu điểm nhưng vẫn nằm trong khoảng tiêu cự, độ phóng đại của ảnh có thể tăng mạnh.<br>• Cần phân biệt trường hợp này với vật đặt ngoài tiêu cự, khi đó thấu kính hội tụ tạo ảnh thật.<br>• Trong bài toán dựng ảnh, cần sử dụng đường kéo dài của tia ló để xác định vị trí ảnh.<br>• Đây là trường hợp quan trọng để giải thích tại sao thấu kính hội tụ có thể vừa tạo ảnh thật vừa tạo ảnh ảo.	Converging lens virtual image	virtual	upright	magnified	https://stickmanphysics.com/wp-content/uploads/2020/04/Convex-Moving-Lens4.gif
+Ảnh qua thấu kính phân kì	Thấu kính phân kì luôn tạo ảnh ảo, cùng chiều và nhỏ hơn vật đối với vật thật ở mọi vị trí.	• Với vật thật đặt trước thấu kính phân kì, các tia sáng sau khi truyền qua thấu kính luôn có xu hướng phân kì.<br>• Đường kéo dài của các tia ló về phía trước thấu kính giao nhau tại vị trí ảnh.<br>• Vì các tia sáng không thực sự hội tụ tại vị trí này nên ảnh là ảnh ảo.<br>• Ảnh luôn cùng chiều với vật và nhỏ hơn vật.<br>• Ảnh thường nằm giữa quang tâm O và tiêu điểm F ở phía trước thấu kính.<br>• Tính chất này không phụ thuộc vào việc vật đặt gần hay xa thấu kính.<br>• Đây là điểm khác biệt quan trọng so với thấu kính hội tụ, vốn có thể tạo ảnh thật hoặc ảnh ảo tùy vị trí vật.<br>• Thấu kính phân kì được sử dụng trong kính dành cho người cận thị để điều chỉnh sự hội tụ của ánh sáng trước khi ánh sáng đi vào mắt.<br>• Khi dựng ảnh, cần sử dụng đường kéo dài của tia ló để xác định vị trí ảnh.<br>• Ghi nhớ ba đặc điểm “ảo – cùng chiều – nhỏ hơn” giúp nhận biết nhanh ảnh qua thấu kính phân kì.	Diverging lens image	virtual	upright	reduced	https://stickmanphysics.com/wp-content/uploads/2020/04/Diverging-Lens-Light-Animation.gif
+Phân biệt thấu kính bằng hình dạng	Có thể phân biệt thấu kính hội tụ và phân kì dựa vào độ dày của rìa so với phần giữa.	• Cách đơn giản nhất để phân biệt hai loại thấu kính là quan sát hình dạng của chúng.<br>• Thấu kính hội tụ thường có phần giữa dày hơn phần rìa.<br>• Vì vậy, có thể ghi nhớ đặc điểm “rìa mỏng – giữa dày” đối với thấu kính hội tụ.<br>• Thấu kính phân kì có phần giữa mỏng hơn phần rìa.<br>• Có thể ghi nhớ đặc điểm “rìa dày – giữa mỏng” đối với thấu kính phân kì.<br>• Khi quan sát một thấu kính, không nên chỉ dựa vào việc nó có mặt cong hay không, vì cả hai loại đều có thể có mặt cong.<br>• Cần so sánh độ dày giữa phần trung tâm và phần rìa.<br>• Hình dạng này liên quan trực tiếp đến tác dụng làm hội tụ hoặc phân kì chùm tia sáng.<br>• Thấu kính hội tụ thường được biểu diễn bằng hình dạng lồi ở hai phía, còn thấu kính phân kì thường được biểu diễn bằng hình dạng lõm ở hai phía.<br>• Nhận biết bằng hình dạng là bước đầu tiên trước khi xác định tiêu điểm, đường truyền tia và tính chất ảnh.	Identify lens by shape	shape	edge	center	https://i.ytimg.com/vi/fXN2lHBc6s4/maxresdefault.jpg
+Phân biệt thấu kính bằng ảnh ảo	Có thể phân biệt thấu kính dựa vào đặc điểm ảnh ảo khi quan sát một vật nhỏ qua thấu kính.	• Một cách thực nghiệm để phân biệt thấu kính là quan sát ảnh của vật nhỏ khi nhìn qua thấu kính.<br>• Nếu thấu kính tạo ảnh ảo cùng chiều và lớn hơn vật, đó là dấu hiệu của thấu kính hội tụ khi vật được đặt trong khoảng tiêu cự.<br>• Ví dụ, đưa một thấu kính gần một dòng chữ nhỏ và quan sát chữ qua thấu kính.<br>• Nếu chữ được phóng đại và cùng chiều, thấu kính có khả năng là thấu kính hội tụ.<br>• Nếu ảnh nhìn thấy cùng chiều nhưng nhỏ hơn vật, đó là đặc điểm của thấu kính phân kì đối với vật thật.<br>• Thấu kính phân kì luôn tạo ảnh ảo, cùng chiều và nhỏ hơn vật.<br>• Phương pháp quan sát ảnh ảo rất thuận tiện khi không có dụng cụ đo chuyên dụng.<br>• Tuy nhiên, cần thực hiện thí nghiệm trong điều kiện phù hợp và kết hợp với quan sát hình dạng để tăng độ tin cậy.<br>• Cách phân biệt này giúp học sinh liên hệ kiến thức lí thuyết với hoạt động thực nghiệm.<br>• Đây cũng là cơ sở để nhận biết một số thấu kính trong các dụng cụ quang học đơn giản.	Identify lens by virtual image	magnified	reduced	virtual	https://stickmanphysics.com/wp-content/uploads/2020/04/Concave-Moving-Lens.gif
+Phân biệt thấu kính bằng chùm tia	Có thể phân biệt thấu kính bằng cách cho chùm tia sáng song song truyền qua và quan sát chùm tia ló.	• Có thể sử dụng một chùm tia sáng song song với nhau để kiểm tra loại thấu kính.<br>• Nếu sau khi truyền qua thấu kính, các tia ló có xu hướng hội tụ về một điểm trên trục chính thì đó là thấu kính hội tụ.<br>• Nếu các tia ló phân kì ra xa nhau và đường kéo dài của chúng gặp nhau tại một điểm phía trước thấu kính thì đó là thấu kính phân kì.<br>• Phương pháp này dựa trực tiếp vào tác dụng quang học của thấu kính nên rất trực quan.<br>• Với thấu kính hội tụ, có thể đặt màn chắn phía sau thấu kính để tìm vị trí hội tụ của chùm tia.<br>• Với thấu kính phân kì, các tia ló không hội tụ trên màn nên cần xét đường kéo dài của chúng.<br>• Khi thực hiện thí nghiệm, nên sử dụng nguồn sáng tạo chùm tia hẹp hoặc bộ tạo tia song song.<br>• Cách kiểm tra bằng chùm tia giúp phân biệt thấu kính ngay cả khi hình dạng của chúng khó quan sát.<br>• Đây là phương pháp phù hợp cho các hoạt động thực hành về quang học ở trường học.<br>• Kết quả thí nghiệm cũng giúp củng cố khái niệm hội tụ, phân kì và tiêu điểm.	Identify lens by light rays	parallel	converging	diverging	https://i.ebayimg.com/images/g/LdgAAOSwgq9bhMWX/s-l400.jpg`;
+
+        let rawInitialData = "";
+        let isEmbeddedFile = (embeddedInitialData && embeddedInitialData.trim() !== "");
+
+        if (isEmbeddedFile) {
+            // Nếu là file Save As đã ngậm dữ liệu -> Lấy dữ liệu ngậm bên trong file
+            rawInitialData = embeddedInitialData;
+        } else {
+            // Nếu là file gốc -> Lấy ngay lập tức từ localStorage (nếu chưa có gì mới dùng bộ mẫu Tứ Bất Tử dự phòng)
+            let savedLocalStorageData = localStorage.getItem('icarus_raw_data');
+            if (savedLocalStorageData && savedLocalStorageData.trim() !== "") {
+                rawInitialData = savedLocalStorageData;
+            } else {
+                rawInitialData = `Sơn Tinh	Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.	• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên	Tản Vien Son Thanh	Ba Vi Mountain	Vietnamese mythology	Natural disaster	https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg`;
+                localStorage.setItem('icarus_raw_data', rawInitialData);
+            }
+        }
+
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                });
+            }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/;
+            const match = text.match(markdownLinkRegex);
+            if (match && match[2]) {
+                return match[2].trim();
+            }
+            return text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        function initData() {
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+            
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            requestWakeLock();
+        }
+
+        function saveConfigToLocalStorage() {
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+            // Chỉ lưu vào localStorage nếu đây là file gốc, file Save As chạy độc lập không ghi đè dữ liệu của file gốc ra ngoài
+            if (!isEmbeddedFile) {
+                localStorage.setItem('icarus_raw_data', rawInitialData);
+            }
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = `${typePrefix}_${index}`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" onclick="readParagraphAt('${escapeHtml(cleanedText)}')">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm hình ảnh">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('scrollableTextArea').scrollTop = 0;
+            saveConfigToLocalStorage();
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t1 = item.tags[0] || '';
+                let t2 = item.tags[1] || '';
+                let t3 = item.tags[2] || '';
+                let t4 = item.tags[3] || '';
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t1}\t${t2}\t${t3}\t${t4}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveConfigToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => {
+                el.classList.remove('active-speaking');
+            });
+        }
+
+        function highlightAndScrollParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                let elId = paragraphElementMap[paragraphIndex];
+                let el = document.getElementById(elId);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    
+                    const scrollArea = document.getElementById('scrollableTextArea');
+                    const elOffsetTop = el.offsetTop;
+                    const areaHeight = scrollArea.clientHeight;
+                    const elHeight = el.offsetHeight;
+                    
+                    scrollArea.scrollTo({
+                        top: elOffsetTop - (areaHeight / 2) + (elHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+
+        let currentQueue = [];
+        let currentQueueIndex = 0;
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0) {
+            if (!synth) return;
+            currentQueue = paragraphs;
+            currentQueueIndex = queueStartIndex;
+
+            if (currentQueueIndex >= currentQueue.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) {
+                    nextSlide();
+                }
+                return;
+            }
+
+            const textToSpeak = currentQueue[currentQueueIndex];
+            let utter = new SpeechSynthesisUtterance(textToSpeak);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            let isTitle = (currentQueueIndex === 0 && currentQueue === getFullQueue());
+            let paragraphMapIndex = isTitle ? -1 : (currentQueue === getFullQueue() ? currentQueueIndex - 1 : currentQueueIndex + getStartIndexOffset(currentQueue));
+
+            utter.onstart = function() {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                if (!isTitle) {
+                    highlightAndScrollParagraph(paragraphMapIndex);
+                }
+            };
+
+            utter.onend = function() {
+                if (!isPaused) {
+                    if (!isAutoplay && paragraphMapIndex >= 0) {
+                        clearActiveHighlights();
+                        return;
+                    }
+                    speakParagraphQueue(currentQueue, currentQueueIndex + 1);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function getFullQueue() {
+            const item = data[currentIndex];
+            return [item.title, ...currentSlideParagraphs];
+        }
+
+        function getStartIndexOffset(subQueue) {
+            let full = getFullQueue();
+            let firstText = subQueue[0];
+            return full.indexOf(firstText) - 1;
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            let fullQueue = getFullQueue();
+            speakParagraphQueue(fullQueue, 0);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            
+            let startIndex = currentSlideParagraphs.indexOf(textSnippet);
+            let queue = startIndex !== -1 ? currentSlideParagraphs.slice(startIndex) : [textSnippet];
+            
+            speakParagraphQueue(queue, 0);
+        }
+
+        function togglePauseRead() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) {
+                    synth.resume();
+                    isPaused = false;
+                    document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                } else {
+                    synth.pause();
+                    isPaused = true;
+                    document.getElementById('pauseBtn').innerText = '▶️ Tiếp tục';
+                }
+            } else if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+            }
+        }
+
+        function stopRead() {
+            if (synth) {
+                synth.cancel();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                clearActiveHighlights();
+            }
+        }
+
+        // Điều hướng đoạn bằng phím Up / Down
+        function jumpParagraph(direction) {
+            let activeEl = document.querySelector('.clickable-paragraph.active-speaking');
+            let paragraphs = Array.from(document.querySelectorAll('.clickable-paragraph'));
+            if (paragraphs.length === 0) return;
+
+            let nextIdx = 0;
+            if (!activeEl) {
+                nextIdx = (direction > 0) ? 0 : paragraphs.length - 1;
+            } else {
+                let currentIdx = paragraphs.indexOf(activeEl);
+                nextIdx = currentIdx + direction;
+                if (nextIdx < 0) nextIdx = 0;
+                if (nextIdx >= paragraphs.length) nextIdx = paragraphs.length - 1;
+            }
+
+            let targetText = paragraphs[nextIdx].innerText;
+            readParagraphAt(targetText);
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveConfigToLocalStorage();
+            if (synth && synth.speaking) {
+                readSlide();
+            }
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function toggleFullscreenMode() {
+            document.body.classList.toggle('fullscreen-mode');
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel += direction;
+            if (fontSizeLevel < -3) fontSizeLevel = -3;
+            if (fontSizeLevel > 5) fontSizeLevel = 5;
+            applyFontSize();
+            saveConfigToLocalStorage();
+        }
+
+        function applyFontSize() {
+            const descElem = document.getElementById('slide-desc');
+            const bulletsElem = document.getElementById('slide-bullets');
+            const titleElem = document.getElementById('slide-title');
+
+            let baseDesc = 1.15 + (fontSizeLevel * 0.1);
+            let baseBullets = 1.0 + (fontSizeLevel * 0.1);
+            let baseTitle = 2.0 + (fontSizeLevel * 0.15);
+
+            descElem.style.fontSize = `${baseDesc}rem`;
+            bulletsElem.style.fontSize = `${baseBullets}rem`;
+            titleElem.style.fontSize = `${baseTitle}rem`;
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                renderSlide();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            // Tự động đóng gói nội dung dữ liệu hiện tại vào biến embeddedInitialData để tạo thành file Save As hoàn chỉnh độc lập
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-tu-bat-tu.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy (Plain Text) phân tách nhau bằng dấu Tab gồm đúng 8 cột theo thứ tự sau (TUYỆT ĐỐI KHÔNG CÓ CỘT SỐ THỨ TỰ Ở ĐẦU):
+1. Từ khóa chính (tiếng Việt)
+2. Kiến thức trọng tâm ngắn gọn.
+3. Nội dung chi tiết (100-200 từ, dùng thẻ <br> nếu xuống dòng gạch đầu dòng)
+4. Từ khóa đáp án tiếng Anh ngắn gọn
+5. Từ khóa tiếng anh 1 liên quan
+6. Từ khóa tiếng anh 2 liên quan
+7. Từ khóa tiếng anh 3 liên quan
+8. URL hình ảnh minh họa thực tế dạng đường dẫn thuần túy hoặc dạng markdown [Alt](url) (để trống nếu không tìm được)
+
+Chỉ trả về dữ liệu thô dạng văn bản Tab-separated, không kèm theo bất kỳ lời dẫn hay định dạng markdown nào khác.`;
+
+            navigator.clipboard.writeText(promptContent).then(() => {
+                alert('Đã copy Prompt AI vào bộ nhớ tạm! Bạn có thể dán vào ChatGPT/Gemini để lấy dữ liệu.');
+            });
+        }
+
+        // Bổ sung phím tắt: Left/Right đổi slide, Up/Down nhảy đoạn, =/+ tăng chữ, -/_ giảm chữ, Esc thoát Fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                jumpParagraph(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                jumpParagraph(-1);
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(1);
+            } else if (e.key === '-' || e.key === '_') {
+                changeFontSize(-1);
+            } else if (e.key === 'Escape') {
+                if (document.body.classList.contains('fullscreen-mode')) {
+                    toggleFullscreenMode();
+                }
+            }
+        });
+
+        // Thao tác vuốt di động
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const threshold = 100; 
+
+        const slideBox = document.getElementById('slideContainerBox');
+        const leftIndicator = document.getElementById('swipeLeftIndicator');
+        const rightIndicator = document.getElementById('swipeRightIndicator');
+
+        slideBox.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        slideBox.addEventListener('touchmove', e => {
+            let currentX = e.changedTouches[0].screenX;
+            let diff = currentX - touchStartX;
+            
+            if (diff < -40) {
+                leftIndicator.style.display = 'block';
+                rightIndicator.style.display = 'none';
+            } else if (diff > 40) {
+                rightIndicator.style.display = 'block';
+                leftIndicator.style.display = 'none';
+            } else {
+                leftIndicator.style.display = 'none';
+                rightIndicator.style.display = 'none';
+            }
+        }, {passive: true});
+
+        slideBox.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            leftIndicator.style.display = 'none';
+            rightIndicator.style.display = 'none';
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - threshold) {
+                nextSlide();
+            } else if (touchEndX > touchStartX + threshold) {
+                prevSlide();
+            }
+        }
+
+        window.onload = () => {
+            initData();
+        };
+    </script>
+
+</body></html>
