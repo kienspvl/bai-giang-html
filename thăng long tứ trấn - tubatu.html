@@ -1,0 +1,1039 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Icarus Presenter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Tăng padding hai bên và toàn màn hình để không bị sát mép */
+            padding: 20px 25px;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        /* Chế độ Fullscreen Minimalist */
+        body.fullscreen-mode .top-toolbar,
+        body.fullscreen-mode .manual-nav {
+            display: none !important;
+        }
+
+        body.fullscreen-mode {
+            padding: 20px 25px;
+            justify-content: center;
+            background: #111;
+        }
+
+        body.fullscreen-mode .container {
+            width: 100vw;
+            height: 94vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Nút thoát Fullscreen nhỏ ở góc trên */
+        .exit-fs-btn {
+            position: fixed;
+            top: 20px;
+            right: 25px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+            transition: 0.2s;
+        }
+        .exit-fs-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            color: #fff;
+        }
+        body.fullscreen-mode .exit-fs-btn {
+            display: block;
+        }
+
+        .top-toolbar {
+            width: 100%;
+            max-width: 1150px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px 18px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1150px;
+            height: 70vh;
+            max-height: 600px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            background: #0b0b0b;
+        }
+
+        /* Hiển thị full ảnh, căn theo cạnh dài để tránh bị xén, lem */
+        .image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-url-bar {
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 8px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 6px 10px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px 25px;
+        }
+
+        .title-area {
+            flex-shrink: 0;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ffd700;
+            cursor: pointer;
+            display: inline-block;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .scrollable-text-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+            position: relative;
+        }
+
+        .desc {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .manual-nav {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1150px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #ffd700;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: #000;
+        }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 250px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px 15px;
+            }
+            .container {
+                flex-direction: column;
+                height: 82vh;
+                max-height: none;
+                position: relative;
+            }
+            .image-panel {
+                flex: none;
+                height: 40vh;
+                width: 100%;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .content-box {
+                flex: 1;
+                overflow: hidden;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="exit-fs-btn" onclick="toggleFullscreenMode()">✕ Thoát Fullscreen</button>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Nhập chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy Prompt AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" onclick="toggleFullscreenMode()">📺 Fullscreen</button>
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save as HTML</button>
+            <button onclick="openImportModal()">Nhập dữ liệu (Import)</button>
+        </div>
+    </div>
+
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSI1RFXtyYlNP_KyPe2xHAyH8rtqzLUa2NcVdNv8aQczK_DQZUSALaNfFA&amp;s=10" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh vào đây..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box">
+            <div class="title-area">
+                <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Bấm để tìm kiếm hình ảnh trên Google" style="font-size: 2.75rem;">Lễ đi Thăng Long Tứ Trấn</h1>
+            </div>
+            <div class="scrollable-text-area" id="scrollableTextArea">
+                <div class="desc" id="slide-desc" style="font-size: 1.65rem;"><div class="clickable-paragraph" id="desc_0" onclick="readParagraphAt('Đi lễ Thăng Long Tứ Trấn là một phong tục văn hóa, tín ngưỡng được nhiều người Hà Nội duy trì, đặc biệt vào dịp đầu năm.')">Đi lễ Thăng Long Tứ Trấn là một phong tục văn hóa, tín ngưỡng được nhiều người Hà Nội duy trì, đặc biệt vào dịp đầu năm.</div></div>
+                <div class="bullets" id="slide-bullets" style="font-size: 1.5rem;"><div class="clickable-paragraph" id="bullets_0" onclick="readParagraphAt('• Người dân có truyền thống đến các đền thuộc Thăng Long Tứ Trấn để dâng hương và cầu mong bình an, sức khỏe, may mắn.')">• Người dân có truyền thống đến các đền thuộc Thăng Long Tứ Trấn để dâng hương và cầu mong bình an, sức khỏe, may mắn.</div><div class="clickable-paragraph" id="bullets_1" onclick="readParagraphAt('• Trình tự thường được nhắc đến là Đông – Tây – Nam – Bắc, tương ứng với Bạch Mã – Voi Phục – Kim Liên – Quán Thánh.')">• Trình tự thường được nhắc đến là Đông – Tây – Nam – Bắc, tương ứng với Bạch Mã – Voi Phục – Kim Liên – Quán Thánh.</div><div class="clickable-paragraph" id="bullets_2" onclick="readParagraphAt('• Hoạt động này thể hiện sự tôn kính đối với các vị thần được cộng đồng thờ phụng.')">• Hoạt động này thể hiện sự tôn kính đối với các vị thần được cộng đồng thờ phụng.</div><div class="clickable-paragraph" id="bullets_3" onclick="readParagraphAt('• Đi lễ đầu năm còn là dịp để con người tìm đến không gian văn hóa truyền thống, tĩnh tâm và gửi gắm những mong ước tốt đẹp.')">• Đi lễ đầu năm còn là dịp để con người tìm đến không gian văn hóa truyền thống, tĩnh tâm và gửi gắm những mong ước tốt đẹp.</div><div class="clickable-paragraph" id="bullets_4" onclick="readParagraphAt('• Các nghi lễ có thể bao gồm dâng hương, lễ vật, cầu an và tham quan di tích.')">• Các nghi lễ có thể bao gồm dâng hương, lễ vật, cầu an và tham quan di tích.</div><div class="clickable-paragraph" id="bullets_5" onclick="readParagraphAt('• Bên cạnh ý nghĩa tâm linh, hoạt động đi lễ góp phần duy trì ký ức lịch sử và phong tục của người Hà Nội.')">• Bên cạnh ý nghĩa tâm linh, hoạt động đi lễ góp phần duy trì ký ức lịch sử và phong tục của người Hà Nội.</div><div class="clickable-paragraph" id="bullets_6" onclick="readParagraphAt('• Tứ Trấn cũng trở thành điểm đến văn hóa, thu hút người dân và du khách muốn tìm hiểu về lịch sử Thăng Long.')">• Tứ Trấn cũng trở thành điểm đến văn hóa, thu hút người dân và du khách muốn tìm hiểu về lịch sử Thăng Long.</div><div class="clickable-paragraph" id="bullets_7" onclick="readParagraphAt('• Việc thực hành tín ngưỡng cần gắn với ý thức giữ gìn di tích, ứng xử văn minh và bảo vệ không gian văn hóa.')">• Việc thực hành tín ngưỡng cần gắn với ý thức giữ gìn di tích, ứng xử văn minh và bảo vệ không gian văn hóa.</div></div>
+                <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Pilgrimage')" title="Tìm hình ảnh">Pilgrimage</span><span class="tag" onclick="searchGoogle('Cultural tradition')" title="Tìm hình ảnh">Cultural tradition</span><span class="tag" onclick="searchGoogle('Praying')" title="Tìm hình ảnh">Praying</span><span class="tag" onclick="searchGoogle('Traditional festival')" title="Tìm hình ảnh">Traditional festival</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseBtn" onclick="togglePauseRead()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Autoplay</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ màn hình luôn sáng khi đọc">
+            <span>Giữ màn hình sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">8 / 8</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated / Excel / Google Sheet)</h2>
+            <p style="font-size: 0.9rem; color: #ccc;">Dán dữ liệu gồm 8 cột (Từ khóa, Kiến thức, Chi tiết, 4 từ khóa Anh, URL ảnh) vào đây:</p>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật dữ liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mặc định ban đầu trống hoàn toàn cho file mới
+        let embeddedInitialData = `Thăng Long Tứ Trấn	Thăng Long Tứ Trấn là hệ thống bốn ngôi đền thiêng trấn giữ bốn phương của kinh thành Thăng Long xưa.	Thăng Long Tứ Trấn là tên gọi dân gian chỉ bốn ngôi đền thiêng gắn với các hướng Đông, Tây, Nam, Bắc của kinh thành Thăng Long.<br>• Trấn Đông là đền Bạch Mã, thờ thần Long Đỗ.<br>• Trấn Tây là đền Voi Phục, thờ Linh Lang Đại vương.<br>• Trấn Nam là đền Kim Liên, thờ Cao Sơn Đại vương.<br>• Trấn Bắc là đền Quán Thánh, thờ Huyền Thiên Trấn Vũ.<br>• Bốn ngôi đền tạo thành một hệ thống tín ngưỡng bảo vệ kinh thành về mặt tâm linh.<br>• Tứ Trấn phản ánh quan niệm của cư dân Thăng Long về việc bảo vệ không gian đô thị, cầu mong bình an và thịnh vượng.<br>• Ngày nay, Thăng Long Tứ Trấn là những di tích lịch sử, văn hóa và tín ngưỡng quan trọng của Hà Nội.<br>• Người dân thường đến các đền vào dịp đầu năm và các ngày lễ để dâng hương, cầu bình an, sức khỏe và may mắn.	Thang Long Four Guardian Temples	Hanoi	Thang Long	Cultural heritage	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXA3NhOxa6r6MrFq_fW2bqdhrhfq9ObC_1Y2DeEajjGa-i_R-fBl24F0&s=10
+Đền Bạch Mã	Đền Bạch Mã là trấn Đông của Thăng Long Tứ Trấn, thờ thần Long Đỗ.	• Đền Bạch Mã nằm tại phố Hàng Buồm, khu vực phố cổ Hà Nội.<br>• Đây là ngôi đền giữ vị trí trấn Đông trong hệ thống Thăng Long Tứ Trấn.<br>• Đền thờ thần Long Đỗ, một vị thần được xem là vị thần bảo hộ của kinh thành Thăng Long.<br>• Theo truyền thuyết, thần Long Đỗ có vai trò quan trọng trong những câu chuyện liên quan đến việc xây dựng và bảo vệ kinh thành.<br>• Tên gọi Bạch Mã gắn với truyền thuyết về con ngựa trắng dẫn đường giúp vua Lý Công Uẩn xác định hướng xây dựng thành.<br>• Kiến trúc đền mang nhiều đặc điểm truyền thống với tam quan, phương đình, đại bái và cung cấm.<br>• Đền Bạch Mã là nơi kết hợp giữa tín ngưỡng dân gian, lịch sử đô thị và văn hóa tâm linh của Hà Nội.<br>• Trong đời sống hiện nay, đền vẫn là điểm đến quen thuộc của người dân và du khách khi tìm hiểu lịch sử Thăng Long.	Bach Ma Temple	Thang Long	Guardian deity	Hanoi	https://upload.wikimedia.org/wikipedia/commons/5/54/Den_Bach_Ma.jpg?utm_source=vi.wikipedia.org&utm_campaign=index&utm_content=original
+Đền Voi Phục	Đền Voi Phục là trấn Tây của Thăng Long Tứ Trấn, thờ Linh Lang Đại vương.	• Đền Voi Phục nằm ở khu vực Thủ Lệ, Hà Nội và là một trong bốn ngôi đền của Thăng Long Tứ Trấn.<br>• Đền giữ vị trí trấn Tây, bảo vệ phía Tây của kinh thành Thăng Long theo quan niệm dân gian.<br>• Vị thần được thờ chính tại đây là Linh Lang Đại vương, một nhân vật được truyền thuyết hóa và gắn với thời nhà Lý.<br>• Tên gọi Voi Phục gắn với hình tượng hai con voi quỳ phục trước cổng đền.<br>• Không gian đền có nhiều cây xanh, tạo nên cảnh quan cổ kính và yên tĩnh giữa khu vực đô thị Hà Nội.<br>• Đền trải qua nhiều lần trùng tu, nhưng vẫn duy trì những yếu tố kiến trúc và tín ngưỡng truyền thống.<br>• Đền Voi Phục thể hiện tín ngưỡng thờ thần bảo hộ cộng đồng và quan niệm tâm linh về việc bảo vệ kinh thành.<br>• Đây cũng là một địa điểm văn hóa giúp tìm hiểu truyền thuyết, lịch sử và tín ngưỡng dân gian của Thăng Long.	Voi Phuc Temple	Linh Lang	Guardian deity	Thang Long	https://static.vinwonders.com/production/den_voi_phuc_1.jpg
+Đền Kim Liên	Đền Kim Liên là trấn Nam của Thăng Long Tứ Trấn, thờ Cao Sơn Đại vương.	• Đền Kim Liên nằm ở khu vực Kim Liên, Hà Nội và giữ vị trí trấn Nam trong hệ thống Thăng Long Tứ Trấn.<br>• Đền còn được biết đến với tên gọi Kim Liên từ hoặc đền Cao Sơn.<br>• Vị thần được thờ chính là Cao Sơn Đại vương, một vị thần được tôn kính trong tín ngưỡng dân gian Việt Nam.<br>• Theo truyền thống, Cao Sơn Đại vương có vai trò bảo hộ vùng đất và cộng đồng cư dân.<br>• Đền có giá trị về kiến trúc, lịch sử và tín ngưỡng, phản ánh quá trình phát triển lâu dài của khu vực phía Nam kinh thành Thăng Long.<br>• Một hiện vật nổi bật là bia đá có bài văn về Cao Sơn Đại vương, góp phần cung cấp tư liệu về lịch sử và tín ngưỡng của di tích.<br>• Đền Kim Liên là nơi người dân đến dâng hương, tưởng nhớ thần linh và cầu mong bình an.<br>• Trong hệ thống Tứ Trấn, đền Kim Liên tượng trưng cho việc bảo vệ phía Nam của kinh thành.	Kim Lien Temple	Cao Son	Guardian deity	Cultural heritage	https://hoangthanhthanglong.vn/wp-content/uploads/2023/05/denkimlien16.jpg
+Đền Quán Thánh	Đền Quán Thánh là trấn Bắc của Thăng Long Tứ Trấn, thờ Huyền Thiên Trấn Vũ.	• Đền Quán Thánh nằm gần Hồ Tây, trên đường Thanh Niên, Hà Nội và giữ vị trí trấn Bắc trong Thăng Long Tứ Trấn.<br>• Đền còn được gọi là đền Trấn Vũ, gắn với tín ngưỡng thờ Huyền Thiên Trấn Vũ.<br>• Huyền Thiên Trấn Vũ được xem là vị thần có khả năng trấn giữ phương Bắc và bảo vệ kinh thành.<br>• Một trong những hiện vật nổi tiếng nhất của đền là pho tượng Trấn Vũ bằng đồng có giá trị nghệ thuật và lịch sử đặc biệt.<br>• Không gian đền kết hợp kiến trúc truyền thống với cảnh quan gần Hồ Tây, tạo nên một địa điểm văn hóa đặc sắc của Hà Nội.<br>• Đền Quán Thánh thể hiện sự giao thoa giữa tín ngưỡng dân gian, Đạo giáo và đời sống tâm linh của cư dân Thăng Long.<br>• Người dân thường đến đền vào các dịp lễ, Tết để dâng hương và cầu bình an.<br>• Đây là một trong những di tích tiêu biểu giúp nhận diện chiều sâu lịch sử và văn hóa của kinh đô Thăng Long.	Quan Thanh Temple	Tran Vu	Huyền Thiên	Thang Long	https://upload.wikimedia.org/wikipedia/commons/6/67/Hanoi_-_Quan-Thanh-Tempel_0001.JPG?utm_source=vi.wikipedia.org&utm_campaign=index&utm_content=original
+Bốn hướng trấn giữ	Thăng Long Tứ Trấn gắn với bốn hướng Đông, Tây, Nam, Bắc của kinh thành Thăng Long.	• Bốn ngôi đền được phân bố theo bốn phương của không gian kinh thành Thăng Long.<br>• Phía Đông là đền Bạch Mã, thờ thần Long Đỗ.<br>• Phía Tây là đền Voi Phục, thờ Linh Lang Đại vương.<br>• Phía Nam là đền Kim Liên, thờ Cao Sơn Đại vương.<br>• Phía Bắc là đền Quán Thánh, thờ Huyền Thiên Trấn Vũ.<br>• Cách bố trí này phản ánh quan niệm cổ truyền về không gian thiêng và sự bảo vệ kinh thành từ bốn phương.<br>• Hệ thống Tứ Trấn không chỉ có ý nghĩa tín ngưỡng mà còn giúp người dân hình dung cấu trúc không gian của Thăng Long xưa.<br>• Trong văn hóa dân gian, bốn vị thần được xem như những lực lượng bảo hộ, giúp giữ gìn sự bình yên cho kinh thành và cộng đồng cư dân.<br>• Ngày nay, bốn di tích trở thành những địa điểm quan trọng để tìm hiểu lịch sử, kiến trúc và tín ngưỡng của Hà Nội.	Four Directions	East	West	North and South	https://hongkytech.wordpress.com/wp-content/uploads/2021/05/800px-thc483ng_long_te1bba9_tre1baa5n_-_nhc3a0_he1baadu_lc3aa_26_me1baa1c.jpg?w=800
+Ý nghĩa văn hóa	Thăng Long Tứ Trấn thể hiện niềm tin của người Việt vào sự bảo hộ tâm linh đối với kinh đô và cộng đồng.	• Thăng Long Tứ Trấn là một biểu tượng quan trọng của văn hóa và tín ngưỡng Hà Nội.<br>• Bốn ngôi đền phản ánh niềm tin rằng kinh thành cần được bảo vệ không chỉ bằng thành lũy và quân đội mà còn bằng các lực lượng thần linh.<br>• Tín ngưỡng Tứ Trấn góp phần tạo nên không gian văn hóa đặc trưng của Thăng Long – Hà Nội.<br>• Các di tích là nơi lưu giữ nhiều truyền thuyết, lễ hội, nghi lễ, kiến trúc và hiện vật có giá trị.<br>• Việc thờ các vị thần bảo hộ thể hiện mong muốn của cộng đồng về cuộc sống bình an, đất nước ổn định và nhân dân thuận lợi.<br>• Các đền cũng là nơi kết nối quá khứ với hiện tại, giúp thế hệ sau hiểu thêm về lịch sử hình thành và phát triển của Hà Nội.<br>• Tứ Trấn vì thế vừa có giá trị tín ngưỡng vừa có giá trị lịch sử, văn hóa và giáo dục.<br>• Bảo tồn các di tích Tứ Trấn góp phần gìn giữ bản sắc văn hóa của Thăng Long – Hà Nội trong quá trình đô thị hóa.	Cultural significance	Hanoi culture	Spiritual belief	Cultural heritage	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIka5zmtSnAmC1gn5DADIAEbppwduhlVC1ZrsJCnEWvw&s=10
+Lễ đi Thăng Long Tứ Trấn	Đi lễ Thăng Long Tứ Trấn là một phong tục văn hóa, tín ngưỡng được nhiều người Hà Nội duy trì, đặc biệt vào dịp đầu năm.	• Người dân có truyền thống đến các đền thuộc Thăng Long Tứ Trấn để dâng hương và cầu mong bình an, sức khỏe, may mắn.<br>• Trình tự thường được nhắc đến là Đông – Tây – Nam – Bắc, tương ứng với Bạch Mã – Voi Phục – Kim Liên – Quán Thánh.<br>• Hoạt động này thể hiện sự tôn kính đối với các vị thần được cộng đồng thờ phụng.<br>• Đi lễ đầu năm còn là dịp để con người tìm đến không gian văn hóa truyền thống, tĩnh tâm và gửi gắm những mong ước tốt đẹp.<br>• Các nghi lễ có thể bao gồm dâng hương, lễ vật, cầu an và tham quan di tích.<br>• Bên cạnh ý nghĩa tâm linh, hoạt động đi lễ góp phần duy trì ký ức lịch sử và phong tục của người Hà Nội.<br>• Tứ Trấn cũng trở thành điểm đến văn hóa, thu hút người dân và du khách muốn tìm hiểu về lịch sử Thăng Long.<br>• Việc thực hành tín ngưỡng cần gắn với ý thức giữ gìn di tích, ứng xử văn minh và bảo vệ không gian văn hóa.	Pilgrimage	Cultural tradition	Praying	Traditional festival	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSI1RFXtyYlNP_KyPe2xHAyH8rtqzLUa2NcVdNv8aQczK_DQZUSALaNfFA&s=10`;
+
+        // Sửa lỗi nạp dữ liệu: Luôn lấy từ localStorage ngay lập tức khi khởi động, tuyệt đối không bị đè hay chờ đợi thao tác bấm nhập thủ công nào nữa
+        let rawInitialData = localStorage.getItem('icarus_raw_data');
+        if (!rawInitialData || rawInitialData.trim() === "") {
+            rawInitialData = `Sơn Tinh	Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.	• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên	Tản Vien Son Thanh	Ba Vi Mountain	Vietnamese mythology	Natural disaster	https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg`;
+            localStorage.setItem('icarus_raw_data', rawInitialData);
+        }
+
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                });
+            }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/;
+            const match = text.match(markdownLinkRegex);
+            if (match && match[2]) {
+                return match[2].trim();
+            }
+            return text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        function initData() {
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+            
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            requestWakeLock();
+        }
+
+        function saveConfigToLocalStorage() {
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+            localStorage.setItem('icarus_raw_data', rawInitialData);
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = `${typePrefix}_${index}`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" onclick="readParagraphAt('${escapeHtml(cleanedText)}')">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm hình ảnh">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('scrollableTextArea').scrollTop = 0;
+            saveConfigToLocalStorage();
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t1 = item.tags[0] || '';
+                let t2 = item.tags[1] || '';
+                let t3 = item.tags[2] || '';
+                let t4 = item.tags[3] || '';
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t1}\t${t2}\t${t3}\t${t4}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveConfigToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            renderSlide();
+            if (isAutoplay) {
+                readSlide();
+            }
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => {
+                el.classList.remove('active-speaking');
+            });
+        }
+
+        function highlightAndScrollParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                let elId = paragraphElementMap[paragraphIndex];
+                let el = document.getElementById(elId);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    
+                    const scrollArea = document.getElementById('scrollableTextArea');
+                    const elOffsetTop = el.offsetTop;
+                    const areaHeight = scrollArea.clientHeight;
+                    const elHeight = el.offsetHeight;
+                    
+                    scrollArea.scrollTo({
+                        top: elOffsetTop - (areaHeight / 2) + (elHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+
+        let currentQueue = [];
+        let currentQueueIndex = 0;
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0) {
+            if (!synth) return;
+            currentQueue = paragraphs;
+            currentQueueIndex = queueStartIndex;
+
+            if (currentQueueIndex >= currentQueue.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) {
+                    nextSlide();
+                }
+                return;
+            }
+
+            const textToSpeak = currentQueue[currentQueueIndex];
+            let utter = new SpeechSynthesisUtterance(textToSpeak);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            let isTitle = (currentQueueIndex === 0 && currentQueue === getFullQueue());
+            let paragraphMapIndex = isTitle ? -1 : (currentQueue === getFullQueue() ? currentQueueIndex - 1 : currentQueueIndex + getStartIndexOffset(currentQueue));
+
+            utter.onstart = function() {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                if (!isTitle) {
+                    highlightAndScrollParagraph(paragraphMapIndex);
+                }
+            };
+
+            utter.onend = function() {
+                if (!isPaused) {
+                    if (!isAutoplay && paragraphMapIndex >= 0) {
+                        clearActiveHighlights();
+                        return;
+                    }
+                    speakParagraphQueue(currentQueue, currentQueueIndex + 1);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function getFullQueue() {
+            const item = data[currentIndex];
+            return [item.title, ...currentSlideParagraphs];
+        }
+
+        function getStartIndexOffset(subQueue) {
+            let full = getFullQueue();
+            let firstText = subQueue[0];
+            return full.indexOf(firstText) - 1;
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            let fullQueue = getFullQueue();
+            speakParagraphQueue(fullQueue, 0);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            
+            let startIndex = currentSlideParagraphs.indexOf(textSnippet);
+            let queue = startIndex !== -1 ? currentSlideParagraphs.slice(startIndex) : [textSnippet];
+            
+            speakParagraphQueue(queue, 0);
+        }
+
+        function togglePauseRead() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) {
+                    synth.resume();
+                    isPaused = false;
+                    document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                } else {
+                    synth.pause();
+                    isPaused = true;
+                    document.getElementById('pauseBtn').innerText = '▶️ Tiếp tục';
+                }
+            } else if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+            }
+        }
+
+        function stopRead() {
+            if (synth) {
+                synth.cancel();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                clearActiveHighlights();
+            }
+        }
+
+        // Thêm tính năng phím tắt Up / Down để nhảy tới đoạn trước / đoạn tiếp sau khi đang đọc hoặc chọn thủ công
+        function jumpParagraph(direction) {
+            let activeEl = document.querySelector('.clickable-paragraph.active-speaking');
+            let paragraphs = Array.from(document.querySelectorAll('.clickable-paragraph'));
+            if (paragraphs.length === 0) return;
+
+            let nextIdx = 0;
+            if (!activeEl) {
+                nextIdx = (direction > 0) ? 0 : paragraphs.length - 1;
+            } else {
+                let currentIdx = paragraphs.indexOf(activeEl);
+                nextIdx = currentIdx + direction;
+                if (nextIdx < 0) nextIdx = 0;
+                if (nextIdx >= paragraphs.length) nextIdx = paragraphs.length - 1;
+            }
+
+            let targetText = paragraphs[nextIdx].innerText;
+            readParagraphAt(targetText);
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveConfigToLocalStorage();
+            if (synth && synth.speaking) {
+                readSlide();
+            }
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function toggleFullscreenMode() {
+            document.body.classList.toggle('fullscreen-mode');
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel += direction;
+            if (fontSizeLevel < -3) fontSizeLevel = -3;
+            if (fontSizeLevel > 5) fontSizeLevel = 5;
+            applyFontSize();
+            saveConfigToLocalStorage();
+        }
+
+        function applyFontSize() {
+            const descElem = document.getElementById('slide-desc');
+            const bulletsElem = document.getElementById('slide-bullets');
+            const titleElem = document.getElementById('slide-title');
+
+            let baseDesc = 1.15 + (fontSizeLevel * 0.1);
+            let baseBullets = 1.0 + (fontSizeLevel * 0.1);
+            let baseTitle = 2.0 + (fontSizeLevel * 0.15);
+
+            descElem.style.fontSize = `${baseDesc}rem`;
+            bulletsElem.style.fontSize = `${baseBullets}rem`;
+            titleElem.style.fontSize = `${baseTitle}rem`;
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                renderSlide();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-tu-bat-tu.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy (Plain Text) phân tách nhau bằng dấu Tab gồm đúng 8 cột theo thứ tự sau (TUYỆT ĐỐI KHÔNG CÓ CỘT SỐ THỨ TỰ Ở ĐẦU):
+1. Từ khóa chính (tiếng Việt)
+2. Kiến thức trọng tâm ngắn gọn.
+3. Nội dung chi tiết (100-200 từ, dùng thẻ <br> nếu xuống dòng gạch đầu dòng)
+4. Từ khóa đáp án tiếng Anh ngắn gọn
+5. Từ khóa tiếng anh 1 liên quan
+6. Từ khóa tiếng anh 2 liên quan
+7. Từ khóa tiếng anh 3 liên quan
+8. URL hình ảnh minh họa thực tế dạng đường dẫn thuần túy hoặc dạng markdown [Alt](url) (để trống nếu không tìm được)
+
+Chỉ trả về dữ liệu thô dạng văn bản Tab-separated, không kèm theo bất kỳ lời dẫn hay định dạng markdown nào khác.`;
+
+            navigator.clipboard.writeText(promptContent).then(() => {
+                alert('Đã copy Prompt AI vào bộ nhớ tạm! Bạn có thể dán vào ChatGPT/Gemini để lấy dữ liệu.');
+            });
+        }
+
+        // Bổ sung phím tắt bàn phím: Left/Right đổi slide, Up/Down nhảy đoạn, =/+ tăng chữ, -/_ giảm chữ, Esc thoát Fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                jumpParagraph(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                jumpParagraph(-1);
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(1);
+            } else if (e.key === '-' || e.key === '_') {
+                changeFontSize(-1);
+            } else if (e.key === 'Escape') {
+                if (document.body.classList.contains('fullscreen-mode')) {
+                    toggleFullscreenMode();
+                }
+            }
+        });
+
+        // Thao tác vuốt di động
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const threshold = 100; 
+
+        const slideBox = document.getElementById('slideContainerBox');
+        const leftIndicator = document.getElementById('swipeLeftIndicator');
+        const rightIndicator = document.getElementById('swipeRightIndicator');
+
+        slideBox.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        slideBox.addEventListener('touchmove', e => {
+            let currentX = e.changedTouches[0].screenX;
+            let diff = currentX - touchStartX;
+            
+            if (diff < -40) {
+                leftIndicator.style.display = 'block';
+                rightIndicator.style.display = 'none';
+            } else if (diff > 40) {
+                rightIndicator.style.display = 'block';
+                leftIndicator.style.display = 'none';
+            } else {
+                leftIndicator.style.display = 'none';
+                rightIndicator.style.display = 'none';
+            }
+        }, {passive: true});
+
+        slideBox.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            leftIndicator.style.display = 'none';
+            rightIndicator.style.display = 'none';
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - threshold) {
+                nextSlide();
+            } else if (touchEndX > touchStartX + threshold) {
+                prevSlide();
+            }
+        }
+
+        window.onload = () => {
+            initData();
+        };
+    </script>
+
+</body></html>
