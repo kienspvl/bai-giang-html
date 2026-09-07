@@ -1,0 +1,1343 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Icarus Presenter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        /* Chế độ Fullscreen Minimalist */
+        body.fullscreen-mode .top-toolbar,
+        body.fullscreen-mode .manual-nav {
+            display: none !important;
+        }
+
+        body.fullscreen-mode {
+            padding: 10px;
+            justify-content: center;
+            background: #111;
+        }
+
+        body.fullscreen-mode .container {
+            width: 100vw;
+            height: 96vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Chế độ Expand Mode */
+        body.expand-mode .container {
+            display: none !important;
+        }
+        
+        .expand-view-container {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        body.expand-mode .expand-view-container {
+            display: flex;
+        }
+
+        .expand-slide-card {
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: border 0.3s, box-shadow 0.3s;
+        }
+        .expand-slide-card.active-card {
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+        .expand-slide-card h2 {
+            color: #ffd700;
+            font-size: 1.6rem;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+            padding-bottom: 8px;
+            cursor: pointer;
+        }
+        .expand-slide-card h2:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+        .expand-slide-card img {
+            max-width: 100%;
+            max-height: 350px;
+            object-fit: contain;
+            display: block;
+            margin: 15px auto;
+            border-radius: 8px;
+            background: #000;
+        }
+        .expand-slide-card .expand-desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .expand-slide-card .expand-bullets {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .exit-fs-btn {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+        }
+        body.fullscreen-mode .exit-fs-btn {
+            display: block;
+        }
+
+        /* Tối ưu hóa Header (Top Toolbar) cho PC & Mobile */
+        .top-toolbar {
+            width: 100%;
+            max-width: 1180px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        button {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1180px;
+            height: 68vh;
+            max-height: 580px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            background: #0b0b0b;
+        }
+
+        .image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-url-bar {
+            padding: 8px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 6px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 5px 8px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 18px 24px;
+        }
+
+        .title-area {
+            flex-shrink: 0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #ffd700;
+            cursor: pointer;
+            display: inline-block;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .scrollable-text-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
+            position: relative;
+        }
+
+        .desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 12px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+        }
+
+        /* Tối ưu hóa Footer (Manual Nav) cho PC & Mobile */
+        .manual-nav {
+            margin-top: 15px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1180px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1rem;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 18px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 18px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #ffd700; }
+        input:checked + .slider:before { transform: translateX(18px); background-color: #000; }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 220px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .top-toolbar, .manual-nav { padding: 8px 10px; gap: 6px; justify-content: center; }
+            .container { flex-direction: column; height: 75vh; }
+            .image-panel { height: 35vh; flex: none; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .content-box { flex: 1; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="exit-fs-btn" onclick="toggleFullscreenMode()">✕ Thoát</button>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <!-- Header / Top Toolbar tối ưu responsive -->
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" id="expandModeBtn" onclick="toggleExpandMode()">📖 Expand</button>
+            <button class="secondary" onclick="toggleFullscreenMode()">📺 Full</button>
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save</button>
+            <button onclick="openImportModal()">Import</button>
+        </div>
+    </div>
+
+    <!-- Giao diện Slide thông thường -->
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://cdn.mindspritesolutions.com/flexiprep/Important-Differences/Chemistry/posts/Difference-between-Ester-and-Ether/Difference-between-Ester-and-4.svg" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box">
+            <div class="title-area">
+                <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Tìm kiếm trên Google" style="font-size: 2.55rem;">Ester</h1>
+            </div>
+            <div class="scrollable-text-area" id="scrollableTextArea" ondblclick="togglePauseRead()">
+                <div class="desc" id="slide-desc" style="font-size: 1.6rem;"><div class="clickable-paragraph" id="desc_0" ondblclick="togglePauseRead()" onclick="readParagraphAt('Khái niệm ester: dẫn xuất của carboxylic acid, trong đó nhóm –OH được thay bằng –OR\'.')">Khái niệm ester: dẫn xuất của carboxylic acid, trong đó nhóm –OH được thay bằng –OR'.</div></div>
+                <div class="bullets" id="slide-bullets" style="font-size: 1.45rem;"><div class="clickable-paragraph" id="bullets_0" ondblclick="togglePauseRead()" onclick="readParagraphAt('Ester là hợp chất hữu cơ được tạo thành khi nhóm –OH trong nhóm carboxyl –COOH của carboxylic acid bị thay thế bằng nhóm –OR\'. Công thức chung của ester đơn chức là RCOOR\', trong đó R có thể là H hoặc gốc hydrocarbon, còn R\' là gốc hydrocarbon.')">Ester là hợp chất hữu cơ được tạo thành khi nhóm –OH trong nhóm carboxyl –COOH của carboxylic acid bị thay thế bằng nhóm –OR'. Công thức chung của ester đơn chức là RCOOR', trong đó R có thể là H hoặc gốc hydrocarbon, còn R' là gốc hydrocarbon.</div><div class="clickable-paragraph" id="bullets_1" ondblclick="togglePauseRead()" onclick="readParagraphAt('Ví dụ: HCOOCH₃ là methyl formate; CH₃COOCH₃ là methyl acetate; CH₃COOC₂H₅ là ethyl acetate; C₆H₅COOCH₃ là methyl benzoate.')">Ví dụ: HCOOCH₃ là methyl formate; CH₃COOCH₃ là methyl acetate; CH₃COOC₂H₅ là ethyl acetate; C₆H₅COOCH₃ là methyl benzoate.</div><div class="clickable-paragraph" id="bullets_2" ondblclick="togglePauseRead()" onclick="readParagraphAt('Ester thường được tạo thành từ phản ứng giữa carboxylic acid và alcohol. Trong phân tử ester, nhóm chức đặc trưng là –COO–. Việc thay thế nhóm –OH bằng nhóm –OR\' làm thay đổi đáng kể tính chất vật lí và hóa học của chất so với carboxylic acid ban đầu. Ester là một nhóm hợp chất quan trọng trong chương trình Hóa học 12 và có nhiều ứng dụng trong đời sống, công nghiệp thực phẩm, mỹ phẩm và sản xuất vật liệu.')">Ester thường được tạo thành từ phản ứng giữa carboxylic acid và alcohol. Trong phân tử ester, nhóm chức đặc trưng là –COO–. Việc thay thế nhóm –OH bằng nhóm –OR' làm thay đổi đáng kể tính chất vật lí và hóa học của chất so với carboxylic acid ban đầu. Ester là một nhóm hợp chất quan trọng trong chương trình Hóa học 12 và có nhiều ứng dụng trong đời sống, công nghiệp thực phẩm, mỹ phẩm và sản xuất vật liệu.</div></div>
+                <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Ester')" title="Tìm kiếm">Ester</span><span class="tag" onclick="searchGoogle('Ester group')" title="Tìm kiếm">Ester group</span><span class="tag" onclick="searchGoogle('Carboxyl')" title="Tìm kiếm">Carboxyl</span><span class="tag" onclick="searchGoogle('Organic compound')" title="Tìm kiếm">Organic compound</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Giao diện Expand Mode -->
+    <div class="expand-view-container" id="expandViewContainer">
+                    <div class="expand-slide-card" id="expand-slide-0">
+                        <h2 id="exp_title_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(0)" title="Đọc tiêu đề">1. Ester</h2>
+                        <img src="https://cdn.mindspritesolutions.com/flexiprep/Important-Differences/Chemistry/posts/Difference-between-Ester-and-Ether/Difference-between-Ester-and-4.svg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_0_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Khái niệm ester: dẫn xuất của carboxylic acid, trong đó nhóm –OH được thay bằng –OR\'.')">Khái niệm ester: dẫn xuất của carboxylic acid, trong đó nhóm –OH được thay bằng –OR'.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_0_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Ester là hợp chất hữu cơ được tạo thành khi nhóm –OH trong nhóm carboxyl –COOH của carboxylic acid bị thay thế bằng nhóm –OR\'. Công thức chung của ester đơn chức là RCOOR\', trong đó R có thể là H hoặc gốc hydrocarbon, còn R\' là gốc hydrocarbon.')">Ester là hợp chất hữu cơ được tạo thành khi nhóm –OH trong nhóm carboxyl –COOH của carboxylic acid bị thay thế bằng nhóm –OR'. Công thức chung của ester đơn chức là RCOOR', trong đó R có thể là H hoặc gốc hydrocarbon, còn R' là gốc hydrocarbon.</div><div class="clickable-paragraph" id="exp_0_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Ví dụ: HCOOCH₃ là methyl formate; CH₃COOCH₃ là methyl acetate; CH₃COOC₂H₅ là ethyl acetate; C₆H₅COOCH₃ là methyl benzoate.')">Ví dụ: HCOOCH₃ là methyl formate; CH₃COOCH₃ là methyl acetate; CH₃COOC₂H₅ là ethyl acetate; C₆H₅COOCH₃ là methyl benzoate.</div><div class="clickable-paragraph" id="exp_0_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Ester thường được tạo thành từ phản ứng giữa carboxylic acid và alcohol. Trong phân tử ester, nhóm chức đặc trưng là –COO–. Việc thay thế nhóm –OH bằng nhóm –OR\' làm thay đổi đáng kể tính chất vật lí và hóa học của chất so với carboxylic acid ban đầu. Ester là một nhóm hợp chất quan trọng trong chương trình Hóa học 12 và có nhiều ứng dụng trong đời sống, công nghiệp thực phẩm, mỹ phẩm và sản xuất vật liệu.')">Ester thường được tạo thành từ phản ứng giữa carboxylic acid và alcohol. Trong phân tử ester, nhóm chức đặc trưng là –COO–. Việc thay thế nhóm –OH bằng nhóm –OR' làm thay đổi đáng kể tính chất vật lí và hóa học của chất so với carboxylic acid ban đầu. Ester là một nhóm hợp chất quan trọng trong chương trình Hóa học 12 và có nhiều ứng dụng trong đời sống, công nghiệp thực phẩm, mỹ phẩm và sản xuất vật liệu.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Ester')">Ester</span><span class="tag" onclick="searchGoogle('Ester group')">Ester group</span><span class="tag" onclick="searchGoogle('Carboxyl')">Carboxyl</span><span class="tag" onclick="searchGoogle('Organic compound')">Organic compound</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-1">
+                        <h2 id="exp_title_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(1)" title="Đọc tiêu đề">2. Công thức chung của ester</h2>
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxMgHjVwlsi3irUaQlmIgPcJhmlDmEGH90ENpsA2cc9OmSarGVRwCVJfs&amp;s=10" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_1_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Công thức tổng quát của ester đơn chức là RCOOR\'.')">Công thức tổng quát của ester đơn chức là RCOOR'.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_1_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Ester đơn chức có công thức tổng quát RCOOR\'. Trong công thức này, R là H hoặc gốc hydrocarbon, còn R\' là gốc hydrocarbon. Phần RCO– có nguồn gốc từ carboxylic acid, còn –OR\' có nguồn gốc từ alcohol.')">Ester đơn chức có công thức tổng quát RCOOR'. Trong công thức này, R là H hoặc gốc hydrocarbon, còn R' là gốc hydrocarbon. Phần RCO– có nguồn gốc từ carboxylic acid, còn –OR' có nguồn gốc từ alcohol.</div><div class="clickable-paragraph" id="exp_1_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Ví dụ, HCOOCH₃ có R = H và R\' = CH₃; CH₃COOC₂H₅ có R = CH₃ và R\' = C₂H₅. Công thức tổng quát giúp nhận biết nhanh một hợp chất có thuộc loại ester hay không.')">Ví dụ, HCOOCH₃ có R = H và R' = CH₃; CH₃COOC₂H₅ có R = CH₃ và R' = C₂H₅. Công thức tổng quát giúp nhận biết nhanh một hợp chất có thuộc loại ester hay không.</div><div class="clickable-paragraph" id="exp_1_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Khi xác định cấu tạo ester, cần chú ý nhóm chức –COO– nằm giữa hai phần hydrocarbon hoặc giữa H và gốc hydrocarbon. Ester có thể chứa liên kết đôi, vòng thơm hoặc các nhóm hydrocarbon khác tùy cấu tạo của R và R\'. Việc phân tích R và R\' cũng là cơ sở để gọi tên ester theo danh pháp thông thường được sử dụng trong chương trình phổ thông.')">Khi xác định cấu tạo ester, cần chú ý nhóm chức –COO– nằm giữa hai phần hydrocarbon hoặc giữa H và gốc hydrocarbon. Ester có thể chứa liên kết đôi, vòng thơm hoặc các nhóm hydrocarbon khác tùy cấu tạo của R và R'. Việc phân tích R và R' cũng là cơ sở để gọi tên ester theo danh pháp thông thường được sử dụng trong chương trình phổ thông.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('RCOOR'')">RCOOR'</span><span class="tag" onclick="searchGoogle('Ester formula')">Ester formula</span><span class="tag" onclick="searchGoogle('Functional group')">Functional group</span><span class="tag" onclick="searchGoogle('Structure')">Structure</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-2">
+                        <h2 id="exp_title_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(2)" title="Đọc tiêu đề">3. Danh pháp ester</h2>
+                        <img src="https://img.loigiaihay.com/picture/2025/0313/1741855237691-mceclip0.png" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_2_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Tên ester đơn chức gồm tên gốc R\' và tên gốc carboxylic acid.')">Tên ester đơn chức gồm tên gốc R' và tên gốc carboxylic acid.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_2_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Danh pháp ester đơn chức được gọi theo quy tắc: tên gốc hydrocarbon R\' đứng trước, sau đó là tên gốc carboxylic acid tương ứng. Ví dụ, HCOOCH₃ có tên methyl formate vì phần –OCH₃ tạo thành gốc methyl và phần HCOO– tương ứng với formic acid. CH₃COOC₂H₅ có tên ethyl acetate vì có gốc ethyl và gốc acetate.')">Danh pháp ester đơn chức được gọi theo quy tắc: tên gốc hydrocarbon R' đứng trước, sau đó là tên gốc carboxylic acid tương ứng. Ví dụ, HCOOCH₃ có tên methyl formate vì phần –OCH₃ tạo thành gốc methyl và phần HCOO– tương ứng với formic acid. CH₃COOC₂H₅ có tên ethyl acetate vì có gốc ethyl và gốc acetate.</div><div class="clickable-paragraph" id="exp_2_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Một số ví dụ thường gặp gồm methyl acetate CH₃COOCH₃, ethyl acetate CH₃COOC₂H₅, methyl benzoate C₆H₅COOCH₃ và methyl acrylate CH₂=CHCOOCH₃. Khi gọi tên, cần xác định chính xác gốc alcohol trước rồi xác định gốc acid. Cách gọi tên này giúp liên hệ trực tiếp giữa công thức cấu tạo và tên của ester.')">Một số ví dụ thường gặp gồm methyl acetate CH₃COOCH₃, ethyl acetate CH₃COOC₂H₅, methyl benzoate C₆H₅COOCH₃ và methyl acrylate CH₂=CHCOOCH₃. Khi gọi tên, cần xác định chính xác gốc alcohol trước rồi xác định gốc acid. Cách gọi tên này giúp liên hệ trực tiếp giữa công thức cấu tạo và tên của ester.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Ester nomenclature')">Ester nomenclature</span><span class="tag" onclick="searchGoogle('Methyl')">Methyl</span><span class="tag" onclick="searchGoogle('Ethyl')">Ethyl</span><span class="tag" onclick="searchGoogle('Acetate')">Acetate</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-3">
+                        <h2 id="exp_title_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(3)" title="Đọc tiêu đề">4. Methyl formate</h2>
+                        <img src="https://natislab.com/images/stories/virtuemart/product/sanpham/780/1.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_3_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Methyl formate có công thức HCOOCH₃.')">Methyl formate có công thức HCOOCH₃.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_3_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Methyl formate là ester đơn chức được tạo bởi formic acid và methanol. Công thức cấu tạo của chất là HCOOCH₃. Theo quy tắc danh pháp, phần –OCH₃ tương ứng với gốc methyl, còn phần HCOO– tương ứng với formate, vì vậy tên gọi là methyl formate.')">Methyl formate là ester đơn chức được tạo bởi formic acid và methanol. Công thức cấu tạo của chất là HCOOCH₃. Theo quy tắc danh pháp, phần –OCH₃ tương ứng với gốc methyl, còn phần HCOO– tương ứng với formate, vì vậy tên gọi là methyl formate.</div><div class="clickable-paragraph" id="exp_3_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Methyl formate là chất lỏng dễ bay hơi và có mùi đặc trưng. Nó thuộc nhóm ester có phân tử tương đối nhỏ. Khi gặp phản ứng thủy phân trong môi trường acid, methyl formate tạo thành formic acid và methanol. Trong môi trường base, sản phẩm là muối formate và methanol.')">Methyl formate là chất lỏng dễ bay hơi và có mùi đặc trưng. Nó thuộc nhóm ester có phân tử tương đối nhỏ. Khi gặp phản ứng thủy phân trong môi trường acid, methyl formate tạo thành formic acid và methanol. Trong môi trường base, sản phẩm là muối formate và methanol.</div><div class="clickable-paragraph" id="exp_3_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Việc nhận biết methyl formate là ví dụ điển hình để học sinh luyện tập cách chuyển đổi giữa tên ester và công thức cấu tạo. Khi nhìn thấy tên “methyl formate”, có thể xác định ngay gốc alcohol là methyl và gốc acid là formate, từ đó viết được công thức HCOOCH₃.')">Việc nhận biết methyl formate là ví dụ điển hình để học sinh luyện tập cách chuyển đổi giữa tên ester và công thức cấu tạo. Khi nhìn thấy tên “methyl formate”, có thể xác định ngay gốc alcohol là methyl và gốc acid là formate, từ đó viết được công thức HCOOCH₃.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Methyl formate')">Methyl formate</span><span class="tag" onclick="searchGoogle('Formate')">Formate</span><span class="tag" onclick="searchGoogle('Methanol')">Methanol</span><span class="tag" onclick="searchGoogle('Ester')">Ester</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-4">
+                        <h2 id="exp_title_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(4)" title="Đọc tiêu đề">5. Ethyl acetate</h2>
+                        <img src="https://sdfine.com/media/catalog/product/cache/1abafcf312c8e3de5a9721e052cf458b/2/0/20108-l25-1.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_4_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Ethyl acetate có công thức CH₃COOC₂H₅.')">Ethyl acetate có công thức CH₃COOC₂H₅.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_4_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Ethyl acetate là một ester quen thuộc có công thức cấu tạo CH₃COOC₂H₅. Chất này được tạo thành từ acetic acid và ethanol trong phản ứng ester hóa có xúc tác H₂SO₄ đặc.')">Ethyl acetate là một ester quen thuộc có công thức cấu tạo CH₃COOC₂H₅. Chất này được tạo thành từ acetic acid và ethanol trong phản ứng ester hóa có xúc tác H₂SO₄ đặc.</div><div class="clickable-paragraph" id="exp_4_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Tên ethyl acetate được tạo từ hai phần: ethyl là gốc hydrocarbon C₂H₅– có nguồn gốc từ ethanol, còn acetate là gốc acid CH₃COO– có nguồn gốc từ acetic acid. Ethyl acetate thường là chất lỏng, ít tan trong nước và có mùi đặc trưng.')">Tên ethyl acetate được tạo từ hai phần: ethyl là gốc hydrocarbon C₂H₅– có nguồn gốc từ ethanol, còn acetate là gốc acid CH₃COO– có nguồn gốc từ acetic acid. Ethyl acetate thường là chất lỏng, ít tan trong nước và có mùi đặc trưng.</div><div class="clickable-paragraph" id="exp_4_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Ethyl acetate có thể bị thủy phân trong môi trường acid tạo acetic acid và ethanol. Trong môi trường base như NaOH, phản ứng tạo sodium acetate và ethanol. Đây cũng là ester thường được dùng trong các thí nghiệm minh họa phản ứng thủy phân ester ở chương trình Hóa học 12.')">Ethyl acetate có thể bị thủy phân trong môi trường acid tạo acetic acid và ethanol. Trong môi trường base như NaOH, phản ứng tạo sodium acetate và ethanol. Đây cũng là ester thường được dùng trong các thí nghiệm minh họa phản ứng thủy phân ester ở chương trình Hóa học 12.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Ethyl acetate')">Ethyl acetate</span><span class="tag" onclick="searchGoogle('Acetate')">Acetate</span><span class="tag" onclick="searchGoogle('Ethanol')">Ethanol</span><span class="tag" onclick="searchGoogle('Ethyl')">Ethyl</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-5">
+                        <h2 id="exp_title_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(5)" title="Đọc tiêu đề">6. Methyl benzoate</h2>
+                        <img src="https://www.sigmaaldrich.com/deepweb/assets/sigmaaldrich/product/structures/227/063/6c44fe2a-5285-4b8f-b007-0784ce06fdf1/640/6c44fe2a-5285-4b8f-b007-0784ce06fdf1.png" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_5_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Methyl benzoate có công thức C₆H₅COOCH₃.')">Methyl benzoate có công thức C₆H₅COOCH₃.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_5_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Methyl benzoate là ester được tạo thành từ benzoic acid và methanol. Công thức cấu tạo của chất là C₆H₅COOCH₃. Trong tên gọi, methyl biểu thị gốc –CH₃O– có nguồn gốc từ methanol, còn benzoate biểu thị phần gốc acid có nguồn gốc từ benzoic acid.')">Methyl benzoate là ester được tạo thành từ benzoic acid và methanol. Công thức cấu tạo của chất là C₆H₅COOCH₃. Trong tên gọi, methyl biểu thị gốc –CH₃O– có nguồn gốc từ methanol, còn benzoate biểu thị phần gốc acid có nguồn gốc từ benzoic acid.</div><div class="clickable-paragraph" id="exp_5_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Methyl benzoate có nhóm chức ester –COO– liên kết với vòng benzene. Đây là ví dụ quan trọng giúp học sinh nhận biết rằng gốc R trong công thức RCOOR\' không nhất thiết phải là gốc alkyl mạch hở mà có thể là gốc thơm.')">Methyl benzoate có nhóm chức ester –COO– liên kết với vòng benzene. Đây là ví dụ quan trọng giúp học sinh nhận biết rằng gốc R trong công thức RCOOR' không nhất thiết phải là gốc alkyl mạch hở mà có thể là gốc thơm.</div><div class="clickable-paragraph" id="exp_5_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Giống nhiều ester khác, methyl benzoate có thể tham gia phản ứng thủy phân. Khi thủy phân trong môi trường acid, sản phẩm tương ứng là benzoic acid và methanol. Khi thủy phân trong môi trường base, sản phẩm là muối benzoate và methanol.')">Giống nhiều ester khác, methyl benzoate có thể tham gia phản ứng thủy phân. Khi thủy phân trong môi trường acid, sản phẩm tương ứng là benzoic acid và methanol. Khi thủy phân trong môi trường base, sản phẩm là muối benzoate và methanol.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Methyl benzoate')">Methyl benzoate</span><span class="tag" onclick="searchGoogle('Benzoate')">Benzoate</span><span class="tag" onclick="searchGoogle('Benzene')">Benzene</span><span class="tag" onclick="searchGoogle('Methanol')">Methanol</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-6">
+                        <h2 id="exp_title_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(6)" title="Đọc tiêu đề">7. Methyl acrylate</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Methyl_acrylate_molecule_ball.png?utm_source=en.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_6_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Methyl acrylate có công thức CH₂=CHCOOCH₃.')">Methyl acrylate có công thức CH₂=CHCOOCH₃.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_6_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Methyl acrylate là ester có công thức CH₂=CHCOOCH₃, được tạo thành từ acrylic acid và methanol. Phân tử chứa đồng thời nhóm chức ester –COO– và liên kết đôi C=C trong gốc hydrocarbon.')">Methyl acrylate là ester có công thức CH₂=CHCOOCH₃, được tạo thành từ acrylic acid và methanol. Phân tử chứa đồng thời nhóm chức ester –COO– và liên kết đôi C=C trong gốc hydrocarbon.</div><div class="clickable-paragraph" id="exp_6_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Tên methyl acrylate gồm methyl, chỉ gốc hydrocarbon có nguồn gốc từ methanol, và acrylate, chỉ gốc acid có nguồn gốc từ acrylic acid. Sự xuất hiện của liên kết đôi C=C làm cho methyl acrylate khác với những ester no như methyl acetate.')">Tên methyl acrylate gồm methyl, chỉ gốc hydrocarbon có nguồn gốc từ methanol, và acrylate, chỉ gốc acid có nguồn gốc từ acrylic acid. Sự xuất hiện của liên kết đôi C=C làm cho methyl acrylate khác với những ester no như methyl acetate.</div><div class="clickable-paragraph" id="exp_6_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Methyl acrylate là ví dụ giúp học sinh luyện tập cách đọc tên và viết công thức cấu tạo ester có chứa liên kết đôi. Ngoài phản ứng thủy phân đặc trưng của ester, liên kết đôi trong phân tử còn có thể tham gia những phản ứng hóa học đặc trưng của alkene. Vì vậy, khi phân tích một ester, cần xem xét cả nhóm chức ester và các nhóm chức hoặc liên kết khác có trong phân tử.')">Methyl acrylate là ví dụ giúp học sinh luyện tập cách đọc tên và viết công thức cấu tạo ester có chứa liên kết đôi. Ngoài phản ứng thủy phân đặc trưng của ester, liên kết đôi trong phân tử còn có thể tham gia những phản ứng hóa học đặc trưng của alkene. Vì vậy, khi phân tích một ester, cần xem xét cả nhóm chức ester và các nhóm chức hoặc liên kết khác có trong phân tử.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Methyl acrylate')">Methyl acrylate</span><span class="tag" onclick="searchGoogle('Acrylate')">Acrylate</span><span class="tag" onclick="searchGoogle('Alkene')">Alkene</span><span class="tag" onclick="searchGoogle('Methyl')">Methyl</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-7">
+                        <h2 id="exp_title_7" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(7)" title="Đọc tiêu đề">8. Tính chất vật lí của ester</h2>
+                        <img src="https://sudospaces.com/vietchem/2023/05/ung-dung-cua-este-1.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_7_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Ester thường là chất lỏng, ít tan trong nước và có mùi đặc trưng.')">Ester thường là chất lỏng, ít tan trong nước và có mùi đặc trưng.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_7_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Ester thường có nhiệt độ sôi tương đối thấp, nhiều ester ở điều kiện thường là chất lỏng, nhẹ hơn nước và ít tan trong nước. Nhiều ester có mùi thơm dễ chịu nên được sử dụng trong công nghiệp thực phẩm và sản xuất hương liệu.')">Ester thường có nhiệt độ sôi tương đối thấp, nhiều ester ở điều kiện thường là chất lỏng, nhẹ hơn nước và ít tan trong nước. Nhiều ester có mùi thơm dễ chịu nên được sử dụng trong công nghiệp thực phẩm và sản xuất hương liệu.</div><div class="clickable-paragraph" id="exp_7_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Ester không tạo được liên kết hydrogen giữa các phân tử ester vì nguyên tử oxygen không liên kết trực tiếp với hydrogen. Vì vậy, với các chất có phân tử khối tương đương, ester thường có nhiệt độ sôi thấp hơn alcohol và carboxylic acid. Carboxylic acid và alcohol có khả năng tạo liên kết hydrogen nên lực tương tác giữa các phân tử mạnh hơn.')">Ester không tạo được liên kết hydrogen giữa các phân tử ester vì nguyên tử oxygen không liên kết trực tiếp với hydrogen. Vì vậy, với các chất có phân tử khối tương đương, ester thường có nhiệt độ sôi thấp hơn alcohol và carboxylic acid. Carboxylic acid và alcohol có khả năng tạo liên kết hydrogen nên lực tương tác giữa các phân tử mạnh hơn.</div><div class="clickable-paragraph" id="exp_7_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Một số ester có mùi đặc trưng giống mùi hoa quả. Ví dụ CH₃CH₂CH₂COOC₂H₅ có mùi thơm của dứa chín. Đặc điểm về mùi và độ tan làm ester trở thành nhóm chất có nhiều ứng dụng trong hương liệu, mỹ phẩm và công nghiệp thực phẩm.')">Một số ester có mùi đặc trưng giống mùi hoa quả. Ví dụ CH₃CH₂CH₂COOC₂H₅ có mùi thơm của dứa chín. Đặc điểm về mùi và độ tan làm ester trở thành nhóm chất có nhiều ứng dụng trong hương liệu, mỹ phẩm và công nghiệp thực phẩm.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Physical properties')">Physical properties</span><span class="tag" onclick="searchGoogle('Boiling point')">Boiling point</span><span class="tag" onclick="searchGoogle('Solubility')">Solubility</span><span class="tag" onclick="searchGoogle('Odor')">Odor</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-8">
+                        <h2 id="exp_title_8" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(8)" title="Đọc tiêu đề">9. Nhiệt độ sôi của ester</h2>
+                        <img src="https://vietjack.com/sbt-hoa-hoc-12-ct/images/cau-ot1-22-trang-25-sbt-hoa-hoc-12.PNG" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_8_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Ester thường có nhiệt độ sôi thấp hơn alcohol và carboxylic acid có cùng phân tử khối.')">Ester thường có nhiệt độ sôi thấp hơn alcohol và carboxylic acid có cùng phân tử khối.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_8_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Nhiệt độ sôi của ester thường thấp hơn alcohol và carboxylic acid có cùng hoặc gần tương đương phân tử khối. Nguyên nhân chính là ester không tạo được liên kết hydrogen giữa các phân tử như alcohol và carboxylic acid.')">Nhiệt độ sôi của ester thường thấp hơn alcohol và carboxylic acid có cùng hoặc gần tương đương phân tử khối. Nguyên nhân chính là ester không tạo được liên kết hydrogen giữa các phân tử như alcohol và carboxylic acid.</div><div class="clickable-paragraph" id="exp_8_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Khi so sánh nhiệt độ sôi của methyl acetate, butan-1-ol và propanoic acid, methyl acetate có nhiệt độ sôi thấp nhất. Butan-1-ol có liên kết hydrogen nên nhiệt độ sôi cao hơn ester. Propanoic acid tạo liên kết hydrogen rất mạnh và có thể tạo dimer, vì vậy nhiệt độ sôi cao nhất trong ba chất.')">Khi so sánh nhiệt độ sôi của methyl acetate, butan-1-ol và propanoic acid, methyl acetate có nhiệt độ sôi thấp nhất. Butan-1-ol có liên kết hydrogen nên nhiệt độ sôi cao hơn ester. Propanoic acid tạo liên kết hydrogen rất mạnh và có thể tạo dimer, vì vậy nhiệt độ sôi cao nhất trong ba chất.</div><div class="clickable-paragraph" id="exp_8_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Thứ tự tăng dần nhiệt độ sôi phù hợp là methyl acetate')">Thứ tự tăng dần nhiệt độ sôi phù hợp là methyl acetate &lt; butan-1-ol &lt; propanoic acid. Đây là dạng bài tập giúp học sinh liên hệ giữa cấu tạo phân tử, lực tương tác giữa các phân tử và tính chất vật lí. Khi giải, cần xác định khả năng tạo liên kết hydrogen trước khi so sánh nhiệt độ sôi.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Boiling point')">Boiling point</span><span class="tag" onclick="searchGoogle('Boiling point')">Boiling point</span><span class="tag" onclick="searchGoogle('Hydrogen bond')">Hydrogen bond</span><span class="tag" onclick="searchGoogle('Molecular mass')">Molecular mass</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-9">
+                        <h2 id="exp_title_9" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(9)" title="Đọc tiêu đề">10. Thủy phân ester trong môi trường acid</h2>
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6Q8WzeFa2ow8WOLRn49LTqbDotWPlLvSmEUMnrwYffbmxDta0eit-Fps&amp;s=10" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_9_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Ester thủy phân trong môi trường acid tạo alcohol và carboxylic acid.')">Ester thủy phân trong môi trường acid tạo alcohol và carboxylic acid.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_9_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Phản ứng thủy phân ester trong môi trường acid là phản ứng thuận nghịch. Ester phản ứng với nước khi có xúc tác acid, thường sử dụng H₂SO₄, tạo thành alcohol và carboxylic acid tương ứng.')">Phản ứng thủy phân ester trong môi trường acid là phản ứng thuận nghịch. Ester phản ứng với nước khi có xúc tác acid, thường sử dụng H₂SO₄, tạo thành alcohol và carboxylic acid tương ứng.</div><div class="clickable-paragraph" id="exp_9_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Ví dụ: CH₃COOCH₂CH₃ + H₂O ⇌ CH₃COOH + CH₃CH₂OH. Trong phản ứng này, ethyl acetate tạo acetic acid và ethanol. Phản ứng thường được thực hiện bằng cách đun nóng nhẹ để tăng tốc độ phản ứng.')">Ví dụ: CH₃COOCH₂CH₃ + H₂O ⇌ CH₃COOH + CH₃CH₂OH. Trong phản ứng này, ethyl acetate tạo acetic acid và ethanol. Phản ứng thường được thực hiện bằng cách đun nóng nhẹ để tăng tốc độ phản ứng.</div><div class="clickable-paragraph" id="exp_9_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Thủy phân ester trong môi trường acid không đi hoàn toàn theo một chiều vì có thể xảy ra phản ứng ester hóa ngược. Do đó, phương trình được biểu diễn bằng dấu ⇌. Khi làm bài tập, cần xác định hai phần của ester: phần acyl tạo carboxylic acid và phần alkoxy tạo alcohol. Đây là phản ứng quan trọng để xác định cấu tạo và điều chế ester.')">Thủy phân ester trong môi trường acid không đi hoàn toàn theo một chiều vì có thể xảy ra phản ứng ester hóa ngược. Do đó, phương trình được biểu diễn bằng dấu ⇌. Khi làm bài tập, cần xác định hai phần của ester: phần acyl tạo carboxylic acid và phần alkoxy tạo alcohol. Đây là phản ứng quan trọng để xác định cấu tạo và điều chế ester.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Acid hydrolysis')">Acid hydrolysis</span><span class="tag" onclick="searchGoogle('Hydrolysis')">Hydrolysis</span><span class="tag" onclick="searchGoogle('Ester')">Ester</span><span class="tag" onclick="searchGoogle('Carboxylic acid')">Carboxylic acid</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-10">
+                        <h2 id="exp_title_10" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(10)" title="Đọc tiêu đề">11. Thí nghiệm thủy phân ester trong môi trường acid</h2>
+                        <img src="https://i.ytimg.com/vi/NSn8R3KF5mk/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AH-CYAC0AWKAgwIABABGGUgZShlMA8=&amp;rs=AOn4CLCLnRc4ft-zj7S7dvGNPe0auFR83w" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_10_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Thủy phân ethyl acetate bằng H₂SO₄ loãng ở 60–70 °C tạo acetic acid và ethanol.')">Thủy phân ethyl acetate bằng H₂SO₄ loãng ở 60–70 °C tạo acetic acid và ethanol.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_10_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Trong thí nghiệm thủy phân ester trong môi trường acid, cho khoảng 1 mL ethyl acetate vào ống nghiệm rồi thêm dung dịch H₂SO₄ 20%. Hỗn hợp được đun cách thủy ở khoảng 60–70 °C để thúc đẩy phản ứng.')">Trong thí nghiệm thủy phân ester trong môi trường acid, cho khoảng 1 mL ethyl acetate vào ống nghiệm rồi thêm dung dịch H₂SO₄ 20%. Hỗn hợp được đun cách thủy ở khoảng 60–70 °C để thúc đẩy phản ứng.</div><div class="clickable-paragraph" id="exp_10_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Phản ứng xảy ra theo phương trình: CH₃COOCH₂CH₃ + H₂O ⇌ CH₃COOH + CH₃CH₂OH. H₂SO₄ đóng vai trò xúc tác acid và không phải là chất tạo thành sản phẩm chính.')">Phản ứng xảy ra theo phương trình: CH₃COOCH₂CH₃ + H₂O ⇌ CH₃COOH + CH₃CH₂OH. H₂SO₄ đóng vai trò xúc tác acid và không phải là chất tạo thành sản phẩm chính.</div><div class="clickable-paragraph" id="exp_10_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Thí nghiệm minh họa tính chất hóa học đặc trưng của ester. Sau phản ứng, ester bị phân cắt tạo alcohol và carboxylic acid tương ứng. Khi tiến hành thí nghiệm cần tuân thủ quy tắc an toàn phòng thí nghiệm, đặc biệt khi làm việc với acid và khi đun nóng. Cách đun cách thủy giúp hỗn hợp được gia nhiệt tương đối đều và hạn chế nguy cơ đun trực tiếp chất dễ bay hơi.')">Thí nghiệm minh họa tính chất hóa học đặc trưng của ester. Sau phản ứng, ester bị phân cắt tạo alcohol và carboxylic acid tương ứng. Khi tiến hành thí nghiệm cần tuân thủ quy tắc an toàn phòng thí nghiệm, đặc biệt khi làm việc với acid và khi đun nóng. Cách đun cách thủy giúp hỗn hợp được gia nhiệt tương đối đều và hạn chế nguy cơ đun trực tiếp chất dễ bay hơi.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Acid hydrolysis experiment')">Acid hydrolysis experiment</span><span class="tag" onclick="searchGoogle('Ethyl acetate')">Ethyl acetate</span><span class="tag" onclick="searchGoogle('Sulfuric acid')">Sulfuric acid</span><span class="tag" onclick="searchGoogle('Water bath')">Water bath</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-11">
+                        <h2 id="exp_title_11" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(11)" title="Đọc tiêu đề">12. Thủy phân ester trong môi trường base</h2>
+                        <img src="https://i.ytimg.com/vi/l_WuC4vpTsY/hqdefault.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_11_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Ester thủy phân với NaOH hoặc KOH tạo muối carboxylate và alcohol.')">Ester thủy phân với NaOH hoặc KOH tạo muối carboxylate và alcohol.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_11_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Thủy phân ester trong môi trường base thường được gọi là phản ứng xà phòng hóa đối với chất béo. Ester phản ứng với dung dịch NaOH hoặc KOH khi đun nóng, tạo muối carboxylate và alcohol. Khác với thủy phân trong môi trường acid, phản ứng trong môi trường base thường được xem là xảy ra theo chiều hoàn toàn.')">Thủy phân ester trong môi trường base thường được gọi là phản ứng xà phòng hóa đối với chất béo. Ester phản ứng với dung dịch NaOH hoặc KOH khi đun nóng, tạo muối carboxylate và alcohol. Khác với thủy phân trong môi trường acid, phản ứng trong môi trường base thường được xem là xảy ra theo chiều hoàn toàn.</div><div class="clickable-paragraph" id="exp_11_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Ví dụ: CH₃COOCH₂CH₃ + NaOH → CH₃COONa + CH₃CH₂OH. Ethyl acetate tạo sodium acetate và ethanol.')">Ví dụ: CH₃COOCH₂CH₃ + NaOH → CH₃COONa + CH₃CH₂OH. Ethyl acetate tạo sodium acetate và ethanol.</div><div class="clickable-paragraph" id="exp_11_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Khi làm bài tập, cần xác định đúng kim loại trong base để viết muối tương ứng. Nếu dùng NaOH thì sản phẩm muối thường chứa Na; nếu dùng KOH thì sản phẩm muối chứa K. Phản ứng thủy phân base là cơ sở của quá trình xà phòng hóa chất béo để sản xuất xà phòng và glycerol.')">Khi làm bài tập, cần xác định đúng kim loại trong base để viết muối tương ứng. Nếu dùng NaOH thì sản phẩm muối thường chứa Na; nếu dùng KOH thì sản phẩm muối chứa K. Phản ứng thủy phân base là cơ sở của quá trình xà phòng hóa chất béo để sản xuất xà phòng và glycerol.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Base hydrolysis')">Base hydrolysis</span><span class="tag" onclick="searchGoogle('Saponification')">Saponification</span><span class="tag" onclick="searchGoogle('Sodium hydroxide')">Sodium hydroxide</span><span class="tag" onclick="searchGoogle('Carboxylate')">Carboxylate</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-12">
+                        <h2 id="exp_title_12" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(12)" title="Đọc tiêu đề">13. Điều chế ester</h2>
+                        <img src="https://www.chemistrylearner.com/wp-content/uploads/2025/01/Esterification.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_12_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Ester được điều chế bằng phản ứng giữa carboxylic acid và alcohol có H₂SO₄ đặc xúc tác.')">Ester được điều chế bằng phản ứng giữa carboxylic acid và alcohol có H₂SO₄ đặc xúc tác.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_12_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Phương pháp phổ biến điều chế ester là phản ứng ester hóa giữa carboxylic acid và alcohol với xúc tác H₂SO₄ đặc và đun nóng. Phương trình tổng quát: RCOOH + R\'OH ⇌ RCOOR\' + H₂O.')">Phương pháp phổ biến điều chế ester là phản ứng ester hóa giữa carboxylic acid và alcohol với xúc tác H₂SO₄ đặc và đun nóng. Phương trình tổng quát: RCOOH + R'OH ⇌ RCOOR' + H₂O.</div><div class="clickable-paragraph" id="exp_12_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Ví dụ, acetic acid phản ứng với ethanol tạo ethyl acetate: CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O. H₂SO₄ đặc vừa đóng vai trò xúc tác vừa giúp thuận lợi cho quá trình tạo ester.')">Ví dụ, acetic acid phản ứng với ethanol tạo ethyl acetate: CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O. H₂SO₄ đặc vừa đóng vai trò xúc tác vừa giúp thuận lợi cho quá trình tạo ester.</div><div class="clickable-paragraph" id="exp_12_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Phản ứng ester hóa là phản ứng thuận nghịch nên hiệu suất thường nhỏ hơn 100%. Muốn tăng lượng ester có thể sử dụng dư một trong các chất phản ứng hoặc loại nước ra khỏi hệ phản ứng. Khi tính hiệu suất, cần xác định chất giới hạn, tính số mol ester lý thuyết rồi so sánh với lượng ester thực tế thu được.')">Phản ứng ester hóa là phản ứng thuận nghịch nên hiệu suất thường nhỏ hơn 100%. Muốn tăng lượng ester có thể sử dụng dư một trong các chất phản ứng hoặc loại nước ra khỏi hệ phản ứng. Khi tính hiệu suất, cần xác định chất giới hạn, tính số mol ester lý thuyết rồi so sánh với lượng ester thực tế thu được.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Esterification')">Esterification</span><span class="tag" onclick="searchGoogle('Carboxylic acid')">Carboxylic acid</span><span class="tag" onclick="searchGoogle('Alcohol')">Alcohol</span><span class="tag" onclick="searchGoogle('Sulfuric acid')">Sulfuric acid</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-13">
+                        <h2 id="exp_title_13" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(13)" title="Đọc tiêu đề">14. Hiệu suất phản ứng ester hóa</h2>
+                        <img src="https://img.loigiaihay.com/picture/2025/0312/1741747636553-mceclip0.png" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_13_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Hiệu suất = lượng ester thực tế chia lượng ester lý thuyết nhân 100%.')">Hiệu suất = lượng ester thực tế chia lượng ester lý thuyết nhân 100%.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_13_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Trong bài toán ester hóa, hiệu suất phản ứng được xác định bằng tỉ lệ giữa lượng sản phẩm thực tế và lượng sản phẩm lý thuyết. Ví dụ, khi cho 16,2 g acetic acid và 9,2 g ethanol phản ứng, cần đổi khối lượng từng chất sang số mol. Acetic acid có M = 60 g/mol nên có 0,27 mol; ethanol có M = 46 g/mol nên có 0,20 mol. Theo phương trình phản ứng, tỉ lệ mol giữa acid, alcohol và ester là 1:1:1, do đó ethanol là chất giới hạn.')">Trong bài toán ester hóa, hiệu suất phản ứng được xác định bằng tỉ lệ giữa lượng sản phẩm thực tế và lượng sản phẩm lý thuyết. Ví dụ, khi cho 16,2 g acetic acid và 9,2 g ethanol phản ứng, cần đổi khối lượng từng chất sang số mol. Acetic acid có M = 60 g/mol nên có 0,27 mol; ethanol có M = 46 g/mol nên có 0,20 mol. Theo phương trình phản ứng, tỉ lệ mol giữa acid, alcohol và ester là 1:1:1, do đó ethanol là chất giới hạn.</div><div class="clickable-paragraph" id="exp_13_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Lượng ethyl acetate lý thuyết là 0,20 mol. Với M ethyl acetate = 88 g/mol, khối lượng lý thuyết là 17,6 g. Nếu thực tế thu được 14,08 g thì hiệu suất là 14,08/17,6 × 100% = 80%. Đây là phương pháp chuẩn để giải các bài toán hiệu suất ester hóa.')">Lượng ethyl acetate lý thuyết là 0,20 mol. Với M ethyl acetate = 88 g/mol, khối lượng lý thuyết là 17,6 g. Nếu thực tế thu được 14,08 g thì hiệu suất là 14,08/17,6 × 100% = 80%. Đây là phương pháp chuẩn để giải các bài toán hiệu suất ester hóa.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('80%')">80%</span><span class="tag" onclick="searchGoogle('Reaction yield')">Reaction yield</span><span class="tag" onclick="searchGoogle('Theoretical yield')">Theoretical yield</span><span class="tag" onclick="searchGoogle('Ethyl acetate')">Ethyl acetate</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-14">
+                        <h2 id="exp_title_14" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(14)" title="Đọc tiêu đề">15. Ứng dụng của ester</h2>
+                        <img src="https://www.online-sciences.com/wp-content/uploads/2018/10/Uses-of-esters-1200x900.webp" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_14_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Ester được dùng làm dung môi, hương liệu, chất tạo mùi và nguyên liệu công nghiệp.')">Ester được dùng làm dung môi, hương liệu, chất tạo mùi và nguyên liệu công nghiệp.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_14_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Ester có nhiều ứng dụng trong đời sống và sản xuất nhờ tính chất vật lí đặc trưng như dễ bay hơi, ít tan trong nước, có khả năng hòa tan nhiều chất hữu cơ và thường có mùi đặc trưng.')">Ester có nhiều ứng dụng trong đời sống và sản xuất nhờ tính chất vật lí đặc trưng như dễ bay hơi, ít tan trong nước, có khả năng hòa tan nhiều chất hữu cơ và thường có mùi đặc trưng.</div><div class="clickable-paragraph" id="exp_14_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Một số ester được sử dụng làm dung môi trong công nghiệp sơn, mực in, chất tẩy rửa và phòng thí nghiệm. Nhiều ester có mùi thơm giống hoa quả hoặc hoa nên được dùng làm hương liệu trong thực phẩm, mỹ phẩm và nước hoa. Ester cũng là nguyên liệu hoặc sản phẩm trung gian trong quá trình tổng hợp nhiều hợp chất hữu cơ.')">Một số ester được sử dụng làm dung môi trong công nghiệp sơn, mực in, chất tẩy rửa và phòng thí nghiệm. Nhiều ester có mùi thơm giống hoa quả hoặc hoa nên được dùng làm hương liệu trong thực phẩm, mỹ phẩm và nước hoa. Ester cũng là nguyên liệu hoặc sản phẩm trung gian trong quá trình tổng hợp nhiều hợp chất hữu cơ.</div><div class="clickable-paragraph" id="exp_14_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Ethyl acetate là một dung môi hữu cơ phổ biến. Một số ester có mùi đặc trưng được dùng để tạo hương nhân tạo cho sản phẩm. Ngoài ra, ester còn có vai trò quan trọng trong sản xuất polymer, chất hóa dẻo và nhiều vật liệu hữu cơ. Việc lựa chọn ester phụ thuộc vào cấu tạo và tính chất của từng chất.')">Ethyl acetate là một dung môi hữu cơ phổ biến. Một số ester có mùi đặc trưng được dùng để tạo hương nhân tạo cho sản phẩm. Ngoài ra, ester còn có vai trò quan trọng trong sản xuất polymer, chất hóa dẻo và nhiều vật liệu hữu cơ. Việc lựa chọn ester phụ thuộc vào cấu tạo và tính chất của từng chất.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Ester applications')">Ester applications</span><span class="tag" onclick="searchGoogle('Solvent')">Solvent</span><span class="tag" onclick="searchGoogle('Flavor')">Flavor</span><span class="tag" onclick="searchGoogle('Fragrance')">Fragrance</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-15">
+                        <h2 id="exp_title_15" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(15)" title="Đọc tiêu đề">16. Lipid</h2>
+                        <img src="https://www.thoughtco.com/thmb/603XFYSJWJKA2G4EfBkiYGkSqgQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/oil_and_water-56a09afd3df78cafdaa32d18.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_15_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Lipid là hợp chất hữu cơ không tan trong nước nhưng tan trong dung môi không phân cực.')">Lipid là hợp chất hữu cơ không tan trong nước nhưng tan trong dung môi không phân cực.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_15_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Lipid là nhóm hợp chất hữu cơ có trong tế bào sống, đặc trưng bởi khả năng không tan hoặc ít tan trong nước nhưng tan tốt trong các dung môi không phân cực. Lipid bao gồm nhiều nhóm chất khác nhau, trong đó chất béo là một loại lipid quan trọng.')">Lipid là nhóm hợp chất hữu cơ có trong tế bào sống, đặc trưng bởi khả năng không tan hoặc ít tan trong nước nhưng tan tốt trong các dung môi không phân cực. Lipid bao gồm nhiều nhóm chất khác nhau, trong đó chất béo là một loại lipid quan trọng.</div><div class="clickable-paragraph" id="exp_15_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Lipid có vai trò đa dạng trong cơ thể sống. Chúng tham gia cấu tạo màng tế bào, dự trữ năng lượng và hỗ trợ nhiều quá trình sinh học. Một số lipid còn là tiền chất hoặc thành phần của các hợp chất sinh học quan trọng.')">Lipid có vai trò đa dạng trong cơ thể sống. Chúng tham gia cấu tạo màng tế bào, dự trữ năng lượng và hỗ trợ nhiều quá trình sinh học. Một số lipid còn là tiền chất hoặc thành phần của các hợp chất sinh học quan trọng.</div><div class="clickable-paragraph" id="exp_15_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Trong chương trình Hóa học 12, nội dung lipid tập trung nhiều vào chất béo, acid béo, phản ứng thủy phân, hydrogen hóa và oxi hóa. Đặc điểm chung về độ tan giúp phân biệt lipid với nhiều hợp chất hữu cơ phân cực khác. Khi học về lipid, cần phân biệt khái niệm lipid rộng với chất béo là một nhóm cụ thể thuộc lipid.')">Trong chương trình Hóa học 12, nội dung lipid tập trung nhiều vào chất béo, acid béo, phản ứng thủy phân, hydrogen hóa và oxi hóa. Đặc điểm chung về độ tan giúp phân biệt lipid với nhiều hợp chất hữu cơ phân cực khác. Khi học về lipid, cần phân biệt khái niệm lipid rộng với chất béo là một nhóm cụ thể thuộc lipid.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Lipid')">Lipid</span><span class="tag" onclick="searchGoogle('Lipid')">Lipid</span><span class="tag" onclick="searchGoogle('Nonpolar solvent')">Nonpolar solvent</span><span class="tag" onclick="searchGoogle('Biomolecule')">Biomolecule</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-16">
+                        <h2 id="exp_title_16" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(16)" title="Đọc tiêu đề">17. Chất béo</h2>
+                        <img src="https://vitadairy.vn/s/images/post/chat-beo-la-gi.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_16_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, 'Chất béo là triester của glycerol với các acid béo.')">Chất béo là triester của glycerol với các acid béo.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_16_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, 'Chất béo là một loại lipid, về mặt hóa học là triester của glycerol với acid béo. Phân tử chất béo có một gốc glycerol liên kết với ba gốc acid béo thông qua ba nhóm chức ester.')">Chất béo là một loại lipid, về mặt hóa học là triester của glycerol với acid béo. Phân tử chất béo có một gốc glycerol liên kết với ba gốc acid béo thông qua ba nhóm chức ester.</div><div class="clickable-paragraph" id="exp_16_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, 'Công thức tổng quát có thể biểu diễn dạng (RCOO)₃C₃H₅ khi cả ba gốc acid béo giống nhau. Nếu ba gốc acid béo khác nhau, cấu trúc chất béo phức tạp hơn nhưng vẫn có bản chất là triester của glycerol.')">Công thức tổng quát có thể biểu diễn dạng (RCOO)₃C₃H₅ khi cả ba gốc acid béo giống nhau. Nếu ba gốc acid béo khác nhau, cấu trúc chất béo phức tạp hơn nhưng vẫn có bản chất là triester của glycerol.</div><div class="clickable-paragraph" id="exp_16_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, 'Chất béo thường được tìm thấy trong mỡ động vật và dầu thực vật. Chất béo no thường chứa nhiều gốc acid béo no và thường ở trạng thái rắn; chất béo không no chứa gốc acid béo có liên kết đôi và thường ở trạng thái lỏng. Chất béo có vai trò cung cấp và dự trữ năng lượng, đồng thời là nguyên liệu quan trọng trong sản xuất xà phòng, glycerol và nhiều sản phẩm công nghiệp.')">Chất béo thường được tìm thấy trong mỡ động vật và dầu thực vật. Chất béo no thường chứa nhiều gốc acid béo no và thường ở trạng thái rắn; chất béo không no chứa gốc acid béo có liên kết đôi và thường ở trạng thái lỏng. Chất béo có vai trò cung cấp và dự trữ năng lượng, đồng thời là nguyên liệu quan trọng trong sản xuất xà phòng, glycerol và nhiều sản phẩm công nghiệp.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Fat')">Fat</span><span class="tag" onclick="searchGoogle('Triglyceride')">Triglyceride</span><span class="tag" onclick="searchGoogle('Glycerol')">Glycerol</span><span class="tag" onclick="searchGoogle('Fatty acid')">Fatty acid</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-17">
+                        <h2 id="exp_title_17" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(17)" title="Đọc tiêu đề">18. Acid béo</h2>
+                        <img src="https://nutrihome.vn/wp-content/uploads/2024/02/cac-axit-beo.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_17_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, 'Acid béo là carboxylic acid đơn chức, mạch dài, không phân nhánh.')">Acid béo là carboxylic acid đơn chức, mạch dài, không phân nhánh.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_17_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, 'Acid béo là các carboxylic acid đơn chức có mạch carbon dài, không phân nhánh và thường có số nguyên tử carbon chẵn. Gốc hydrocarbon của acid béo có thể no hoặc không no.')">Acid béo là các carboxylic acid đơn chức có mạch carbon dài, không phân nhánh và thường có số nguyên tử carbon chẵn. Gốc hydrocarbon của acid béo có thể no hoặc không no.</div><div class="clickable-paragraph" id="exp_17_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, 'Acid béo no chỉ chứa các liên kết đơn C–C trong mạch hydrocarbon. Hai acid béo no thường gặp là palmitic acid CH₃(CH₂)₁₄COOH và stearic acid CH₃(CH₂)₁₆COOH. Acid béo không no chứa một hoặc nhiều liên kết đôi C=C, chẳng hạn oleic acid và linoleic acid.')">Acid béo no chỉ chứa các liên kết đơn C–C trong mạch hydrocarbon. Hai acid béo no thường gặp là palmitic acid CH₃(CH₂)₁₄COOH và stearic acid CH₃(CH₂)₁₆COOH. Acid béo không no chứa một hoặc nhiều liên kết đôi C=C, chẳng hạn oleic acid và linoleic acid.</div><div class="clickable-paragraph" id="exp_17_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, 'Acid béo là thành phần quan trọng cấu tạo nên chất béo. Tính chất của chất béo phụ thuộc đáng kể vào loại acid béo tạo thành. Gốc acid béo càng chứa nhiều liên kết đôi thì chất béo càng có xu hướng ở trạng thái lỏng và dễ bị oxi hóa. Một số acid béo không no như omega-3 và omega-6 có vai trò sinh học quan trọng.')">Acid béo là thành phần quan trọng cấu tạo nên chất béo. Tính chất của chất béo phụ thuộc đáng kể vào loại acid béo tạo thành. Gốc acid béo càng chứa nhiều liên kết đôi thì chất béo càng có xu hướng ở trạng thái lỏng và dễ bị oxi hóa. Một số acid béo không no như omega-3 và omega-6 có vai trò sinh học quan trọng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Fatty acid')">Fatty acid</span><span class="tag" onclick="searchGoogle('Carboxylic acid')">Carboxylic acid</span><span class="tag" onclick="searchGoogle('Hydrocarbon')">Hydrocarbon</span><span class="tag" onclick="searchGoogle('Carbon chain')">Carbon chain</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-18">
+                        <h2 id="exp_title_18" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(18)" title="Đọc tiêu đề">19. Acid béo no</h2>
+                        <img src="https://cdn.nhathuoclongchau.com.vn/v1/static/axit_beo_no_la_gi_dc421f96c9.jpeg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_18_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, 'Acid béo no chỉ chứa liên kết đơn C–C trong mạch hydrocarbon.')">Acid béo no chỉ chứa liên kết đơn C–C trong mạch hydrocarbon.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_18_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, 'Acid béo no là carboxylic acid đơn chức có mạch hydrocarbon dài, không phân nhánh và không chứa liên kết đôi C=C. Hai acid béo no thường gặp là palmitic acid có công thức CH₃(CH₂)₁₄COOH và stearic acid có công thức CH₃(CH₂)₁₆COOH.')">Acid béo no là carboxylic acid đơn chức có mạch hydrocarbon dài, không phân nhánh và không chứa liên kết đôi C=C. Hai acid béo no thường gặp là palmitic acid có công thức CH₃(CH₂)₁₄COOH và stearic acid có công thức CH₃(CH₂)₁₆COOH.</div><div class="clickable-paragraph" id="exp_18_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, 'Do không có liên kết đôi, gốc hydrocarbon của acid béo no có cấu trúc tương đối thẳng và có thể xếp chặt. Vì vậy, chất béo chứa nhiều gốc acid béo no thường có nhiệt độ nóng chảy cao hơn và thường tồn tại ở trạng thái rắn ở điều kiện thường, ví dụ mỡ lợn và mỡ bò.')">Do không có liên kết đôi, gốc hydrocarbon của acid béo no có cấu trúc tương đối thẳng và có thể xếp chặt. Vì vậy, chất béo chứa nhiều gốc acid béo no thường có nhiệt độ nóng chảy cao hơn và thường tồn tại ở trạng thái rắn ở điều kiện thường, ví dụ mỡ lợn và mỡ bò.</div><div class="clickable-paragraph" id="exp_18_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, 'Acid béo no có thể tham gia phản ứng tạo chất béo và phản ứng thủy phân ngược thông qua các ester tương ứng. Khi học chất béo, cần nhận biết acid béo no dựa vào sự vắng mặt của liên kết đôi C=C trong mạch hydrocarbon.')">Acid béo no có thể tham gia phản ứng tạo chất béo và phản ứng thủy phân ngược thông qua các ester tương ứng. Khi học chất béo, cần nhận biết acid béo no dựa vào sự vắng mặt của liên kết đôi C=C trong mạch hydrocarbon.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Saturated fatty acid')">Saturated fatty acid</span><span class="tag" onclick="searchGoogle('Palmitic acid')">Palmitic acid</span><span class="tag" onclick="searchGoogle('Stearic acid')">Stearic acid</span><span class="tag" onclick="searchGoogle('Saturated fat')">Saturated fat</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-19">
+                        <h2 id="exp_title_19" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(19)" title="Đọc tiêu đề">20. Acid béo không no</h2>
+                        <img src="https://www.medigoapp.com/uploads/axit_beo_2_ca4850b165.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_19_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, 'Acid béo không no chứa một hoặc nhiều liên kết đôi C=C.')">Acid béo không no chứa một hoặc nhiều liên kết đôi C=C.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_19_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, 'Acid béo không no là acid béo có một hoặc nhiều liên kết đôi C=C trong mạch hydrocarbon. Oleic acid có một liên kết đôi với công thức CH₃(CH₂)₇CH=CH(CH₂)₇COOH. Linoleic acid có hai liên kết đôi với công thức CH₃(CH₂)₄CH=CHCH₂CH=CH(CH₂)₇COOH.')">Acid béo không no là acid béo có một hoặc nhiều liên kết đôi C=C trong mạch hydrocarbon. Oleic acid có một liên kết đôi với công thức CH₃(CH₂)₇CH=CH(CH₂)₇COOH. Linoleic acid có hai liên kết đôi với công thức CH₃(CH₂)₄CH=CHCH₂CH=CH(CH₂)₇COOH.</div><div class="clickable-paragraph" id="exp_19_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, 'Sự xuất hiện của liên kết đôi làm mạch hydrocarbon khó xếp chặt, vì vậy chất béo chứa nhiều gốc acid béo không no thường tồn tại ở trạng thái lỏng, được gọi phổ biến là dầu. Dầu thực vật và dầu cá thường chứa nhiều acid béo không no.')">Sự xuất hiện của liên kết đôi làm mạch hydrocarbon khó xếp chặt, vì vậy chất béo chứa nhiều gốc acid béo không no thường tồn tại ở trạng thái lỏng, được gọi phổ biến là dầu. Dầu thực vật và dầu cá thường chứa nhiều acid béo không no.</div><div class="clickable-paragraph" id="exp_19_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, 'Liên kết đôi trong gốc acid béo không no dễ tham gia phản ứng hydrogen hóa và dễ bị oxi hóa bởi oxygen trong không khí. Vì vậy, chất béo không no có thể được chuyển thành chất béo no và cũng dễ xảy ra quá trình ôi thiu khi bảo quản không phù hợp.')">Liên kết đôi trong gốc acid béo không no dễ tham gia phản ứng hydrogen hóa và dễ bị oxi hóa bởi oxygen trong không khí. Vì vậy, chất béo không no có thể được chuyển thành chất béo no và cũng dễ xảy ra quá trình ôi thiu khi bảo quản không phù hợp.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Unsaturated fatty acid')">Unsaturated fatty acid</span><span class="tag" onclick="searchGoogle('Oleic acid')">Oleic acid</span><span class="tag" onclick="searchGoogle('Linoleic acid')">Linoleic acid</span><span class="tag" onclick="searchGoogle('Double bond')">Double bond</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-20">
+                        <h2 id="exp_title_20" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(20)" title="Đọc tiêu đề">21. Palmitic acid</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/Palmitic-acid-3D-balls.png?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_20_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, 'Palmitic acid là acid béo no có công thức CH₃(CH₂)₁₄COOH.')">Palmitic acid là acid béo no có công thức CH₃(CH₂)₁₄COOH.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_20_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, 'Palmitic acid, hay acid palmitic, là một acid béo no có công thức CH₃(CH₂)₁₄COOH. Phân tử có tổng cộng 16 nguyên tử carbon và không chứa liên kết đôi C=C trong mạch hydrocarbon.')">Palmitic acid, hay acid palmitic, là một acid béo no có công thức CH₃(CH₂)₁₄COOH. Phân tử có tổng cộng 16 nguyên tử carbon và không chứa liên kết đôi C=C trong mạch hydrocarbon.</div><div class="clickable-paragraph" id="exp_20_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, 'Palmitic acid là một trong những acid béo thường gặp trong chất béo tự nhiên. Vì là acid béo no nên gốc hydrocarbon của nó có thể xếp tương đối chặt. Khi tham gia tạo chất béo, ba gốc palmitate có thể kết hợp với glycerol tạo triglyceride tương ứng.')">Palmitic acid là một trong những acid béo thường gặp trong chất béo tự nhiên. Vì là acid béo no nên gốc hydrocarbon của nó có thể xếp tương đối chặt. Khi tham gia tạo chất béo, ba gốc palmitate có thể kết hợp với glycerol tạo triglyceride tương ứng.</div><div class="clickable-paragraph" id="exp_20_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, 'Trong bài tập hóa học, cần phân biệt palmitic acid với stearic acid và các acid béo không no. Palmitic acid có dạng CH₃(CH₂)₁₄COOH, còn stearic acid có thêm hai nhóm –CH₂– nên chứa 18 carbon. Việc đếm số carbon và kiểm tra liên kết đôi giúp nhận dạng chính xác acid béo.')">Trong bài tập hóa học, cần phân biệt palmitic acid với stearic acid và các acid béo không no. Palmitic acid có dạng CH₃(CH₂)₁₄COOH, còn stearic acid có thêm hai nhóm –CH₂– nên chứa 18 carbon. Việc đếm số carbon và kiểm tra liên kết đôi giúp nhận dạng chính xác acid béo.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Palmitic acid')">Palmitic acid</span><span class="tag" onclick="searchGoogle('Saturated fat')">Saturated fat</span><span class="tag" onclick="searchGoogle('Fatty acid')">Fatty acid</span><span class="tag" onclick="searchGoogle('Palmitate')">Palmitate</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-21">
+                        <h2 id="exp_title_21" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(21)" title="Đọc tiêu đề">22. Stearic acid</h2>
+                        <img src="https://cdn.britannica.com/31/96831-050-97696E96/formula-stearic-acid.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_21_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, 'Stearic acid là acid béo no có công thức CH₃(CH₂)₁₆COOH.')">Stearic acid là acid béo no có công thức CH₃(CH₂)₁₆COOH.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_21_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, 'Stearic acid, hay acid stearic, là một acid béo no có công thức CH₃(CH₂)₁₆COOH. Phân tử chứa 18 nguyên tử carbon và không có liên kết đôi C=C trong mạch hydrocarbon.')">Stearic acid, hay acid stearic, là một acid béo no có công thức CH₃(CH₂)₁₆COOH. Phân tử chứa 18 nguyên tử carbon và không có liên kết đôi C=C trong mạch hydrocarbon.</div><div class="clickable-paragraph" id="exp_21_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, 'Stearic acid là thành phần của nhiều chất béo tự nhiên. Khi kết hợp với glycerol, ba gốc stearate có thể tạo triglyceride là tristearin. Chất béo chứa nhiều gốc stearic thường có trạng thái rắn ở điều kiện thường do các mạch hydrocarbon no có khả năng xếp chặt.')">Stearic acid là thành phần của nhiều chất béo tự nhiên. Khi kết hợp với glycerol, ba gốc stearate có thể tạo triglyceride là tristearin. Chất béo chứa nhiều gốc stearic thường có trạng thái rắn ở điều kiện thường do các mạch hydrocarbon no có khả năng xếp chặt.</div><div class="clickable-paragraph" id="exp_21_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, 'Để nhận biết chất béo được tạo thành từ glycerol và stearic acid, cần viết gốc stearate C₁₇H₃₅COO– rồi gắn ba gốc này vào glycerol. Công thức thu được là (C₁₇H₃₅COO)₃C₃H₅. Đây là dạng bài tập quan trọng để rèn kỹ năng chuyển đổi giữa acid béo và công thức chất béo.')">Để nhận biết chất béo được tạo thành từ glycerol và stearic acid, cần viết gốc stearate C₁₇H₃₅COO– rồi gắn ba gốc này vào glycerol. Công thức thu được là (C₁₇H₃₅COO)₃C₃H₅. Đây là dạng bài tập quan trọng để rèn kỹ năng chuyển đổi giữa acid béo và công thức chất béo.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Stearic acid')">Stearic acid</span><span class="tag" onclick="searchGoogle('Saturated fatty acid')">Saturated fatty acid</span><span class="tag" onclick="searchGoogle('Stearate')">Stearate</span><span class="tag" onclick="searchGoogle('Tristearin')">Tristearin</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-22">
+                        <h2 id="exp_title_22" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(22)" title="Đọc tiêu đề">23. Oleic acid</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Oleic-acid-3D-vdW.png/330px-Oleic-acid-3D-vdW.png?utm_source=vi.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_22_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, 'Oleic acid là acid béo không no có một liên kết đôi C=C.')">Oleic acid là acid béo không no có một liên kết đôi C=C.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_22_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, 'Oleic acid là acid béo không no đơn chức, có công thức CH₃(CH₂)₇CH=CH(CH₂)₇COOH. Phân tử chứa 18 carbon và một liên kết đôi C=C trong mạch hydrocarbon.')">Oleic acid là acid béo không no đơn chức, có công thức CH₃(CH₂)₇CH=CH(CH₂)₇COOH. Phân tử chứa 18 carbon và một liên kết đôi C=C trong mạch hydrocarbon.</div><div class="clickable-paragraph" id="exp_22_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, 'Oleic acid là thành phần phổ biến trong nhiều loại dầu thực vật. Khi tạo chất béo với glycerol, các gốc oleate tạo nên triolein. Do có liên kết đôi, gốc oleate làm cho chất béo thường có trạng thái lỏng ở điều kiện thường và dễ bị oxi hóa hơn chất béo no.')">Oleic acid là thành phần phổ biến trong nhiều loại dầu thực vật. Khi tạo chất béo với glycerol, các gốc oleate tạo nên triolein. Do có liên kết đôi, gốc oleate làm cho chất béo thường có trạng thái lỏng ở điều kiện thường và dễ bị oxi hóa hơn chất béo no.</div><div class="clickable-paragraph" id="exp_22_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, 'Liên kết đôi trong oleic acid có thể tham gia phản ứng cộng hydrogen. Khi hydrogen hóa thích hợp, liên kết đôi được chuyển thành liên kết đơn, làm tăng mức độ no của gốc acid béo. Oleic acid là ví dụ tiêu biểu để học sinh hiểu mối liên hệ giữa cấu tạo acid béo không no và tính chất vật lí, hóa học của dầu thực vật.')">Liên kết đôi trong oleic acid có thể tham gia phản ứng cộng hydrogen. Khi hydrogen hóa thích hợp, liên kết đôi được chuyển thành liên kết đơn, làm tăng mức độ no của gốc acid béo. Oleic acid là ví dụ tiêu biểu để học sinh hiểu mối liên hệ giữa cấu tạo acid béo không no và tính chất vật lí, hóa học của dầu thực vật.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Oleic acid')">Oleic acid</span><span class="tag" onclick="searchGoogle('Unsaturated fatty acid')">Unsaturated fatty acid</span><span class="tag" onclick="searchGoogle('Oleate')">Oleate</span><span class="tag" onclick="searchGoogle('Double bond')">Double bond</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-23">
+                        <h2 id="exp_title_23" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(23)" title="Đọc tiêu đề">24. Linoleic acid</h2>
+                        <img src="https://images.tuyensinh247.com/picture/images_question/1725439735-luiu.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_23_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, 'Linoleic acid là acid béo không no có hai liên kết đôi C=C.')">Linoleic acid là acid béo không no có hai liên kết đôi C=C.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_23_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, 'Linoleic acid là acid béo không no chứa hai liên kết đôi C=C. Công thức của linoleic acid là CH₃(CH₂)₄CH=CHCH₂CH=CH(CH₂)₇COOH. Phân tử có 18 carbon và hai liên kết đôi.')">Linoleic acid là acid béo không no chứa hai liên kết đôi C=C. Công thức của linoleic acid là CH₃(CH₂)₄CH=CHCH₂CH=CH(CH₂)₇COOH. Phân tử có 18 carbon và hai liên kết đôi.</div><div class="clickable-paragraph" id="exp_23_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, 'Do chứa nhiều liên kết đôi, linoleic acid có gốc hydrocarbon kém no và khó xếp chặt. Các chất béo chứa nhiều gốc linoleate thường có xu hướng tồn tại ở trạng thái lỏng. Đồng thời, các liên kết đôi là vị trí dễ xảy ra phản ứng hydrogen hóa và oxi hóa.')">Do chứa nhiều liên kết đôi, linoleic acid có gốc hydrocarbon kém no và khó xếp chặt. Các chất béo chứa nhiều gốc linoleate thường có xu hướng tồn tại ở trạng thái lỏng. Đồng thời, các liên kết đôi là vị trí dễ xảy ra phản ứng hydrogen hóa và oxi hóa.</div><div class="clickable-paragraph" id="exp_23_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, 'Linoleic acid thuộc nhóm acid béo omega-6, có vai trò sinh học quan trọng. Trong dinh dưỡng, omega-6 thường được cung cấp từ các loại dầu thực vật và một số thực phẩm khác. Trong hóa học, linoleic acid là ví dụ điển hình giúp minh họa acid béo đa không no và mối liên hệ giữa số lượng liên kết đôi với tính chất của chất béo.')">Linoleic acid thuộc nhóm acid béo omega-6, có vai trò sinh học quan trọng. Trong dinh dưỡng, omega-6 thường được cung cấp từ các loại dầu thực vật và một số thực phẩm khác. Trong hóa học, linoleic acid là ví dụ điển hình giúp minh họa acid béo đa không no và mối liên hệ giữa số lượng liên kết đôi với tính chất của chất béo.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Linoleic acid')">Linoleic acid</span><span class="tag" onclick="searchGoogle('Omega-6')">Omega-6</span><span class="tag" onclick="searchGoogle('Polyunsaturated')">Polyunsaturated</span><span class="tag" onclick="searchGoogle('Double bond')">Double bond</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-24">
+                        <h2 id="exp_title_24" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(24)" title="Đọc tiêu đề">25. Tính chất vật lí của chất béo</h2>
+                        <img src="https://cdn.vungoi.vn/vungoi/1531908861313_chat_beo.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_24_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(24, 'Chất béo no thường rắn, chất béo không no thường lỏng; chất béo không tan trong nước.')">Chất béo no thường rắn, chất béo không no thường lỏng; chất béo không tan trong nước.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_24_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(24, 'Chất béo thường là những chất nhẹ hơn nước, không tan trong nước nhưng tan tốt trong các dung môi hữu cơ kém phân cực. Trạng thái vật lí phụ thuộc nhiều vào thành phần acid béo tạo nên triglyceride.')">Chất béo thường là những chất nhẹ hơn nước, không tan trong nước nhưng tan tốt trong các dung môi hữu cơ kém phân cực. Trạng thái vật lí phụ thuộc nhiều vào thành phần acid béo tạo nên triglyceride.</div><div class="clickable-paragraph" id="exp_24_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(24, 'Chất béo chứa nhiều gốc acid béo no thường có nhiệt độ nóng chảy cao và thường tồn tại ở trạng thái rắn, ví dụ mỡ lợn và mỡ bò. Ngược lại, chất béo chứa nhiều gốc acid béo không no có nhiều liên kết đôi nên thường tồn tại ở trạng thái lỏng, ví dụ dầu vừng, dầu lạc và dầu cá.')">Chất béo chứa nhiều gốc acid béo no thường có nhiệt độ nóng chảy cao và thường tồn tại ở trạng thái rắn, ví dụ mỡ lợn và mỡ bò. Ngược lại, chất béo chứa nhiều gốc acid béo không no có nhiều liên kết đôi nên thường tồn tại ở trạng thái lỏng, ví dụ dầu vừng, dầu lạc và dầu cá.</div><div class="clickable-paragraph" id="exp_24_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(24, 'Sự khác nhau này liên quan đến khả năng xếp chặt của các mạch hydrocarbon. Mạch no tương đối thẳng nên dễ xếp sát nhau, trong khi liên kết đôi làm cấu trúc mạch bị gấp, giảm khả năng xếp chặt. Đây là cơ sở giải thích sự khác nhau giữa dầu và mỡ.')">Sự khác nhau này liên quan đến khả năng xếp chặt của các mạch hydrocarbon. Mạch no tương đối thẳng nên dễ xếp sát nhau, trong khi liên kết đôi làm cấu trúc mạch bị gấp, giảm khả năng xếp chặt. Đây là cơ sở giải thích sự khác nhau giữa dầu và mỡ.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Physical properties of fat')">Physical properties of fat</span><span class="tag" onclick="searchGoogle('Solid fat')">Solid fat</span><span class="tag" onclick="searchGoogle('Liquid oil')">Liquid oil</span><span class="tag" onclick="searchGoogle('Solubility')">Solubility</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-25">
+                        <h2 id="exp_title_25" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(25)" title="Đọc tiêu đề">26. Phản ứng hydrogen hóa chất béo</h2>
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxAq-1GcQ2fyZJTvtQZH5zwzY0erT-hDXy3--GtCVtSE5091TK9fEY3cI&amp;s=10" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_25_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(25, 'Chất béo không no cộng H₂ vào liên kết đôi tạo chất béo no.')">Chất béo không no cộng H₂ vào liên kết đôi tạo chất béo no.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_25_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(25, 'Chất béo không no có thể tham gia phản ứng hydrogen hóa khi tác dụng với hydrogen ở điều kiện thích hợp, thường có xúc tác và đun nóng. Hydrogen cộng vào các liên kết đôi C=C trong gốc acid béo, làm giảm mức độ không no và tạo chất béo no hơn.')">Chất béo không no có thể tham gia phản ứng hydrogen hóa khi tác dụng với hydrogen ở điều kiện thích hợp, thường có xúc tác và đun nóng. Hydrogen cộng vào các liên kết đôi C=C trong gốc acid béo, làm giảm mức độ không no và tạo chất béo no hơn.</div><div class="clickable-paragraph" id="exp_25_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(25, 'Ví dụ, một triglyceride chứa ba liên kết đôi có thể cộng 3H₂ để chuyển thành triglyceride tương ứng không còn các liên kết đôi đó. Phản ứng này làm thay đổi tính chất vật lí của chất béo, chẳng hạn dầu lỏng có thể chuyển thành chất béo rắn hơn.')">Ví dụ, một triglyceride chứa ba liên kết đôi có thể cộng 3H₂ để chuyển thành triglyceride tương ứng không còn các liên kết đôi đó. Phản ứng này làm thay đổi tính chất vật lí của chất béo, chẳng hạn dầu lỏng có thể chuyển thành chất béo rắn hơn.</div><div class="clickable-paragraph" id="exp_25_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(25, 'Trong công nghiệp thực phẩm, quá trình hydrogen hóa từng được sử dụng để chuyển dầu thực vật thành chất béo có độ rắn phù hợp. Khi học phương trình phản ứng, cần đếm chính xác số liên kết đôi trong phân tử để xác định số mol H₂ cần dùng.')">Trong công nghiệp thực phẩm, quá trình hydrogen hóa từng được sử dụng để chuyển dầu thực vật thành chất béo có độ rắn phù hợp. Khi học phương trình phản ứng, cần đếm chính xác số liên kết đôi trong phân tử để xác định số mol H₂ cần dùng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Hydrogenation')">Hydrogenation</span><span class="tag" onclick="searchGoogle('Hydrogen')">Hydrogen</span><span class="tag" onclick="searchGoogle('Double bond')">Double bond</span><span class="tag" onclick="searchGoogle('Saturated fat')">Saturated fat</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-26">
+                        <h2 id="exp_title_26" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(26)" title="Đọc tiêu đề">27. Phản ứng oxi hóa chất béo</h2>
+                        <img src="https://d16qt3wv6xm098.cloudfront.net/UvkEhKtbR5SE8HBCimKYhnYmQ7aN_6mO/_.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_26_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(26, 'Chất béo không no dễ bị oxygen không khí oxi hóa gây ôi thiu.')">Chất béo không no dễ bị oxygen không khí oxi hóa gây ôi thiu.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_26_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(26, 'Các gốc acid béo không no trong chất béo chứa liên kết đôi C=C kém bền nên có thể bị oxygen trong không khí oxi hóa chậm. Quá trình này tạo ra nhiều sản phẩm oxi hóa có mùi khó chịu, làm chất béo bị ôi thiu.')">Các gốc acid béo không no trong chất béo chứa liên kết đôi C=C kém bền nên có thể bị oxygen trong không khí oxi hóa chậm. Quá trình này tạo ra nhiều sản phẩm oxi hóa có mùi khó chịu, làm chất béo bị ôi thiu.</div><div class="clickable-paragraph" id="exp_26_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(26, 'Chất béo càng chứa nhiều gốc acid béo không no thì thường càng dễ bị oxi hóa. Ánh sáng, nhiệt độ cao và oxygen có thể thúc đẩy quá trình này. Vì vậy, dầu ăn cần được bảo quản trong điều kiện hạn chế ánh sáng, nhiệt và không khí.')">Chất béo càng chứa nhiều gốc acid béo không no thì thường càng dễ bị oxi hóa. Ánh sáng, nhiệt độ cao và oxygen có thể thúc đẩy quá trình này. Vì vậy, dầu ăn cần được bảo quản trong điều kiện hạn chế ánh sáng, nhiệt và không khí.</div><div class="clickable-paragraph" id="exp_26_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(26, 'Hiện tượng dầu có mùi lạ sau thời gian dài mở nắp là một ví dụ quen thuộc của quá trình oxi hóa chất béo. Kiến thức này giúp giải thích tại sao thực phẩm giàu chất béo cần được bảo quản đúng cách và tại sao dầu không nên bị đun nóng quá lâu hoặc tái sử dụng nhiều lần.')">Hiện tượng dầu có mùi lạ sau thời gian dài mở nắp là một ví dụ quen thuộc của quá trình oxi hóa chất béo. Kiến thức này giúp giải thích tại sao thực phẩm giàu chất béo cần được bảo quản đúng cách và tại sao dầu không nên bị đun nóng quá lâu hoặc tái sử dụng nhiều lần.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Fat oxidation')">Fat oxidation</span><span class="tag" onclick="searchGoogle('Oxidation')">Oxidation</span><span class="tag" onclick="searchGoogle('Oxygen')">Oxygen</span><span class="tag" onclick="searchGoogle('Rancidity')">Rancidity</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-27">
+                        <h2 id="exp_title_27" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(27)" title="Đọc tiêu đề">28. Phản ứng xà phòng hóa chất béo</h2>
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPp1I4SLGPChtSHjdEMeHN3ZFJh52_LyQTYDabYjIX2tNcWAXILcPCpSs&amp;s=10" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_27_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(27, 'Chất béo phản ứng với NaOH hoặc KOH tạo glycerol và muối của acid béo.')">Chất béo phản ứng với NaOH hoặc KOH tạo glycerol và muối của acid béo.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_27_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(27, 'Phản ứng xà phòng hóa là phản ứng thủy phân chất béo trong môi trường base mạnh như NaOH hoặc KOH. Sản phẩm gồm glycerol và muối của các acid béo. Các muối natri hoặc kali của acid béo chính là thành phần quan trọng của xà phòng.')">Phản ứng xà phòng hóa là phản ứng thủy phân chất béo trong môi trường base mạnh như NaOH hoặc KOH. Sản phẩm gồm glycerol và muối của các acid béo. Các muối natri hoặc kali của acid béo chính là thành phần quan trọng của xà phòng.</div><div class="clickable-paragraph" id="exp_27_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(27, 'Ví dụ, triglyceride của stearic acid phản ứng với 3NaOH tạo glycerol và 3 sodium stearate. Vì chất béo là triester nên cần 3 mol NaOH cho mỗi mol triglyceride nếu cả ba nhóm ester đều bị thủy phân.')">Ví dụ, triglyceride của stearic acid phản ứng với 3NaOH tạo glycerol và 3 sodium stearate. Vì chất béo là triester nên cần 3 mol NaOH cho mỗi mol triglyceride nếu cả ba nhóm ester đều bị thủy phân.</div><div class="clickable-paragraph" id="exp_27_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(27, 'Phản ứng xà phòng hóa có ý nghĩa lớn trong sản xuất xà phòng. Khi giải bài toán, cần dựa vào tỉ lệ mol giữa chất béo, NaOH và glycerol. Nếu biết khối lượng glycerol sinh ra, có thể tính số mol chất béo theo tỉ lệ 1:1, sau đó tính khối lượng muối acid béo dựa trên định luật bảo toàn khối lượng hoặc số mol.')">Phản ứng xà phòng hóa có ý nghĩa lớn trong sản xuất xà phòng. Khi giải bài toán, cần dựa vào tỉ lệ mol giữa chất béo, NaOH và glycerol. Nếu biết khối lượng glycerol sinh ra, có thể tính số mol chất béo theo tỉ lệ 1:1, sau đó tính khối lượng muối acid béo dựa trên định luật bảo toàn khối lượng hoặc số mol.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Saponification')">Saponification</span><span class="tag" onclick="searchGoogle('Soap')">Soap</span><span class="tag" onclick="searchGoogle('Glycerol')">Glycerol</span><span class="tag" onclick="searchGoogle('Sodium hydroxide')">Sodium hydroxide</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-28">
+                        <h2 id="exp_title_28" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(28)" title="Đọc tiêu đề">29. Xà phòng hóa triolein</h2>
+                        <img src="https://tdgimex.com/wp-content/uploads/2024/07/phoi-xa-phong-glycerin.png" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_28_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(28, 'Triolein phản ứng với 3NaOH tạo glycerol và 3 sodium oleate.')">Triolein phản ứng với 3NaOH tạo glycerol và 3 sodium oleate.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_28_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(28, 'Triolein là triglyceride được tạo bởi glycerol và oleic acid, chứa ba gốc oleate. Khi xà phòng hóa hoàn toàn, một mol triolein phản ứng với 3 mol NaOH tạo một mol glycerol và ba mol sodium oleate.')">Triolein là triglyceride được tạo bởi glycerol và oleic acid, chứa ba gốc oleate. Khi xà phòng hóa hoàn toàn, một mol triolein phản ứng với 3 mol NaOH tạo một mol glycerol và ba mol sodium oleate.</div><div class="clickable-paragraph" id="exp_28_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(28, 'Phương trình tổng quát: triolein + 3NaOH → glycerol + 3 sodium oleate. Nếu thu được 4,14 g glycerol, với M glycerol = 92 g/mol, số mol glycerol là 4,14/92 = 0,045 mol. Do tỉ lệ mol triolein:glycerol là 1:1 nên có 0,045 mol triolein và tạo 0,135 mol sodium oleate.')">Phương trình tổng quát: triolein + 3NaOH → glycerol + 3 sodium oleate. Nếu thu được 4,14 g glycerol, với M glycerol = 92 g/mol, số mol glycerol là 4,14/92 = 0,045 mol. Do tỉ lệ mol triolein:glycerol là 1:1 nên có 0,045 mol triolein và tạo 0,135 mol sodium oleate.</div><div class="clickable-paragraph" id="exp_28_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(28, 'Sodium oleate có công thức C₁₇H₃₃COONa và M = 304 g/mol. Khối lượng muối là 0,135 × 304 = 41,04 g. Đây là cách giải dựa vào tỉ lệ mol trong phản ứng xà phòng hóa.')">Sodium oleate có công thức C₁₇H₃₃COONa và M = 304 g/mol. Khối lượng muối là 0,135 × 304 = 41,04 g. Đây là cách giải dựa vào tỉ lệ mol trong phản ứng xà phòng hóa.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('41.04 g')">41.04 g</span><span class="tag" onclick="searchGoogle('Saponification')">Saponification</span><span class="tag" onclick="searchGoogle('Triolein')">Triolein</span><span class="tag" onclick="searchGoogle('Sodium oleate')">Sodium oleate</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-29">
+                        <h2 id="exp_title_29" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(29)" title="Đọc tiêu đề">30. Ứng dụng của chất béo</h2>
+                        <img src="https://hinu.vn/wp-content/uploads/2025/10/bo-sung-chat-beo-cho-be-1.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_29_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(29, 'Chất béo cung cấp và dự trữ năng lượng, đồng thời được dùng trong sản xuất xà phòng, glycerol và thực phẩm.')">Chất béo cung cấp và dự trữ năng lượng, đồng thời được dùng trong sản xuất xà phòng, glycerol và thực phẩm.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_29_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(29, 'Chất béo có vai trò quan trọng đối với cơ thể và đời sống. Về sinh học, chất béo là nguồn cung cấp năng lượng và dạng dự trữ năng lượng hiệu quả. Chúng cũng cung cấp các acid béo cần thiết cho cơ thể.')">Chất béo có vai trò quan trọng đối với cơ thể và đời sống. Về sinh học, chất béo là nguồn cung cấp năng lượng và dạng dự trữ năng lượng hiệu quả. Chúng cũng cung cấp các acid béo cần thiết cho cơ thể.</div><div class="clickable-paragraph" id="exp_29_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(29, 'Trong công nghiệp, chất béo được sử dụng để sản xuất xà phòng, glycerol, mỹ phẩm, dược phẩm và nhiều sản phẩm chế biến thực phẩm. Phản ứng xà phòng hóa chất béo với NaOH hoặc KOH tạo muối acid béo và glycerol, là cơ sở của sản xuất xà phòng truyền thống.')">Trong công nghiệp, chất béo được sử dụng để sản xuất xà phòng, glycerol, mỹ phẩm, dược phẩm và nhiều sản phẩm chế biến thực phẩm. Phản ứng xà phòng hóa chất béo với NaOH hoặc KOH tạo muối acid béo và glycerol, là cơ sở của sản xuất xà phòng truyền thống.</div><div class="clickable-paragraph" id="exp_29_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(29, 'Trong thực phẩm, dầu và mỡ được sử dụng để cung cấp năng lượng và tạo hương vị, cấu trúc cho món ăn. Tuy nhiên, chất béo cần được sử dụng hợp lí và bảo quản đúng cách. Các acid béo không no, đặc biệt omega-3 và omega-6, có vai trò quan trọng trong dinh dưỡng và nhiều quá trình sinh học của cơ thể.')">Trong thực phẩm, dầu và mỡ được sử dụng để cung cấp năng lượng và tạo hương vị, cấu trúc cho món ăn. Tuy nhiên, chất béo cần được sử dụng hợp lí và bảo quản đúng cách. Các acid béo không no, đặc biệt omega-3 và omega-6, có vai trò quan trọng trong dinh dưỡng và nhiều quá trình sinh học của cơ thể.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Fat applications')">Fat applications</span><span class="tag" onclick="searchGoogle('Energy')">Energy</span><span class="tag" onclick="searchGoogle('Soap')">Soap</span><span class="tag" onclick="searchGoogle('Glycerol')">Glycerol</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-30">
+                        <h2 id="exp_title_30" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(30)" title="Đọc tiêu đề">31. Omega-3</h2>
+                        <img src="https://m.media-amazon.com/images/I/7120z-4Ac2L._AC_UF1000,1000_QL80_.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_30_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(30, 'Omega-3 là nhóm acid béo không no có liên kết đôi đầu tiên ở vị trí số 3.')">Omega-3 là nhóm acid béo không no có liên kết đôi đầu tiên ở vị trí số 3.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_30_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(30, 'Omega-3 là cách gọi một nhóm acid béo không no trong đó liên kết đôi đầu tiên được tính từ đầu methyl của mạch carbon nằm ở vị trí carbon số 3. Một số acid béo omega-3 có vai trò quan trọng trong dinh dưỡng và sinh học.')">Omega-3 là cách gọi một nhóm acid béo không no trong đó liên kết đôi đầu tiên được tính từ đầu methyl của mạch carbon nằm ở vị trí carbon số 3. Một số acid béo omega-3 có vai trò quan trọng trong dinh dưỡng và sinh học.</div><div class="clickable-paragraph" id="exp_30_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(30, 'Các nguồn thực phẩm giàu omega-3 thường gồm dầu cá và một số loại cá béo, ngoài ra còn có một số loại hạt và dầu thực vật. Omega-3 tham gia vào nhiều chức năng sinh học, đặc biệt liên quan đến hệ thần kinh và thị giác.')">Các nguồn thực phẩm giàu omega-3 thường gồm dầu cá và một số loại cá béo, ngoài ra còn có một số loại hạt và dầu thực vật. Omega-3 tham gia vào nhiều chức năng sinh học, đặc biệt liên quan đến hệ thần kinh và thị giác.</div><div class="clickable-paragraph" id="exp_30_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(30, 'Trong chương trình phổ thông, cần hiểu omega-3 là nhóm acid béo không no được phân loại dựa trên vị trí liên kết đôi đầu tiên. Khi tư vấn dinh dưỡng, không nên hiểu omega-3 là một chất duy nhất mà là một nhóm nhiều acid béo khác nhau. Việc bổ sung omega-3 nên thông qua chế độ ăn cân đối và nguồn thực phẩm phù hợp.')">Trong chương trình phổ thông, cần hiểu omega-3 là nhóm acid béo không no được phân loại dựa trên vị trí liên kết đôi đầu tiên. Khi tư vấn dinh dưỡng, không nên hiểu omega-3 là một chất duy nhất mà là một nhóm nhiều acid béo khác nhau. Việc bổ sung omega-3 nên thông qua chế độ ăn cân đối và nguồn thực phẩm phù hợp.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Omega-3')">Omega-3</span><span class="tag" onclick="searchGoogle('Omega fatty acid')">Omega fatty acid</span><span class="tag" onclick="searchGoogle('Unsaturated fat')">Unsaturated fat</span><span class="tag" onclick="searchGoogle('Fish oil')">Fish oil</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-31">
+                        <h2 id="exp_title_31" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(31)" title="Đọc tiêu đề">32. Omega-6</h2>
+                        <img src="https://cdn.nhathuoclongchau.com.vn/unsafe/800x0/omega_6_va_nhung_dieu_ban_nen_biet_2_8abbe37ee5.jpg" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_31_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(31, 'Omega-6 là nhóm acid béo không no có liên kết đôi đầu tiên ở vị trí số 6.')">Omega-6 là nhóm acid béo không no có liên kết đôi đầu tiên ở vị trí số 6.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_31_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(31, 'Omega-6 là nhóm acid béo không no được xác định dựa trên vị trí của liên kết đôi đầu tiên tính từ đầu methyl của mạch hydrocarbon. Liên kết đôi đầu tiên nằm ở vị trí carbon số 6.')">Omega-6 là nhóm acid béo không no được xác định dựa trên vị trí của liên kết đôi đầu tiên tính từ đầu methyl của mạch hydrocarbon. Liên kết đôi đầu tiên nằm ở vị trí carbon số 6.</div><div class="clickable-paragraph" id="exp_31_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(31, 'Linoleic acid là một ví dụ quan trọng của acid béo omega-6. Acid này có hai liên kết đôi và thường được cung cấp từ dầu thực vật. Omega-6 tham gia vào nhiều quá trình sinh học và là nhóm acid béo cần thiết trong chế độ ăn.')">Linoleic acid là một ví dụ quan trọng của acid béo omega-6. Acid này có hai liên kết đôi và thường được cung cấp từ dầu thực vật. Omega-6 tham gia vào nhiều quá trình sinh học và là nhóm acid béo cần thiết trong chế độ ăn.</div><div class="clickable-paragraph" id="exp_31_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(31, 'Trong học tập, cần phân biệt omega-6 với omega-3 dựa vào vị trí liên kết đôi đầu tiên. Cả hai đều thuộc nhóm acid béo không no nhưng có cách phân loại khác nhau. Omega-6 không phải là một chất đơn lẻ mà là tên gọi chung của một nhóm acid béo có đặc điểm cấu tạo tương ứng.')">Trong học tập, cần phân biệt omega-6 với omega-3 dựa vào vị trí liên kết đôi đầu tiên. Cả hai đều thuộc nhóm acid béo không no nhưng có cách phân loại khác nhau. Omega-6 không phải là một chất đơn lẻ mà là tên gọi chung của một nhóm acid béo có đặc điểm cấu tạo tương ứng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Omega-6')">Omega-6</span><span class="tag" onclick="searchGoogle('Omega fatty acid')">Omega fatty acid</span><span class="tag" onclick="searchGoogle('Linoleic acid')">Linoleic acid</span><span class="tag" onclick="searchGoogle('Unsaturated fat')">Unsaturated fat</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-32">
+                        <h2 id="exp_title_32" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(32)" title="Đọc tiêu đề">33. Thực phẩm giàu omega-3</h2>
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQwd5eeGGGFOiQAkb38aXohEUu22tOMX9_FJy8NGAPcWw&amp;s=10" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_32_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(32, 'Dầu cá là một nguồn thực phẩm giàu omega-3.')">Dầu cá là một nguồn thực phẩm giàu omega-3.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_32_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(32, 'Omega-3 có thể được cung cấp thông qua nhiều loại thực phẩm, trong đó dầu cá là nguồn thường được nhắc đến vì chứa các acid béo omega-3 như EPA và DHA. Một số loại cá béo như cá hồi, cá thu, cá mòi cũng có hàm lượng omega-3 đáng kể.')">Omega-3 có thể được cung cấp thông qua nhiều loại thực phẩm, trong đó dầu cá là nguồn thường được nhắc đến vì chứa các acid béo omega-3 như EPA và DHA. Một số loại cá béo như cá hồi, cá thu, cá mòi cũng có hàm lượng omega-3 đáng kể.</div><div class="clickable-paragraph" id="exp_32_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(32, 'Ngoài nguồn động vật, một số thực phẩm thực vật như hạt lanh, hạt chia và quả óc chó cung cấp acid béo omega-3 dạng ALA. Cơ thể có thể chuyển đổi ALA thành các dạng omega-3 khác nhưng hiệu quả chuyển đổi có giới hạn.')">Ngoài nguồn động vật, một số thực phẩm thực vật như hạt lanh, hạt chia và quả óc chó cung cấp acid béo omega-3 dạng ALA. Cơ thể có thể chuyển đổi ALA thành các dạng omega-3 khác nhưng hiệu quả chuyển đổi có giới hạn.</div><div class="clickable-paragraph" id="exp_32_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(32, 'Trong câu hỏi lựa chọn giữa dầu olive, dầu cá, dầu mè và dầu đậu nành, đáp án phù hợp nhất là dầu cá. Kiến thức này giúp học sinh liên hệ nội dung Hóa học về acid béo không no với kiến thức dinh dưỡng trong đời sống.')">Trong câu hỏi lựa chọn giữa dầu olive, dầu cá, dầu mè và dầu đậu nành, đáp án phù hợp nhất là dầu cá. Kiến thức này giúp học sinh liên hệ nội dung Hóa học về acid béo không no với kiến thức dinh dưỡng trong đời sống.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Omega-3 food sources')">Omega-3 food sources</span><span class="tag" onclick="searchGoogle('Fish oil')">Fish oil</span><span class="tag" onclick="searchGoogle('EPA')">EPA</span><span class="tag" onclick="searchGoogle('DHA')">DHA</span></div>
+                    </div>
+                </div>
+
+    <!-- Footer / Manual Nav tối ưu responsive -->
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseBtn" onclick="togglePauseRead()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Auto</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ sáng màn hình">
+            <span>Sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">1 / 33</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated)</h2>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let embeddedInitialData = `Ester	Khái niệm ester: dẫn xuất của carboxylic acid, trong đó nhóm –OH được thay bằng –OR'.	Ester là hợp chất hữu cơ được tạo thành khi nhóm –OH trong nhóm carboxyl –COOH của carboxylic acid bị thay thế bằng nhóm –OR'. Công thức chung của ester đơn chức là RCOOR', trong đó R có thể là H hoặc gốc hydrocarbon, còn R' là gốc hydrocarbon.<br>Ví dụ: HCOOCH₃ là methyl formate; CH₃COOCH₃ là methyl acetate; CH₃COOC₂H₅ là ethyl acetate; C₆H₅COOCH₃ là methyl benzoate.<br>Ester thường được tạo thành từ phản ứng giữa carboxylic acid và alcohol. Trong phân tử ester, nhóm chức đặc trưng là –COO–. Việc thay thế nhóm –OH bằng nhóm –OR' làm thay đổi đáng kể tính chất vật lí và hóa học của chất so với carboxylic acid ban đầu. Ester là một nhóm hợp chất quan trọng trong chương trình Hóa học 12 và có nhiều ứng dụng trong đời sống, công nghiệp thực phẩm, mỹ phẩm và sản xuất vật liệu.	Ester	Ester group	Carboxyl	Organic compound	https://cdn.mindspritesolutions.com/flexiprep/Important-Differences/Chemistry/posts/Difference-between-Ester-and-Ether/Difference-between-Ester-and-4.svg
+Công thức chung của ester	Công thức tổng quát của ester đơn chức là RCOOR'.	Ester đơn chức có công thức tổng quát RCOOR'. Trong công thức này, R là H hoặc gốc hydrocarbon, còn R' là gốc hydrocarbon. Phần RCO– có nguồn gốc từ carboxylic acid, còn –OR' có nguồn gốc từ alcohol.<br>Ví dụ, HCOOCH₃ có R = H và R' = CH₃; CH₃COOC₂H₅ có R = CH₃ và R' = C₂H₅. Công thức tổng quát giúp nhận biết nhanh một hợp chất có thuộc loại ester hay không.<br>Khi xác định cấu tạo ester, cần chú ý nhóm chức –COO– nằm giữa hai phần hydrocarbon hoặc giữa H và gốc hydrocarbon. Ester có thể chứa liên kết đôi, vòng thơm hoặc các nhóm hydrocarbon khác tùy cấu tạo của R và R'. Việc phân tích R và R' cũng là cơ sở để gọi tên ester theo danh pháp thông thường được sử dụng trong chương trình phổ thông.	RCOOR'	Ester formula	Functional group	Structure	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxMgHjVwlsi3irUaQlmIgPcJhmlDmEGH90ENpsA2cc9OmSarGVRwCVJfs&s=10
+Danh pháp ester	Tên ester đơn chức gồm tên gốc R' và tên gốc carboxylic acid.	Danh pháp ester đơn chức được gọi theo quy tắc: tên gốc hydrocarbon R' đứng trước, sau đó là tên gốc carboxylic acid tương ứng. Ví dụ, HCOOCH₃ có tên methyl formate vì phần –OCH₃ tạo thành gốc methyl và phần HCOO– tương ứng với formic acid. CH₃COOC₂H₅ có tên ethyl acetate vì có gốc ethyl và gốc acetate.<br>Một số ví dụ thường gặp gồm methyl acetate CH₃COOCH₃, ethyl acetate CH₃COOC₂H₅, methyl benzoate C₆H₅COOCH₃ và methyl acrylate CH₂=CHCOOCH₃. Khi gọi tên, cần xác định chính xác gốc alcohol trước rồi xác định gốc acid. Cách gọi tên này giúp liên hệ trực tiếp giữa công thức cấu tạo và tên của ester.	Ester nomenclature	Methyl	Ethyl	Acetate	https://img.loigiaihay.com/picture/2025/0313/1741855237691-mceclip0.png
+Methyl formate	Methyl formate có công thức HCOOCH₃.	Methyl formate là ester đơn chức được tạo bởi formic acid và methanol. Công thức cấu tạo của chất là HCOOCH₃. Theo quy tắc danh pháp, phần –OCH₃ tương ứng với gốc methyl, còn phần HCOO– tương ứng với formate, vì vậy tên gọi là methyl formate.<br>Methyl formate là chất lỏng dễ bay hơi và có mùi đặc trưng. Nó thuộc nhóm ester có phân tử tương đối nhỏ. Khi gặp phản ứng thủy phân trong môi trường acid, methyl formate tạo thành formic acid và methanol. Trong môi trường base, sản phẩm là muối formate và methanol.<br>Việc nhận biết methyl formate là ví dụ điển hình để học sinh luyện tập cách chuyển đổi giữa tên ester và công thức cấu tạo. Khi nhìn thấy tên “methyl formate”, có thể xác định ngay gốc alcohol là methyl và gốc acid là formate, từ đó viết được công thức HCOOCH₃.	Methyl formate	Formate	Methanol	Ester	https://natislab.com/images/stories/virtuemart/product/sanpham/780/1.jpg
+Ethyl acetate	Ethyl acetate có công thức CH₃COOC₂H₅.	Ethyl acetate là một ester quen thuộc có công thức cấu tạo CH₃COOC₂H₅. Chất này được tạo thành từ acetic acid và ethanol trong phản ứng ester hóa có xúc tác H₂SO₄ đặc.<br>Tên ethyl acetate được tạo từ hai phần: ethyl là gốc hydrocarbon C₂H₅– có nguồn gốc từ ethanol, còn acetate là gốc acid CH₃COO– có nguồn gốc từ acetic acid. Ethyl acetate thường là chất lỏng, ít tan trong nước và có mùi đặc trưng.<br>Ethyl acetate có thể bị thủy phân trong môi trường acid tạo acetic acid và ethanol. Trong môi trường base như NaOH, phản ứng tạo sodium acetate và ethanol. Đây cũng là ester thường được dùng trong các thí nghiệm minh họa phản ứng thủy phân ester ở chương trình Hóa học 12.	Ethyl acetate	Acetate	Ethanol	Ethyl	https://sdfine.com/media/catalog/product/cache/1abafcf312c8e3de5a9721e052cf458b/2/0/20108-l25-1.jpg
+Methyl benzoate	Methyl benzoate có công thức C₆H₅COOCH₃.	Methyl benzoate là ester được tạo thành từ benzoic acid và methanol. Công thức cấu tạo của chất là C₆H₅COOCH₃. Trong tên gọi, methyl biểu thị gốc –CH₃O– có nguồn gốc từ methanol, còn benzoate biểu thị phần gốc acid có nguồn gốc từ benzoic acid.<br>Methyl benzoate có nhóm chức ester –COO– liên kết với vòng benzene. Đây là ví dụ quan trọng giúp học sinh nhận biết rằng gốc R trong công thức RCOOR' không nhất thiết phải là gốc alkyl mạch hở mà có thể là gốc thơm.<br>Giống nhiều ester khác, methyl benzoate có thể tham gia phản ứng thủy phân. Khi thủy phân trong môi trường acid, sản phẩm tương ứng là benzoic acid và methanol. Khi thủy phân trong môi trường base, sản phẩm là muối benzoate và methanol.	Methyl benzoate	Benzoate	Benzene	Methanol	https://www.sigmaaldrich.com/deepweb/assets/sigmaaldrich/product/structures/227/063/6c44fe2a-5285-4b8f-b007-0784ce06fdf1/640/6c44fe2a-5285-4b8f-b007-0784ce06fdf1.png
+Methyl acrylate	Methyl acrylate có công thức CH₂=CHCOOCH₃.	Methyl acrylate là ester có công thức CH₂=CHCOOCH₃, được tạo thành từ acrylic acid và methanol. Phân tử chứa đồng thời nhóm chức ester –COO– và liên kết đôi C=C trong gốc hydrocarbon.<br>Tên methyl acrylate gồm methyl, chỉ gốc hydrocarbon có nguồn gốc từ methanol, và acrylate, chỉ gốc acid có nguồn gốc từ acrylic acid. Sự xuất hiện của liên kết đôi C=C làm cho methyl acrylate khác với những ester no như methyl acetate.<br>Methyl acrylate là ví dụ giúp học sinh luyện tập cách đọc tên và viết công thức cấu tạo ester có chứa liên kết đôi. Ngoài phản ứng thủy phân đặc trưng của ester, liên kết đôi trong phân tử còn có thể tham gia những phản ứng hóa học đặc trưng của alkene. Vì vậy, khi phân tích một ester, cần xem xét cả nhóm chức ester và các nhóm chức hoặc liên kết khác có trong phân tử.	Methyl acrylate	Acrylate	Alkene	Methyl	https://upload.wikimedia.org/wikipedia/commons/3/3b/Methyl_acrylate_molecule_ball.png?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original
+Tính chất vật lí của ester	Ester thường là chất lỏng, ít tan trong nước và có mùi đặc trưng.	Ester thường có nhiệt độ sôi tương đối thấp, nhiều ester ở điều kiện thường là chất lỏng, nhẹ hơn nước và ít tan trong nước. Nhiều ester có mùi thơm dễ chịu nên được sử dụng trong công nghiệp thực phẩm và sản xuất hương liệu.<br>Ester không tạo được liên kết hydrogen giữa các phân tử ester vì nguyên tử oxygen không liên kết trực tiếp với hydrogen. Vì vậy, với các chất có phân tử khối tương đương, ester thường có nhiệt độ sôi thấp hơn alcohol và carboxylic acid. Carboxylic acid và alcohol có khả năng tạo liên kết hydrogen nên lực tương tác giữa các phân tử mạnh hơn.<br>Một số ester có mùi đặc trưng giống mùi hoa quả. Ví dụ CH₃CH₂CH₂COOC₂H₅ có mùi thơm của dứa chín. Đặc điểm về mùi và độ tan làm ester trở thành nhóm chất có nhiều ứng dụng trong hương liệu, mỹ phẩm và công nghiệp thực phẩm.	Physical properties	Boiling point	Solubility	Odor	https://sudospaces.com/vietchem/2023/05/ung-dung-cua-este-1.jpg
+Nhiệt độ sôi của ester	Ester thường có nhiệt độ sôi thấp hơn alcohol và carboxylic acid có cùng phân tử khối.	Nhiệt độ sôi của ester thường thấp hơn alcohol và carboxylic acid có cùng hoặc gần tương đương phân tử khối. Nguyên nhân chính là ester không tạo được liên kết hydrogen giữa các phân tử như alcohol và carboxylic acid.<br>Khi so sánh nhiệt độ sôi của methyl acetate, butan-1-ol và propanoic acid, methyl acetate có nhiệt độ sôi thấp nhất. Butan-1-ol có liên kết hydrogen nên nhiệt độ sôi cao hơn ester. Propanoic acid tạo liên kết hydrogen rất mạnh và có thể tạo dimer, vì vậy nhiệt độ sôi cao nhất trong ba chất.<br>Thứ tự tăng dần nhiệt độ sôi phù hợp là methyl acetate < butan-1-ol < propanoic acid. Đây là dạng bài tập giúp học sinh liên hệ giữa cấu tạo phân tử, lực tương tác giữa các phân tử và tính chất vật lí. Khi giải, cần xác định khả năng tạo liên kết hydrogen trước khi so sánh nhiệt độ sôi.	Boiling point	Boiling point	Hydrogen bond	Molecular mass	https://vietjack.com/sbt-hoa-hoc-12-ct/images/cau-ot1-22-trang-25-sbt-hoa-hoc-12.PNG
+Thủy phân ester trong môi trường acid	Ester thủy phân trong môi trường acid tạo alcohol và carboxylic acid.	Phản ứng thủy phân ester trong môi trường acid là phản ứng thuận nghịch. Ester phản ứng với nước khi có xúc tác acid, thường sử dụng H₂SO₄, tạo thành alcohol và carboxylic acid tương ứng.<br>Ví dụ: CH₃COOCH₂CH₃ + H₂O ⇌ CH₃COOH + CH₃CH₂OH. Trong phản ứng này, ethyl acetate tạo acetic acid và ethanol. Phản ứng thường được thực hiện bằng cách đun nóng nhẹ để tăng tốc độ phản ứng.<br>Thủy phân ester trong môi trường acid không đi hoàn toàn theo một chiều vì có thể xảy ra phản ứng ester hóa ngược. Do đó, phương trình được biểu diễn bằng dấu ⇌. Khi làm bài tập, cần xác định hai phần của ester: phần acyl tạo carboxylic acid và phần alkoxy tạo alcohol. Đây là phản ứng quan trọng để xác định cấu tạo và điều chế ester.	Acid hydrolysis	Hydrolysis	Ester	Carboxylic acid	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6Q8WzeFa2ow8WOLRn49LTqbDotWPlLvSmEUMnrwYffbmxDta0eit-Fps&s=10
+Thí nghiệm thủy phân ester trong môi trường acid	Thủy phân ethyl acetate bằng H₂SO₄ loãng ở 60–70 °C tạo acetic acid và ethanol.	Trong thí nghiệm thủy phân ester trong môi trường acid, cho khoảng 1 mL ethyl acetate vào ống nghiệm rồi thêm dung dịch H₂SO₄ 20%. Hỗn hợp được đun cách thủy ở khoảng 60–70 °C để thúc đẩy phản ứng.<br>Phản ứng xảy ra theo phương trình: CH₃COOCH₂CH₃ + H₂O ⇌ CH₃COOH + CH₃CH₂OH. H₂SO₄ đóng vai trò xúc tác acid và không phải là chất tạo thành sản phẩm chính.<br>Thí nghiệm minh họa tính chất hóa học đặc trưng của ester. Sau phản ứng, ester bị phân cắt tạo alcohol và carboxylic acid tương ứng. Khi tiến hành thí nghiệm cần tuân thủ quy tắc an toàn phòng thí nghiệm, đặc biệt khi làm việc với acid và khi đun nóng. Cách đun cách thủy giúp hỗn hợp được gia nhiệt tương đối đều và hạn chế nguy cơ đun trực tiếp chất dễ bay hơi.	Acid hydrolysis experiment	Ethyl acetate	Sulfuric acid	Water bath	https://i.ytimg.com/vi/NSn8R3KF5mk/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AH-CYAC0AWKAgwIABABGGUgZShlMA8=&rs=AOn4CLCLnRc4ft-zj7S7dvGNPe0auFR83w
+Thủy phân ester trong môi trường base	Ester thủy phân với NaOH hoặc KOH tạo muối carboxylate và alcohol.	Thủy phân ester trong môi trường base thường được gọi là phản ứng xà phòng hóa đối với chất béo. Ester phản ứng với dung dịch NaOH hoặc KOH khi đun nóng, tạo muối carboxylate và alcohol. Khác với thủy phân trong môi trường acid, phản ứng trong môi trường base thường được xem là xảy ra theo chiều hoàn toàn.<br>Ví dụ: CH₃COOCH₂CH₃ + NaOH → CH₃COONa + CH₃CH₂OH. Ethyl acetate tạo sodium acetate và ethanol.<br>Khi làm bài tập, cần xác định đúng kim loại trong base để viết muối tương ứng. Nếu dùng NaOH thì sản phẩm muối thường chứa Na; nếu dùng KOH thì sản phẩm muối chứa K. Phản ứng thủy phân base là cơ sở của quá trình xà phòng hóa chất béo để sản xuất xà phòng và glycerol.	Base hydrolysis	Saponification	Sodium hydroxide	Carboxylate	https://i.ytimg.com/vi/l_WuC4vpTsY/hqdefault.jpg
+Điều chế ester	Ester được điều chế bằng phản ứng giữa carboxylic acid và alcohol có H₂SO₄ đặc xúc tác.	Phương pháp phổ biến điều chế ester là phản ứng ester hóa giữa carboxylic acid và alcohol với xúc tác H₂SO₄ đặc và đun nóng. Phương trình tổng quát: RCOOH + R'OH ⇌ RCOOR' + H₂O.<br>Ví dụ, acetic acid phản ứng với ethanol tạo ethyl acetate: CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O. H₂SO₄ đặc vừa đóng vai trò xúc tác vừa giúp thuận lợi cho quá trình tạo ester.<br>Phản ứng ester hóa là phản ứng thuận nghịch nên hiệu suất thường nhỏ hơn 100%. Muốn tăng lượng ester có thể sử dụng dư một trong các chất phản ứng hoặc loại nước ra khỏi hệ phản ứng. Khi tính hiệu suất, cần xác định chất giới hạn, tính số mol ester lý thuyết rồi so sánh với lượng ester thực tế thu được.	Esterification	Carboxylic acid	Alcohol	Sulfuric acid	https://www.chemistrylearner.com/wp-content/uploads/2025/01/Esterification.jpg
+Hiệu suất phản ứng ester hóa	Hiệu suất = lượng ester thực tế chia lượng ester lý thuyết nhân 100%.	Trong bài toán ester hóa, hiệu suất phản ứng được xác định bằng tỉ lệ giữa lượng sản phẩm thực tế và lượng sản phẩm lý thuyết. Ví dụ, khi cho 16,2 g acetic acid và 9,2 g ethanol phản ứng, cần đổi khối lượng từng chất sang số mol. Acetic acid có M = 60 g/mol nên có 0,27 mol; ethanol có M = 46 g/mol nên có 0,20 mol. Theo phương trình phản ứng, tỉ lệ mol giữa acid, alcohol và ester là 1:1:1, do đó ethanol là chất giới hạn.<br>Lượng ethyl acetate lý thuyết là 0,20 mol. Với M ethyl acetate = 88 g/mol, khối lượng lý thuyết là 17,6 g. Nếu thực tế thu được 14,08 g thì hiệu suất là 14,08/17,6 × 100% = 80%. Đây là phương pháp chuẩn để giải các bài toán hiệu suất ester hóa.	80%	Reaction yield	Theoretical yield	Ethyl acetate	https://img.loigiaihay.com/picture/2025/0312/1741747636553-mceclip0.png
+Ứng dụng của ester	Ester được dùng làm dung môi, hương liệu, chất tạo mùi và nguyên liệu công nghiệp.	Ester có nhiều ứng dụng trong đời sống và sản xuất nhờ tính chất vật lí đặc trưng như dễ bay hơi, ít tan trong nước, có khả năng hòa tan nhiều chất hữu cơ và thường có mùi đặc trưng.<br>Một số ester được sử dụng làm dung môi trong công nghiệp sơn, mực in, chất tẩy rửa và phòng thí nghiệm. Nhiều ester có mùi thơm giống hoa quả hoặc hoa nên được dùng làm hương liệu trong thực phẩm, mỹ phẩm và nước hoa. Ester cũng là nguyên liệu hoặc sản phẩm trung gian trong quá trình tổng hợp nhiều hợp chất hữu cơ.<br>Ethyl acetate là một dung môi hữu cơ phổ biến. Một số ester có mùi đặc trưng được dùng để tạo hương nhân tạo cho sản phẩm. Ngoài ra, ester còn có vai trò quan trọng trong sản xuất polymer, chất hóa dẻo và nhiều vật liệu hữu cơ. Việc lựa chọn ester phụ thuộc vào cấu tạo và tính chất của từng chất.	Ester applications	Solvent	Flavor	Fragrance	https://www.online-sciences.com/wp-content/uploads/2018/10/Uses-of-esters-1200x900.webp
+Lipid	Lipid là hợp chất hữu cơ không tan trong nước nhưng tan trong dung môi không phân cực.	Lipid là nhóm hợp chất hữu cơ có trong tế bào sống, đặc trưng bởi khả năng không tan hoặc ít tan trong nước nhưng tan tốt trong các dung môi không phân cực. Lipid bao gồm nhiều nhóm chất khác nhau, trong đó chất béo là một loại lipid quan trọng.<br>Lipid có vai trò đa dạng trong cơ thể sống. Chúng tham gia cấu tạo màng tế bào, dự trữ năng lượng và hỗ trợ nhiều quá trình sinh học. Một số lipid còn là tiền chất hoặc thành phần của các hợp chất sinh học quan trọng.<br>Trong chương trình Hóa học 12, nội dung lipid tập trung nhiều vào chất béo, acid béo, phản ứng thủy phân, hydrogen hóa và oxi hóa. Đặc điểm chung về độ tan giúp phân biệt lipid với nhiều hợp chất hữu cơ phân cực khác. Khi học về lipid, cần phân biệt khái niệm lipid rộng với chất béo là một nhóm cụ thể thuộc lipid.	Lipid	Lipid	Nonpolar solvent	Biomolecule	https://www.thoughtco.com/thmb/603XFYSJWJKA2G4EfBkiYGkSqgQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/oil_and_water-56a09afd3df78cafdaa32d18.jpg
+Chất béo	Chất béo là triester của glycerol với các acid béo.	Chất béo là một loại lipid, về mặt hóa học là triester của glycerol với acid béo. Phân tử chất béo có một gốc glycerol liên kết với ba gốc acid béo thông qua ba nhóm chức ester.<br>Công thức tổng quát có thể biểu diễn dạng (RCOO)₃C₃H₅ khi cả ba gốc acid béo giống nhau. Nếu ba gốc acid béo khác nhau, cấu trúc chất béo phức tạp hơn nhưng vẫn có bản chất là triester của glycerol.<br>Chất béo thường được tìm thấy trong mỡ động vật và dầu thực vật. Chất béo no thường chứa nhiều gốc acid béo no và thường ở trạng thái rắn; chất béo không no chứa gốc acid béo có liên kết đôi và thường ở trạng thái lỏng. Chất béo có vai trò cung cấp và dự trữ năng lượng, đồng thời là nguyên liệu quan trọng trong sản xuất xà phòng, glycerol và nhiều sản phẩm công nghiệp.	Fat	Triglyceride	Glycerol	Fatty acid	https://vitadairy.vn/s/images/post/chat-beo-la-gi.jpg
+Acid béo	Acid béo là carboxylic acid đơn chức, mạch dài, không phân nhánh.	Acid béo là các carboxylic acid đơn chức có mạch carbon dài, không phân nhánh và thường có số nguyên tử carbon chẵn. Gốc hydrocarbon của acid béo có thể no hoặc không no.<br>Acid béo no chỉ chứa các liên kết đơn C–C trong mạch hydrocarbon. Hai acid béo no thường gặp là palmitic acid CH₃(CH₂)₁₄COOH và stearic acid CH₃(CH₂)₁₆COOH. Acid béo không no chứa một hoặc nhiều liên kết đôi C=C, chẳng hạn oleic acid và linoleic acid.<br>Acid béo là thành phần quan trọng cấu tạo nên chất béo. Tính chất của chất béo phụ thuộc đáng kể vào loại acid béo tạo thành. Gốc acid béo càng chứa nhiều liên kết đôi thì chất béo càng có xu hướng ở trạng thái lỏng và dễ bị oxi hóa. Một số acid béo không no như omega-3 và omega-6 có vai trò sinh học quan trọng.	Fatty acid	Carboxylic acid	Hydrocarbon	Carbon chain	https://nutrihome.vn/wp-content/uploads/2024/02/cac-axit-beo.jpg
+Acid béo no	Acid béo no chỉ chứa liên kết đơn C–C trong mạch hydrocarbon.	Acid béo no là carboxylic acid đơn chức có mạch hydrocarbon dài, không phân nhánh và không chứa liên kết đôi C=C. Hai acid béo no thường gặp là palmitic acid có công thức CH₃(CH₂)₁₄COOH và stearic acid có công thức CH₃(CH₂)₁₆COOH.<br>Do không có liên kết đôi, gốc hydrocarbon của acid béo no có cấu trúc tương đối thẳng và có thể xếp chặt. Vì vậy, chất béo chứa nhiều gốc acid béo no thường có nhiệt độ nóng chảy cao hơn và thường tồn tại ở trạng thái rắn ở điều kiện thường, ví dụ mỡ lợn và mỡ bò.<br>Acid béo no có thể tham gia phản ứng tạo chất béo và phản ứng thủy phân ngược thông qua các ester tương ứng. Khi học chất béo, cần nhận biết acid béo no dựa vào sự vắng mặt của liên kết đôi C=C trong mạch hydrocarbon.	Saturated fatty acid	Palmitic acid	Stearic acid	Saturated fat	https://cdn.nhathuoclongchau.com.vn/v1/static/axit_beo_no_la_gi_dc421f96c9.jpeg
+Acid béo không no	Acid béo không no chứa một hoặc nhiều liên kết đôi C=C.	Acid béo không no là acid béo có một hoặc nhiều liên kết đôi C=C trong mạch hydrocarbon. Oleic acid có một liên kết đôi với công thức CH₃(CH₂)₇CH=CH(CH₂)₇COOH. Linoleic acid có hai liên kết đôi với công thức CH₃(CH₂)₄CH=CHCH₂CH=CH(CH₂)₇COOH.<br>Sự xuất hiện của liên kết đôi làm mạch hydrocarbon khó xếp chặt, vì vậy chất béo chứa nhiều gốc acid béo không no thường tồn tại ở trạng thái lỏng, được gọi phổ biến là dầu. Dầu thực vật và dầu cá thường chứa nhiều acid béo không no.<br>Liên kết đôi trong gốc acid béo không no dễ tham gia phản ứng hydrogen hóa và dễ bị oxi hóa bởi oxygen trong không khí. Vì vậy, chất béo không no có thể được chuyển thành chất béo no và cũng dễ xảy ra quá trình ôi thiu khi bảo quản không phù hợp.	Unsaturated fatty acid	Oleic acid	Linoleic acid	Double bond	https://www.medigoapp.com/uploads/axit_beo_2_ca4850b165.jpg
+Palmitic acid	Palmitic acid là acid béo no có công thức CH₃(CH₂)₁₄COOH.	Palmitic acid, hay acid palmitic, là một acid béo no có công thức CH₃(CH₂)₁₄COOH. Phân tử có tổng cộng 16 nguyên tử carbon và không chứa liên kết đôi C=C trong mạch hydrocarbon.<br>Palmitic acid là một trong những acid béo thường gặp trong chất béo tự nhiên. Vì là acid béo no nên gốc hydrocarbon của nó có thể xếp tương đối chặt. Khi tham gia tạo chất béo, ba gốc palmitate có thể kết hợp với glycerol tạo triglyceride tương ứng.<br>Trong bài tập hóa học, cần phân biệt palmitic acid với stearic acid và các acid béo không no. Palmitic acid có dạng CH₃(CH₂)₁₄COOH, còn stearic acid có thêm hai nhóm –CH₂– nên chứa 18 carbon. Việc đếm số carbon và kiểm tra liên kết đôi giúp nhận dạng chính xác acid béo.	Palmitic acid	Saturated fat	Fatty acid	Palmitate	https://upload.wikimedia.org/wikipedia/commons/8/81/Palmitic-acid-3D-balls.png?utm_source=vi.wikipedia.org&utm_campaign=index&utm_content=original
+Stearic acid	Stearic acid là acid béo no có công thức CH₃(CH₂)₁₆COOH.	Stearic acid, hay acid stearic, là một acid béo no có công thức CH₃(CH₂)₁₆COOH. Phân tử chứa 18 nguyên tử carbon và không có liên kết đôi C=C trong mạch hydrocarbon.<br>Stearic acid là thành phần của nhiều chất béo tự nhiên. Khi kết hợp với glycerol, ba gốc stearate có thể tạo triglyceride là tristearin. Chất béo chứa nhiều gốc stearic thường có trạng thái rắn ở điều kiện thường do các mạch hydrocarbon no có khả năng xếp chặt.<br>Để nhận biết chất béo được tạo thành từ glycerol và stearic acid, cần viết gốc stearate C₁₇H₃₅COO– rồi gắn ba gốc này vào glycerol. Công thức thu được là (C₁₇H₃₅COO)₃C₃H₅. Đây là dạng bài tập quan trọng để rèn kỹ năng chuyển đổi giữa acid béo và công thức chất béo.	Stearic acid	Saturated fatty acid	Stearate	Tristearin	https://cdn.britannica.com/31/96831-050-97696E96/formula-stearic-acid.jpg
+Oleic acid	Oleic acid là acid béo không no có một liên kết đôi C=C.	Oleic acid là acid béo không no đơn chức, có công thức CH₃(CH₂)₇CH=CH(CH₂)₇COOH. Phân tử chứa 18 carbon và một liên kết đôi C=C trong mạch hydrocarbon.<br>Oleic acid là thành phần phổ biến trong nhiều loại dầu thực vật. Khi tạo chất béo với glycerol, các gốc oleate tạo nên triolein. Do có liên kết đôi, gốc oleate làm cho chất béo thường có trạng thái lỏng ở điều kiện thường và dễ bị oxi hóa hơn chất béo no.<br>Liên kết đôi trong oleic acid có thể tham gia phản ứng cộng hydrogen. Khi hydrogen hóa thích hợp, liên kết đôi được chuyển thành liên kết đơn, làm tăng mức độ no của gốc acid béo. Oleic acid là ví dụ tiêu biểu để học sinh hiểu mối liên hệ giữa cấu tạo acid béo không no và tính chất vật lí, hóa học của dầu thực vật.	Oleic acid	Unsaturated fatty acid	Oleate	Double bond	https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Oleic-acid-3D-vdW.png/330px-Oleic-acid-3D-vdW.png?utm_source=vi.wikipedia.org&utm_campaign=parser&utm_content=thumbnail
+Linoleic acid	Linoleic acid là acid béo không no có hai liên kết đôi C=C.	Linoleic acid là acid béo không no chứa hai liên kết đôi C=C. Công thức của linoleic acid là CH₃(CH₂)₄CH=CHCH₂CH=CH(CH₂)₇COOH. Phân tử có 18 carbon và hai liên kết đôi.<br>Do chứa nhiều liên kết đôi, linoleic acid có gốc hydrocarbon kém no và khó xếp chặt. Các chất béo chứa nhiều gốc linoleate thường có xu hướng tồn tại ở trạng thái lỏng. Đồng thời, các liên kết đôi là vị trí dễ xảy ra phản ứng hydrogen hóa và oxi hóa.<br>Linoleic acid thuộc nhóm acid béo omega-6, có vai trò sinh học quan trọng. Trong dinh dưỡng, omega-6 thường được cung cấp từ các loại dầu thực vật và một số thực phẩm khác. Trong hóa học, linoleic acid là ví dụ điển hình giúp minh họa acid béo đa không no và mối liên hệ giữa số lượng liên kết đôi với tính chất của chất béo.	Linoleic acid	Omega-6	Polyunsaturated	Double bond	https://images.tuyensinh247.com/picture/images_question/1725439735-luiu.jpg
+Tính chất vật lí của chất béo	Chất béo no thường rắn, chất béo không no thường lỏng; chất béo không tan trong nước.	Chất béo thường là những chất nhẹ hơn nước, không tan trong nước nhưng tan tốt trong các dung môi hữu cơ kém phân cực. Trạng thái vật lí phụ thuộc nhiều vào thành phần acid béo tạo nên triglyceride.<br>Chất béo chứa nhiều gốc acid béo no thường có nhiệt độ nóng chảy cao và thường tồn tại ở trạng thái rắn, ví dụ mỡ lợn và mỡ bò. Ngược lại, chất béo chứa nhiều gốc acid béo không no có nhiều liên kết đôi nên thường tồn tại ở trạng thái lỏng, ví dụ dầu vừng, dầu lạc và dầu cá.<br>Sự khác nhau này liên quan đến khả năng xếp chặt của các mạch hydrocarbon. Mạch no tương đối thẳng nên dễ xếp sát nhau, trong khi liên kết đôi làm cấu trúc mạch bị gấp, giảm khả năng xếp chặt. Đây là cơ sở giải thích sự khác nhau giữa dầu và mỡ.	Physical properties of fat	Solid fat	Liquid oil	Solubility	https://cdn.vungoi.vn/vungoi/1531908861313_chat_beo.jpg
+Phản ứng hydrogen hóa chất béo	Chất béo không no cộng H₂ vào liên kết đôi tạo chất béo no.	Chất béo không no có thể tham gia phản ứng hydrogen hóa khi tác dụng với hydrogen ở điều kiện thích hợp, thường có xúc tác và đun nóng. Hydrogen cộng vào các liên kết đôi C=C trong gốc acid béo, làm giảm mức độ không no và tạo chất béo no hơn.<br>Ví dụ, một triglyceride chứa ba liên kết đôi có thể cộng 3H₂ để chuyển thành triglyceride tương ứng không còn các liên kết đôi đó. Phản ứng này làm thay đổi tính chất vật lí của chất béo, chẳng hạn dầu lỏng có thể chuyển thành chất béo rắn hơn.<br>Trong công nghiệp thực phẩm, quá trình hydrogen hóa từng được sử dụng để chuyển dầu thực vật thành chất béo có độ rắn phù hợp. Khi học phương trình phản ứng, cần đếm chính xác số liên kết đôi trong phân tử để xác định số mol H₂ cần dùng.	Hydrogenation	Hydrogen	Double bond	Saturated fat	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxAq-1GcQ2fyZJTvtQZH5zwzY0erT-hDXy3--GtCVtSE5091TK9fEY3cI&s=10
+Phản ứng oxi hóa chất béo	Chất béo không no dễ bị oxygen không khí oxi hóa gây ôi thiu.	Các gốc acid béo không no trong chất béo chứa liên kết đôi C=C kém bền nên có thể bị oxygen trong không khí oxi hóa chậm. Quá trình này tạo ra nhiều sản phẩm oxi hóa có mùi khó chịu, làm chất béo bị ôi thiu.<br>Chất béo càng chứa nhiều gốc acid béo không no thì thường càng dễ bị oxi hóa. Ánh sáng, nhiệt độ cao và oxygen có thể thúc đẩy quá trình này. Vì vậy, dầu ăn cần được bảo quản trong điều kiện hạn chế ánh sáng, nhiệt và không khí.<br>Hiện tượng dầu có mùi lạ sau thời gian dài mở nắp là một ví dụ quen thuộc của quá trình oxi hóa chất béo. Kiến thức này giúp giải thích tại sao thực phẩm giàu chất béo cần được bảo quản đúng cách và tại sao dầu không nên bị đun nóng quá lâu hoặc tái sử dụng nhiều lần.	Fat oxidation	Oxidation	Oxygen	Rancidity	https://d16qt3wv6xm098.cloudfront.net/UvkEhKtbR5SE8HBCimKYhnYmQ7aN_6mO/_.jpg
+Phản ứng xà phòng hóa chất béo	Chất béo phản ứng với NaOH hoặc KOH tạo glycerol và muối của acid béo.	Phản ứng xà phòng hóa là phản ứng thủy phân chất béo trong môi trường base mạnh như NaOH hoặc KOH. Sản phẩm gồm glycerol và muối của các acid béo. Các muối natri hoặc kali của acid béo chính là thành phần quan trọng của xà phòng.<br>Ví dụ, triglyceride của stearic acid phản ứng với 3NaOH tạo glycerol và 3 sodium stearate. Vì chất béo là triester nên cần 3 mol NaOH cho mỗi mol triglyceride nếu cả ba nhóm ester đều bị thủy phân.<br>Phản ứng xà phòng hóa có ý nghĩa lớn trong sản xuất xà phòng. Khi giải bài toán, cần dựa vào tỉ lệ mol giữa chất béo, NaOH và glycerol. Nếu biết khối lượng glycerol sinh ra, có thể tính số mol chất béo theo tỉ lệ 1:1, sau đó tính khối lượng muối acid béo dựa trên định luật bảo toàn khối lượng hoặc số mol.	Saponification	Soap	Glycerol	Sodium hydroxide	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPp1I4SLGPChtSHjdEMeHN3ZFJh52_LyQTYDabYjIX2tNcWAXILcPCpSs&s=10
+Xà phòng hóa triolein	Triolein phản ứng với 3NaOH tạo glycerol và 3 sodium oleate.	Triolein là triglyceride được tạo bởi glycerol và oleic acid, chứa ba gốc oleate. Khi xà phòng hóa hoàn toàn, một mol triolein phản ứng với 3 mol NaOH tạo một mol glycerol và ba mol sodium oleate.<br>Phương trình tổng quát: triolein + 3NaOH → glycerol + 3 sodium oleate. Nếu thu được 4,14 g glycerol, với M glycerol = 92 g/mol, số mol glycerol là 4,14/92 = 0,045 mol. Do tỉ lệ mol triolein:glycerol là 1:1 nên có 0,045 mol triolein và tạo 0,135 mol sodium oleate.<br>Sodium oleate có công thức C₁₇H₃₃COONa và M = 304 g/mol. Khối lượng muối là 0,135 × 304 = 41,04 g. Đây là cách giải dựa vào tỉ lệ mol trong phản ứng xà phòng hóa.	41.04 g	Saponification	Triolein	Sodium oleate	https://tdgimex.com/wp-content/uploads/2024/07/phoi-xa-phong-glycerin.png
+Ứng dụng của chất béo	Chất béo cung cấp và dự trữ năng lượng, đồng thời được dùng trong sản xuất xà phòng, glycerol và thực phẩm.	Chất béo có vai trò quan trọng đối với cơ thể và đời sống. Về sinh học, chất béo là nguồn cung cấp năng lượng và dạng dự trữ năng lượng hiệu quả. Chúng cũng cung cấp các acid béo cần thiết cho cơ thể.<br>Trong công nghiệp, chất béo được sử dụng để sản xuất xà phòng, glycerol, mỹ phẩm, dược phẩm và nhiều sản phẩm chế biến thực phẩm. Phản ứng xà phòng hóa chất béo với NaOH hoặc KOH tạo muối acid béo và glycerol, là cơ sở của sản xuất xà phòng truyền thống.<br>Trong thực phẩm, dầu và mỡ được sử dụng để cung cấp năng lượng và tạo hương vị, cấu trúc cho món ăn. Tuy nhiên, chất béo cần được sử dụng hợp lí và bảo quản đúng cách. Các acid béo không no, đặc biệt omega-3 và omega-6, có vai trò quan trọng trong dinh dưỡng và nhiều quá trình sinh học của cơ thể.	Fat applications	Energy	Soap	Glycerol	https://hinu.vn/wp-content/uploads/2025/10/bo-sung-chat-beo-cho-be-1.jpg
+Omega-3	Omega-3 là nhóm acid béo không no có liên kết đôi đầu tiên ở vị trí số 3.	Omega-3 là cách gọi một nhóm acid béo không no trong đó liên kết đôi đầu tiên được tính từ đầu methyl của mạch carbon nằm ở vị trí carbon số 3. Một số acid béo omega-3 có vai trò quan trọng trong dinh dưỡng và sinh học.<br>Các nguồn thực phẩm giàu omega-3 thường gồm dầu cá và một số loại cá béo, ngoài ra còn có một số loại hạt và dầu thực vật. Omega-3 tham gia vào nhiều chức năng sinh học, đặc biệt liên quan đến hệ thần kinh và thị giác.<br>Trong chương trình phổ thông, cần hiểu omega-3 là nhóm acid béo không no được phân loại dựa trên vị trí liên kết đôi đầu tiên. Khi tư vấn dinh dưỡng, không nên hiểu omega-3 là một chất duy nhất mà là một nhóm nhiều acid béo khác nhau. Việc bổ sung omega-3 nên thông qua chế độ ăn cân đối và nguồn thực phẩm phù hợp.	Omega-3	Omega fatty acid	Unsaturated fat	Fish oil	https://m.media-amazon.com/images/I/7120z-4Ac2L._AC_UF1000,1000_QL80_.jpg
+Omega-6	Omega-6 là nhóm acid béo không no có liên kết đôi đầu tiên ở vị trí số 6.	Omega-6 là nhóm acid béo không no được xác định dựa trên vị trí của liên kết đôi đầu tiên tính từ đầu methyl của mạch hydrocarbon. Liên kết đôi đầu tiên nằm ở vị trí carbon số 6.<br>Linoleic acid là một ví dụ quan trọng của acid béo omega-6. Acid này có hai liên kết đôi và thường được cung cấp từ dầu thực vật. Omega-6 tham gia vào nhiều quá trình sinh học và là nhóm acid béo cần thiết trong chế độ ăn.<br>Trong học tập, cần phân biệt omega-6 với omega-3 dựa vào vị trí liên kết đôi đầu tiên. Cả hai đều thuộc nhóm acid béo không no nhưng có cách phân loại khác nhau. Omega-6 không phải là một chất đơn lẻ mà là tên gọi chung của một nhóm acid béo có đặc điểm cấu tạo tương ứng.	Omega-6	Omega fatty acid	Linoleic acid	Unsaturated fat	https://cdn.nhathuoclongchau.com.vn/unsafe/800x0/omega_6_va_nhung_dieu_ban_nen_biet_2_8abbe37ee5.jpg
+Thực phẩm giàu omega-3	Dầu cá là một nguồn thực phẩm giàu omega-3.	Omega-3 có thể được cung cấp thông qua nhiều loại thực phẩm, trong đó dầu cá là nguồn thường được nhắc đến vì chứa các acid béo omega-3 như EPA và DHA. Một số loại cá béo như cá hồi, cá thu, cá mòi cũng có hàm lượng omega-3 đáng kể.<br>Ngoài nguồn động vật, một số thực phẩm thực vật như hạt lanh, hạt chia và quả óc chó cung cấp acid béo omega-3 dạng ALA. Cơ thể có thể chuyển đổi ALA thành các dạng omega-3 khác nhưng hiệu quả chuyển đổi có giới hạn.<br>Trong câu hỏi lựa chọn giữa dầu olive, dầu cá, dầu mè và dầu đậu nành, đáp án phù hợp nhất là dầu cá. Kiến thức này giúp học sinh liên hệ nội dung Hóa học về acid béo không no với kiến thức dinh dưỡng trong đời sống.	Omega-3 food sources	Fish oil	EPA	DHA	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQwd5eeGGGFOiQAkb38aXohEUu22tOMX9_FJy8NGAPcWw&s=10`;
+        const DEFAULT_RAW_DATA = `Sơn Tinh\tTản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.\t• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên\tTản Vien Son Thanh\tBa Vi Mountain\tVietnamese mythology\tNatural disaster\thttps://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg\nThánh Gióng\tPhù Đổng Thiên Vương là biểu tượng sức mạnh chống ngoại xâm.\t• Biểu tượng tuổi trẻ và lòng yêu nước<br>• Gắn với hội Gióng truyền thống<br>• Lạc vào huyền thoại đánh giặc Ân\tPhu Dong Thien Vuong\tGiong Festival\tVietnamese hero\tPatriotism\thttps://vnn-imgs-a1.vgcloud.vn/icdn/2020/05/29/10/thanh-giong-1.jpg`;
+
+        const STORAGE_KEY_DATA = 'icarus_raw_data_v3';
+        let rawInitialData = "";
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        function initData() {
+            if (embeddedInitialData && embeddedInitialData.trim() !== "") {
+                rawInitialData = embeddedInitialData;
+            } else {
+                let savedData = localStorage.getItem(STORAGE_KEY_DATA);
+                rawInitialData = (savedData && savedData.trim() !== "") ? savedData : DEFAULT_RAW_DATA;
+                localStorage.setItem(STORAGE_KEY_DATA, rawInitialData);
+            }
+
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            renderExpandView();
+            requestWakeLock();
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem(STORAGE_KEY_DATA, rawInitialData);
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) requestWakeLock();
+            else releaseWakeLock();
+        }
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const match = text.match(/\[([^\]]+)\]\(([^)]+)\)/);
+            return match && match[2] ? match[2].trim() : text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+        let expandParagraphMaps = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix, slideIdx = null) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = slideIdx !== null ? `exp_${slideIdx}_${typePrefix}_${index}` : `${typePrefix}_${index}`;
+                let clickAction = slideIdx !== null ? `readSpecificSlideParagraph(${slideIdx}, '${escapeHtml(cleanedText)}')` : `readParagraphAt('${escapeHtml(cleanedText)}')`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" ondblclick="togglePauseRead()" onclick="${clickAction}">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm kiếm">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('scrollableTextArea').scrollTop = 0;
+            highlightExpandCard(currentIndex);
+            saveToLocalStorage();
+        }
+
+        function renderExpandView() {
+            const expandContainer = document.getElementById('expandViewContainer');
+            let html = '';
+            expandParagraphMaps = [];
+
+            data.forEach((item, slideIdx) => {
+                let tagsHtml = '';
+                item.tags.forEach(tag => {
+                    tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')">${tag}</span>`;
+                });
+
+                let pMap = { titleId: `exp_title_${slideIdx}`, paragraphs: [] };
+
+                if (item.desc) {
+                    item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                        let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                        if (clean) pMap.paragraphs.push({ text: clean, id: `exp_${slideIdx}_desc_${idx}` });
+                    });
+                }
+                if (item.bullets) {
+                    item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                        let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                        if (clean) pMap.paragraphs.push({ text: clean, id: `exp_${slideIdx}_bullets_${idx}` });
+                    });
+                }
+                expandParagraphMaps.push(pMap);
+
+                let formattedDesc = formatClickableParagraphs(item.desc, 'desc', slideIdx);
+                let formattedBullets = formatClickableParagraphs(item.bullets, 'bullets', slideIdx);
+
+                html += `
+                    <div class="expand-slide-card" id="expand-slide-${slideIdx}">
+                        <h2 id="exp_title_${slideIdx}" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(${slideIdx})" title="Đọc tiêu đề">${slideIdx + 1}. ${item.title}</h2>
+                        ${item.img ? `<img src="${item.img}" alt="Ảnh" onerror="this.style.display='none'">` : ''}
+                        <div class="expand-desc">${formattedDesc}</div>
+                        ${formattedBullets ? `<div class="expand-bullets">${formattedBullets}</div>` : ''}
+                        <div class="tags-container">${tagsHtml}</div>
+                    </div>
+                `;
+            });
+            expandContainer.innerHTML = html;
+        }
+
+        function toggleExpandMode() {
+            document.body.classList.toggle('expand-mode');
+            const btn = document.getElementById('expandModeBtn');
+            if (document.body.classList.contains('expand-mode')) {
+                btn.innerText = '⏹️ Thoát';
+                renderExpandView();
+                highlightExpandCard(currentIndex);
+            } else {
+                btn.innerText = '📖 Expand';
+            }
+        }
+
+        function highlightExpandCard(slideIdx) {
+            document.querySelectorAll('.expand-slide-card').forEach((card, idx) => {
+                if (idx === slideIdx) {
+                    card.classList.add('active-card');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    card.classList.remove('active-card');
+                }
+            });
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+                renderExpandView();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t = item.tags;
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t[0]||''}\t${t[1]||''}\t${t[2]||''}\t${t[3]||''}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            if (currentIndex >= data.length) currentIndex = 0;
+            renderSlide();
+            if (isAutoplay) readSlide();
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            renderSlide();
+            if (isAutoplay) readSlide();
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => el.classList.remove('active-speaking'));
+        }
+
+        function highlightAndScrollParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                // Highlight ở chế độ Thường
+                let el = document.getElementById(paragraphElementMap[paragraphIndex]);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    const scrollArea = document.getElementById('scrollableTextArea');
+                    scrollArea.scrollTo({
+                        top: el.offsetTop - (scrollArea.clientHeight / 2) + (el.offsetHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+
+                // Highlight đồng thời ở chế độ Expand Mode
+                if (expandParagraphMaps[currentIndex] && expandParagraphMaps[currentIndex].paragraphs[paragraphIndex]) {
+                    let expEl = document.getElementById(expandParagraphMaps[currentIndex].paragraphs[paragraphIndex].id);
+                    if (expEl) expEl.classList.add('active-speaking');
+                }
+            }
+        }
+
+        let currentQueue = [];
+        let currentQueueIndex = 0;
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0, isReadingTitle = false) {
+            if (!synth) return;
+            currentQueue = paragraphs;
+            currentQueueIndex = queueStartIndex;
+
+            if (currentQueueIndex >= currentQueue.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) nextSlide();
+                return;
+            }
+
+            let utter = new SpeechSynthesisUtterance(currentQueue[currentQueueIndex]);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            utter.onstart = () => {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                if (isReadingTitle) {
+                    clearActiveHighlights();
+                    highlightExpandCard(currentIndex);
+                } else {
+                    highlightAndScrollParagraph(currentQueueIndex);
+                }
+            };
+
+            utter.onend = () => {
+                if (!isPaused) {
+                    if (isReadingTitle) {
+                        // Sau khi đọc xong tiêu đề, tiếp tục đọc sang danh sách nội dung
+                        speakParagraphQueue(currentSlideParagraphs, 0, false);
+                    } else {
+                        if (!isAutoplay) {
+                            clearActiveHighlights();
+                            return;
+                        }
+                        speakParagraphQueue(currentQueue, currentQueueIndex + 1, false);
+                    }
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            highlightExpandCard(currentIndex);
+            // Bắt đầu đọc từ tiêu đề trước (không highlight nội dung), sau đó tự chuyển sang nội dung
+            let titleText = data[currentIndex].title;
+            let utter = new SpeechSynthesisUtterance(titleText);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            utter.onstart = () => {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                clearActiveHighlights();
+            };
+
+            utter.onend = () => {
+                if (!isPaused) {
+                    speakParagraphQueue(currentSlideParagraphs, 0, false);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            let idx = currentSlideParagraphs.indexOf(textSnippet);
+            speakParagraphQueue(currentSlideParagraphs, idx !== -1 ? idx : 0, false);
+        }
+
+        function readSpecificSlideTitle(slideIdx) {
+            if (!synth) return;
+            stopRead();
+            currentIndex = slideIdx;
+            renderSlide();
+            highlightExpandCard(slideIdx);
+            let utter = new SpeechSynthesisUtterance(data[slideIdx].title);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+            synth.speak(utter);
+        }
+
+        function readSpecificSlideParagraph(slideIdx, textSnippet) {
+            if (!synth) return;
+            stopRead();
+            currentIndex = slideIdx;
+            renderSlide();
+            highlightExpandCard(slideIdx);
+
+            let item = data[slideIdx];
+            let paragraphs = [];
+            if (item.desc) item.desc.split(/<br\s*[\/]?>/gi).forEach(p => { let c = p.replace(/<[^>]*>?/gm, '').trim(); if(c) paragraphs.push(c); });
+            if (item.bullets) item.bullets.split(/<br\s*[\/]?>/gi).forEach(p => { let c = p.replace(/<[^>]*>?/gm, '').trim(); if(c) paragraphs.push(c); });
+            
+            let idx = paragraphs.indexOf(textSnippet);
+            // Gán lại mảng map tạm cho slide này để highlight đúng
+            currentSlideParagraphs = paragraphs;
+            paragraphElementMap = paragraphs.map((_, i) => `exp_${slideIdx}_desc_${i}`); // mapping giả định
+            speakParagraphQueue(paragraphs, idx !== -1 ? idx : 0, false);
+        }
+
+        function togglePauseRead() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) { synth.resume(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; }
+                else { synth.pause(); isPaused = true; document.getElementById('pauseBtn').innerText = '▶️ Tiếp tục'; }
+            } else if (isPaused) { synth.resume(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; }
+        }
+
+        function stopRead() {
+            if (synth) { synth.cancel(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; clearActiveHighlights(); }
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveToLocalStorage();
+            if (synth && synth.speaking) readSlide();
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function toggleFullscreenMode() {
+            document.body.classList.toggle('fullscreen-mode');
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel = Math.max(-3, Math.min(5, fontSizeLevel + direction));
+            applyFontSize();
+            saveToLocalStorage();
+        }
+
+        function applyFontSize() {
+            let baseDesc = 1.1 + (fontSizeLevel * 0.1);
+            let baseBullets = 0.95 + (fontSizeLevel * 0.1);
+            let baseTitle = 1.8 + (fontSizeLevel * 0.15);
+
+            document.getElementById('slide-desc').style.fontSize = `${baseDesc}rem`;
+            document.getElementById('slide-bullets').style.fontSize = `${baseBullets}rem`;
+            document.getElementById('slide-title').style.fontSize = `${baseTitle}rem`;
+
+            document.querySelectorAll('.expand-desc').forEach(el => el.style.fontSize = `${baseDesc}rem`);
+            document.querySelectorAll('.expand-bullets').forEach(el => el.style.fontSize = `${baseBullets}rem`);
+            document.querySelectorAll('.expand-slide-card h2').forEach(el => el.style.fontSize = `${baseTitle * 0.9}rem`);
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                saveToLocalStorage();
+                renderSlide();
+                renderExpandView();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-icarus.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy phân tách nhau bằng dấu Tab gồm đúng 8 cột: Từ khóa, Kiến thức, Chi tiết, 4 từ khóa Anh, URL ảnh. Chỉ trả về dữ liệu thô.`;
+            navigator.clipboard.writeText(promptContent).then(() => { alert('Đã copy Prompt AI!'); });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+            if (e.key === 'ArrowRight') nextSlide();
+            else if (e.key === 'ArrowLeft') prevSlide();
+            else if (e.key === '=' || e.key === '+') changeFontSize(1);
+            else if (e.key === '-' || e.key === '_') changeFontSize(-1);
+            else if (e.key === 'Escape') {
+                if (document.body.classList.contains('fullscreen-mode')) toggleFullscreenMode();
+                if (document.body.classList.contains('expand-mode')) toggleExpandMode();
+            }
+        });
+
+        initData();
+    </script>
+
+</body></html>
