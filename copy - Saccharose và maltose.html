@@ -1,0 +1,1202 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Icarus Presenter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        /* Chế độ Fullscreen Minimalist */
+        body.fullscreen-mode .top-toolbar,
+        body.fullscreen-mode .manual-nav {
+            display: none !important;
+        }
+
+        body.fullscreen-mode {
+            padding: 10px;
+            justify-content: center;
+            background: #111;
+        }
+
+        body.fullscreen-mode .container {
+            width: 100vw;
+            height: 96vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Chế độ Expand Mode */
+        body.expand-mode .container {
+            display: none !important;
+        }
+        
+        .expand-view-container {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        body.expand-mode .expand-view-container {
+            display: flex;
+        }
+
+        .expand-slide-card {
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: border 0.3s, box-shadow 0.3s;
+        }
+        .expand-slide-card.active-card {
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+        .expand-slide-card h2 {
+            color: #ffd700;
+            font-size: 1.6rem;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+            padding-bottom: 8px;
+            cursor: pointer;
+        }
+        .expand-slide-card h2:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+        .expand-slide-card img {
+            max-width: 100%;
+            max-height: 350px;
+            object-fit: contain;
+            display: block;
+            margin: 15px auto;
+            border-radius: 8px;
+            background: #000;
+        }
+        .expand-slide-card .expand-desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .expand-slide-card .expand-bullets {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .exit-fs-btn {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+        }
+        body.fullscreen-mode .exit-fs-btn {
+            display: block;
+        }
+
+        /* Tối ưu hóa Header (Top Toolbar) cho PC & Mobile */
+        .top-toolbar {
+            width: 100%;
+            max-width: 1180px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        button {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1180px;
+            height: 68vh;
+            max-height: 580px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            background: #0b0b0b;
+        }
+
+        .image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-url-bar {
+            padding: 8px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 6px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 5px 8px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 18px 24px;
+        }
+
+        .title-area {
+            flex-shrink: 0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #ffd700;
+            cursor: pointer;
+            display: inline-block;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .scrollable-text-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
+            position: relative;
+        }
+
+        .desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 12px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+        }
+
+        /* Tối ưu hóa Footer (Manual Nav) cho PC & Mobile */
+        .manual-nav {
+            margin-top: 15px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1180px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1rem;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 18px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 18px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #ffd700; }
+        input:checked + .slider:before { transform: translateX(18px); background-color: #000; }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 220px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .top-toolbar, .manual-nav { padding: 8px 10px; gap: 6px; justify-content: center; }
+            .container { flex-direction: column; height: 75vh; }
+            .image-panel { height: 35vh; flex: none; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .content-box { flex: 1; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="exit-fs-btn" onclick="toggleFullscreenMode()">✕ Thoát</button>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <!-- Header / Top Toolbar tối ưu responsive -->
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" id="expandModeBtn" onclick="toggleExpandMode()">📖 Expand</button>
+            <button class="secondary" onclick="toggleFullscreenMode()">📺 Full</button>
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save</button>
+            <button onclick="openImportModal()">Import</button>
+        </div>
+    </div>
+
+    <!-- Giao diện Slide thông thường -->
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box">
+            <div class="title-area">
+                <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Tìm kiếm trên Google" style="font-size: 2.55rem;">Saccharose</h1>
+            </div>
+            <div class="scrollable-text-area" id="scrollableTextArea" ondblclick="togglePauseRead()">
+                <div class="desc" id="slide-desc" style="font-size: 1.6rem;"><div class="clickable-paragraph" id="desc_0" ondblclick="togglePauseRead()" onclick="readParagraphAt('Saccharose là disaccharide gồm α-glucose và β-fructose liên kết α-1,2-glycoside.')">Saccharose là disaccharide gồm α-glucose và β-fructose liên kết α-1,2-glycoside.</div></div>
+                <div class="bullets" id="slide-bullets" style="font-size: 1.45rem;"><div class="clickable-paragraph" id="bullets_0" ondblclick="togglePauseRead()" onclick="readParagraphAt('Saccharose có công thức phân tử C12H22O11 và là một disaccharide phổ biến.')">Saccharose có công thức phân tử C12H22O11 và là một disaccharide phổ biến.</div><div class="clickable-paragraph" id="bullets_1" ondblclick="togglePauseRead()" onclick="readParagraphAt('Phân tử được tạo thành từ một đơn vị α-glucose và một đơn vị β-fructose.')">Phân tử được tạo thành từ một đơn vị α-glucose và một đơn vị β-fructose.</div><div class="clickable-paragraph" id="bullets_2" ondblclick="togglePauseRead()" onclick="readParagraphAt('Hai monosaccharide liên kết với nhau bằng liên kết α-1,2-glycoside giữa các carbon anomeric.')">Hai monosaccharide liên kết với nhau bằng liên kết α-1,2-glycoside giữa các carbon anomeric.</div><div class="clickable-paragraph" id="bullets_3" ondblclick="togglePauseRead()" onclick="readParagraphAt('Do cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không còn nhóm hemiacetal tự do.')">Do cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không còn nhóm hemiacetal tự do.</div><div class="clickable-paragraph" id="bullets_4" ondblclick="togglePauseRead()" onclick="readParagraphAt('Saccharose có nhiều nhóm hydroxyl -OH nên thể hiện tính chất của polyalcohol.')">Saccharose có nhiều nhóm hydroxyl -OH nên thể hiện tính chất của polyalcohol.</div><div class="clickable-paragraph" id="bullets_5" ondblclick="togglePauseRead()" onclick="readParagraphAt('Saccharose có vị ngọt, tan tốt trong nước và là thành phần chính của đường mía, đường củ cải.')">Saccharose có vị ngọt, tan tốt trong nước và là thành phần chính của đường mía, đường củ cải.</div></div>
+                <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Sucrose')" title="Tìm kiếm">Sucrose</span><span class="tag" onclick="searchGoogle('Sucrose')" title="Tìm kiếm">Sucrose</span><span class="tag" onclick="searchGoogle('Disaccharide')" title="Tìm kiếm">Disaccharide</span><span class="tag" onclick="searchGoogle('Glucose')" title="Tìm kiếm">Glucose</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Giao diện Expand Mode -->
+    <div class="expand-view-container" id="expandViewContainer">
+                    <div class="expand-slide-card" id="expand-slide-0">
+                        <h2 id="exp_title_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(0)" title="Đọc tiêu đề">1. Saccharose</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Sucrose" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_0_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Saccharose là disaccharide gồm α-glucose và β-fructose liên kết α-1,2-glycoside.')">Saccharose là disaccharide gồm α-glucose và β-fructose liên kết α-1,2-glycoside.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_0_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Saccharose có công thức phân tử C12H22O11 và là một disaccharide phổ biến.')">Saccharose có công thức phân tử C12H22O11 và là một disaccharide phổ biến.</div><div class="clickable-paragraph" id="exp_0_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Phân tử được tạo thành từ một đơn vị α-glucose và một đơn vị β-fructose.')">Phân tử được tạo thành từ một đơn vị α-glucose và một đơn vị β-fructose.</div><div class="clickable-paragraph" id="exp_0_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Hai monosaccharide liên kết với nhau bằng liên kết α-1,2-glycoside giữa các carbon anomeric.')">Hai monosaccharide liên kết với nhau bằng liên kết α-1,2-glycoside giữa các carbon anomeric.</div><div class="clickable-paragraph" id="exp_0_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Do cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không còn nhóm hemiacetal tự do.')">Do cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không còn nhóm hemiacetal tự do.</div><div class="clickable-paragraph" id="exp_0_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Saccharose có nhiều nhóm hydroxyl -OH nên thể hiện tính chất của polyalcohol.')">Saccharose có nhiều nhóm hydroxyl -OH nên thể hiện tính chất của polyalcohol.</div><div class="clickable-paragraph" id="exp_0_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Saccharose có vị ngọt, tan tốt trong nước và là thành phần chính của đường mía, đường củ cải.')">Saccharose có vị ngọt, tan tốt trong nước và là thành phần chính của đường mía, đường củ cải.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span><span class="tag" onclick="searchGoogle('Disaccharide')">Disaccharide</span><span class="tag" onclick="searchGoogle('Glucose')">Glucose</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-1">
+                        <h2 id="exp_title_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(1)" title="Đọc tiêu đề">2. Maltose</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Maltose" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_1_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Maltose là disaccharide gồm hai đơn vị glucose liên kết α-1,4-glycoside.')">Maltose là disaccharide gồm hai đơn vị glucose liên kết α-1,4-glycoside.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_1_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Maltose có công thức phân tử C12H22O11 và được tạo thành từ hai đơn vị glucose.')">Maltose có công thức phân tử C12H22O11 và được tạo thành từ hai đơn vị glucose.</div><div class="clickable-paragraph" id="exp_1_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Hai đơn vị glucose liên kết với nhau bằng liên kết α-1,4-glycoside.')">Hai đơn vị glucose liên kết với nhau bằng liên kết α-1,4-glycoside.</div><div class="clickable-paragraph" id="exp_1_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Trong phân tử maltose, một carbon anomeric tham gia liên kết glycoside còn carbon anomeric của đơn vị glucose thứ hai vẫn tự do.')">Trong phân tử maltose, một carbon anomeric tham gia liên kết glycoside còn carbon anomeric của đơn vị glucose thứ hai vẫn tự do.</div><div class="clickable-paragraph" id="exp_1_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Vì vậy maltose có thể tồn tại ở dạng mạch vòng và chuyển sang dạng mạch hở.')">Vì vậy maltose có thể tồn tại ở dạng mạch vòng và chuyển sang dạng mạch hở.</div><div class="clickable-paragraph" id="exp_1_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Maltose có tính chất của polyalcohol và có tính khử do còn nhóm hemiacetal tự do.')">Maltose có tính chất của polyalcohol và có tính khử do còn nhóm hemiacetal tự do.</div><div class="clickable-paragraph" id="exp_1_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Maltose có trong một số hạt ngũ cốc nảy mầm và được sử dụng trong công nghiệp thực phẩm.')">Maltose có trong một số hạt ngũ cốc nảy mầm và được sử dụng trong công nghiệp thực phẩm.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Maltose')">Maltose</span><span class="tag" onclick="searchGoogle('Disaccharide')">Disaccharide</span><span class="tag" onclick="searchGoogle('Glucose')">Glucose</span><span class="tag" onclick="searchGoogle('Glycosidic bond')">Glycosidic bond</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-2">
+                        <h2 id="exp_title_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(2)" title="Đọc tiêu đề">3. Liên kết α-1,2-glycoside</h2>
+                        
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_2_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Liên kết α-1,2-glycoside nối glucose và fructose trong saccharose.')">Liên kết α-1,2-glycoside nối glucose và fructose trong saccharose.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_2_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Trong saccharose, glucose và fructose được nối với nhau bằng liên kết α-1,2-glycoside.')">Trong saccharose, glucose và fructose được nối với nhau bằng liên kết α-1,2-glycoside.</div><div class="clickable-paragraph" id="exp_2_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Liên kết được hình thành giữa carbon anomeric của đơn vị α-glucose và carbon anomeric của đơn vị β-fructose.')">Liên kết được hình thành giữa carbon anomeric của đơn vị α-glucose và carbon anomeric của đơn vị β-fructose.</div><div class="clickable-paragraph" id="exp_2_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Quá trình tạo liên kết đi kèm với sự tách một phân tử nước từ hai monosaccharide.')">Quá trình tạo liên kết đi kèm với sự tách một phân tử nước từ hai monosaccharide.</div><div class="clickable-paragraph" id="exp_2_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Đặc điểm quan trọng là cả hai carbon anomeric đều tham gia liên kết glycoside.')">Đặc điểm quan trọng là cả hai carbon anomeric đều tham gia liên kết glycoside.</div><div class="clickable-paragraph" id="exp_2_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Do đó saccharose không có nhóm hemiacetal hoặc hemiketal tự do và không thể hiện tính khử như maltose.')">Do đó saccharose không có nhóm hemiacetal hoặc hemiketal tự do và không thể hiện tính khử như maltose.</div><div class="clickable-paragraph" id="exp_2_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Liên kết α-1,2-glycoside cũng bị thủy phân trong môi trường acid hoặc dưới tác dụng của enzyme thích hợp.')">Liên kết α-1,2-glycoside cũng bị thủy phân trong môi trường acid hoặc dưới tác dụng của enzyme thích hợp.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Alpha-1,2-glycosidic bond')">Alpha-1,2-glycosidic bond</span><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span><span class="tag" onclick="searchGoogle('Glycosidic bond')">Glycosidic bond</span><span class="tag" onclick="searchGoogle('Fructose')">Fructose</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-3">
+                        <h2 id="exp_title_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(3)" title="Đọc tiêu đề">4. Liên kết α-1,4-glycoside</h2>
+                        
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_3_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Liên kết α-1,4-glycoside nối hai đơn vị glucose trong maltose.')">Liên kết α-1,4-glycoside nối hai đơn vị glucose trong maltose.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_3_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Trong maltose, hai đơn vị glucose được nối với nhau bằng liên kết α-1,4-glycoside.')">Trong maltose, hai đơn vị glucose được nối với nhau bằng liên kết α-1,4-glycoside.</div><div class="clickable-paragraph" id="exp_3_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Liên kết hình thành giữa carbon anomeric C1 của glucose thứ nhất và nhóm hydroxyl ở C4 của glucose thứ hai.')">Liên kết hình thành giữa carbon anomeric C1 của glucose thứ nhất và nhóm hydroxyl ở C4 của glucose thứ hai.</div><div class="clickable-paragraph" id="exp_3_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Trong quá trình tạo maltose, một phân tử nước được tách ra.')">Trong quá trình tạo maltose, một phân tử nước được tách ra.</div><div class="clickable-paragraph" id="exp_3_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Carbon anomeric của glucose thứ hai vẫn còn nhóm hemiacetal tự do.')">Carbon anomeric của glucose thứ hai vẫn còn nhóm hemiacetal tự do.</div><div class="clickable-paragraph" id="exp_3_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Vì vậy maltose có khả năng chuyển đổi giữa dạng mạch vòng và dạng mạch hở.')">Vì vậy maltose có khả năng chuyển đổi giữa dạng mạch vòng và dạng mạch hở.</div><div class="clickable-paragraph" id="exp_3_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Nhóm chức aldehyde xuất hiện ở dạng mạch hở giúp maltose có tính khử.')">Nhóm chức aldehyde xuất hiện ở dạng mạch hở giúp maltose có tính khử.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Alpha-1,4-glycosidic bond')">Alpha-1,4-glycosidic bond</span><span class="tag" onclick="searchGoogle('Maltose')">Maltose</span><span class="tag" onclick="searchGoogle('Glucose')">Glucose</span><span class="tag" onclick="searchGoogle('Glycosidic bond')">Glycosidic bond</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-4">
+                        <h2 id="exp_title_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(4)" title="Đọc tiêu đề">5. Tính chất polyalcohol</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Polyols" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_4_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Saccharose và maltose đều có nhiều nhóm -OH nên thể hiện tính chất của polyalcohol.')">Saccharose và maltose đều có nhiều nhóm -OH nên thể hiện tính chất của polyalcohol.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_4_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Saccharose và maltose đều chứa nhiều nhóm hydroxyl -OH trong cấu trúc phân tử.')">Saccharose và maltose đều chứa nhiều nhóm hydroxyl -OH trong cấu trúc phân tử.</div><div class="clickable-paragraph" id="exp_4_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Các nhóm -OH kề nhau có khả năng tương tác với ion Cu2+ trong môi trường kiềm.')">Các nhóm -OH kề nhau có khả năng tương tác với ion Cu2+ trong môi trường kiềm.</div><div class="clickable-paragraph" id="exp_4_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Khi cho saccharose vào kết tủa Cu(OH)2 trong môi trường kiềm, kết tủa có thể tan tạo thành dung dịch phức màu xanh lam đậm.')">Khi cho saccharose vào kết tủa Cu(OH)2 trong môi trường kiềm, kết tủa có thể tan tạo thành dung dịch phức màu xanh lam đậm.</div><div class="clickable-paragraph" id="exp_4_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Hiện tượng này là biểu hiện tính chất của hợp chất polyalcohol.')">Hiện tượng này là biểu hiện tính chất của hợp chất polyalcohol.</div><div class="clickable-paragraph" id="exp_4_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Do đó khi hỏi saccharose và maltose đều có tính chất của nhóm chất nào, đáp án đúng là polyalcohol.')">Do đó khi hỏi saccharose và maltose đều có tính chất của nhóm chất nào, đáp án đúng là polyalcohol.</div><div class="clickable-paragraph" id="exp_4_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Tính chất này khác với phản ứng đặc trưng của aldehyde, carboxylic acid hay ketone.')">Tính chất này khác với phản ứng đặc trưng của aldehyde, carboxylic acid hay ketone.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Polyalcohol')">Polyalcohol</span><span class="tag" onclick="searchGoogle('Polyol')">Polyol</span><span class="tag" onclick="searchGoogle('Hydroxyl group')">Hydroxyl group</span><span class="tag" onclick="searchGoogle('Copper hydroxide')">Copper hydroxide</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-5">
+                        <h2 id="exp_title_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(5)" title="Đọc tiêu đề">6. Saccharose tác dụng với Cu(OH)2</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Copper%28II%29_hydroxide" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_5_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Saccharose hòa tan Cu(OH)2 trong môi trường kiềm tạo dung dịch màu xanh lam đậm.')">Saccharose hòa tan Cu(OH)2 trong môi trường kiềm tạo dung dịch màu xanh lam đậm.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_5_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Thí nghiệm có thể thực hiện bằng cách cho dung dịch CuSO4 vào dung dịch NaOH để tạo kết tủa Cu(OH)2 màu xanh.')">Thí nghiệm có thể thực hiện bằng cách cho dung dịch CuSO4 vào dung dịch NaOH để tạo kết tủa Cu(OH)2 màu xanh.</div><div class="clickable-paragraph" id="exp_5_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Sau đó thêm dung dịch saccharose vào ống nghiệm và lắc đều.')">Sau đó thêm dung dịch saccharose vào ống nghiệm và lắc đều.</div><div class="clickable-paragraph" id="exp_5_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Kết tủa Cu(OH)2 dần tan do các nhóm -OH của saccharose phối trí với ion Cu2+.')">Kết tủa Cu(OH)2 dần tan do các nhóm -OH của saccharose phối trí với ion Cu2+.</div><div class="clickable-paragraph" id="exp_5_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Sản phẩm là phức đồng có màu xanh lam đậm trong dung dịch.')">Sản phẩm là phức đồng có màu xanh lam đậm trong dung dịch.</div><div class="clickable-paragraph" id="exp_5_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Hiện tượng quan sát được là xuất hiện dung dịch màu xanh đậm, không phải bọt khí hay kết tủa xanh mới.')">Hiện tượng quan sát được là xuất hiện dung dịch màu xanh đậm, không phải bọt khí hay kết tủa xanh mới.</div><div class="clickable-paragraph" id="exp_5_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Phản ứng này thể hiện tính chất polyalcohol của saccharose và không phải phản ứng oxi hóa khử.')">Phản ứng này thể hiện tính chất polyalcohol của saccharose và không phải phản ứng oxi hóa khử.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Copper(II) complex')">Copper(II) complex</span><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span><span class="tag" onclick="searchGoogle('Copper hydroxide')">Copper hydroxide</span><span class="tag" onclick="searchGoogle('Blue solution')">Blue solution</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-6">
+                        <h2 id="exp_title_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(6)" title="Đọc tiêu đề">7. Phản ứng thủy phân saccharose</h2>
+                        
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_6_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Saccharose thủy phân tạo glucose và fructose dưới tác dụng của enzyme hoặc acid.')">Saccharose thủy phân tạo glucose và fructose dưới tác dụng của enzyme hoặc acid.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_6_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Saccharose có thể bị thủy phân khi đun nóng trong môi trường acid hoặc dưới tác dụng của enzyme thích hợp.')">Saccharose có thể bị thủy phân khi đun nóng trong môi trường acid hoặc dưới tác dụng của enzyme thích hợp.</div><div class="clickable-paragraph" id="exp_6_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Phương trình tổng quát: C12H22O11 + H2O → C6H12O6 (glucose) + C6H12O6 (fructose).')">Phương trình tổng quát: C12H22O11 + H2O → C6H12O6 (glucose) + C6H12O6 (fructose).</div><div class="clickable-paragraph" id="exp_6_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Sản phẩm thủy phân gồm hai monosaccharide là glucose và fructose.')">Sản phẩm thủy phân gồm hai monosaccharide là glucose và fructose.</div><div class="clickable-paragraph" id="exp_6_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Phản ứng làm phá vỡ liên kết glycoside giữa hai đơn vị monosaccharide.')">Phản ứng làm phá vỡ liên kết glycoside giữa hai đơn vị monosaccharide.</div><div class="clickable-paragraph" id="exp_6_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Trong cơ thể sinh vật, enzyme sucrase xúc tác quá trình thủy phân saccharose.')">Trong cơ thể sinh vật, enzyme sucrase xúc tác quá trình thủy phân saccharose.</div><div class="clickable-paragraph" id="exp_6_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Đây là phản ứng quan trọng trong quá trình tiêu hóa và chuyển hóa carbohydrate.')">Đây là phản ứng quan trọng trong quá trình tiêu hóa và chuyển hóa carbohydrate.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Hydrolysis')">Hydrolysis</span><span class="tag" onclick="searchGoogle('Glucose')">Glucose</span><span class="tag" onclick="searchGoogle('Fructose')">Fructose</span><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-7">
+                        <h2 id="exp_title_7" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(7)" title="Đọc tiêu đề">8. Trạng thái tự nhiên của saccharose</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Sugarcane" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_7_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Saccharose là chất rắn, vị ngọt, tan tốt trong nước và có nhiều trong mía, củ cải đường, hoa thốt nốt.')">Saccharose là chất rắn, vị ngọt, tan tốt trong nước và có nhiều trong mía, củ cải đường, hoa thốt nốt.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_7_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Saccharose là chất rắn kết tinh có vị ngọt đặc trưng.')">Saccharose là chất rắn kết tinh có vị ngọt đặc trưng.</div><div class="clickable-paragraph" id="exp_7_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Chất này tan tốt trong nước nên được sử dụng phổ biến làm đường ăn trong đời sống.')">Chất này tan tốt trong nước nên được sử dụng phổ biến làm đường ăn trong đời sống.</div><div class="clickable-paragraph" id="exp_7_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Nguồn saccharose tự nhiên quan trọng gồm cây mía, củ cải đường và hoa thốt nốt.')">Nguồn saccharose tự nhiên quan trọng gồm cây mía, củ cải đường và hoa thốt nốt.</div><div class="clickable-paragraph" id="exp_7_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Trong sản xuất đường công nghiệp, mía và củ cải đường được khai thác để thu saccharose.')">Trong sản xuất đường công nghiệp, mía và củ cải đường được khai thác để thu saccharose.</div><div class="clickable-paragraph" id="exp_7_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Saccharose còn là nguyên liệu quan trọng trong công nghiệp thực phẩm và có thể được sử dụng làm nguyên liệu cho một số quá trình tổng hợp hóa chất.')">Saccharose còn là nguyên liệu quan trọng trong công nghiệp thực phẩm và có thể được sử dụng làm nguyên liệu cho một số quá trình tổng hợp hóa chất.</div><div class="clickable-paragraph" id="exp_7_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Đường mía có thành phần carbohydrate chính là saccharose.')">Đường mía có thành phần carbohydrate chính là saccharose.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Sugarcane sugar')">Sugarcane sugar</span><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span><span class="tag" onclick="searchGoogle('Sugarcane')">Sugarcane</span><span class="tag" onclick="searchGoogle('Sugar beet')">Sugar beet</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-8">
+                        <h2 id="exp_title_8" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(8)" title="Đọc tiêu đề">9. Ứng dụng của saccharose</h2>
+                        
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_8_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Saccharose được sử dụng rộng rãi trong công nghiệp thực phẩm và tổng hợp hóa chất.')">Saccharose được sử dụng rộng rãi trong công nghiệp thực phẩm và tổng hợp hóa chất.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_8_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Saccharose được sử dụng phổ biến làm chất tạo vị ngọt trong thực phẩm và đồ uống.')">Saccharose được sử dụng phổ biến làm chất tạo vị ngọt trong thực phẩm và đồ uống.</div><div class="clickable-paragraph" id="exp_8_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Trong gia đình, saccharose là thành phần chính của đường ăn và được dùng để chế biến nhiều loại thực phẩm.')">Trong gia đình, saccharose là thành phần chính của đường ăn và được dùng để chế biến nhiều loại thực phẩm.</div><div class="clickable-paragraph" id="exp_8_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Trong công nghiệp thực phẩm, saccharose được sử dụng trong sản xuất bánh kẹo, nước giải khát và các sản phẩm chế biến khác.')">Trong công nghiệp thực phẩm, saccharose được sử dụng trong sản xuất bánh kẹo, nước giải khát và các sản phẩm chế biến khác.</div><div class="clickable-paragraph" id="exp_8_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Saccharose cũng có thể tham gia một số quá trình lên men hoặc được sử dụng làm nguyên liệu trong tổng hợp hóa chất.')">Saccharose cũng có thể tham gia một số quá trình lên men hoặc được sử dụng làm nguyên liệu trong tổng hợp hóa chất.</div><div class="clickable-paragraph" id="exp_8_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Việc khai thác saccharose từ mía và củ cải đường có ý nghĩa kinh tế lớn.')">Việc khai thác saccharose từ mía và củ cải đường có ý nghĩa kinh tế lớn.</div><div class="clickable-paragraph" id="exp_8_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Nhờ vị ngọt và khả năng tan tốt trong nước, saccharose là một carbohydrate có ứng dụng rất rộng rãi.')">Nhờ vị ngọt và khả năng tan tốt trong nước, saccharose là một carbohydrate có ứng dụng rất rộng rãi.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Food sweetener')">Food sweetener</span><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span><span class="tag" onclick="searchGoogle('Food industry')">Food industry</span><span class="tag" onclick="searchGoogle('Sugar')">Sugar</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-9">
+                        <h2 id="exp_title_9" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(9)" title="Đọc tiêu đề">10. Maltose trong tự nhiên</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Germination" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_9_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Maltose có trong một số hạt nảy mầm và được hình thành khi tinh bột bị thủy phân.')">Maltose có trong một số hạt nảy mầm và được hình thành khi tinh bột bị thủy phân.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_9_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Maltose là một disaccharide có thể được tạo thành trong quá trình phân giải tinh bột.')">Maltose là một disaccharide có thể được tạo thành trong quá trình phân giải tinh bột.</div><div class="clickable-paragraph" id="exp_9_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Maltose thường xuất hiện trong các loại hạt đang nảy mầm do enzyme amylase xúc tác quá trình thủy phân tinh bột tạo các đường đơn giản hơn.')">Maltose thường xuất hiện trong các loại hạt đang nảy mầm do enzyme amylase xúc tác quá trình thủy phân tinh bột tạo các đường đơn giản hơn.</div><div class="clickable-paragraph" id="exp_9_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Maltose có vị ngọt và tan tốt trong nước.')">Maltose có vị ngọt và tan tốt trong nước.</div><div class="clickable-paragraph" id="exp_9_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Đây là một trong những sản phẩm trung gian quan trọng khi tinh bột được phân giải thành glucose.')">Đây là một trong những sản phẩm trung gian quan trọng khi tinh bột được phân giải thành glucose.</div><div class="clickable-paragraph" id="exp_9_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Maltose có vai trò trong các quá trình sinh hóa và được ứng dụng trong công nghiệp thực phẩm.')">Maltose có vai trò trong các quá trình sinh hóa và được ứng dụng trong công nghiệp thực phẩm.</div><div class="clickable-paragraph" id="exp_9_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Trong sản xuất bia, các sản phẩm từ maltose và quá trình lên men đường đóng vai trò quan trọng trong việc tạo ethanol.')">Trong sản xuất bia, các sản phẩm từ maltose và quá trình lên men đường đóng vai trò quan trọng trong việc tạo ethanol.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Maltose in germinating seeds')">Maltose in germinating seeds</span><span class="tag" onclick="searchGoogle('Germination')">Germination</span><span class="tag" onclick="searchGoogle('Starch')">Starch</span><span class="tag" onclick="searchGoogle('Amylase')">Amylase</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-10">
+                        <h2 id="exp_title_10" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(10)" title="Đọc tiêu đề">11. Ứng dụng của maltose</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Maltose" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_10_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Maltose được dùng làm chất tạo ngọt và nguyên liệu trong một số quá trình lên men, sản xuất bia.')">Maltose được dùng làm chất tạo ngọt và nguyên liệu trong một số quá trình lên men, sản xuất bia.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_10_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Maltose là carbohydrate có vị ngọt và được sử dụng trong công nghiệp thực phẩm.')">Maltose là carbohydrate có vị ngọt và được sử dụng trong công nghiệp thực phẩm.</div><div class="clickable-paragraph" id="exp_10_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Maltose có thể được dùng làm chất tạo ngọt trong một số sản phẩm thực phẩm và đồ uống.')">Maltose có thể được dùng làm chất tạo ngọt trong một số sản phẩm thực phẩm và đồ uống.</div><div class="clickable-paragraph" id="exp_10_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Trong quá trình sản xuất bia, maltose là một trong những loại đường quan trọng được nấm men sử dụng làm cơ chất lên men.')">Trong quá trình sản xuất bia, maltose là một trong những loại đường quan trọng được nấm men sử dụng làm cơ chất lên men.</div><div class="clickable-paragraph" id="exp_10_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Quá trình lên men chuyển hóa đường thành ethanol và carbon dioxide.')">Quá trình lên men chuyển hóa đường thành ethanol và carbon dioxide.</div><div class="clickable-paragraph" id="exp_10_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Maltose cũng liên quan đến quá trình chế biến malt từ các loại hạt ngũ cốc nảy mầm.')">Maltose cũng liên quan đến quá trình chế biến malt từ các loại hạt ngũ cốc nảy mầm.</div><div class="clickable-paragraph" id="exp_10_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Nhờ nguồn gốc từ quá trình thủy phân tinh bột và đặc tính dễ tham gia chuyển hóa, maltose có giá trị trong công nghiệp thực phẩm và công nghệ lên men.')">Nhờ nguồn gốc từ quá trình thủy phân tinh bột và đặc tính dễ tham gia chuyển hóa, maltose có giá trị trong công nghiệp thực phẩm và công nghệ lên men.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Maltose application')">Maltose application</span><span class="tag" onclick="searchGoogle('Maltose')">Maltose</span><span class="tag" onclick="searchGoogle('Brewing')">Brewing</span><span class="tag" onclick="searchGoogle('Fermentation')">Fermentation</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-11">
+                        <h2 id="exp_title_11" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(11)" title="Đọc tiêu đề">12. Tính khử của maltose</h2>
+                        
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_11_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Maltose có tính khử vì còn một carbon anomeric tự do có thể chuyển sang dạng mạch hở.')">Maltose có tính khử vì còn một carbon anomeric tự do có thể chuyển sang dạng mạch hở.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_11_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Maltose khác saccharose ở chỗ một carbon anomeric của maltose vẫn còn tự do.')">Maltose khác saccharose ở chỗ một carbon anomeric của maltose vẫn còn tự do.</div><div class="clickable-paragraph" id="exp_11_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Carbon anomeric tự do thuộc đơn vị glucose thứ hai có thể mở vòng tạo dạng mạch hở.')">Carbon anomeric tự do thuộc đơn vị glucose thứ hai có thể mở vòng tạo dạng mạch hở.</div><div class="clickable-paragraph" id="exp_11_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Ở dạng mạch hở, maltose có nhóm aldehyde nên có khả năng tham gia các phản ứng đặc trưng của đường khử.')">Ở dạng mạch hở, maltose có nhóm aldehyde nên có khả năng tham gia các phản ứng đặc trưng của đường khử.</div><div class="clickable-paragraph" id="exp_11_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Vì vậy maltose có tính khử và có thể tham gia phản ứng tráng bạc hoặc phản ứng với Cu(OH)2 trong điều kiện thích hợp.')">Vì vậy maltose có tính khử và có thể tham gia phản ứng tráng bạc hoặc phản ứng với Cu(OH)2 trong điều kiện thích hợp.</div><div class="clickable-paragraph" id="exp_11_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Ngược lại, trong saccharose, cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không có tính khử.')">Ngược lại, trong saccharose, cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không có tính khử.</div><div class="clickable-paragraph" id="exp_11_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Đây là một điểm quan trọng để phân biệt maltose với saccharose.')">Đây là một điểm quan trọng để phân biệt maltose với saccharose.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Reducing sugar')">Reducing sugar</span><span class="tag" onclick="searchGoogle('Maltose')">Maltose</span><span class="tag" onclick="searchGoogle('Reducing sugar')">Reducing sugar</span><span class="tag" onclick="searchGoogle('Aldehyde')">Aldehyde</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-12">
+                        <h2 id="exp_title_12" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(12)" title="Đọc tiêu đề">13. Dạng mạch vòng của maltose</h2>
+                        
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_12_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Maltose có cấu trúc gồm hai vòng glucose nối với nhau bằng liên kết α-1,4-glycoside.')">Maltose có cấu trúc gồm hai vòng glucose nối với nhau bằng liên kết α-1,4-glycoside.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_12_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Trong dạng mạch vòng, maltose gồm hai đơn vị glucose ở dạng vòng pyranose.')">Trong dạng mạch vòng, maltose gồm hai đơn vị glucose ở dạng vòng pyranose.</div><div class="clickable-paragraph" id="exp_12_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Đơn vị glucose thứ nhất sử dụng carbon anomeric C1 để hình thành liên kết α-1,4-glycoside với nhóm -OH tại C4 của glucose thứ hai.')">Đơn vị glucose thứ nhất sử dụng carbon anomeric C1 để hình thành liên kết α-1,4-glycoside với nhóm -OH tại C4 của glucose thứ hai.</div><div class="clickable-paragraph" id="exp_12_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Đơn vị glucose thứ hai vẫn còn carbon anomeric tự do.')">Đơn vị glucose thứ hai vẫn còn carbon anomeric tự do.</div><div class="clickable-paragraph" id="exp_12_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Carbon anomeric tự do này cho phép maltose chuyển đổi giữa dạng α và β tại đầu khử.')">Carbon anomeric tự do này cho phép maltose chuyển đổi giữa dạng α và β tại đầu khử.</div><div class="clickable-paragraph" id="exp_12_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Sự tồn tại của đầu khử là nguyên nhân quan trọng tạo nên tính khử của maltose.')">Sự tồn tại của đầu khử là nguyên nhân quan trọng tạo nên tính khử của maltose.</div><div class="clickable-paragraph" id="exp_12_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Cấu trúc mạch vòng giúp mô tả rõ vị trí liên kết glycoside và sự định hướng của các nhóm thế trong phân tử.')">Cấu trúc mạch vòng giúp mô tả rõ vị trí liên kết glycoside và sự định hướng của các nhóm thế trong phân tử.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Cyclic maltose')">Cyclic maltose</span><span class="tag" onclick="searchGoogle('Maltose')">Maltose</span><span class="tag" onclick="searchGoogle('Glucose')">Glucose</span><span class="tag" onclick="searchGoogle('Pyranose')">Pyranose</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-13">
+                        <h2 id="exp_title_13" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(13)" title="Đọc tiêu đề">14. Dạng mạch hở của maltose</h2>
+                        
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_13_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Dạng mạch hở của maltose xuất hiện do glucose ở đầu khử có thể mở vòng tạo nhóm aldehyde.')">Dạng mạch hở của maltose xuất hiện do glucose ở đầu khử có thể mở vòng tạo nhóm aldehyde.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_13_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Maltose có thể tồn tại ở dạng mạch hở do carbon anomeric của một đơn vị glucose không tham gia liên kết glycoside.')">Maltose có thể tồn tại ở dạng mạch hở do carbon anomeric của một đơn vị glucose không tham gia liên kết glycoside.</div><div class="clickable-paragraph" id="exp_13_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Khi vòng glucose ở đầu khử mở ra, nhóm hemiacetal chuyển thành nhóm aldehyde -CHO.')">Khi vòng glucose ở đầu khử mở ra, nhóm hemiacetal chuyển thành nhóm aldehyde -CHO.</div><div class="clickable-paragraph" id="exp_13_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Sự cân bằng giữa dạng mạch vòng và dạng mạch hở giúp maltose thể hiện tính khử.')">Sự cân bằng giữa dạng mạch vòng và dạng mạch hở giúp maltose thể hiện tính khử.</div><div class="clickable-paragraph" id="exp_13_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Dạng mạch hở chỉ chiếm tỉ lệ nhỏ so với dạng vòng nhưng đóng vai trò quan trọng trong các phản ứng hóa học.')">Dạng mạch hở chỉ chiếm tỉ lệ nhỏ so với dạng vòng nhưng đóng vai trò quan trọng trong các phản ứng hóa học.</div><div class="clickable-paragraph" id="exp_13_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Đặc điểm này giải thích vì sao maltose có thể tham gia phản ứng tráng bạc và các phản ứng oxi hóa của aldehyde.')">Đặc điểm này giải thích vì sao maltose có thể tham gia phản ứng tráng bạc và các phản ứng oxi hóa của aldehyde.</div><div class="clickable-paragraph" id="exp_13_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Đây cũng là điểm khác biệt quan trọng giữa maltose và saccharose.')">Đây cũng là điểm khác biệt quan trọng giữa maltose và saccharose.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Open-chain maltose')">Open-chain maltose</span><span class="tag" onclick="searchGoogle('Maltose')">Maltose</span><span class="tag" onclick="searchGoogle('Aldehyde')">Aldehyde</span><span class="tag" onclick="searchGoogle('Reducing sugar')">Reducing sugar</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-14">
+                        <h2 id="exp_title_14" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(14)" title="Đọc tiêu đề">15. Đường mía</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Sugarcane" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_14_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Đường mía có thành phần carbohydrate chính là saccharose.')">Đường mía có thành phần carbohydrate chính là saccharose.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_14_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Đường mía là sản phẩm thu được chủ yếu từ cây mía sau các quá trình ép, làm sạch, cô đặc và kết tinh dịch mía.')">Đường mía là sản phẩm thu được chủ yếu từ cây mía sau các quá trình ép, làm sạch, cô đặc và kết tinh dịch mía.</div><div class="clickable-paragraph" id="exp_14_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Thành phần carbohydrate chính của đường mía là saccharose.')">Thành phần carbohydrate chính của đường mía là saccharose.</div><div class="clickable-paragraph" id="exp_14_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Saccharose tạo vị ngọt đặc trưng và có khả năng tan tốt trong nước.')">Saccharose tạo vị ngọt đặc trưng và có khả năng tan tốt trong nước.</div><div class="clickable-paragraph" id="exp_14_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Mía là một trong những nguồn nguyên liệu quan trọng nhất để sản xuất đường saccharose trên quy mô công nghiệp.')">Mía là một trong những nguồn nguyên liệu quan trọng nhất để sản xuất đường saccharose trên quy mô công nghiệp.</div><div class="clickable-paragraph" id="exp_14_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Ngoài saccharose, nguyên liệu mía ban đầu còn chứa nước, chất xơ, khoáng chất và một lượng nhỏ các hợp chất hữu cơ khác.')">Ngoài saccharose, nguyên liệu mía ban đầu còn chứa nước, chất xơ, khoáng chất và một lượng nhỏ các hợp chất hữu cơ khác.</div><div class="clickable-paragraph" id="exp_14_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Trong chương trình Hóa học 12, khi hỏi carbohydrate chính trong đường mía, đáp án cần chọn là saccharose.')">Trong chương trình Hóa học 12, khi hỏi carbohydrate chính trong đường mía, đáp án cần chọn là saccharose.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Sugarcane sugar')">Sugarcane sugar</span><span class="tag" onclick="searchGoogle('Sugarcane')">Sugarcane</span><span class="tag" onclick="searchGoogle('Sucrose')">Sucrose</span><span class="tag" onclick="searchGoogle('Carbohydrate')">Carbohydrate</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-15">
+                        <h2 id="exp_title_15" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(15)" title="Đọc tiêu đề">16. Hạt nảy mầm</h2>
+                        <img src="https://commons.wikimedia.org/wiki/Category:Germination" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_15_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Maltose có thể được tìm thấy trong một số hạt nảy mầm do tinh bột bị thủy phân.')">Maltose có thể được tìm thấy trong một số hạt nảy mầm do tinh bột bị thủy phân.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_15_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Trong quá trình hạt nảy mầm, các enzyme thủy phân được hoạt hóa để phân giải chất dự trữ như tinh bột.')">Trong quá trình hạt nảy mầm, các enzyme thủy phân được hoạt hóa để phân giải chất dự trữ như tinh bột.</div><div class="clickable-paragraph" id="exp_15_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Enzyme amylase xúc tác quá trình phân giải tinh bột tạo ra các sản phẩm carbohydrate nhỏ hơn, trong đó có maltose.')">Enzyme amylase xúc tác quá trình phân giải tinh bột tạo ra các sản phẩm carbohydrate nhỏ hơn, trong đó có maltose.</div><div class="clickable-paragraph" id="exp_15_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Maltose sau đó tiếp tục được thủy phân thành glucose để cung cấp năng lượng và nguyên liệu cho sự phát triển của cây non.')">Maltose sau đó tiếp tục được thủy phân thành glucose để cung cấp năng lượng và nguyên liệu cho sự phát triển của cây non.</div><div class="clickable-paragraph" id="exp_15_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Vì vậy maltose thường được nhắc đến khi nghiên cứu thành phần carbohydrate của hạt nảy mầm.')">Vì vậy maltose thường được nhắc đến khi nghiên cứu thành phần carbohydrate của hạt nảy mầm.</div><div class="clickable-paragraph" id="exp_15_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Quá trình này cũng là cơ sở sinh hóa của việc sản xuất malt từ các loại ngũ cốc như đại mạch.')">Quá trình này cũng là cơ sở sinh hóa của việc sản xuất malt từ các loại ngũ cốc như đại mạch.</div><div class="clickable-paragraph" id="exp_15_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Malt chứa nhiều enzyme và đường sinh ra từ quá trình nảy mầm, có vai trò quan trọng trong công nghệ sản xuất bia.')">Malt chứa nhiều enzyme và đường sinh ra từ quá trình nảy mầm, có vai trò quan trọng trong công nghệ sản xuất bia.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Germinating seeds')">Germinating seeds</span><span class="tag" onclick="searchGoogle('Germination')">Germination</span><span class="tag" onclick="searchGoogle('Maltose')">Maltose</span><span class="tag" onclick="searchGoogle('Amylase')">Amylase</span></div>
+                    </div>
+                </div>
+
+    <!-- Footer / Manual Nav tối ưu responsive -->
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseBtn" onclick="togglePauseRead()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Auto</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ sáng màn hình">
+            <span>Sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">1 / 16</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated)</h2>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let embeddedInitialData = `Saccharose	Saccharose là disaccharide gồm α-glucose và β-fructose liên kết α-1,2-glycoside.	Saccharose có công thức phân tử C12H22O11 và là một disaccharide phổ biến.<br>Phân tử được tạo thành từ một đơn vị α-glucose và một đơn vị β-fructose.<br>Hai monosaccharide liên kết với nhau bằng liên kết α-1,2-glycoside giữa các carbon anomeric.<br>Do cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không còn nhóm hemiacetal tự do.<br>Saccharose có nhiều nhóm hydroxyl -OH nên thể hiện tính chất của polyalcohol.<br>Saccharose có vị ngọt, tan tốt trong nước và là thành phần chính của đường mía, đường củ cải.	Sucrose	Sucrose	Disaccharide	Glucose	https://commons.wikimedia.org/wiki/Category:Sucrose
+Maltose	Maltose là disaccharide gồm hai đơn vị glucose liên kết α-1,4-glycoside.	Maltose có công thức phân tử C12H22O11 và được tạo thành từ hai đơn vị glucose.<br>Hai đơn vị glucose liên kết với nhau bằng liên kết α-1,4-glycoside.<br>Trong phân tử maltose, một carbon anomeric tham gia liên kết glycoside còn carbon anomeric của đơn vị glucose thứ hai vẫn tự do.<br>Vì vậy maltose có thể tồn tại ở dạng mạch vòng và chuyển sang dạng mạch hở.<br>Maltose có tính chất của polyalcohol và có tính khử do còn nhóm hemiacetal tự do.<br>Maltose có trong một số hạt ngũ cốc nảy mầm và được sử dụng trong công nghiệp thực phẩm.	Maltose	Disaccharide	Glucose	Glycosidic bond	https://commons.wikimedia.org/wiki/Category:Maltose
+Liên kết α-1,2-glycoside	Liên kết α-1,2-glycoside nối glucose và fructose trong saccharose.	Trong saccharose, glucose và fructose được nối với nhau bằng liên kết α-1,2-glycoside.<br>Liên kết được hình thành giữa carbon anomeric của đơn vị α-glucose và carbon anomeric của đơn vị β-fructose.<br>Quá trình tạo liên kết đi kèm với sự tách một phân tử nước từ hai monosaccharide.<br>Đặc điểm quan trọng là cả hai carbon anomeric đều tham gia liên kết glycoside.<br>Do đó saccharose không có nhóm hemiacetal hoặc hemiketal tự do và không thể hiện tính khử như maltose.<br>Liên kết α-1,2-glycoside cũng bị thủy phân trong môi trường acid hoặc dưới tác dụng của enzyme thích hợp.	Alpha-1,2-glycosidic bond	Sucrose	Glycosidic bond	Fructose	
+Liên kết α-1,4-glycoside	Liên kết α-1,4-glycoside nối hai đơn vị glucose trong maltose.	Trong maltose, hai đơn vị glucose được nối với nhau bằng liên kết α-1,4-glycoside.<br>Liên kết hình thành giữa carbon anomeric C1 của glucose thứ nhất và nhóm hydroxyl ở C4 của glucose thứ hai.<br>Trong quá trình tạo maltose, một phân tử nước được tách ra.<br>Carbon anomeric của glucose thứ hai vẫn còn nhóm hemiacetal tự do.<br>Vì vậy maltose có khả năng chuyển đổi giữa dạng mạch vòng và dạng mạch hở.<br>Nhóm chức aldehyde xuất hiện ở dạng mạch hở giúp maltose có tính khử.	Alpha-1,4-glycosidic bond	Maltose	Glucose	Glycosidic bond	
+Tính chất polyalcohol	Saccharose và maltose đều có nhiều nhóm -OH nên thể hiện tính chất của polyalcohol.	Saccharose và maltose đều chứa nhiều nhóm hydroxyl -OH trong cấu trúc phân tử.<br>Các nhóm -OH kề nhau có khả năng tương tác với ion Cu2+ trong môi trường kiềm.<br>Khi cho saccharose vào kết tủa Cu(OH)2 trong môi trường kiềm, kết tủa có thể tan tạo thành dung dịch phức màu xanh lam đậm.<br>Hiện tượng này là biểu hiện tính chất của hợp chất polyalcohol.<br>Do đó khi hỏi saccharose và maltose đều có tính chất của nhóm chất nào, đáp án đúng là polyalcohol.<br>Tính chất này khác với phản ứng đặc trưng của aldehyde, carboxylic acid hay ketone.	Polyalcohol	Polyol	Hydroxyl group	Copper hydroxide	https://commons.wikimedia.org/wiki/Category:Polyols
+Saccharose tác dụng với Cu(OH)2	Saccharose hòa tan Cu(OH)2 trong môi trường kiềm tạo dung dịch màu xanh lam đậm.	Thí nghiệm có thể thực hiện bằng cách cho dung dịch CuSO4 vào dung dịch NaOH để tạo kết tủa Cu(OH)2 màu xanh.<br>Sau đó thêm dung dịch saccharose vào ống nghiệm và lắc đều.<br>Kết tủa Cu(OH)2 dần tan do các nhóm -OH của saccharose phối trí với ion Cu2+.<br>Sản phẩm là phức đồng có màu xanh lam đậm trong dung dịch.<br>Hiện tượng quan sát được là xuất hiện dung dịch màu xanh đậm, không phải bọt khí hay kết tủa xanh mới.<br>Phản ứng này thể hiện tính chất polyalcohol của saccharose và không phải phản ứng oxi hóa khử.	Copper(II) complex	Sucrose	Copper hydroxide	Blue solution	https://commons.wikimedia.org/wiki/Category:Copper%28II%29_hydroxide
+Phản ứng thủy phân saccharose	Saccharose thủy phân tạo glucose và fructose dưới tác dụng của enzyme hoặc acid.	Saccharose có thể bị thủy phân khi đun nóng trong môi trường acid hoặc dưới tác dụng của enzyme thích hợp.<br>Phương trình tổng quát: C12H22O11 + H2O → C6H12O6 (glucose) + C6H12O6 (fructose).<br>Sản phẩm thủy phân gồm hai monosaccharide là glucose và fructose.<br>Phản ứng làm phá vỡ liên kết glycoside giữa hai đơn vị monosaccharide.<br>Trong cơ thể sinh vật, enzyme sucrase xúc tác quá trình thủy phân saccharose.<br>Đây là phản ứng quan trọng trong quá trình tiêu hóa và chuyển hóa carbohydrate.	Hydrolysis	Glucose	Fructose	Sucrose	
+Trạng thái tự nhiên của saccharose	Saccharose là chất rắn, vị ngọt, tan tốt trong nước và có nhiều trong mía, củ cải đường, hoa thốt nốt.	Saccharose là chất rắn kết tinh có vị ngọt đặc trưng.<br>Chất này tan tốt trong nước nên được sử dụng phổ biến làm đường ăn trong đời sống.<br>Nguồn saccharose tự nhiên quan trọng gồm cây mía, củ cải đường và hoa thốt nốt.<br>Trong sản xuất đường công nghiệp, mía và củ cải đường được khai thác để thu saccharose.<br>Saccharose còn là nguyên liệu quan trọng trong công nghiệp thực phẩm và có thể được sử dụng làm nguyên liệu cho một số quá trình tổng hợp hóa chất.<br>Đường mía có thành phần carbohydrate chính là saccharose.	Sugarcane sugar	Sucrose	Sugarcane	Sugar beet	https://commons.wikimedia.org/wiki/Category:Sugarcane
+Ứng dụng của saccharose	Saccharose được sử dụng rộng rãi trong công nghiệp thực phẩm và tổng hợp hóa chất.	Saccharose được sử dụng phổ biến làm chất tạo vị ngọt trong thực phẩm và đồ uống.<br>Trong gia đình, saccharose là thành phần chính của đường ăn và được dùng để chế biến nhiều loại thực phẩm.<br>Trong công nghiệp thực phẩm, saccharose được sử dụng trong sản xuất bánh kẹo, nước giải khát và các sản phẩm chế biến khác.<br>Saccharose cũng có thể tham gia một số quá trình lên men hoặc được sử dụng làm nguyên liệu trong tổng hợp hóa chất.<br>Việc khai thác saccharose từ mía và củ cải đường có ý nghĩa kinh tế lớn.<br>Nhờ vị ngọt và khả năng tan tốt trong nước, saccharose là một carbohydrate có ứng dụng rất rộng rãi.	Food sweetener	Sucrose	Food industry	Sugar	
+Maltose trong tự nhiên	Maltose có trong một số hạt nảy mầm và được hình thành khi tinh bột bị thủy phân.	Maltose là một disaccharide có thể được tạo thành trong quá trình phân giải tinh bột.<br>Maltose thường xuất hiện trong các loại hạt đang nảy mầm do enzyme amylase xúc tác quá trình thủy phân tinh bột tạo các đường đơn giản hơn.<br>Maltose có vị ngọt và tan tốt trong nước.<br>Đây là một trong những sản phẩm trung gian quan trọng khi tinh bột được phân giải thành glucose.<br>Maltose có vai trò trong các quá trình sinh hóa và được ứng dụng trong công nghiệp thực phẩm.<br>Trong sản xuất bia, các sản phẩm từ maltose và quá trình lên men đường đóng vai trò quan trọng trong việc tạo ethanol.	Maltose in germinating seeds	Germination	Starch	Amylase	https://commons.wikimedia.org/wiki/Category:Germination
+Ứng dụng của maltose	Maltose được dùng làm chất tạo ngọt và nguyên liệu trong một số quá trình lên men, sản xuất bia.	Maltose là carbohydrate có vị ngọt và được sử dụng trong công nghiệp thực phẩm.<br>Maltose có thể được dùng làm chất tạo ngọt trong một số sản phẩm thực phẩm và đồ uống.<br>Trong quá trình sản xuất bia, maltose là một trong những loại đường quan trọng được nấm men sử dụng làm cơ chất lên men.<br>Quá trình lên men chuyển hóa đường thành ethanol và carbon dioxide.<br>Maltose cũng liên quan đến quá trình chế biến malt từ các loại hạt ngũ cốc nảy mầm.<br>Nhờ nguồn gốc từ quá trình thủy phân tinh bột và đặc tính dễ tham gia chuyển hóa, maltose có giá trị trong công nghiệp thực phẩm và công nghệ lên men.	Maltose application	Maltose	Brewing	Fermentation	https://commons.wikimedia.org/wiki/Category:Maltose
+Tính khử của maltose	Maltose có tính khử vì còn một carbon anomeric tự do có thể chuyển sang dạng mạch hở.	Maltose khác saccharose ở chỗ một carbon anomeric của maltose vẫn còn tự do.<br>Carbon anomeric tự do thuộc đơn vị glucose thứ hai có thể mở vòng tạo dạng mạch hở.<br>Ở dạng mạch hở, maltose có nhóm aldehyde nên có khả năng tham gia các phản ứng đặc trưng của đường khử.<br>Vì vậy maltose có tính khử và có thể tham gia phản ứng tráng bạc hoặc phản ứng với Cu(OH)2 trong điều kiện thích hợp.<br>Ngược lại, trong saccharose, cả hai carbon anomeric đều tham gia liên kết glycoside nên saccharose không có tính khử.<br>Đây là một điểm quan trọng để phân biệt maltose với saccharose.	Reducing sugar	Maltose	Reducing sugar	Aldehyde	
+Dạng mạch vòng của maltose	Maltose có cấu trúc gồm hai vòng glucose nối với nhau bằng liên kết α-1,4-glycoside.	Trong dạng mạch vòng, maltose gồm hai đơn vị glucose ở dạng vòng pyranose.<br>Đơn vị glucose thứ nhất sử dụng carbon anomeric C1 để hình thành liên kết α-1,4-glycoside với nhóm -OH tại C4 của glucose thứ hai.<br>Đơn vị glucose thứ hai vẫn còn carbon anomeric tự do.<br>Carbon anomeric tự do này cho phép maltose chuyển đổi giữa dạng α và β tại đầu khử.<br>Sự tồn tại của đầu khử là nguyên nhân quan trọng tạo nên tính khử của maltose.<br>Cấu trúc mạch vòng giúp mô tả rõ vị trí liên kết glycoside và sự định hướng của các nhóm thế trong phân tử.	Cyclic maltose	Maltose	Glucose	Pyranose	
+Dạng mạch hở của maltose	Dạng mạch hở của maltose xuất hiện do glucose ở đầu khử có thể mở vòng tạo nhóm aldehyde.	Maltose có thể tồn tại ở dạng mạch hở do carbon anomeric của một đơn vị glucose không tham gia liên kết glycoside.<br>Khi vòng glucose ở đầu khử mở ra, nhóm hemiacetal chuyển thành nhóm aldehyde -CHO.<br>Sự cân bằng giữa dạng mạch vòng và dạng mạch hở giúp maltose thể hiện tính khử.<br>Dạng mạch hở chỉ chiếm tỉ lệ nhỏ so với dạng vòng nhưng đóng vai trò quan trọng trong các phản ứng hóa học.<br>Đặc điểm này giải thích vì sao maltose có thể tham gia phản ứng tráng bạc và các phản ứng oxi hóa của aldehyde.<br>Đây cũng là điểm khác biệt quan trọng giữa maltose và saccharose.	Open-chain maltose	Maltose	Aldehyde	Reducing sugar	
+Đường mía	Đường mía có thành phần carbohydrate chính là saccharose.	Đường mía là sản phẩm thu được chủ yếu từ cây mía sau các quá trình ép, làm sạch, cô đặc và kết tinh dịch mía.<br>Thành phần carbohydrate chính của đường mía là saccharose.<br>Saccharose tạo vị ngọt đặc trưng và có khả năng tan tốt trong nước.<br>Mía là một trong những nguồn nguyên liệu quan trọng nhất để sản xuất đường saccharose trên quy mô công nghiệp.<br>Ngoài saccharose, nguyên liệu mía ban đầu còn chứa nước, chất xơ, khoáng chất và một lượng nhỏ các hợp chất hữu cơ khác.<br>Trong chương trình Hóa học 12, khi hỏi carbohydrate chính trong đường mía, đáp án cần chọn là saccharose.	Sugarcane sugar	Sugarcane	Sucrose	Carbohydrate	https://commons.wikimedia.org/wiki/Category:Sugarcane
+Hạt nảy mầm	Maltose có thể được tìm thấy trong một số hạt nảy mầm do tinh bột bị thủy phân.	Trong quá trình hạt nảy mầm, các enzyme thủy phân được hoạt hóa để phân giải chất dự trữ như tinh bột.<br>Enzyme amylase xúc tác quá trình phân giải tinh bột tạo ra các sản phẩm carbohydrate nhỏ hơn, trong đó có maltose.<br>Maltose sau đó tiếp tục được thủy phân thành glucose để cung cấp năng lượng và nguyên liệu cho sự phát triển của cây non.<br>Vì vậy maltose thường được nhắc đến khi nghiên cứu thành phần carbohydrate của hạt nảy mầm.<br>Quá trình này cũng là cơ sở sinh hóa của việc sản xuất malt từ các loại ngũ cốc như đại mạch.<br>Malt chứa nhiều enzyme và đường sinh ra từ quá trình nảy mầm, có vai trò quan trọng trong công nghệ sản xuất bia.	Germinating seeds	Germination	Maltose	Amylase	https://commons.wikimedia.org/wiki/Category:Germination`;
+        const DEFAULT_RAW_DATA = `Sơn Tinh\tTản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.\t• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên\tTản Vien Son Thanh\tBa Vi Mountain\tVietnamese mythology\tNatural disaster\thttps://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg\nThánh Gióng\tPhù Đổng Thiên Vương là biểu tượng sức mạnh chống ngoại xâm.\t• Biểu tượng tuổi trẻ và lòng yêu nước<br>• Gắn với hội Gióng truyền thống<br>• Lạc vào huyền thoại đánh giặc Ân\tPhu Dong Thien Vuong\tGiong Festival\tVietnamese hero\tPatriotism\thttps://vnn-imgs-a1.vgcloud.vn/icdn/2020/05/29/10/thanh-giong-1.jpg`;
+
+        const STORAGE_KEY_DATA = 'icarus_raw_data_v3';
+        let rawInitialData = "";
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        function initData() {
+            if (embeddedInitialData && embeddedInitialData.trim() !== "") {
+                rawInitialData = embeddedInitialData;
+            } else {
+                let savedData = localStorage.getItem(STORAGE_KEY_DATA);
+                rawInitialData = (savedData && savedData.trim() !== "") ? savedData : DEFAULT_RAW_DATA;
+                localStorage.setItem(STORAGE_KEY_DATA, rawInitialData);
+            }
+
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            renderExpandView();
+            requestWakeLock();
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem(STORAGE_KEY_DATA, rawInitialData);
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) requestWakeLock();
+            else releaseWakeLock();
+        }
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const match = text.match(/\[([^\]]+)\]\(([^)]+)\)/);
+            return match && match[2] ? match[2].trim() : text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+        let expandParagraphMaps = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix, slideIdx = null) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = slideIdx !== null ? `exp_${slideIdx}_${typePrefix}_${index}` : `${typePrefix}_${index}`;
+                let clickAction = slideIdx !== null ? `readSpecificSlideParagraph(${slideIdx}, '${escapeHtml(cleanedText)}')` : `readParagraphAt('${escapeHtml(cleanedText)}')`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" ondblclick="togglePauseRead()" onclick="${clickAction}">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm kiếm">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('scrollableTextArea').scrollTop = 0;
+            highlightExpandCard(currentIndex);
+            saveToLocalStorage();
+        }
+
+        function renderExpandView() {
+            const expandContainer = document.getElementById('expandViewContainer');
+            let html = '';
+            expandParagraphMaps = [];
+
+            data.forEach((item, slideIdx) => {
+                let tagsHtml = '';
+                item.tags.forEach(tag => {
+                    tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')">${tag}</span>`;
+                });
+
+                let pMap = { titleId: `exp_title_${slideIdx}`, paragraphs: [] };
+
+                if (item.desc) {
+                    item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                        let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                        if (clean) pMap.paragraphs.push({ text: clean, id: `exp_${slideIdx}_desc_${idx}` });
+                    });
+                }
+                if (item.bullets) {
+                    item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                        let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                        if (clean) pMap.paragraphs.push({ text: clean, id: `exp_${slideIdx}_bullets_${idx}` });
+                    });
+                }
+                expandParagraphMaps.push(pMap);
+
+                let formattedDesc = formatClickableParagraphs(item.desc, 'desc', slideIdx);
+                let formattedBullets = formatClickableParagraphs(item.bullets, 'bullets', slideIdx);
+
+                html += `
+                    <div class="expand-slide-card" id="expand-slide-${slideIdx}">
+                        <h2 id="exp_title_${slideIdx}" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(${slideIdx})" title="Đọc tiêu đề">${slideIdx + 1}. ${item.title}</h2>
+                        ${item.img ? `<img src="${item.img}" alt="Ảnh" onerror="this.style.display='none'">` : ''}
+                        <div class="expand-desc">${formattedDesc}</div>
+                        ${formattedBullets ? `<div class="expand-bullets">${formattedBullets}</div>` : ''}
+                        <div class="tags-container">${tagsHtml}</div>
+                    </div>
+                `;
+            });
+            expandContainer.innerHTML = html;
+        }
+
+        function toggleExpandMode() {
+            document.body.classList.toggle('expand-mode');
+            const btn = document.getElementById('expandModeBtn');
+            if (document.body.classList.contains('expand-mode')) {
+                btn.innerText = '⏹️ Thoát';
+                renderExpandView();
+                highlightExpandCard(currentIndex);
+            } else {
+                btn.innerText = '📖 Expand';
+            }
+        }
+
+        function highlightExpandCard(slideIdx) {
+            document.querySelectorAll('.expand-slide-card').forEach((card, idx) => {
+                if (idx === slideIdx) {
+                    card.classList.add('active-card');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    card.classList.remove('active-card');
+                }
+            });
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+                renderExpandView();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t = item.tags;
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t[0]||''}\t${t[1]||''}\t${t[2]||''}\t${t[3]||''}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            if (currentIndex >= data.length) currentIndex = 0;
+            renderSlide();
+            if (isAutoplay) readSlide();
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            renderSlide();
+            if (isAutoplay) readSlide();
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => el.classList.remove('active-speaking'));
+        }
+
+        function highlightAndScrollParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                // Highlight ở chế độ Thường
+                let el = document.getElementById(paragraphElementMap[paragraphIndex]);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    const scrollArea = document.getElementById('scrollableTextArea');
+                    scrollArea.scrollTo({
+                        top: el.offsetTop - (scrollArea.clientHeight / 2) + (el.offsetHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+
+                // Highlight đồng thời ở chế độ Expand Mode
+                if (expandParagraphMaps[currentIndex] && expandParagraphMaps[currentIndex].paragraphs[paragraphIndex]) {
+                    let expEl = document.getElementById(expandParagraphMaps[currentIndex].paragraphs[paragraphIndex].id);
+                    if (expEl) expEl.classList.add('active-speaking');
+                }
+            }
+        }
+
+        let currentQueue = [];
+        let currentQueueIndex = 0;
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0, isReadingTitle = false) {
+            if (!synth) return;
+            currentQueue = paragraphs;
+            currentQueueIndex = queueStartIndex;
+
+            if (currentQueueIndex >= currentQueue.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) nextSlide();
+                return;
+            }
+
+            let utter = new SpeechSynthesisUtterance(currentQueue[currentQueueIndex]);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            utter.onstart = () => {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                if (isReadingTitle) {
+                    clearActiveHighlights();
+                    highlightExpandCard(currentIndex);
+                } else {
+                    highlightAndScrollParagraph(currentQueueIndex);
+                }
+            };
+
+            utter.onend = () => {
+                if (!isPaused) {
+                    if (isReadingTitle) {
+                        // Sau khi đọc xong tiêu đề, tiếp tục đọc sang danh sách nội dung
+                        speakParagraphQueue(currentSlideParagraphs, 0, false);
+                    } else {
+                        if (!isAutoplay) {
+                            clearActiveHighlights();
+                            return;
+                        }
+                        speakParagraphQueue(currentQueue, currentQueueIndex + 1, false);
+                    }
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            highlightExpandCard(currentIndex);
+            // Bắt đầu đọc từ tiêu đề trước (không highlight nội dung), sau đó tự chuyển sang nội dung
+            let titleText = data[currentIndex].title;
+            let utter = new SpeechSynthesisUtterance(titleText);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            utter.onstart = () => {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                clearActiveHighlights();
+            };
+
+            utter.onend = () => {
+                if (!isPaused) {
+                    speakParagraphQueue(currentSlideParagraphs, 0, false);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            let idx = currentSlideParagraphs.indexOf(textSnippet);
+            speakParagraphQueue(currentSlideParagraphs, idx !== -1 ? idx : 0, false);
+        }
+
+        function readSpecificSlideTitle(slideIdx) {
+            if (!synth) return;
+            stopRead();
+            currentIndex = slideIdx;
+            renderSlide();
+            highlightExpandCard(slideIdx);
+            let utter = new SpeechSynthesisUtterance(data[slideIdx].title);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+            synth.speak(utter);
+        }
+
+        function readSpecificSlideParagraph(slideIdx, textSnippet) {
+            if (!synth) return;
+            stopRead();
+            currentIndex = slideIdx;
+            renderSlide();
+            highlightExpandCard(slideIdx);
+
+            let item = data[slideIdx];
+            let paragraphs = [];
+            if (item.desc) item.desc.split(/<br\s*[\/]?>/gi).forEach(p => { let c = p.replace(/<[^>]*>?/gm, '').trim(); if(c) paragraphs.push(c); });
+            if (item.bullets) item.bullets.split(/<br\s*[\/]?>/gi).forEach(p => { let c = p.replace(/<[^>]*>?/gm, '').trim(); if(c) paragraphs.push(c); });
+            
+            let idx = paragraphs.indexOf(textSnippet);
+            // Gán lại mảng map tạm cho slide này để highlight đúng
+            currentSlideParagraphs = paragraphs;
+            paragraphElementMap = paragraphs.map((_, i) => `exp_${slideIdx}_desc_${i}`); // mapping giả định
+            speakParagraphQueue(paragraphs, idx !== -1 ? idx : 0, false);
+        }
+
+        function togglePauseRead() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) { synth.resume(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; }
+                else { synth.pause(); isPaused = true; document.getElementById('pauseBtn').innerText = '▶️ Tiếp tục'; }
+            } else if (isPaused) { synth.resume(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; }
+        }
+
+        function stopRead() {
+            if (synth) { synth.cancel(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; clearActiveHighlights(); }
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveToLocalStorage();
+            if (synth && synth.speaking) readSlide();
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function toggleFullscreenMode() {
+            document.body.classList.toggle('fullscreen-mode');
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel = Math.max(-3, Math.min(5, fontSizeLevel + direction));
+            applyFontSize();
+            saveToLocalStorage();
+        }
+
+        function applyFontSize() {
+            let baseDesc = 1.1 + (fontSizeLevel * 0.1);
+            let baseBullets = 0.95 + (fontSizeLevel * 0.1);
+            let baseTitle = 1.8 + (fontSizeLevel * 0.15);
+
+            document.getElementById('slide-desc').style.fontSize = `${baseDesc}rem`;
+            document.getElementById('slide-bullets').style.fontSize = `${baseBullets}rem`;
+            document.getElementById('slide-title').style.fontSize = `${baseTitle}rem`;
+
+            document.querySelectorAll('.expand-desc').forEach(el => el.style.fontSize = `${baseDesc}rem`);
+            document.querySelectorAll('.expand-bullets').forEach(el => el.style.fontSize = `${baseBullets}rem`);
+            document.querySelectorAll('.expand-slide-card h2').forEach(el => el.style.fontSize = `${baseTitle * 0.9}rem`);
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                saveToLocalStorage();
+                renderSlide();
+                renderExpandView();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-icarus.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy (Plain Text) phân tách nhau bằng dấu Tab gồm đúng 8 cột theo thứ tự sau (TUYỆT ĐỐI KHÔNG CÓ CỘT SỐ THỨ TỰ Ở ĐẦU):
+1. Từ khóa chính (tiếng Việt)
+2. Kiến thức trọng tâm ngắn gọn.
+3. Nội dung chi tiết (100-200 từ, dùng thẻ <br> để ngắt ý, xuống dòng)
+4. Từ khóa đáp án tiếng Anh ngắn gọn
+5. Từ khóa tiếng anh 1 liên quan
+6. Từ khóa tiếng anh 2 liên quan
+7. Từ khóa tiếng anh 3 liên quan
+8. URL hình ảnh minh họa thực tế dạng đường dẫn thuần túy hoặc dạng markdown [Alt](url) (để trống nếu không tìm được)
+
+Chỉ trả về dữ liệu thô dạng văn bản Tab-separated, không kèm theo bất kỳ lời dẫn hay định dạng markdown nào khác.`;
+
+            navigator.clipboard.writeText(promptContent).then(() => { alert('Đã copy Prompt AI!'); });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+            if (e.key === 'ArrowRight') nextSlide();
+            else if (e.key === 'ArrowLeft') prevSlide();
+            else if (e.key === '=' || e.key === '+') changeFontSize(1);
+            else if (e.key === '-' || e.key === '_') changeFontSize(-1);
+            else if (e.key === 'Escape') {
+                if (document.body.classList.contains('fullscreen-mode')) toggleFullscreenMode();
+                if (document.body.classList.contains('expand-mode')) toggleExpandMode();
+            }
+        });
+
+        initData();
+    </script>
+
+
+</body></html>
