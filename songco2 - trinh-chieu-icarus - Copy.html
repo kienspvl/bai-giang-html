@@ -1,0 +1,1274 @@
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trình Chiếu Thủ Công - Icarus Presenter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+        }
+
+        /* Chế độ Fullscreen Minimalist */
+        body.fullscreen-mode .top-toolbar,
+        body.fullscreen-mode .manual-nav {
+            display: none !important;
+        }
+
+        body.fullscreen-mode {
+            padding: 10px;
+            justify-content: center;
+            background: #111;
+        }
+
+        body.fullscreen-mode .container {
+            width: 100vw;
+            height: 96vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Chế độ Expand Mode */
+        body.expand-mode .container {
+            display: none !important;
+        }
+        
+        .expand-view-container {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        body.expand-mode .expand-view-container {
+            display: flex;
+        }
+
+        .expand-slide-card {
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: border 0.3s, box-shadow 0.3s;
+        }
+        .expand-slide-card.active-card {
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+        .expand-slide-card h2 {
+            color: #ffd700;
+            font-size: 1.6rem;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+            padding-bottom: 8px;
+            cursor: pointer;
+        }
+        .expand-slide-card h2:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+        .expand-slide-card img {
+            max-width: 100%;
+            max-height: 350px;
+            object-fit: contain;
+            display: block;
+            margin: 15px auto;
+            border-radius: 8px;
+            background: #000;
+        }
+        .expand-slide-card .expand-desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .expand-slide-card .expand-bullets {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .exit-fs-btn {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(5px);
+        }
+        body.fullscreen-mode .exit-fs-btn {
+            display: block;
+        }
+
+        /* Tối ưu hóa Header (Top Toolbar) cho PC & Mobile */
+        .top-toolbar {
+            width: 100%;
+            max-width: 1180px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="text"], select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        button {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ffd700;
+            color: #000;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #ffea75;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #444;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1180px;
+            height: 68vh;
+            max-height: 580px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            background: #0b0b0b;
+        }
+
+        .image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-url-bar {
+            padding: 8px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            gap: 6px;
+        }
+
+        .image-url-bar input {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 5px 8px;
+        }
+
+        .content-box {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 18px 24px;
+        }
+
+        .title-area {
+            flex-shrink: 0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #ffd700;
+            cursor: pointer;
+            display: inline-block;
+        }
+        h1:hover {
+            color: #ffea75;
+            text-decoration: underline;
+        }
+
+        .scrollable-text-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
+            position: relative;
+        }
+
+        .desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .clickable-paragraph {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .clickable-paragraph:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffea75;
+        }
+        .clickable-paragraph.active-speaking {
+            background: rgba(255, 215, 0, 0.35);
+            color: #ffea75;
+            border-left: 4px solid #ffd700;
+            transform: scale(1.01);
+        }
+
+        .bullets {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 12px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+        .tag:hover {
+            background: rgba(255, 215, 0, 0.4);
+        }
+
+        /* Tối ưu hóa Footer (Manual Nav) cho PC & Mobile */
+        .manual-nav {
+            margin-top: 15px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1180px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .slide-counter {
+            font-weight: bold;
+            font-size: 1rem;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 18px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 18px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #ffd700; }
+        input:checked + .slider:before { transform: translateX(18px); background-color: #000; }
+
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(255, 215, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px 10px;
+            border-radius: 10px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+        }
+        #swipeLeftIndicator { right: 15px; }
+        #swipeRightIndicator { left: 15px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2a283b;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .modal-content textarea {
+            width: 100%;
+            height: 220px;
+            background: #1a1824;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .top-toolbar, .manual-nav { padding: 8px 10px; gap: 6px; justify-content: center; }
+            .container { flex-direction: column; height: 75vh; }
+            .image-panel { height: 35vh; flex: none; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .content-box { flex: 1; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="exit-fs-btn" onclick="toggleFullscreenMode()">✕ Thoát</button>
+
+    <div id="swipeLeftIndicator" class="swipe-indicator">➔</div>
+    <div id="swipeRightIndicator" class="swipe-indicator">⬅</div>
+
+    <!-- Header / Top Toolbar tối ưu responsive -->
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <input type="text" id="topicInput" placeholder="Chủ đề..." value="Tứ Bất Tử Việt Nam">
+            <button class="secondary" onclick="copyPrompt()">Copy AI</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="secondary" id="expandModeBtn" onclick="toggleExpandMode()">📖 Expand</button>
+            <button class="secondary" onclick="toggleFullscreenMode()">📺 Full</button>
+            <button class="secondary" onclick="changeFontSize(1)">A+</button>
+            <button class="secondary" onclick="changeFontSize(-1)">A-</button>
+            <button class="secondary" onclick="saveAsHtml()">Save</button>
+            <button onclick="openImportModal()">Import</button>
+        </div>
+    </div>
+
+    <!-- Giao diện Slide thông thường -->
+    <div class="container" id="slideContainerBox">
+        <div class="image-panel">
+            <div class="image-box">
+                <img id="slide-img" src="https://www.acs.psu.edu/drussell/demos/waves/Water-2016.gif" alt="Ảnh minh họa" onerror="this.src='https://via.placeholder.com/600x400?text=Khong+Co+Anh+Hoac+Loi+Link'">
+            </div>
+            <div class="image-url-bar">
+                <input type="text" id="img-url-input" placeholder="Dán URL ảnh..." oninput="updateImageUrl(this.value)">
+            </div>
+        </div>
+        <div class="content-box">
+            <div class="title-area">
+                <h1 id="slide-title" onclick="searchGoogle(this.innerText)" title="Tìm kiếm trên Google" style="font-size: 2.55rem;">Sóng cơ</h1>
+            </div>
+            <div class="scrollable-text-area" id="scrollableTextArea" ondblclick="togglePauseRead()">
+                <div class="desc" id="slide-desc" style="font-size: 1.6rem;"><div class="clickable-paragraph" id="desc_0" ondblclick="togglePauseRead()" onclick="readParagraphAt('Là sự lan truyền của biến dạng cơ trong môi trường đàn hồi.')">Là sự lan truyền của biến dạng cơ trong môi trường đàn hồi.</div></div>
+                <div class="bullets" id="slide-bullets" style="font-size: 1.45rem;"><div class="clickable-paragraph" id="bullets_0" ondblclick="togglePauseRead()" onclick="readParagraphAt('Sóng cơ là sự lan truyền của biến dạng cơ trong một môi trường đàn hồi. Khi một nguồn dao động tác dụng lên môi trường, các phần tử gần nguồn dao động và nhờ lực liên kết, chúng làm các phần tử lân cận dao động theo.')">Sóng cơ là sự lan truyền của biến dạng cơ trong một môi trường đàn hồi. Khi một nguồn dao động tác dụng lên môi trường, các phần tử gần nguồn dao động và nhờ lực liên kết, chúng làm các phần tử lân cận dao động theo. </div><div class="clickable-paragraph" id="bullets_1" ondblclick="togglePauseRead()" onclick="readParagraphAt('• Sóng cơ truyền năng lượng và trạng thái dao động từ nơi này đến nơi khác nhưng không mang vật chất đi xa theo phương truyền sóng.')">• Sóng cơ truyền năng lượng và trạng thái dao động từ nơi này đến nơi khác nhưng không mang vật chất đi xa theo phương truyền sóng. </div><div class="clickable-paragraph" id="bullets_2" ondblclick="togglePauseRead()" onclick="readParagraphAt('• Các ví dụ quen thuộc gồm sóng nước, sóng âm và sóng địa chấn.')">• Các ví dụ quen thuộc gồm sóng nước, sóng âm và sóng địa chấn. </div><div class="clickable-paragraph" id="bullets_3" ondblclick="togglePauseRead()" onclick="readParagraphAt('• Sóng nước được tạo ra khi mặt nước bị kích thích dao động. Sóng âm truyền qua không khí, chất lỏng hoặc chất rắn. Sóng địa chấn lan truyền trong đất đá khi xảy ra động đất.')">• Sóng nước được tạo ra khi mặt nước bị kích thích dao động. Sóng âm truyền qua không khí, chất lỏng hoặc chất rắn. Sóng địa chấn lan truyền trong đất đá khi xảy ra động đất. </div><div class="clickable-paragraph" id="bullets_4" ondblclick="togglePauseRead()" onclick="readParagraphAt('• Vì cần môi trường vật chất để truyền dao động nên sóng cơ không truyền được trong chân không.')">• Vì cần môi trường vật chất để truyền dao động nên sóng cơ không truyền được trong chân không. </div><div class="clickable-paragraph" id="bullets_5" ondblclick="togglePauseRead()" onclick="readParagraphAt('• Đặc điểm quan trọng của sóng cơ là sự lan truyền dao động chứ không phải sự chuyển dời liên tục của các phần tử môi trường theo sóng.')">• Đặc điểm quan trọng của sóng cơ là sự lan truyền dao động chứ không phải sự chuyển dời liên tục của các phần tử môi trường theo sóng.</div></div>
+                <div class="tags-container" id="slide-tags"><span class="tag" onclick="searchGoogle('Mechanical wave')" title="Tìm kiếm">Mechanical wave</span><span class="tag" onclick="searchGoogle('water wave')" title="Tìm kiếm">water wave</span><span class="tag" onclick="searchGoogle('wave propagation')" title="Tìm kiếm">wave propagation</span><span class="tag" onclick="searchGoogle('elastic medium')" title="Tìm kiếm">elastic medium</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Giao diện Expand Mode -->
+    <div class="expand-view-container" id="expandViewContainer">
+                    <div class="expand-slide-card" id="expand-slide-0">
+                        <h2 id="exp_title_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(0)" title="Đọc tiêu đề">1. Sóng cơ</h2>
+                        <img src="https://www.acs.psu.edu/drussell/demos/waves/Water-2016.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_0_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Là sự lan truyền của biến dạng cơ trong môi trường đàn hồi.')">Là sự lan truyền của biến dạng cơ trong môi trường đàn hồi.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_0_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, 'Sóng cơ là sự lan truyền của biến dạng cơ trong một môi trường đàn hồi. Khi một nguồn dao động tác dụng lên môi trường, các phần tử gần nguồn dao động và nhờ lực liên kết, chúng làm các phần tử lân cận dao động theo.')">Sóng cơ là sự lan truyền của biến dạng cơ trong một môi trường đàn hồi. Khi một nguồn dao động tác dụng lên môi trường, các phần tử gần nguồn dao động và nhờ lực liên kết, chúng làm các phần tử lân cận dao động theo. </div><div class="clickable-paragraph" id="exp_0_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, '• Sóng cơ truyền năng lượng và trạng thái dao động từ nơi này đến nơi khác nhưng không mang vật chất đi xa theo phương truyền sóng.')">• Sóng cơ truyền năng lượng và trạng thái dao động từ nơi này đến nơi khác nhưng không mang vật chất đi xa theo phương truyền sóng. </div><div class="clickable-paragraph" id="exp_0_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, '• Các ví dụ quen thuộc gồm sóng nước, sóng âm và sóng địa chấn.')">• Các ví dụ quen thuộc gồm sóng nước, sóng âm và sóng địa chấn. </div><div class="clickable-paragraph" id="exp_0_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, '• Sóng nước được tạo ra khi mặt nước bị kích thích dao động. Sóng âm truyền qua không khí, chất lỏng hoặc chất rắn. Sóng địa chấn lan truyền trong đất đá khi xảy ra động đất.')">• Sóng nước được tạo ra khi mặt nước bị kích thích dao động. Sóng âm truyền qua không khí, chất lỏng hoặc chất rắn. Sóng địa chấn lan truyền trong đất đá khi xảy ra động đất. </div><div class="clickable-paragraph" id="exp_0_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, '• Vì cần môi trường vật chất để truyền dao động nên sóng cơ không truyền được trong chân không.')">• Vì cần môi trường vật chất để truyền dao động nên sóng cơ không truyền được trong chân không. </div><div class="clickable-paragraph" id="exp_0_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(0, '• Đặc điểm quan trọng của sóng cơ là sự lan truyền dao động chứ không phải sự chuyển dời liên tục của các phần tử môi trường theo sóng.')">• Đặc điểm quan trọng của sóng cơ là sự lan truyền dao động chứ không phải sự chuyển dời liên tục của các phần tử môi trường theo sóng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Mechanical wave')">Mechanical wave</span><span class="tag" onclick="searchGoogle('water wave')">water wave</span><span class="tag" onclick="searchGoogle('wave propagation')">wave propagation</span><span class="tag" onclick="searchGoogle('elastic medium')">elastic medium</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-1">
+                        <h2 id="exp_title_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(1)" title="Đọc tiêu đề">2. Nguồn sóng</h2>
+                        <img src="https://i.pinimg.com/originals/5c/f2/03/5cf203dd5f09d048bc1672bb8ac55bfc.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_1_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Nguồn sóng là vật hoặc hệ dao động tạo ra và truyền dao động vào môi trường.')">Nguồn sóng là vật hoặc hệ dao động tạo ra và truyền dao động vào môi trường.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_1_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, 'Nguồn sóng là vật hoặc hệ vật thực hiện dao động và tạo ra sự lan truyền dao động trong môi trường.')">Nguồn sóng là vật hoặc hệ vật thực hiện dao động và tạo ra sự lan truyền dao động trong môi trường. </div><div class="clickable-paragraph" id="exp_1_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, '• Trong thí nghiệm về sóng cơ, vật O dao động lên xuống có thể đóng vai trò là nguồn sóng. Dao động của O làm các phần tử môi trường lân cận dao động và tạo thành sóng truyền ra xa.')">• Trong thí nghiệm về sóng cơ, vật O dao động lên xuống có thể đóng vai trò là nguồn sóng. Dao động của O làm các phần tử môi trường lân cận dao động và tạo thành sóng truyền ra xa. </div><div class="clickable-paragraph" id="exp_1_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, '• Nguồn sóng có thể là một vật dao động tuần hoàn hoặc dao động không tuần hoàn tùy trường hợp.')">• Nguồn sóng có thể là một vật dao động tuần hoàn hoặc dao động không tuần hoàn tùy trường hợp. </div><div class="clickable-paragraph" id="exp_1_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, '• Ví dụ, khi dây đàn guitar rung, dao động của dây làm không khí xung quanh dao động và tạo ra sóng âm.')">• Ví dụ, khi dây đàn guitar rung, dao động của dây làm không khí xung quanh dao động và tạo ra sóng âm. </div><div class="clickable-paragraph" id="exp_1_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, '• Trong loa, màng loa dao động tạo ra sự biến thiên áp suất và lan truyền trong không khí dưới dạng sóng âm.')">• Trong loa, màng loa dao động tạo ra sự biến thiên áp suất và lan truyền trong không khí dưới dạng sóng âm. </div><div class="clickable-paragraph" id="exp_1_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(1, '• Đặc điểm dao động của nguồn như biên độ, tần số và chu kì có ảnh hưởng trực tiếp đến các đại lượng tương ứng của sóng được tạo ra trong môi trường.')">• Đặc điểm dao động của nguồn như biên độ, tần số và chu kì có ảnh hưởng trực tiếp đến các đại lượng tương ứng của sóng được tạo ra trong môi trường.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave source')">Wave source</span><span class="tag" onclick="searchGoogle('vibrating source')">vibrating source</span><span class="tag" onclick="searchGoogle('guitar string')">guitar string</span><span class="tag" onclick="searchGoogle('sound generation')">sound generation</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-2">
+                        <h2 id="exp_title_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(2)" title="Đọc tiêu đề">3. Môi trường truyền sóng</h2>
+                        <img src="https://i.makeagif.com/media/8-31-2018/CvyS2m.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_2_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Môi trường truyền sóng là môi trường đàn hồi trong đó dao động được lan truyền từ phần tử này sang phần tử khác.')">Môi trường truyền sóng là môi trường đàn hồi trong đó dao động được lan truyền từ phần tử này sang phần tử khác.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_2_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, 'Môi trường truyền sóng là môi trường vật chất có tính đàn hồi, cho phép dao động được truyền từ phần tử này sang phần tử khác.')">Môi trường truyền sóng là môi trường vật chất có tính đàn hồi, cho phép dao động được truyền từ phần tử này sang phần tử khác. </div><div class="clickable-paragraph" id="exp_2_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, '• Đối với sóng nước, nước là môi trường truyền sóng. Đối với sóng âm trong không khí, không khí là môi trường truyền sóng. Đối với sóng địa chấn, đất đá là môi trường truyền sóng.')">• Đối với sóng nước, nước là môi trường truyền sóng. Đối với sóng âm trong không khí, không khí là môi trường truyền sóng. Đối với sóng địa chấn, đất đá là môi trường truyền sóng. </div><div class="clickable-paragraph" id="exp_2_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, '• Khi một phần tử môi trường dao động, lực tương tác giữa các phần tử làm các phần tử lân cận dao động theo. Quá trình này tiếp diễn và tạo nên sự lan truyền sóng.')">• Khi một phần tử môi trường dao động, lực tương tác giữa các phần tử làm các phần tử lân cận dao động theo. Quá trình này tiếp diễn và tạo nên sự lan truyền sóng. </div><div class="clickable-paragraph" id="exp_2_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, '• Tính chất của môi trường ảnh hưởng đến tốc độ truyền sóng. Các môi trường khác nhau thường cho tốc độ truyền sóng khác nhau.')">• Tính chất của môi trường ảnh hưởng đến tốc độ truyền sóng. Các môi trường khác nhau thường cho tốc độ truyền sóng khác nhau. </div><div class="clickable-paragraph" id="exp_2_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, '• Sóng cơ không truyền được trong chân không vì chân không không có các phần tử vật chất để truyền dao động cơ.')">• Sóng cơ không truyền được trong chân không vì chân không không có các phần tử vật chất để truyền dao động cơ. </div><div class="clickable-paragraph" id="exp_2_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(2, '• Môi trường càng có đặc tính đàn hồi phù hợp thì dao động có thể được truyền đi với tốc độ khác nhau tùy vào loại sóng và tính chất vật liệu.')">• Môi trường càng có đặc tính đàn hồi phù hợp thì dao động có thể được truyền đi với tốc độ khác nhau tùy vào loại sóng và tính chất vật liệu.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave medium')">Wave medium</span><span class="tag" onclick="searchGoogle('water')">water</span><span class="tag" onclick="searchGoogle('air')">air</span><span class="tag" onclick="searchGoogle('rock medium')">rock medium</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-3">
+                        <h2 id="exp_title_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(3)" title="Đọc tiêu đề">4. Sự truyền dao động</h2>
+                        <img src="https://i.makeagif.com/media/6-11-2024/IJy6nM.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_3_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Sóng hình thành do dao động được truyền từ phần tử này sang phần tử lân cận nhờ lực liên kết giữa các phần tử môi trường.')">Sóng hình thành do dao động được truyền từ phần tử này sang phần tử lân cận nhờ lực liên kết giữa các phần tử môi trường.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_3_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, 'Sự truyền dao động là cơ chế cơ bản tạo nên sóng cơ. Khi nguồn sóng dao động, phần tử môi trường gần nguồn nhận được tác động và bắt đầu dao động.')">Sự truyền dao động là cơ chế cơ bản tạo nên sóng cơ. Khi nguồn sóng dao động, phần tử môi trường gần nguồn nhận được tác động và bắt đầu dao động. </div><div class="clickable-paragraph" id="exp_3_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, '• Nhờ lực liên kết hoặc tương tác giữa các phần tử, dao động được truyền từ phần tử này sang phần tử lân cận. Sau đó các phần tử xa nguồn hơn lần lượt dao động.')">• Nhờ lực liên kết hoặc tương tác giữa các phần tử, dao động được truyền từ phần tử này sang phần tử lân cận. Sau đó các phần tử xa nguồn hơn lần lượt dao động. </div><div class="clickable-paragraph" id="exp_3_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, '• Vì mỗi phần tử chỉ dao động quanh vị trí cân bằng nên sự truyền sóng không đồng nghĩa với việc vật chất được vận chuyển liên tục từ nguồn đến nơi nhận.')">• Vì mỗi phần tử chỉ dao động quanh vị trí cân bằng nên sự truyền sóng không đồng nghĩa với việc vật chất được vận chuyển liên tục từ nguồn đến nơi nhận. </div><div class="clickable-paragraph" id="exp_3_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, '• Năng lượng dao động được truyền qua môi trường từ vùng này sang vùng khác.')">• Năng lượng dao động được truyền qua môi trường từ vùng này sang vùng khác. </div><div class="clickable-paragraph" id="exp_3_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, '• Phần tử càng gần nguồn thường bắt đầu dao động sớm hơn phần tử ở xa nguồn. Đây là cơ sở để xác định độ trễ pha giữa các điểm trên phương truyền sóng.')">• Phần tử càng gần nguồn thường bắt đầu dao động sớm hơn phần tử ở xa nguồn. Đây là cơ sở để xác định độ trễ pha giữa các điểm trên phương truyền sóng. </div><div class="clickable-paragraph" id="exp_3_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(3, '• Quá trình truyền dao động phụ thuộc vào tính chất đàn hồi và quán tính của môi trường.')">• Quá trình truyền dao động phụ thuộc vào tính chất đàn hồi và quán tính của môi trường.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave propagation')">Wave propagation</span><span class="tag" onclick="searchGoogle('particle vibration')">particle vibration</span><span class="tag" onclick="searchGoogle('coupling force')">coupling force</span><span class="tag" onclick="searchGoogle('medium')">medium</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-4">
+                        <h2 id="exp_title_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(4)" title="Đọc tiêu đề">5. Phương truyền sóng</h2>
+                        <img src="https://i.makeagif.com/media/2-24-2017/GvU1su.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_4_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Phương truyền sóng là phương mà biến dạng hoặc dao động lan truyền trong môi trường.')">Phương truyền sóng là phương mà biến dạng hoặc dao động lan truyền trong môi trường.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_4_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, 'Phương truyền sóng là phương mà trạng thái dao động hoặc biến dạng lan truyền từ nguồn đến các vùng khác của môi trường.')">Phương truyền sóng là phương mà trạng thái dao động hoặc biến dạng lan truyền từ nguồn đến các vùng khác của môi trường. </div><div class="clickable-paragraph" id="exp_4_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, '• Trong thí nghiệm, nếu nguồn O tạo sóng truyền đến điểm C thì đường thẳng OC có thể được xem là phương truyền sóng.')">• Trong thí nghiệm, nếu nguồn O tạo sóng truyền đến điểm C thì đường thẳng OC có thể được xem là phương truyền sóng. </div><div class="clickable-paragraph" id="exp_4_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, '• Với sóng truyền trên dây, phương truyền sóng thường dọc theo chiều dài của dây.')">• Với sóng truyền trên dây, phương truyền sóng thường dọc theo chiều dài của dây. </div><div class="clickable-paragraph" id="exp_4_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, '• Phương truyền sóng cần được phân biệt với phương dao động của phần tử môi trường. Hai phương này có thể trùng nhau hoặc vuông góc tùy loại sóng.')">• Phương truyền sóng cần được phân biệt với phương dao động của phần tử môi trường. Hai phương này có thể trùng nhau hoặc vuông góc tùy loại sóng. </div><div class="clickable-paragraph" id="exp_4_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, '• Với sóng dọc, phần tử môi trường dao động theo phương truyền sóng. Với sóng ngang, phần tử môi trường dao động vuông góc với phương truyền sóng.')">• Với sóng dọc, phần tử môi trường dao động theo phương truyền sóng. Với sóng ngang, phần tử môi trường dao động vuông góc với phương truyền sóng. </div><div class="clickable-paragraph" id="exp_4_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(4, '• Xác định đúng phương truyền sóng giúp nhận biết dạng sóng và phân tích độ lệch pha giữa các điểm trong môi trường.')">• Xác định đúng phương truyền sóng giúp nhận biết dạng sóng và phân tích độ lệch pha giữa các điểm trong môi trường.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Direction of propagation')">Direction of propagation</span><span class="tag" onclick="searchGoogle('propagation direction')">propagation direction</span><span class="tag" onclick="searchGoogle('wave path')">wave path</span><span class="tag" onclick="searchGoogle('string wave')">string wave</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-5">
+                        <h2 id="exp_title_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(5)" title="Đọc tiêu đề">6. Dao động của phần tử môi trường</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/7/74/Animation_for_a_deep_water_wave.gif?utm_source=commons.wikimedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_5_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Các phần tử môi trường thường chỉ dao động quanh vị trí cân bằng trong một phạm vi nhỏ, không chuyển động theo sóng đi xa.')">Các phần tử môi trường thường chỉ dao động quanh vị trí cân bằng trong một phạm vi nhỏ, không chuyển động theo sóng đi xa.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_5_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, 'Các phần tử của môi trường truyền sóng cơ thường dao động quanh vị trí cân bằng của chúng thay vì chuyển động theo sóng đi xa.')">Các phần tử của môi trường truyền sóng cơ thường dao động quanh vị trí cân bằng của chúng thay vì chuyển động theo sóng đi xa. </div><div class="clickable-paragraph" id="exp_5_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, '• Ví dụ, một miếng xốp nổi trên mặt nước có thể dao động lên xuống khi sóng truyền qua. Sau khi sóng đi qua, miếng xốp có xu hướng trở lại vị trí ban đầu nếu bỏ qua dòng chảy của nước.')">• Ví dụ, một miếng xốp nổi trên mặt nước có thể dao động lên xuống khi sóng truyền qua. Sau khi sóng đi qua, miếng xốp có xu hướng trở lại vị trí ban đầu nếu bỏ qua dòng chảy của nước. </div><div class="clickable-paragraph" id="exp_5_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, '• Điều này cho thấy sóng truyền năng lượng và trạng thái dao động chứ không mang vật chất đi xa.')">• Điều này cho thấy sóng truyền năng lượng và trạng thái dao động chứ không mang vật chất đi xa. </div><div class="clickable-paragraph" id="exp_5_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, '• Đối với sóng ngang trên mặt nước, phần tử nước có thể dao động theo phương gần vuông góc với phương truyền sóng.')">• Đối với sóng ngang trên mặt nước, phần tử nước có thể dao động theo phương gần vuông góc với phương truyền sóng. </div><div class="clickable-paragraph" id="exp_5_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, '• Trong sóng âm, các phần tử không khí dao động qua lại quanh vị trí cân bằng, tạo ra các vùng nén và giãn truyền đi.')">• Trong sóng âm, các phần tử không khí dao động qua lại quanh vị trí cân bằng, tạo ra các vùng nén và giãn truyền đi. </div><div class="clickable-paragraph" id="exp_5_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(5, '• Việc phân biệt chuyển động của phần tử với sự lan truyền của sóng là kiến thức quan trọng khi giải thích bản chất sóng cơ.')">• Việc phân biệt chuyển động của phần tử với sự lan truyền của sóng là kiến thức quan trọng khi giải thích bản chất sóng cơ.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Particle oscillation')">Particle oscillation</span><span class="tag" onclick="searchGoogle('particle motion')">particle motion</span><span class="tag" onclick="searchGoogle('equilibrium position')">equilibrium position</span><span class="tag" onclick="searchGoogle('water surface')">water surface</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-6">
+                        <h2 id="exp_title_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(6)" title="Đọc tiêu đề">7. Biên độ sóng</h2>
+                        <img src="https://cdn.dribbble.com/userupload/21888828/file/original-9425dab702a9d1bfe1692c181a164b05.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_6_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Biên độ sóng A là độ lệch lớn nhất của phần tử môi trường khỏi vị trí cân bằng.')">Biên độ sóng A là độ lệch lớn nhất của phần tử môi trường khỏi vị trí cân bằng.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_6_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, 'Biên độ sóng A đặc trưng cho độ mạnh của dao động của các phần tử môi trường. Nó được xác định bằng độ lệch lớn nhất của phần tử khỏi vị trí cân bằng trong quá trình dao động.')">Biên độ sóng A đặc trưng cho độ mạnh của dao động của các phần tử môi trường. Nó được xác định bằng độ lệch lớn nhất của phần tử khỏi vị trí cân bằng trong quá trình dao động. </div><div class="clickable-paragraph" id="exp_6_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, '• Đơn vị của biên độ phụ thuộc vào đại lượng li độ, thường dùng mét hoặc centimet.')">• Đơn vị của biên độ phụ thuộc vào đại lượng li độ, thường dùng mét hoặc centimet. </div><div class="clickable-paragraph" id="exp_6_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, '• Trên đồ thị li độ theo vị trí, biên độ là giá trị tuyệt đối lớn nhất của li độ. Khoảng cách từ vị trí cân bằng đến đỉnh sóng hoặc đáy sóng chính là A.')">• Trên đồ thị li độ theo vị trí, biên độ là giá trị tuyệt đối lớn nhất của li độ. Khoảng cách từ vị trí cân bằng đến đỉnh sóng hoặc đáy sóng chính là A. </div><div class="clickable-paragraph" id="exp_6_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, '• Biên độ càng lớn thì dao động của phần tử càng mạnh và trong nhiều trường hợp năng lượng truyền bởi sóng càng lớn.')">• Biên độ càng lớn thì dao động của phần tử càng mạnh và trong nhiều trường hợp năng lượng truyền bởi sóng càng lớn. </div><div class="clickable-paragraph" id="exp_6_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, '• Ví dụ, nếu ngọn sóng cao 12 cm so với mặt nước cân bằng thì biên độ dao động tương ứng là A = 12 cm.')">• Ví dụ, nếu ngọn sóng cao 12 cm so với mặt nước cân bằng thì biên độ dao động tương ứng là A = 12 cm. </div><div class="clickable-paragraph" id="exp_6_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(6, '• Cần phân biệt biên độ với chiều cao sóng. Với sóng hình sin, khoảng cách từ đỉnh đến đáy bằng 2A.')">• Cần phân biệt biên độ với chiều cao sóng. Với sóng hình sin, khoảng cách từ đỉnh đến đáy bằng 2A.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave amplitude')">Wave amplitude</span><span class="tag" onclick="searchGoogle('amplitude')">amplitude</span><span class="tag" onclick="searchGoogle('wave height')">wave height</span><span class="tag" onclick="searchGoogle('oscillation')">oscillation</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-7">
+                        <h2 id="exp_title_7" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(7)" title="Đọc tiêu đề">8. Bước sóng</h2>
+                        <img src="https://i.makeagif.com/media/3-10-2023/h6ggs7.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_7_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Bước sóng λ là khoảng cách giữa hai phần tử gần nhau nhất dao động cùng trạng thái trên phương truyền sóng.')">Bước sóng λ là khoảng cách giữa hai phần tử gần nhau nhất dao động cùng trạng thái trên phương truyền sóng.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_7_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, 'Bước sóng λ là khoảng cách ngắn nhất giữa hai điểm trên phương truyền sóng dao động cùng pha. Đây là một trong những đại lượng đặc trưng quan trọng của sóng.')">Bước sóng λ là khoảng cách ngắn nhất giữa hai điểm trên phương truyền sóng dao động cùng pha. Đây là một trong những đại lượng đặc trưng quan trọng của sóng. </div><div class="clickable-paragraph" id="exp_7_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, '• Với sóng hình sin, bước sóng có thể xác định bằng khoảng cách giữa hai đỉnh liên tiếp hoặc hai đáy liên tiếp.')">• Với sóng hình sin, bước sóng có thể xác định bằng khoảng cách giữa hai đỉnh liên tiếp hoặc hai đáy liên tiếp. </div><div class="clickable-paragraph" id="exp_7_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, '• Hai điểm cách nhau đúng một bước sóng λ có cùng trạng thái dao động tại cùng thời điểm.')">• Hai điểm cách nhau đúng một bước sóng λ có cùng trạng thái dao động tại cùng thời điểm. </div><div class="clickable-paragraph" id="exp_7_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, '• Đơn vị của bước sóng trong hệ SI là mét (m).')">• Đơn vị của bước sóng trong hệ SI là mét (m). </div><div class="clickable-paragraph" id="exp_7_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, '• Bước sóng cũng chính là quãng đường mà sóng truyền được trong một chu kì T. Vì vậy λ = vT.')">• Bước sóng cũng chính là quãng đường mà sóng truyền được trong một chu kì T. Vì vậy λ = vT. </div><div class="clickable-paragraph" id="exp_7_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, '• Nếu biết tốc độ truyền sóng và tần số, có thể tính bước sóng bằng công thức λ = v/f.')">• Nếu biết tốc độ truyền sóng và tần số, có thể tính bước sóng bằng công thức λ = v/f. </div><div class="clickable-paragraph" id="exp_7_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(7, '• Bước sóng phụ thuộc vào tốc độ truyền sóng và tần số của nguồn. Khi sóng truyền trong cùng môi trường với tốc độ không đổi, tần số tăng thì bước sóng giảm.')">• Bước sóng phụ thuộc vào tốc độ truyền sóng và tần số của nguồn. Khi sóng truyền trong cùng môi trường với tốc độ không đổi, tần số tăng thì bước sóng giảm.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wavelength')">Wavelength</span><span class="tag" onclick="searchGoogle('wavelength')">wavelength</span><span class="tag" onclick="searchGoogle('crest')">crest</span><span class="tag" onclick="searchGoogle('distance')">distance</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-8">
+                        <h2 id="exp_title_8" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(8)" title="Đọc tiêu đề">9. Chu kì sóng</h2>
+                        <img src="https://i.makeagif.com/media/11-30-2018/YdGxIK.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_8_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Chu kì T là thời gian để một phần tử môi trường thực hiện một dao động toàn phần; cũng là thời gian giữa hai đỉnh sóng liên tiếp qua một điểm.')">Chu kì T là thời gian để một phần tử môi trường thực hiện một dao động toàn phần; cũng là thời gian giữa hai đỉnh sóng liên tiếp qua một điểm.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_8_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, 'Chu kì sóng T là khoảng thời gian để một phần tử môi trường thực hiện một dao động toàn phần. Chu kì cũng là khoảng thời gian giữa hai lần liên tiếp một trạng thái dao động giống nhau đi qua cùng một điểm.')">Chu kì sóng T là khoảng thời gian để một phần tử môi trường thực hiện một dao động toàn phần. Chu kì cũng là khoảng thời gian giữa hai lần liên tiếp một trạng thái dao động giống nhau đi qua cùng một điểm. </div><div class="clickable-paragraph" id="exp_8_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, '• Đối với sóng tuần hoàn, chu kì của sóng bằng chu kì dao động của nguồn tạo sóng.')">• Đối với sóng tuần hoàn, chu kì của sóng bằng chu kì dao động của nguồn tạo sóng. </div><div class="clickable-paragraph" id="exp_8_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, '• Đơn vị của chu kì là giây, kí hiệu s.')">• Đơn vị của chu kì là giây, kí hiệu s. </div><div class="clickable-paragraph" id="exp_8_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, '• Nếu nguồn thực hiện 24 dao động trong 40 s thì chu kì là T = 40/24 ≈ 1,67 s.')">• Nếu nguồn thực hiện 24 dao động trong 40 s thì chu kì là T = 40/24 ≈ 1,67 s. </div><div class="clickable-paragraph" id="exp_8_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, '• Chu kì có quan hệ nghịch đảo với tần số theo công thức f = 1/T.')">• Chu kì có quan hệ nghịch đảo với tần số theo công thức f = 1/T. </div><div class="clickable-paragraph" id="exp_8_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, '• Khi biết chu kì và tốc độ truyền sóng, bước sóng được tính bằng λ = vT.')">• Khi biết chu kì và tốc độ truyền sóng, bước sóng được tính bằng λ = vT. </div><div class="clickable-paragraph" id="exp_8_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(8, '• Trên đồ thị li độ theo thời gian u-t, chu kì được xác định bằng khoảng thời gian giữa hai trạng thái giống nhau liên tiếp, chẳng hạn hai đỉnh liên tiếp.')">• Trên đồ thị li độ theo thời gian u-t, chu kì được xác định bằng khoảng thời gian giữa hai trạng thái giống nhau liên tiếp, chẳng hạn hai đỉnh liên tiếp.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave period')">Wave period</span><span class="tag" onclick="searchGoogle('period')">period</span><span class="tag" onclick="searchGoogle('oscillation time')">oscillation time</span><span class="tag" onclick="searchGoogle('crest interval')">crest interval</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-9">
+                        <h2 id="exp_title_9" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(9)" title="Đọc tiêu đề">10. Tần số sóng</h2>
+                        <img src="https://www.acs.psu.edu/drussell/demos/waves/Rayleigh-2016.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_9_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Tần số f là số dao động hoặc số ngọn sóng đi qua một điểm trong một đơn vị thời gian.')">Tần số f là số dao động hoặc số ngọn sóng đi qua một điểm trong một đơn vị thời gian.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_9_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, 'Tần số sóng f cho biết số dao động toàn phần của một phần tử hoặc số ngọn sóng đi qua một điểm trong một đơn vị thời gian.')">Tần số sóng f cho biết số dao động toàn phần của một phần tử hoặc số ngọn sóng đi qua một điểm trong một đơn vị thời gian. </div><div class="clickable-paragraph" id="exp_9_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, '• Đơn vị của tần số là hertz, kí hiệu Hz. Một hertz tương ứng với một dao động trong một giây.')">• Đơn vị của tần số là hertz, kí hiệu Hz. Một hertz tương ứng với một dao động trong một giây. </div><div class="clickable-paragraph" id="exp_9_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, '• Tần số liên hệ với chu kì bởi công thức f = 1/T. Vì vậy tần số càng lớn thì chu kì càng nhỏ.')">• Tần số liên hệ với chu kì bởi công thức f = 1/T. Vì vậy tần số càng lớn thì chu kì càng nhỏ. </div><div class="clickable-paragraph" id="exp_9_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, '• Nếu nguồn thực hiện 24 dao động trong 40 s thì f = 24/40 = 0,60 Hz và T ≈ 1,67 s.')">• Nếu nguồn thực hiện 24 dao động trong 40 s thì f = 24/40 = 0,60 Hz và T ≈ 1,67 s. </div><div class="clickable-paragraph" id="exp_9_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, '• Khi sóng truyền trong cùng một môi trường, tần số của sóng do nguồn quyết định và không thay đổi khi sóng truyền từ vị trí này sang vị trí khác.')">• Khi sóng truyền trong cùng một môi trường, tần số của sóng do nguồn quyết định và không thay đổi khi sóng truyền từ vị trí này sang vị trí khác. </div><div class="clickable-paragraph" id="exp_9_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(9, '• Nếu tốc độ truyền sóng không đổi, khi tần số tăng thì bước sóng giảm theo hệ thức λ = v/f.')">• Nếu tốc độ truyền sóng không đổi, khi tần số tăng thì bước sóng giảm theo hệ thức λ = v/f.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave frequency')">Wave frequency</span><span class="tag" onclick="searchGoogle('frequency')">frequency</span><span class="tag" onclick="searchGoogle('oscillation rate')">oscillation rate</span><span class="tag" onclick="searchGoogle('hertz')">hertz</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-10">
+                        <h2 id="exp_title_10" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(10)" title="Đọc tiêu đề">11. Tốc độ truyền sóng</h2>
+                        <img src="https://ibphysicsnotes.files.wordpress.com/2016/01/waveparameters.gif?w=300&amp;h=225" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_10_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Tốc độ truyền sóng v là tốc độ lan truyền trạng thái dao động hoặc biến dạng trong môi trường.')">Tốc độ truyền sóng v là tốc độ lan truyền trạng thái dao động hoặc biến dạng trong môi trường.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_10_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, 'Tốc độ truyền sóng v biểu thị mức độ nhanh chậm của quá trình lan truyền trạng thái dao động hoặc biến dạng trong môi trường.')">Tốc độ truyền sóng v biểu thị mức độ nhanh chậm của quá trình lan truyền trạng thái dao động hoặc biến dạng trong môi trường. </div><div class="clickable-paragraph" id="exp_10_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, '• Nếu sóng truyền được quãng đường 10 m trong thời gian 5 s thì tốc độ truyền sóng là v = 10/5 = 2 m/s.')">• Nếu sóng truyền được quãng đường 10 m trong thời gian 5 s thì tốc độ truyền sóng là v = 10/5 = 2 m/s. </div><div class="clickable-paragraph" id="exp_10_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, '• Đơn vị trong hệ SI là m/s.')">• Đơn vị trong hệ SI là m/s. </div><div class="clickable-paragraph" id="exp_10_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, '• Tốc độ truyền sóng phụ thuộc chủ yếu vào tính chất của môi trường truyền sóng, chẳng hạn độ đàn hồi và khối lượng riêng đối với từng loại sóng.')">• Tốc độ truyền sóng phụ thuộc chủ yếu vào tính chất của môi trường truyền sóng, chẳng hạn độ đàn hồi và khối lượng riêng đối với từng loại sóng. </div><div class="clickable-paragraph" id="exp_10_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, '• Tốc độ truyền sóng không phải là tốc độ chuyển động của một phần tử môi trường theo phương truyền sóng.')">• Tốc độ truyền sóng không phải là tốc độ chuyển động của một phần tử môi trường theo phương truyền sóng. </div><div class="clickable-paragraph" id="exp_10_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, '• Trong cùng một môi trường, theo kiến thức cơ bản, tốc độ truyền sóng không phụ thuộc trực tiếp vào tần số của nguồn.')">• Trong cùng một môi trường, theo kiến thức cơ bản, tốc độ truyền sóng không phụ thuộc trực tiếp vào tần số của nguồn. </div><div class="clickable-paragraph" id="exp_10_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(10, '• Từ tốc độ truyền sóng có thể xác định bước sóng thông qua λ = vT hoặc λ = v/f.')">• Từ tốc độ truyền sóng có thể xác định bước sóng thông qua λ = vT hoặc λ = v/f.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave speed')">Wave speed</span><span class="tag" onclick="searchGoogle('propagation speed')">propagation speed</span><span class="tag" onclick="searchGoogle('wave velocity')">wave velocity</span><span class="tag" onclick="searchGoogle('medium property')">medium property</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-11">
+                        <h2 id="exp_title_11" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(11)" title="Đọc tiêu đề">12. Mối liên hệ λ, T, v</h2>
+                        <img src="https://cheungphysics.weebly.com/uploads/8/8/6/0/88603758/wave5_orig.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_11_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Bước sóng, chu kì và tốc độ truyền sóng liên hệ bởi công thức λ = vT.')">Bước sóng, chu kì và tốc độ truyền sóng liên hệ bởi công thức λ = vT.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_11_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, 'Mối liên hệ giữa bước sóng λ, chu kì T và tốc độ truyền sóng v được biểu diễn bằng công thức λ = vT.')">Mối liên hệ giữa bước sóng λ, chu kì T và tốc độ truyền sóng v được biểu diễn bằng công thức λ = vT. </div><div class="clickable-paragraph" id="exp_11_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, '• Công thức này xuất phát từ ý nghĩa của bước sóng: trong thời gian một chu kì, sóng truyền được đúng một bước sóng.')">• Công thức này xuất phát từ ý nghĩa của bước sóng: trong thời gian một chu kì, sóng truyền được đúng một bước sóng. </div><div class="clickable-paragraph" id="exp_11_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, '• Nếu biết tốc độ truyền sóng và chu kì, có thể tính bước sóng bằng λ = vT.')">• Nếu biết tốc độ truyền sóng và chu kì, có thể tính bước sóng bằng λ = vT. </div><div class="clickable-paragraph" id="exp_11_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, '• Nếu biết bước sóng và chu kì, tốc độ truyền sóng là v = λ/T.')">• Nếu biết bước sóng và chu kì, tốc độ truyền sóng là v = λ/T. </div><div class="clickable-paragraph" id="exp_11_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, '• Nếu biết bước sóng và tốc độ truyền sóng, chu kì là T = λ/v.')">• Nếu biết bước sóng và tốc độ truyền sóng, chu kì là T = λ/v. </div><div class="clickable-paragraph" id="exp_11_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, '• Ví dụ, với v = 2 m/s và T = 1,67 s, ta có λ ≈ 3,34 m.')">• Ví dụ, với v = 2 m/s và T = 1,67 s, ta có λ ≈ 3,34 m. </div><div class="clickable-paragraph" id="exp_11_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(11, '• Khi giải bài tập cần thống nhất đơn vị, đặc biệt phải đổi thời gian về giây và khoảng cách về mét nếu yêu cầu kết quả theo đơn vị SI.')">• Khi giải bài tập cần thống nhất đơn vị, đặc biệt phải đổi thời gian về giây và khoảng cách về mét nếu yêu cầu kết quả theo đơn vị SI.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wavelength relation')">Wavelength relation</span><span class="tag" onclick="searchGoogle('wave equation')">wave equation</span><span class="tag" onclick="searchGoogle('period')">period</span><span class="tag" onclick="searchGoogle('speed')">speed</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-12">
+                        <h2 id="exp_title_12" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(12)" title="Đọc tiêu đề">13. Mối liên hệ λ, f, v</h2>
+                        <img src="https://stickmanphysics.com/wp-content/uploads/2020/03/Velocity-With-Wavelength-and-frequency.gif" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_12_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Công thức liên hệ giữa bước sóng, tần số và tốc độ truyền sóng là λ = v/f.')">Công thức liên hệ giữa bước sóng, tần số và tốc độ truyền sóng là λ = v/f.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_12_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, 'Mối liên hệ giữa bước sóng λ, tần số f và tốc độ truyền sóng v được xác định bởi công thức λ = v/f.')">Mối liên hệ giữa bước sóng λ, tần số f và tốc độ truyền sóng v được xác định bởi công thức λ = v/f. </div><div class="clickable-paragraph" id="exp_12_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, '• Công thức này có thể suy ra từ λ = vT và T = 1/f.')">• Công thức này có thể suy ra từ λ = vT và T = 1/f. </div><div class="clickable-paragraph" id="exp_12_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, '• Khi biết tốc độ truyền sóng và tần số, ta tính bước sóng bằng λ = v/f.')">• Khi biết tốc độ truyền sóng và tần số, ta tính bước sóng bằng λ = v/f. </div><div class="clickable-paragraph" id="exp_12_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, '• Khi biết bước sóng và tần số, tốc độ truyền sóng là v = λf.')">• Khi biết bước sóng và tần số, tốc độ truyền sóng là v = λf. </div><div class="clickable-paragraph" id="exp_12_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, '• Khi biết tốc độ truyền sóng và bước sóng, tần số là f = v/λ.')">• Khi biết tốc độ truyền sóng và bước sóng, tần số là f = v/λ. </div><div class="clickable-paragraph" id="exp_12_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, '• Ví dụ, âm truyền trong không khí với v = 340 m/s và f = 170 Hz thì λ = 340/170 = 2 m.')">• Ví dụ, âm truyền trong không khí với v = 340 m/s và f = 170 Hz thì λ = 340/170 = 2 m. </div><div class="clickable-paragraph" id="exp_12_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(12, '• Trong cùng môi trường, nếu tốc độ truyền sóng không đổi thì tần số tăng làm bước sóng giảm, còn tần số giảm làm bước sóng tăng.')">• Trong cùng môi trường, nếu tốc độ truyền sóng không đổi thì tần số tăng làm bước sóng giảm, còn tần số giảm làm bước sóng tăng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave equation')">Wave equation</span><span class="tag" onclick="searchGoogle('frequency')">frequency</span><span class="tag" onclick="searchGoogle('wavelength')">wavelength</span><span class="tag" onclick="searchGoogle('sound speed')">sound speed</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-13">
+                        <h2 id="exp_title_13" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(13)" title="Đọc tiêu đề">14. Cường độ sóng</h2>
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHgYobnUQrmnh5AscH4oebqTByKZiG7E_V7iftgotDYuENpkWM2n0USbK-&amp;s=10" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_13_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Cường độ sóng là năng lượng truyền qua một đơn vị diện tích vuông góc với phương truyền sóng trong một đơn vị thời gian.')">Cường độ sóng là năng lượng truyền qua một đơn vị diện tích vuông góc với phương truyền sóng trong một đơn vị thời gian.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_13_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, 'Cường độ sóng đặc trưng cho mức độ truyền năng lượng của sóng qua một đơn vị diện tích trong một đơn vị thời gian.')">Cường độ sóng đặc trưng cho mức độ truyền năng lượng của sóng qua một đơn vị diện tích trong một đơn vị thời gian. </div><div class="clickable-paragraph" id="exp_13_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, '• Cường độ sóng thường được xác định bằng năng lượng truyền qua một diện tích vuông góc với phương truyền sóng trong một khoảng thời gian xác định, chia cho diện tích và thời gian đó.')">• Cường độ sóng thường được xác định bằng năng lượng truyền qua một diện tích vuông góc với phương truyền sóng trong một khoảng thời gian xác định, chia cho diện tích và thời gian đó. </div><div class="clickable-paragraph" id="exp_13_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, '• Đơn vị của cường độ sóng trong hệ SI là W/m².')">• Đơn vị của cường độ sóng trong hệ SI là W/m². </div><div class="clickable-paragraph" id="exp_13_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, '• Với sóng âm, cường độ âm càng lớn thì tại vị trí quan sát âm thường được cảm nhận là mạnh hơn, mặc dù cảm giác to nhỏ còn liên quan đến đặc điểm sinh lí của tai.')">• Với sóng âm, cường độ âm càng lớn thì tại vị trí quan sát âm thường được cảm nhận là mạnh hơn, mặc dù cảm giác to nhỏ còn liên quan đến đặc điểm sinh lí của tai. </div><div class="clickable-paragraph" id="exp_13_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, '• Cường độ sóng có thể giảm khi sóng lan truyền ra xa nguồn do năng lượng phân bố trên diện tích ngày càng lớn.')">• Cường độ sóng có thể giảm khi sóng lan truyền ra xa nguồn do năng lượng phân bố trên diện tích ngày càng lớn. </div><div class="clickable-paragraph" id="exp_13_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(13, '• Trong các bài toán đơn giản, cần chú ý phân biệt cường độ sóng với công suất của nguồn và năng lượng toàn phần truyền bởi sóng.')">• Trong các bài toán đơn giản, cần chú ý phân biệt cường độ sóng với công suất của nguồn và năng lượng toàn phần truyền bởi sóng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave intensity')">Wave intensity</span><span class="tag" onclick="searchGoogle('intensity')">intensity</span><span class="tag" onclick="searchGoogle('energy flux')">energy flux</span><span class="tag" onclick="searchGoogle('power density')">power density</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-14">
+                        <h2 id="exp_title_14" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(14)" title="Đọc tiêu đề">15. Độ lệch pha</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Phase_shift.gif?utm_source=commons.wikimedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Ảnh" onerror="this.style.display='none'">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_14_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Độ lệch pha mô tả sự khác nhau về trạng thái dao động của hai phần tử môi trường tại cùng một thời điểm.')">Độ lệch pha mô tả sự khác nhau về trạng thái dao động của hai phần tử môi trường tại cùng một thời điểm.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_14_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, 'Độ lệch pha mô tả mức độ khác nhau về trạng thái dao động của hai phần tử môi trường tại cùng một thời điểm.')">Độ lệch pha mô tả mức độ khác nhau về trạng thái dao động của hai phần tử môi trường tại cùng một thời điểm. </div><div class="clickable-paragraph" id="exp_14_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, '• Hai điểm trên phương truyền sóng cách nhau một số nguyên lần bước sóng λ thì dao động cùng pha.')">• Hai điểm trên phương truyền sóng cách nhau một số nguyên lần bước sóng λ thì dao động cùng pha. </div><div class="clickable-paragraph" id="exp_14_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, '• Hai điểm cách nhau λ/2 có độ lệch pha π rad, tức là dao động ngược pha.')">• Hai điểm cách nhau λ/2 có độ lệch pha π rad, tức là dao động ngược pha. </div><div class="clickable-paragraph" id="exp_14_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, '• Hai điểm cách nhau λ/4 có độ lệch pha π/2 rad, tương ứng 90°.')">• Hai điểm cách nhau λ/4 có độ lệch pha π/2 rad, tương ứng 90°. </div><div class="clickable-paragraph" id="exp_14_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, '• Độ lệch pha giữa hai điểm tăng theo khoảng cách giữa chúng trên phương truyền sóng.')">• Độ lệch pha giữa hai điểm tăng theo khoảng cách giữa chúng trên phương truyền sóng. </div><div class="clickable-paragraph" id="exp_14_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, '• Với sóng truyền theo một phương, độ lệch pha có thể được xác định dựa trên tỉ số giữa khoảng cách hai điểm và bước sóng.')">• Với sóng truyền theo một phương, độ lệch pha có thể được xác định dựa trên tỉ số giữa khoảng cách hai điểm và bước sóng. </div><div class="clickable-paragraph" id="exp_14_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(14, '• Hiểu độ lệch pha giúp xác định điểm nào dao động cùng pha, ngược pha hoặc vuông pha, đồng thời hỗ trợ giải các bài toán xác định trạng thái dao động của các điểm trên sóng.')">• Hiểu độ lệch pha giúp xác định điểm nào dao động cùng pha, ngược pha hoặc vuông pha, đồng thời hỗ trợ giải các bài toán xác định trạng thái dao động của các điểm trên sóng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Phase difference')">Phase difference</span><span class="tag" onclick="searchGoogle('phase')">phase</span><span class="tag" onclick="searchGoogle('phase shift')">phase shift</span><span class="tag" onclick="searchGoogle('in-phase')">in-phase</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-15">
+                        <h2 id="exp_title_15" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(15)" title="Đọc tiêu đề">16. Sóng trễ pha</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Phase_shift.svg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_15_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Phần tử ở xa nguồn hơn trên phương truyền sóng thường dao động trễ pha so với phần tử ở gần nguồn.')">Phần tử ở xa nguồn hơn trên phương truyền sóng thường dao động trễ pha so với phần tử ở gần nguồn.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_15_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, 'Sóng truyền từ nguồn đến các điểm khác nhau trong môi trường nên những điểm ở xa nguồn thường bắt đầu dao động muộn hơn những điểm ở gần nguồn. Hiện tượng này được mô tả bằng độ trễ pha.')">Sóng truyền từ nguồn đến các điểm khác nhau trong môi trường nên những điểm ở xa nguồn thường bắt đầu dao động muộn hơn những điểm ở gần nguồn. Hiện tượng này được mô tả bằng độ trễ pha. </div><div class="clickable-paragraph" id="exp_15_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, '• Nếu sóng truyền từ O đến M và M nằm phía trước theo phương truyền sóng, dao động tại M trễ pha so với O.')">• Nếu sóng truyền từ O đến M và M nằm phía trước theo phương truyền sóng, dao động tại M trễ pha so với O. </div><div class="clickable-paragraph" id="exp_15_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, '• Sau thời gian T/4, sóng truyền được quãng đường λ/4. Vì vậy điểm cách nguồn λ/4 có độ lệch pha π/2 so với nguồn.')">• Sau thời gian T/4, sóng truyền được quãng đường λ/4. Vì vậy điểm cách nguồn λ/4 có độ lệch pha π/2 so với nguồn. </div><div class="clickable-paragraph" id="exp_15_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, '• Độ trễ pha tăng khi khoảng cách giữa hai điểm tăng.')">• Độ trễ pha tăng khi khoảng cách giữa hai điểm tăng. </div><div class="clickable-paragraph" id="exp_15_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, '• Hai điểm cách nhau λ có cùng pha nhưng điểm ở xa vẫn nhận dao động muộn hơn một chu kì.')">• Hai điểm cách nhau λ có cùng pha nhưng điểm ở xa vẫn nhận dao động muộn hơn một chu kì. </div><div class="clickable-paragraph" id="exp_15_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(15, '• Khi phân tích sóng, cần chú ý cả hướng truyền sóng vì nó quyết định điểm nào sớm pha và điểm nào trễ pha.')">• Khi phân tích sóng, cần chú ý cả hướng truyền sóng vì nó quyết định điểm nào sớm pha và điểm nào trễ pha.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Phase lag')">Phase lag</span><span class="tag" onclick="searchGoogle('phase lag')">phase lag</span><span class="tag" onclick="searchGoogle('delay')">delay</span><span class="tag" onclick="searchGoogle('distance')">distance</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-16">
+                        <h2 id="exp_title_16" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(16)" title="Đọc tiêu đề">17. Độ lệch pha π/2</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/50/Phase_shift_90.svg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_16_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, 'Hai phần tử cách nhau λ/4 trên phương truyền sóng có độ lệch pha π/2.')">Hai phần tử cách nhau λ/4 trên phương truyền sóng có độ lệch pha π/2.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_16_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, 'Hai phần tử trên phương truyền sóng cách nhau một khoảng bằng λ/4 có độ lệch pha π/2 rad, tương ứng 90°.')">Hai phần tử trên phương truyền sóng cách nhau một khoảng bằng λ/4 có độ lệch pha π/2 rad, tương ứng 90°. </div><div class="clickable-paragraph" id="exp_16_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, '• Nếu sóng truyền từ O đến M và OM = λ/4 thì dao động tại M trễ pha π/2 so với dao động tại O.')">• Nếu sóng truyền từ O đến M và OM = λ/4 thì dao động tại M trễ pha π/2 so với dao động tại O. </div><div class="clickable-paragraph" id="exp_16_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, '• Ngược lại, nếu xét theo chiều từ M về O thì có thể nói dao động tại O sớm pha π/2 so với M.')">• Ngược lại, nếu xét theo chiều từ M về O thì có thể nói dao động tại O sớm pha π/2 so với M. </div><div class="clickable-paragraph" id="exp_16_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, '• Độ lệch pha π/2 còn được gọi là lệch pha một phần tư chu kì hoặc quarter-cycle phase difference.')">• Độ lệch pha π/2 còn được gọi là lệch pha một phần tư chu kì hoặc quarter-cycle phase difference. </div><div class="clickable-paragraph" id="exp_16_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, '• Trong dao động điều hòa, hai dao động lệch pha π/2 có thể biểu diễn bằng một hàm sin và một hàm cos phù hợp.')">• Trong dao động điều hòa, hai dao động lệch pha π/2 có thể biểu diễn bằng một hàm sin và một hàm cos phù hợp. </div><div class="clickable-paragraph" id="exp_16_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(16, '• Khi giải bài tập, cần xác định chính xác hướng truyền sóng và vị trí tương đối của hai điểm trước khi kết luận điểm nào sớm pha hoặc trễ pha.')">• Khi giải bài tập, cần xác định chính xác hướng truyền sóng và vị trí tương đối của hai điểm trước khi kết luận điểm nào sớm pha hoặc trễ pha.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Quarter-cycle phase difference')">Quarter-cycle phase difference</span><span class="tag" onclick="searchGoogle('quarter wavelength')">quarter wavelength</span><span class="tag" onclick="searchGoogle('90 degrees')">90 degrees</span><span class="tag" onclick="searchGoogle('phase lag')">phase lag</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-17">
+                        <h2 id="exp_title_17" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(17)" title="Đọc tiêu đề">18. Độ lệch pha π</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6d/Phase_opposition.svg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_17_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, 'Hai phần tử cách nhau λ/2 trên phương truyền sóng có độ lệch pha π, tức dao động ngược pha.')">Hai phần tử cách nhau λ/2 trên phương truyền sóng có độ lệch pha π, tức dao động ngược pha.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_17_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, 'Hai phần tử trên phương truyền sóng cách nhau một khoảng bằng λ/2 có độ lệch pha π rad, tương ứng 180°, nên chúng dao động ngược pha.')">Hai phần tử trên phương truyền sóng cách nhau một khoảng bằng λ/2 có độ lệch pha π rad, tương ứng 180°, nên chúng dao động ngược pha. </div><div class="clickable-paragraph" id="exp_17_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, '• Khi một điểm ở biên dương thì điểm cách nó λ/2 ở cùng thời điểm sẽ ở biên âm nếu sóng hình sin.')">• Khi một điểm ở biên dương thì điểm cách nó λ/2 ở cùng thời điểm sẽ ở biên âm nếu sóng hình sin. </div><div class="clickable-paragraph" id="exp_17_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, '• Khi một điểm đi qua vị trí cân bằng theo một chiều thì điểm cách λ/2 sẽ đi qua vị trí cân bằng theo chiều ngược lại.')">• Khi một điểm đi qua vị trí cân bằng theo một chiều thì điểm cách λ/2 sẽ đi qua vị trí cân bằng theo chiều ngược lại. </div><div class="clickable-paragraph" id="exp_17_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, '• Độ lệch pha π còn được gọi là độ lệch pha nửa chu kì hoặc half-cycle phase difference.')">• Độ lệch pha π còn được gọi là độ lệch pha nửa chu kì hoặc half-cycle phase difference. </div><div class="clickable-paragraph" id="exp_17_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, '• Các điểm cách nhau một số lẻ lần λ/2 có thể dao động ngược pha.')">• Các điểm cách nhau một số lẻ lần λ/2 có thể dao động ngược pha. </div><div class="clickable-paragraph" id="exp_17_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(17, '• Trong bài toán sóng, nhận biết hai điểm ngược pha giúp xác định nhanh li độ, vận tốc dao động hoặc trạng thái của các phần tử khi biết trạng thái của một điểm.')">• Trong bài toán sóng, nhận biết hai điểm ngược pha giúp xác định nhanh li độ, vận tốc dao động hoặc trạng thái của các phần tử khi biết trạng thái của một điểm.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Opposite phase')">Opposite phase</span><span class="tag" onclick="searchGoogle('half wavelength')">half wavelength</span><span class="tag" onclick="searchGoogle('180 degrees')">180 degrees</span><span class="tag" onclick="searchGoogle('phase opposition')">phase opposition</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-18">
+                        <h2 id="exp_title_18" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(18)" title="Đọc tiêu đề">19. Tốc độ truyền sóng phụ thuộc môi trường</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/8e/Wave_velocity.svg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_18_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, 'Tốc độ truyền sóng cơ phụ thuộc vào tính chất của môi trường truyền sóng và không phụ thuộc trực tiếp vào tần số nguồn.')">Tốc độ truyền sóng cơ phụ thuộc vào tính chất của môi trường truyền sóng và không phụ thuộc trực tiếp vào tần số nguồn.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_18_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, 'Tốc độ truyền sóng cơ được quyết định chủ yếu bởi các tính chất của môi trường truyền sóng.')">Tốc độ truyền sóng cơ được quyết định chủ yếu bởi các tính chất của môi trường truyền sóng. </div><div class="clickable-paragraph" id="exp_18_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, '• Trong cùng một môi trường và với cùng loại sóng, khi thay đổi tần số nguồn, tốc độ truyền sóng cơ bản được xem là không đổi.')">• Trong cùng một môi trường và với cùng loại sóng, khi thay đổi tần số nguồn, tốc độ truyền sóng cơ bản được xem là không đổi. </div><div class="clickable-paragraph" id="exp_18_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, '• Khi tốc độ không đổi mà tần số thay đổi, bước sóng sẽ thay đổi theo λ = v/f.')">• Khi tốc độ không đổi mà tần số thay đổi, bước sóng sẽ thay đổi theo λ = v/f. </div><div class="clickable-paragraph" id="exp_18_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, '• Điều này cho thấy tần số do nguồn quyết định, còn tốc độ truyền sóng phụ thuộc môi trường.')">• Điều này cho thấy tần số do nguồn quyết định, còn tốc độ truyền sóng phụ thuộc môi trường. </div><div class="clickable-paragraph" id="exp_18_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, '• Khi sóng truyền sang một môi trường khác, tốc độ truyền sóng có thể thay đổi. Khi đó tần số của sóng do nguồn quyết định vẫn giữ nguyên, còn bước sóng thay đổi theo tốc độ mới.')">• Khi sóng truyền sang một môi trường khác, tốc độ truyền sóng có thể thay đổi. Khi đó tần số của sóng do nguồn quyết định vẫn giữ nguyên, còn bước sóng thay đổi theo tốc độ mới. </div><div class="clickable-paragraph" id="exp_18_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(18, '• Vì vậy, khi giải câu hỏi về tốc độ truyền sóng, cần chú ý điều kiện môi trường thay vì cho rằng tần số cao luôn làm tốc độ truyền sóng lớn hơn.')">• Vì vậy, khi giải câu hỏi về tốc độ truyền sóng, cần chú ý điều kiện môi trường thay vì cho rằng tần số cao luôn làm tốc độ truyền sóng lớn hơn.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Wave speed in medium')">Wave speed in medium</span><span class="tag" onclick="searchGoogle('medium')">medium</span><span class="tag" onclick="searchGoogle('velocity')">velocity</span><span class="tag" onclick="searchGoogle('frequency independence')">frequency independence</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-19">
+                        <h2 id="exp_title_19" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(19)" title="Đọc tiêu đề">20. Sóng hình sin</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/8e/Sine_wave.svg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_19_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, 'Sóng hình sin là sóng có dạng biến thiên theo hàm sin hoặc cos theo không gian hoặc thời gian.')">Sóng hình sin là sóng có dạng biến thiên theo hàm sin hoặc cos theo không gian hoặc thời gian.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_19_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, 'Sóng hình sin là dạng sóng tuần hoàn có li độ biến thiên theo hàm sin hoặc cos theo vị trí, thời gian hoặc cả hai.')">Sóng hình sin là dạng sóng tuần hoàn có li độ biến thiên theo hàm sin hoặc cos theo vị trí, thời gian hoặc cả hai. </div><div class="clickable-paragraph" id="exp_19_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, '• Một sóng hình sin có thể được mô tả bằng các đại lượng như biên độ A, bước sóng λ, chu kì T, tần số f và tốc độ truyền sóng v.')">• Một sóng hình sin có thể được mô tả bằng các đại lượng như biên độ A, bước sóng λ, chu kì T, tần số f và tốc độ truyền sóng v. </div><div class="clickable-paragraph" id="exp_19_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, '• Đồ thị u-x biểu diễn li độ của các phần tử môi trường theo vị trí tại một thời điểm nhất định, qua đó có thể xác định bước sóng và biên độ.')">• Đồ thị u-x biểu diễn li độ của các phần tử môi trường theo vị trí tại một thời điểm nhất định, qua đó có thể xác định bước sóng và biên độ. </div><div class="clickable-paragraph" id="exp_19_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, '• Đồ thị u-t biểu diễn li độ của một phần tử theo thời gian, qua đó xác định chu kì và tần số.')">• Đồ thị u-t biểu diễn li độ của một phần tử theo thời gian, qua đó xác định chu kì và tần số. </div><div class="clickable-paragraph" id="exp_19_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, '• Trên hình dạng sóng hình sin, các đỉnh và đáy lặp lại tuần hoàn trong không gian.')">• Trên hình dạng sóng hình sin, các đỉnh và đáy lặp lại tuần hoàn trong không gian. </div><div class="clickable-paragraph" id="exp_19_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(19, '• Sóng hình sin là mô hình cơ bản để nghiên cứu nhiều hiện tượng sóng vì các đại lượng đặc trưng có quan hệ rõ ràng và dễ biểu diễn bằng đồ thị.')">• Sóng hình sin là mô hình cơ bản để nghiên cứu nhiều hiện tượng sóng vì các đại lượng đặc trưng có quan hệ rõ ràng và dễ biểu diễn bằng đồ thị.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Sinusoidal wave')">Sinusoidal wave</span><span class="tag" onclick="searchGoogle('sine wave')">sine wave</span><span class="tag" onclick="searchGoogle('oscillation')">oscillation</span><span class="tag" onclick="searchGoogle('graph')">graph</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-20">
+                        <h2 id="exp_title_20" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(20)" title="Đọc tiêu đề">21. Đồ thị u-x</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Sine_wave.svg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_20_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, 'Đồ thị u-x biểu diễn li độ của các phần tử môi trường theo vị trí tại một thời điểm.')">Đồ thị u-x biểu diễn li độ của các phần tử môi trường theo vị trí tại một thời điểm.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_20_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, 'Đồ thị u-x là đồ thị biểu diễn li độ u của các phần tử môi trường theo tọa độ x tại một thời điểm xác định.')">Đồ thị u-x là đồ thị biểu diễn li độ u của các phần tử môi trường theo tọa độ x tại một thời điểm xác định. </div><div class="clickable-paragraph" id="exp_20_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, '• Trục ngang biểu diễn vị trí x, còn trục đứng biểu diễn li độ u. Vì đồ thị chụp trạng thái của nhiều điểm tại cùng thời điểm nên nó thể hiện hình dạng của sóng trong không gian.')">• Trục ngang biểu diễn vị trí x, còn trục đứng biểu diễn li độ u. Vì đồ thị chụp trạng thái của nhiều điểm tại cùng thời điểm nên nó thể hiện hình dạng của sóng trong không gian. </div><div class="clickable-paragraph" id="exp_20_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, '• Khoảng cách giữa hai đỉnh liên tiếp hoặc hai đáy liên tiếp trên đồ thị chính là bước sóng λ.')">• Khoảng cách giữa hai đỉnh liên tiếp hoặc hai đáy liên tiếp trên đồ thị chính là bước sóng λ. </div><div class="clickable-paragraph" id="exp_20_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, '• Giá trị li độ cực đại theo độ lớn cho biết biên độ A.')">• Giá trị li độ cực đại theo độ lớn cho biết biên độ A. </div><div class="clickable-paragraph" id="exp_20_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, '• Có thể dùng đồ thị u-x để xác định các điểm cùng pha, ngược pha hoặc lệch pha π/2.')">• Có thể dùng đồ thị u-x để xác định các điểm cùng pha, ngược pha hoặc lệch pha π/2. </div><div class="clickable-paragraph" id="exp_20_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, '• Hai điểm cách nhau λ dao động cùng pha; hai điểm cách nhau λ/2 dao động ngược pha.')">• Hai điểm cách nhau λ dao động cùng pha; hai điểm cách nhau λ/2 dao động ngược pha. </div><div class="clickable-paragraph" id="exp_20_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(20, '• Khi đọc đồ thị, cần chú ý đơn vị trên cả hai trục và xác định đúng khoảng cách theo phương truyền sóng.')">• Khi đọc đồ thị, cần chú ý đơn vị trên cả hai trục và xác định đúng khoảng cách theo phương truyền sóng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Displacement-position graph')">Displacement-position graph</span><span class="tag" onclick="searchGoogle('u-x graph')">u-x graph</span><span class="tag" onclick="searchGoogle('wave profile')">wave profile</span><span class="tag" onclick="searchGoogle('wavelength')">wavelength</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-21">
+                        <h2 id="exp_title_21" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(21)" title="Đọc tiêu đề">22. Đồ thị u-t</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/Oscilloscope_waveform.jpg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_21_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, 'Đồ thị u-t biểu diễn li độ của một phần tử môi trường theo thời gian.')">Đồ thị u-t biểu diễn li độ của một phần tử môi trường theo thời gian.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_21_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, 'Đồ thị u-t biểu diễn sự biến thiên li độ u của một phần tử môi trường theo thời gian t.')">Đồ thị u-t biểu diễn sự biến thiên li độ u của một phần tử môi trường theo thời gian t. </div><div class="clickable-paragraph" id="exp_21_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, '• Trục ngang biểu diễn thời gian, còn trục đứng biểu diễn li độ của phần tử đang xét. Vì theo dõi một phần tử tại một vị trí cố định nên đồ thị này cho biết quá trình dao động theo thời gian.')">• Trục ngang biểu diễn thời gian, còn trục đứng biểu diễn li độ của phần tử đang xét. Vì theo dõi một phần tử tại một vị trí cố định nên đồ thị này cho biết quá trình dao động theo thời gian. </div><div class="clickable-paragraph" id="exp_21_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, '• Khoảng thời gian giữa hai đỉnh liên tiếp, hai đáy liên tiếp hoặc hai trạng thái giống nhau liên tiếp là chu kì T.')">• Khoảng thời gian giữa hai đỉnh liên tiếp, hai đáy liên tiếp hoặc hai trạng thái giống nhau liên tiếp là chu kì T. </div><div class="clickable-paragraph" id="exp_21_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, '• Sau khi xác định T, có thể tính tần số bằng công thức f = 1/T.')">• Sau khi xác định T, có thể tính tần số bằng công thức f = 1/T. </div><div class="clickable-paragraph" id="exp_21_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, '• Biên độ A được xác định từ giá trị li độ cực đại.')">• Biên độ A được xác định từ giá trị li độ cực đại. </div><div class="clickable-paragraph" id="exp_21_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, '• Đồ thị u-t thường được dùng để xác định chu kì, tần số, biên độ và trạng thái dao động của phần tử.')">• Đồ thị u-t thường được dùng để xác định chu kì, tần số, biên độ và trạng thái dao động của phần tử. </div><div class="clickable-paragraph" id="exp_21_bullets_6" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(21, '• Khi đọc đồ thị, phải chú ý đơn vị thời gian, đặc biệt trường hợp trục thời gian được chia theo mili giây hoặc micro giây.')">• Khi đọc đồ thị, phải chú ý đơn vị thời gian, đặc biệt trường hợp trục thời gian được chia theo mili giây hoặc micro giây.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Displacement-time graph')">Displacement-time graph</span><span class="tag" onclick="searchGoogle('u-t graph')">u-t graph</span><span class="tag" onclick="searchGoogle('period')">period</span><span class="tag" onclick="searchGoogle('oscilloscope')">oscilloscope</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-22">
+                        <h2 id="exp_title_22" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(22)" title="Đọc tiêu đề">23. Bài toán thuyền tạo sóng</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6c/Boat_on_water.jpg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_22_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, 'Thuyền thực hiện 24 dao động trong 40 s, tạo sóng truyền 10 m trong 5 s và ngọn sóng cao 12 cm.')">Thuyền thực hiện 24 dao động trong 40 s, tạo sóng truyền 10 m trong 5 s và ngọn sóng cao 12 cm.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_22_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, 'Bài toán thuyền tạo sóng minh họa cách xác định các đại lượng đặc trưng của sóng từ dữ kiện thực tế. Thuyền thực hiện 24 dao động trong 40 s nên chu kì của nguồn là T = 40/24 ≈ 1,67 s.')">Bài toán thuyền tạo sóng minh họa cách xác định các đại lượng đặc trưng của sóng từ dữ kiện thực tế. Thuyền thực hiện 24 dao động trong 40 s nên chu kì của nguồn là T = 40/24 ≈ 1,67 s. </div><div class="clickable-paragraph" id="exp_22_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, '• Tần số của nguồn là f = 24/40 = 0,60 Hz.')">• Tần số của nguồn là f = 24/40 = 0,60 Hz. </div><div class="clickable-paragraph" id="exp_22_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, '• Sóng truyền được quãng đường 10 m trong thời gian 5 s nên tốc độ truyền sóng là v = 10/5 = 2 m/s.')">• Sóng truyền được quãng đường 10 m trong thời gian 5 s nên tốc độ truyền sóng là v = 10/5 = 2 m/s. </div><div class="clickable-paragraph" id="exp_22_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, '• Bước sóng được tính bằng λ = vT ≈ 2 × 1,67 ≈ 3,33 m. Có thể kiểm tra bằng λ = v/f ≈ 2/0,60 ≈ 3,33 m.')">• Bước sóng được tính bằng λ = vT ≈ 2 × 1,67 ≈ 3,33 m. Có thể kiểm tra bằng λ = v/f ≈ 2/0,60 ≈ 3,33 m. </div><div class="clickable-paragraph" id="exp_22_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, '• Nếu ngọn sóng cao 12 cm so với mặt nước cân bằng thì biên độ là A = 12 cm.')">• Nếu ngọn sóng cao 12 cm so với mặt nước cân bằng thì biên độ là A = 12 cm. </div><div class="clickable-paragraph" id="exp_22_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(22, '• Bài toán yêu cầu chú ý đổi đơn vị và lựa chọn đúng công thức cho từng đại lượng.')">• Bài toán yêu cầu chú ý đổi đơn vị và lựa chọn đúng công thức cho từng đại lượng.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Boat wave problem')">Boat wave problem</span><span class="tag" onclick="searchGoogle('boat')">boat</span><span class="tag" onclick="searchGoogle('water wave')">water wave</span><span class="tag" onclick="searchGoogle('calculation')">calculation</span></div>
+                    </div>
+                
+                    <div class="expand-slide-card" id="expand-slide-23">
+                        <h2 id="exp_title_23" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(23)" title="Đọc tiêu đề">24. Bài toán xác định tần số từ đồ thị</h2>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/1/1e/Oscilloscope.jpg" alt="Ảnh" onerror="this.style.display='none'" style="display: none;">
+                        <div class="expand-desc"><div class="clickable-paragraph" id="exp_23_desc_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, 'Để xác định tần số từ đồ thị u-t, trước hết xác định chu kì T bằng khoảng thời gian giữa hai trạng thái dao động giống nhau liên tiếp.')">Để xác định tần số từ đồ thị u-t, trước hết xác định chu kì T bằng khoảng thời gian giữa hai trạng thái dao động giống nhau liên tiếp.</div></div>
+                        <div class="expand-bullets"><div class="clickable-paragraph" id="exp_23_bullets_0" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, 'Khi xác định tần số từ đồ thị u-t, cần đọc chu kì của dao động trước rồi sử dụng công thức f = 1/T.')">Khi xác định tần số từ đồ thị u-t, cần đọc chu kì của dao động trước rồi sử dụng công thức f = 1/T. </div><div class="clickable-paragraph" id="exp_23_bullets_1" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, '• Trên đồ thị, chọn hai điểm liên tiếp có cùng trạng thái dao động, chẳng hạn hai đỉnh liên tiếp hoặc hai lần qua vị trí cân bằng theo cùng chiều. Khoảng thời gian giữa chúng chính là một chu kì T.')">• Trên đồ thị, chọn hai điểm liên tiếp có cùng trạng thái dao động, chẳng hạn hai đỉnh liên tiếp hoặc hai lần qua vị trí cân bằng theo cùng chiều. Khoảng thời gian giữa chúng chính là một chu kì T. </div><div class="clickable-paragraph" id="exp_23_bullets_2" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, '• Ví dụ, nếu mỗi ô ngang ứng với 1 ms và một chu kì kéo dài 4 ô thì T = 4 ms = 0,004 s.')">• Ví dụ, nếu mỗi ô ngang ứng với 1 ms và một chu kì kéo dài 4 ô thì T = 4 ms = 0,004 s. </div><div class="clickable-paragraph" id="exp_23_bullets_3" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, '• Tần số là f = 1/0,004 = 250 Hz.')">• Tần số là f = 1/0,004 = 250 Hz. </div><div class="clickable-paragraph" id="exp_23_bullets_4" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, '• Khi đọc đồ thị cần đặc biệt chú ý đơn vị mili giây. Không được sử dụng trực tiếp 4 ms như 4 s trong công thức.')">• Khi đọc đồ thị cần đặc biệt chú ý đơn vị mili giây. Không được sử dụng trực tiếp 4 ms như 4 s trong công thức. </div><div class="clickable-paragraph" id="exp_23_bullets_5" ondblclick="togglePauseRead()" onclick="readSpecificSlideParagraph(23, '• Quy trình giải gồm ba bước: xác định số ô ứng với một chu kì, đổi đơn vị thời gian về giây, sau đó tính f = 1/T.')">• Quy trình giải gồm ba bước: xác định số ô ứng với một chu kì, đổi đơn vị thời gian về giây, sau đó tính f = 1/T.</div></div>
+                        <div class="tags-container"><span class="tag" onclick="searchGoogle('Frequency from graph')">Frequency from graph</span><span class="tag" onclick="searchGoogle('oscilloscope')">oscilloscope</span><span class="tag" onclick="searchGoogle('period measurement')">period measurement</span><span class="tag" onclick="searchGoogle('sound wave')">sound wave</span></div>
+                    </div>
+                </div>
+
+    <!-- Footer / Manual Nav tối ưu responsive -->
+    <div class="manual-nav">
+        <button class="secondary" onclick="prevSlide()">❮ Trước</button>
+        <button onclick="readSlide()">🔊 Đọc</button>
+        <button class="secondary" id="pauseBtn" onclick="togglePauseRead()">⏸️ Tạm dừng</button>
+        <button class="secondary" onclick="stopRead()">⏹️ Dừng</button>
+        <select id="speechRateSelect" onchange="updateSpeechRate()">
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2x</option>
+            <option value="2.5">2.5x</option>
+            <option value="3">3x</option>
+        </select>
+        <div class="switch-container">
+            <span>Auto</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplayCheckbox" onchange="toggleAutoplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="switch-container" title="Giữ sáng màn hình">
+            <span>Sáng</span>
+            <label class="switch">
+                <input type="checkbox" id="wakeLockCheckbox" checked="" onchange="toggleWakeLock()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <span class="slide-counter" id="slideCounter">1 / 24</span>
+        <button class="secondary" onclick="nextSlide()">Sau ❯</button>
+    </div>
+
+    <div class="modal" id="importModal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nhập dữ liệu (Tab-separated)</h2>
+            <textarea id="importTextarea" placeholder="Dán dữ liệu vào đây..."></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button class="secondary" onclick="closeImportModal()">Hủy</button>
+                <button onclick="processImport()">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let embeddedInitialData = `Sóng cơ	Là sự lan truyền của biến dạng cơ trong môi trường đàn hồi.	Sóng cơ là sự lan truyền của biến dạng cơ trong một môi trường đàn hồi. Khi một nguồn dao động tác dụng lên môi trường, các phần tử gần nguồn dao động và nhờ lực liên kết, chúng làm các phần tử lân cận dao động theo. <br>• Sóng cơ truyền năng lượng và trạng thái dao động từ nơi này đến nơi khác nhưng không mang vật chất đi xa theo phương truyền sóng. <br>• Các ví dụ quen thuộc gồm sóng nước, sóng âm và sóng địa chấn. <br>• Sóng nước được tạo ra khi mặt nước bị kích thích dao động. Sóng âm truyền qua không khí, chất lỏng hoặc chất rắn. Sóng địa chấn lan truyền trong đất đá khi xảy ra động đất. <br>• Vì cần môi trường vật chất để truyền dao động nên sóng cơ không truyền được trong chân không. <br>• Đặc điểm quan trọng của sóng cơ là sự lan truyền dao động chứ không phải sự chuyển dời liên tục của các phần tử môi trường theo sóng.	Mechanical wave	water wave	wave propagation	elastic medium	https://www.acs.psu.edu/drussell/demos/waves/Water-2016.gif
+Nguồn sóng	Nguồn sóng là vật hoặc hệ dao động tạo ra và truyền dao động vào môi trường.	Nguồn sóng là vật hoặc hệ vật thực hiện dao động và tạo ra sự lan truyền dao động trong môi trường. <br>• Trong thí nghiệm về sóng cơ, vật O dao động lên xuống có thể đóng vai trò là nguồn sóng. Dao động của O làm các phần tử môi trường lân cận dao động và tạo thành sóng truyền ra xa. <br>• Nguồn sóng có thể là một vật dao động tuần hoàn hoặc dao động không tuần hoàn tùy trường hợp. <br>• Ví dụ, khi dây đàn guitar rung, dao động của dây làm không khí xung quanh dao động và tạo ra sóng âm. <br>• Trong loa, màng loa dao động tạo ra sự biến thiên áp suất và lan truyền trong không khí dưới dạng sóng âm. <br>• Đặc điểm dao động của nguồn như biên độ, tần số và chu kì có ảnh hưởng trực tiếp đến các đại lượng tương ứng của sóng được tạo ra trong môi trường.	Wave source	vibrating source	guitar string	sound generation	https://i.pinimg.com/originals/5c/f2/03/5cf203dd5f09d048bc1672bb8ac55bfc.gif
+Môi trường truyền sóng	Môi trường truyền sóng là môi trường đàn hồi trong đó dao động được lan truyền từ phần tử này sang phần tử khác.	Môi trường truyền sóng là môi trường vật chất có tính đàn hồi, cho phép dao động được truyền từ phần tử này sang phần tử khác. <br>• Đối với sóng nước, nước là môi trường truyền sóng. Đối với sóng âm trong không khí, không khí là môi trường truyền sóng. Đối với sóng địa chấn, đất đá là môi trường truyền sóng. <br>• Khi một phần tử môi trường dao động, lực tương tác giữa các phần tử làm các phần tử lân cận dao động theo. Quá trình này tiếp diễn và tạo nên sự lan truyền sóng. <br>• Tính chất của môi trường ảnh hưởng đến tốc độ truyền sóng. Các môi trường khác nhau thường cho tốc độ truyền sóng khác nhau. <br>• Sóng cơ không truyền được trong chân không vì chân không không có các phần tử vật chất để truyền dao động cơ. <br>• Môi trường càng có đặc tính đàn hồi phù hợp thì dao động có thể được truyền đi với tốc độ khác nhau tùy vào loại sóng và tính chất vật liệu.	Wave medium	water	air	rock medium	https://i.makeagif.com/media/8-31-2018/CvyS2m.gif
+Sự truyền dao động	Sóng hình thành do dao động được truyền từ phần tử này sang phần tử lân cận nhờ lực liên kết giữa các phần tử môi trường.	Sự truyền dao động là cơ chế cơ bản tạo nên sóng cơ. Khi nguồn sóng dao động, phần tử môi trường gần nguồn nhận được tác động và bắt đầu dao động. <br>• Nhờ lực liên kết hoặc tương tác giữa các phần tử, dao động được truyền từ phần tử này sang phần tử lân cận. Sau đó các phần tử xa nguồn hơn lần lượt dao động. <br>• Vì mỗi phần tử chỉ dao động quanh vị trí cân bằng nên sự truyền sóng không đồng nghĩa với việc vật chất được vận chuyển liên tục từ nguồn đến nơi nhận. <br>• Năng lượng dao động được truyền qua môi trường từ vùng này sang vùng khác. <br>• Phần tử càng gần nguồn thường bắt đầu dao động sớm hơn phần tử ở xa nguồn. Đây là cơ sở để xác định độ trễ pha giữa các điểm trên phương truyền sóng. <br>• Quá trình truyền dao động phụ thuộc vào tính chất đàn hồi và quán tính của môi trường.	Wave propagation	particle vibration	coupling force	medium	https://i.makeagif.com/media/6-11-2024/IJy6nM.gif
+Phương truyền sóng	Phương truyền sóng là phương mà biến dạng hoặc dao động lan truyền trong môi trường.	Phương truyền sóng là phương mà trạng thái dao động hoặc biến dạng lan truyền từ nguồn đến các vùng khác của môi trường. <br>• Trong thí nghiệm, nếu nguồn O tạo sóng truyền đến điểm C thì đường thẳng OC có thể được xem là phương truyền sóng. <br>• Với sóng truyền trên dây, phương truyền sóng thường dọc theo chiều dài của dây. <br>• Phương truyền sóng cần được phân biệt với phương dao động của phần tử môi trường. Hai phương này có thể trùng nhau hoặc vuông góc tùy loại sóng. <br>• Với sóng dọc, phần tử môi trường dao động theo phương truyền sóng. Với sóng ngang, phần tử môi trường dao động vuông góc với phương truyền sóng. <br>• Xác định đúng phương truyền sóng giúp nhận biết dạng sóng và phân tích độ lệch pha giữa các điểm trong môi trường.	Direction of propagation	propagation direction	wave path	string wave	https://i.makeagif.com/media/2-24-2017/GvU1su.gif
+Dao động của phần tử môi trường	Các phần tử môi trường thường chỉ dao động quanh vị trí cân bằng trong một phạm vi nhỏ, không chuyển động theo sóng đi xa.	Các phần tử của môi trường truyền sóng cơ thường dao động quanh vị trí cân bằng của chúng thay vì chuyển động theo sóng đi xa. <br>• Ví dụ, một miếng xốp nổi trên mặt nước có thể dao động lên xuống khi sóng truyền qua. Sau khi sóng đi qua, miếng xốp có xu hướng trở lại vị trí ban đầu nếu bỏ qua dòng chảy của nước. <br>• Điều này cho thấy sóng truyền năng lượng và trạng thái dao động chứ không mang vật chất đi xa. <br>• Đối với sóng ngang trên mặt nước, phần tử nước có thể dao động theo phương gần vuông góc với phương truyền sóng. <br>• Trong sóng âm, các phần tử không khí dao động qua lại quanh vị trí cân bằng, tạo ra các vùng nén và giãn truyền đi. <br>• Việc phân biệt chuyển động của phần tử với sự lan truyền của sóng là kiến thức quan trọng khi giải thích bản chất sóng cơ.	Particle oscillation	particle motion	equilibrium position	water surface	https://upload.wikimedia.org/wikipedia/commons/7/74/Animation_for_a_deep_water_wave.gif?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original
+Biên độ sóng	Biên độ sóng A là độ lệch lớn nhất của phần tử môi trường khỏi vị trí cân bằng.	Biên độ sóng A đặc trưng cho độ mạnh của dao động của các phần tử môi trường. Nó được xác định bằng độ lệch lớn nhất của phần tử khỏi vị trí cân bằng trong quá trình dao động. <br>• Đơn vị của biên độ phụ thuộc vào đại lượng li độ, thường dùng mét hoặc centimet. <br>• Trên đồ thị li độ theo vị trí, biên độ là giá trị tuyệt đối lớn nhất của li độ. Khoảng cách từ vị trí cân bằng đến đỉnh sóng hoặc đáy sóng chính là A. <br>• Biên độ càng lớn thì dao động của phần tử càng mạnh và trong nhiều trường hợp năng lượng truyền bởi sóng càng lớn. <br>• Ví dụ, nếu ngọn sóng cao 12 cm so với mặt nước cân bằng thì biên độ dao động tương ứng là A = 12 cm. <br>• Cần phân biệt biên độ với chiều cao sóng. Với sóng hình sin, khoảng cách từ đỉnh đến đáy bằng 2A.	Wave amplitude	amplitude	wave height	oscillation	https://cdn.dribbble.com/userupload/21888828/file/original-9425dab702a9d1bfe1692c181a164b05.gif
+Bước sóng	Bước sóng λ là khoảng cách giữa hai phần tử gần nhau nhất dao động cùng trạng thái trên phương truyền sóng.	Bước sóng λ là khoảng cách ngắn nhất giữa hai điểm trên phương truyền sóng dao động cùng pha. Đây là một trong những đại lượng đặc trưng quan trọng của sóng. <br>• Với sóng hình sin, bước sóng có thể xác định bằng khoảng cách giữa hai đỉnh liên tiếp hoặc hai đáy liên tiếp. <br>• Hai điểm cách nhau đúng một bước sóng λ có cùng trạng thái dao động tại cùng thời điểm. <br>• Đơn vị của bước sóng trong hệ SI là mét (m). <br>• Bước sóng cũng chính là quãng đường mà sóng truyền được trong một chu kì T. Vì vậy λ = vT. <br>• Nếu biết tốc độ truyền sóng và tần số, có thể tính bước sóng bằng công thức λ = v/f. <br>• Bước sóng phụ thuộc vào tốc độ truyền sóng và tần số của nguồn. Khi sóng truyền trong cùng môi trường với tốc độ không đổi, tần số tăng thì bước sóng giảm.	Wavelength	wavelength	crest	distance	https://i.makeagif.com/media/3-10-2023/h6ggs7.gif
+Chu kì sóng	Chu kì T là thời gian để một phần tử môi trường thực hiện một dao động toàn phần; cũng là thời gian giữa hai đỉnh sóng liên tiếp qua một điểm.	Chu kì sóng T là khoảng thời gian để một phần tử môi trường thực hiện một dao động toàn phần. Chu kì cũng là khoảng thời gian giữa hai lần liên tiếp một trạng thái dao động giống nhau đi qua cùng một điểm. <br>• Đối với sóng tuần hoàn, chu kì của sóng bằng chu kì dao động của nguồn tạo sóng. <br>• Đơn vị của chu kì là giây, kí hiệu s. <br>• Nếu nguồn thực hiện 24 dao động trong 40 s thì chu kì là T = 40/24 ≈ 1,67 s. <br>• Chu kì có quan hệ nghịch đảo với tần số theo công thức f = 1/T. <br>• Khi biết chu kì và tốc độ truyền sóng, bước sóng được tính bằng λ = vT. <br>• Trên đồ thị li độ theo thời gian u-t, chu kì được xác định bằng khoảng thời gian giữa hai trạng thái giống nhau liên tiếp, chẳng hạn hai đỉnh liên tiếp.	Wave period	period	oscillation time	crest interval	https://i.makeagif.com/media/11-30-2018/YdGxIK.gif
+Tần số sóng	Tần số f là số dao động hoặc số ngọn sóng đi qua một điểm trong một đơn vị thời gian.	Tần số sóng f cho biết số dao động toàn phần của một phần tử hoặc số ngọn sóng đi qua một điểm trong một đơn vị thời gian. <br>• Đơn vị của tần số là hertz, kí hiệu Hz. Một hertz tương ứng với một dao động trong một giây. <br>• Tần số liên hệ với chu kì bởi công thức f = 1/T. Vì vậy tần số càng lớn thì chu kì càng nhỏ. <br>• Nếu nguồn thực hiện 24 dao động trong 40 s thì f = 24/40 = 0,60 Hz và T ≈ 1,67 s. <br>• Khi sóng truyền trong cùng một môi trường, tần số của sóng do nguồn quyết định và không thay đổi khi sóng truyền từ vị trí này sang vị trí khác. <br>• Nếu tốc độ truyền sóng không đổi, khi tần số tăng thì bước sóng giảm theo hệ thức λ = v/f.	Wave frequency	frequency	oscillation rate	hertz	https://www.acs.psu.edu/drussell/demos/waves/Rayleigh-2016.gif
+Tốc độ truyền sóng	Tốc độ truyền sóng v là tốc độ lan truyền trạng thái dao động hoặc biến dạng trong môi trường.	Tốc độ truyền sóng v biểu thị mức độ nhanh chậm của quá trình lan truyền trạng thái dao động hoặc biến dạng trong môi trường. <br>• Nếu sóng truyền được quãng đường 10 m trong thời gian 5 s thì tốc độ truyền sóng là v = 10/5 = 2 m/s. <br>• Đơn vị trong hệ SI là m/s. <br>• Tốc độ truyền sóng phụ thuộc chủ yếu vào tính chất của môi trường truyền sóng, chẳng hạn độ đàn hồi và khối lượng riêng đối với từng loại sóng. <br>• Tốc độ truyền sóng không phải là tốc độ chuyển động của một phần tử môi trường theo phương truyền sóng. <br>• Trong cùng một môi trường, theo kiến thức cơ bản, tốc độ truyền sóng không phụ thuộc trực tiếp vào tần số của nguồn. <br>• Từ tốc độ truyền sóng có thể xác định bước sóng thông qua λ = vT hoặc λ = v/f.	Wave speed	propagation speed	wave velocity	medium property	https://ibphysicsnotes.files.wordpress.com/2016/01/waveparameters.gif?w=300&h=225
+Mối liên hệ λ, T, v	Bước sóng, chu kì và tốc độ truyền sóng liên hệ bởi công thức λ = vT.	Mối liên hệ giữa bước sóng λ, chu kì T và tốc độ truyền sóng v được biểu diễn bằng công thức λ = vT. <br>• Công thức này xuất phát từ ý nghĩa của bước sóng: trong thời gian một chu kì, sóng truyền được đúng một bước sóng. <br>• Nếu biết tốc độ truyền sóng và chu kì, có thể tính bước sóng bằng λ = vT. <br>• Nếu biết bước sóng và chu kì, tốc độ truyền sóng là v = λ/T. <br>• Nếu biết bước sóng và tốc độ truyền sóng, chu kì là T = λ/v. <br>• Ví dụ, với v = 2 m/s và T = 1,67 s, ta có λ ≈ 3,34 m. <br>• Khi giải bài tập cần thống nhất đơn vị, đặc biệt phải đổi thời gian về giây và khoảng cách về mét nếu yêu cầu kết quả theo đơn vị SI.	Wavelength relation	wave equation	period	speed	https://cheungphysics.weebly.com/uploads/8/8/6/0/88603758/wave5_orig.gif
+Mối liên hệ λ, f, v	Công thức liên hệ giữa bước sóng, tần số và tốc độ truyền sóng là λ = v/f.	Mối liên hệ giữa bước sóng λ, tần số f và tốc độ truyền sóng v được xác định bởi công thức λ = v/f. <br>• Công thức này có thể suy ra từ λ = vT và T = 1/f. <br>• Khi biết tốc độ truyền sóng và tần số, ta tính bước sóng bằng λ = v/f. <br>• Khi biết bước sóng và tần số, tốc độ truyền sóng là v = λf. <br>• Khi biết tốc độ truyền sóng và bước sóng, tần số là f = v/λ. <br>• Ví dụ, âm truyền trong không khí với v = 340 m/s và f = 170 Hz thì λ = 340/170 = 2 m. <br>• Trong cùng môi trường, nếu tốc độ truyền sóng không đổi thì tần số tăng làm bước sóng giảm, còn tần số giảm làm bước sóng tăng.	Wave equation	frequency	wavelength	sound speed	https://stickmanphysics.com/wp-content/uploads/2020/03/Velocity-With-Wavelength-and-frequency.gif
+Cường độ sóng	Cường độ sóng là năng lượng truyền qua một đơn vị diện tích vuông góc với phương truyền sóng trong một đơn vị thời gian.	Cường độ sóng đặc trưng cho mức độ truyền năng lượng của sóng qua một đơn vị diện tích trong một đơn vị thời gian. <br>• Cường độ sóng thường được xác định bằng năng lượng truyền qua một diện tích vuông góc với phương truyền sóng trong một khoảng thời gian xác định, chia cho diện tích và thời gian đó. <br>• Đơn vị của cường độ sóng trong hệ SI là W/m². <br>• Với sóng âm, cường độ âm càng lớn thì tại vị trí quan sát âm thường được cảm nhận là mạnh hơn, mặc dù cảm giác to nhỏ còn liên quan đến đặc điểm sinh lí của tai. <br>• Cường độ sóng có thể giảm khi sóng lan truyền ra xa nguồn do năng lượng phân bố trên diện tích ngày càng lớn. <br>• Trong các bài toán đơn giản, cần chú ý phân biệt cường độ sóng với công suất của nguồn và năng lượng toàn phần truyền bởi sóng.	Wave intensity	intensity	energy flux	power density	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHgYobnUQrmnh5AscH4oebqTByKZiG7E_V7iftgotDYuENpkWM2n0USbK-&s=10
+Độ lệch pha	Độ lệch pha mô tả sự khác nhau về trạng thái dao động của hai phần tử môi trường tại cùng một thời điểm.	Độ lệch pha mô tả mức độ khác nhau về trạng thái dao động của hai phần tử môi trường tại cùng một thời điểm. <br>• Hai điểm trên phương truyền sóng cách nhau một số nguyên lần bước sóng λ thì dao động cùng pha. <br>• Hai điểm cách nhau λ/2 có độ lệch pha π rad, tức là dao động ngược pha. <br>• Hai điểm cách nhau λ/4 có độ lệch pha π/2 rad, tương ứng 90°. <br>• Độ lệch pha giữa hai điểm tăng theo khoảng cách giữa chúng trên phương truyền sóng. <br>• Với sóng truyền theo một phương, độ lệch pha có thể được xác định dựa trên tỉ số giữa khoảng cách hai điểm và bước sóng. <br>• Hiểu độ lệch pha giúp xác định điểm nào dao động cùng pha, ngược pha hoặc vuông pha, đồng thời hỗ trợ giải các bài toán xác định trạng thái dao động của các điểm trên sóng.	Phase difference	phase	phase shift	in-phase	https://upload.wikimedia.org/wikipedia/commons/d/d5/Phase_shift.gif?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original
+Sóng trễ pha	Phần tử ở xa nguồn hơn trên phương truyền sóng thường dao động trễ pha so với phần tử ở gần nguồn.	Sóng truyền từ nguồn đến các điểm khác nhau trong môi trường nên những điểm ở xa nguồn thường bắt đầu dao động muộn hơn những điểm ở gần nguồn. Hiện tượng này được mô tả bằng độ trễ pha. <br>• Nếu sóng truyền từ O đến M và M nằm phía trước theo phương truyền sóng, dao động tại M trễ pha so với O. <br>• Sau thời gian T/4, sóng truyền được quãng đường λ/4. Vì vậy điểm cách nguồn λ/4 có độ lệch pha π/2 so với nguồn. <br>• Độ trễ pha tăng khi khoảng cách giữa hai điểm tăng. <br>• Hai điểm cách nhau λ có cùng pha nhưng điểm ở xa vẫn nhận dao động muộn hơn một chu kì. <br>• Khi phân tích sóng, cần chú ý cả hướng truyền sóng vì nó quyết định điểm nào sớm pha và điểm nào trễ pha.	Phase lag	phase lag	delay	distance	https://upload.wikimedia.org/wikipedia/commons/4/4e/Phase_shift.svg
+Độ lệch pha π/2	Hai phần tử cách nhau λ/4 trên phương truyền sóng có độ lệch pha π/2.	Hai phần tử trên phương truyền sóng cách nhau một khoảng bằng λ/4 có độ lệch pha π/2 rad, tương ứng 90°. <br>• Nếu sóng truyền từ O đến M và OM = λ/4 thì dao động tại M trễ pha π/2 so với dao động tại O. <br>• Ngược lại, nếu xét theo chiều từ M về O thì có thể nói dao động tại O sớm pha π/2 so với M. <br>• Độ lệch pha π/2 còn được gọi là lệch pha một phần tư chu kì hoặc quarter-cycle phase difference. <br>• Trong dao động điều hòa, hai dao động lệch pha π/2 có thể biểu diễn bằng một hàm sin và một hàm cos phù hợp. <br>• Khi giải bài tập, cần xác định chính xác hướng truyền sóng và vị trí tương đối của hai điểm trước khi kết luận điểm nào sớm pha hoặc trễ pha.	Quarter-cycle phase difference	quarter wavelength	90 degrees	phase lag	https://upload.wikimedia.org/wikipedia/commons/5/50/Phase_shift_90.svg
+Độ lệch pha π	Hai phần tử cách nhau λ/2 trên phương truyền sóng có độ lệch pha π, tức dao động ngược pha.	Hai phần tử trên phương truyền sóng cách nhau một khoảng bằng λ/2 có độ lệch pha π rad, tương ứng 180°, nên chúng dao động ngược pha. <br>• Khi một điểm ở biên dương thì điểm cách nó λ/2 ở cùng thời điểm sẽ ở biên âm nếu sóng hình sin. <br>• Khi một điểm đi qua vị trí cân bằng theo một chiều thì điểm cách λ/2 sẽ đi qua vị trí cân bằng theo chiều ngược lại. <br>• Độ lệch pha π còn được gọi là độ lệch pha nửa chu kì hoặc half-cycle phase difference. <br>• Các điểm cách nhau một số lẻ lần λ/2 có thể dao động ngược pha. <br>• Trong bài toán sóng, nhận biết hai điểm ngược pha giúp xác định nhanh li độ, vận tốc dao động hoặc trạng thái của các phần tử khi biết trạng thái của một điểm.	Opposite phase	half wavelength	180 degrees	phase opposition	https://upload.wikimedia.org/wikipedia/commons/6/6d/Phase_opposition.svg
+Tốc độ truyền sóng phụ thuộc môi trường	Tốc độ truyền sóng cơ phụ thuộc vào tính chất của môi trường truyền sóng và không phụ thuộc trực tiếp vào tần số nguồn.	Tốc độ truyền sóng cơ được quyết định chủ yếu bởi các tính chất của môi trường truyền sóng. <br>• Trong cùng một môi trường và với cùng loại sóng, khi thay đổi tần số nguồn, tốc độ truyền sóng cơ bản được xem là không đổi. <br>• Khi tốc độ không đổi mà tần số thay đổi, bước sóng sẽ thay đổi theo λ = v/f. <br>• Điều này cho thấy tần số do nguồn quyết định, còn tốc độ truyền sóng phụ thuộc môi trường. <br>• Khi sóng truyền sang một môi trường khác, tốc độ truyền sóng có thể thay đổi. Khi đó tần số của sóng do nguồn quyết định vẫn giữ nguyên, còn bước sóng thay đổi theo tốc độ mới. <br>• Vì vậy, khi giải câu hỏi về tốc độ truyền sóng, cần chú ý điều kiện môi trường thay vì cho rằng tần số cao luôn làm tốc độ truyền sóng lớn hơn.	Wave speed in medium	medium	velocity	frequency independence	https://upload.wikimedia.org/wikipedia/commons/8/8e/Wave_velocity.svg
+Sóng hình sin	Sóng hình sin là sóng có dạng biến thiên theo hàm sin hoặc cos theo không gian hoặc thời gian.	Sóng hình sin là dạng sóng tuần hoàn có li độ biến thiên theo hàm sin hoặc cos theo vị trí, thời gian hoặc cả hai. <br>• Một sóng hình sin có thể được mô tả bằng các đại lượng như biên độ A, bước sóng λ, chu kì T, tần số f và tốc độ truyền sóng v. <br>• Đồ thị u-x biểu diễn li độ của các phần tử môi trường theo vị trí tại một thời điểm nhất định, qua đó có thể xác định bước sóng và biên độ. <br>• Đồ thị u-t biểu diễn li độ của một phần tử theo thời gian, qua đó xác định chu kì và tần số. <br>• Trên hình dạng sóng hình sin, các đỉnh và đáy lặp lại tuần hoàn trong không gian. <br>• Sóng hình sin là mô hình cơ bản để nghiên cứu nhiều hiện tượng sóng vì các đại lượng đặc trưng có quan hệ rõ ràng và dễ biểu diễn bằng đồ thị.	Sinusoidal wave	sine wave	oscillation	graph	https://upload.wikimedia.org/wikipedia/commons/8/8e/Sine_wave.svg
+Đồ thị u-x	Đồ thị u-x biểu diễn li độ của các phần tử môi trường theo vị trí tại một thời điểm.	Đồ thị u-x là đồ thị biểu diễn li độ u của các phần tử môi trường theo tọa độ x tại một thời điểm xác định. <br>• Trục ngang biểu diễn vị trí x, còn trục đứng biểu diễn li độ u. Vì đồ thị chụp trạng thái của nhiều điểm tại cùng thời điểm nên nó thể hiện hình dạng của sóng trong không gian. <br>• Khoảng cách giữa hai đỉnh liên tiếp hoặc hai đáy liên tiếp trên đồ thị chính là bước sóng λ. <br>• Giá trị li độ cực đại theo độ lớn cho biết biên độ A. <br>• Có thể dùng đồ thị u-x để xác định các điểm cùng pha, ngược pha hoặc lệch pha π/2. <br>• Hai điểm cách nhau λ dao động cùng pha; hai điểm cách nhau λ/2 dao động ngược pha. <br>• Khi đọc đồ thị, cần chú ý đơn vị trên cả hai trục và xác định đúng khoảng cách theo phương truyền sóng.	Displacement-position graph	u-x graph	wave profile	wavelength	https://upload.wikimedia.org/wikipedia/commons/5/5f/Sine_wave.svg
+Đồ thị u-t	Đồ thị u-t biểu diễn li độ của một phần tử môi trường theo thời gian.	Đồ thị u-t biểu diễn sự biến thiên li độ u của một phần tử môi trường theo thời gian t. <br>• Trục ngang biểu diễn thời gian, còn trục đứng biểu diễn li độ của phần tử đang xét. Vì theo dõi một phần tử tại một vị trí cố định nên đồ thị này cho biết quá trình dao động theo thời gian. <br>• Khoảng thời gian giữa hai đỉnh liên tiếp, hai đáy liên tiếp hoặc hai trạng thái giống nhau liên tiếp là chu kì T. <br>• Sau khi xác định T, có thể tính tần số bằng công thức f = 1/T. <br>• Biên độ A được xác định từ giá trị li độ cực đại. <br>• Đồ thị u-t thường được dùng để xác định chu kì, tần số, biên độ và trạng thái dao động của phần tử. <br>• Khi đọc đồ thị, phải chú ý đơn vị thời gian, đặc biệt trường hợp trục thời gian được chia theo mili giây hoặc micro giây.	Displacement-time graph	u-t graph	period	oscilloscope	https://upload.wikimedia.org/wikipedia/commons/2/2e/Oscilloscope_waveform.jpg
+Bài toán thuyền tạo sóng	Thuyền thực hiện 24 dao động trong 40 s, tạo sóng truyền 10 m trong 5 s và ngọn sóng cao 12 cm.	Bài toán thuyền tạo sóng minh họa cách xác định các đại lượng đặc trưng của sóng từ dữ kiện thực tế. Thuyền thực hiện 24 dao động trong 40 s nên chu kì của nguồn là T = 40/24 ≈ 1,67 s. <br>• Tần số của nguồn là f = 24/40 = 0,60 Hz. <br>• Sóng truyền được quãng đường 10 m trong thời gian 5 s nên tốc độ truyền sóng là v = 10/5 = 2 m/s. <br>• Bước sóng được tính bằng λ = vT ≈ 2 × 1,67 ≈ 3,33 m. Có thể kiểm tra bằng λ = v/f ≈ 2/0,60 ≈ 3,33 m. <br>• Nếu ngọn sóng cao 12 cm so với mặt nước cân bằng thì biên độ là A = 12 cm. <br>• Bài toán yêu cầu chú ý đổi đơn vị và lựa chọn đúng công thức cho từng đại lượng.	Boat wave problem	boat	water wave	calculation	https://upload.wikimedia.org/wikipedia/commons/6/6c/Boat_on_water.jpg
+Bài toán xác định tần số từ đồ thị	Để xác định tần số từ đồ thị u-t, trước hết xác định chu kì T bằng khoảng thời gian giữa hai trạng thái dao động giống nhau liên tiếp.	Khi xác định tần số từ đồ thị u-t, cần đọc chu kì của dao động trước rồi sử dụng công thức f = 1/T. <br>• Trên đồ thị, chọn hai điểm liên tiếp có cùng trạng thái dao động, chẳng hạn hai đỉnh liên tiếp hoặc hai lần qua vị trí cân bằng theo cùng chiều. Khoảng thời gian giữa chúng chính là một chu kì T. <br>• Ví dụ, nếu mỗi ô ngang ứng với 1 ms và một chu kì kéo dài 4 ô thì T = 4 ms = 0,004 s. <br>• Tần số là f = 1/0,004 = 250 Hz. <br>• Khi đọc đồ thị cần đặc biệt chú ý đơn vị mili giây. Không được sử dụng trực tiếp 4 ms như 4 s trong công thức. <br>• Quy trình giải gồm ba bước: xác định số ô ứng với một chu kì, đổi đơn vị thời gian về giây, sau đó tính f = 1/T.	Frequency from graph	oscilloscope	period measurement	sound wave	https://upload.wikimedia.org/wikipedia/commons/1/1e/Oscilloscope.jpg`;
+        const DEFAULT_RAW_DATA = `Sơn Tinh\tTản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử.\t• Còn gọi là Tản Viên Sơn Thánh<br>• Gắn với núi Ba Vì<br>• Biểu tượng chinh phục và chung sống với tự nhiên\tTản Vien Son Thanh\tBa Vi Mountain\tVietnamese mythology\tNatural disaster\thttps://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg\nThánh Gióng\tPhù Đổng Thiên Vương là biểu tượng sức mạnh chống ngoại xâm.\t• Biểu tượng tuổi trẻ và lòng yêu nước<br>• Gắn với hội Gióng truyền thống<br>• Lạc vào huyền thoại đánh giặc Ân\tPhu Dong Thien Vuong\tGiong Festival\tVietnamese hero\tPatriotism\thttps://vnn-imgs-a1.vgcloud.vn/icdn/2020/05/29/10/thanh-giong-1.jpg`;
+
+        const STORAGE_KEY_DATA = 'icarus_raw_data_v3';
+        let rawInitialData = "";
+        let data = [];
+        let currentIndex = parseInt(localStorage.getItem('icarus_current_index')) || 0;
+        let speechRate = parseFloat(localStorage.getItem('icarus_speech_rate')) || 1;
+        let isAutoplay = false;
+        let fontSizeLevel = parseInt(localStorage.getItem('icarus_font_size')) || 0;
+
+        let synth = window.speechSynthesis;
+        let isPaused = false;
+        let wakeLock = null;
+
+        function initData() {
+            if (embeddedInitialData && embeddedInitialData.trim() !== "") {
+                rawInitialData = embeddedInitialData;
+            } else {
+                let savedData = localStorage.getItem(STORAGE_KEY_DATA);
+                rawInitialData = (savedData && savedData.trim() !== "") ? savedData : DEFAULT_RAW_DATA;
+                localStorage.setItem(STORAGE_KEY_DATA, rawInitialData);
+            }
+
+            data = parseData(rawInitialData);
+            if (currentIndex >= data.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = 0;
+
+            document.getElementById('speechRateSelect').value = speechRate;
+            document.getElementById('autoplayCheckbox').checked = isAutoplay;
+            applyFontSize();
+            renderSlide();
+            renderExpandView();
+            requestWakeLock();
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem(STORAGE_KEY_DATA, rawInitialData);
+            localStorage.setItem('icarus_speech_rate', speechRate);
+            localStorage.setItem('icarus_font_size', fontSizeLevel);
+            localStorage.setItem('icarus_current_index', currentIndex);
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && document.getElementById('wakeLockCheckbox').checked) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); }
+        }
+
+        function toggleWakeLock() {
+            if (document.getElementById('wakeLockCheckbox').checked) requestWakeLock();
+            else releaseWakeLock();
+        }
+
+        function extractImageUrl(text) {
+            if (!text) return '';
+            text = text.trim();
+            const match = text.match(/\[([^\]]+)\]\(([^)]+)\)/);
+            return match && match[2] ? match[2].trim() : text;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    parsed.push({
+                        title: cols[0] ? cols[0].trim() : '',
+                        desc: cols[1] ? cols[1].trim() : '',
+                        bullets: cols[2] ? cols[2].trim() : '',
+                        tags: [cols[3], cols[4], cols[5], cols[6]].filter(t => t && t.trim() !== ''),
+                        img: extractImageUrl(cols[7] ? cols[7].trim() : '')
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        let currentSlideParagraphs = [];
+        let paragraphElementMap = [];
+        let expandParagraphMaps = [];
+
+        function formatClickableParagraphs(htmlString, typePrefix, slideIdx = null) {
+            if (!htmlString) return '';
+            const parts = htmlString.split(/<br\s*[\/]?>/gi);
+            return parts.map((part, index) => {
+                const cleanedText = part.replace(/<[^>]*>?/gm, '').trim();
+                if (!cleanedText) return '';
+                let uniqueId = slideIdx !== null ? `exp_${slideIdx}_${typePrefix}_${index}` : `${typePrefix}_${index}`;
+                let clickAction = slideIdx !== null ? `readSpecificSlideParagraph(${slideIdx}, '${escapeHtml(cleanedText)}')` : `readParagraphAt('${escapeHtml(cleanedText)}')`;
+                return `<div class="clickable-paragraph" id="${uniqueId}" ondblclick="togglePauseRead()" onclick="${clickAction}">${part}</div>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function renderSlide() {
+            if (data.length === 0) return;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            if (currentIndex >= data.length) currentIndex = 0;
+
+            const item = data[currentIndex];
+            document.getElementById('slide-title').innerText = item.title;
+            
+            currentSlideParagraphs = [];
+            paragraphElementMap = [];
+
+            if (item.desc) {
+                item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`desc_${idx}`);
+                    }
+                });
+            }
+
+            if (item.bullets) {
+                item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                    let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                    if (clean) {
+                        currentSlideParagraphs.push(clean);
+                        paragraphElementMap.push(`bullets_${idx}`);
+                    }
+                });
+            }
+
+            document.getElementById('slide-desc').innerHTML = formatClickableParagraphs(item.desc, 'desc');
+            document.getElementById('slide-bullets').innerHTML = formatClickableParagraphs(item.bullets, 'bullets');
+            
+            let tagsHtml = '';
+            item.tags.forEach(tag => {
+                tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')" title="Tìm kiếm">${tag}</span>`;
+            });
+            document.getElementById('slide-tags').innerHTML = tagsHtml;
+
+            document.getElementById('slide-img').src = item.img;
+            document.getElementById('img-url-input').value = item.img;
+            document.getElementById('slideCounter').innerText = `${currentIndex + 1} / ${data.length}`;
+            
+            document.getElementById('scrollableTextArea').scrollTop = 0;
+            highlightExpandCard(currentIndex);
+            saveToLocalStorage();
+        }
+
+        function renderExpandView() {
+            const expandContainer = document.getElementById('expandViewContainer');
+            let html = '';
+            expandParagraphMaps = [];
+
+            data.forEach((item, slideIdx) => {
+                let tagsHtml = '';
+                item.tags.forEach(tag => {
+                    tagsHtml += `<span class="tag" onclick="searchGoogle('${tag}')">${tag}</span>`;
+                });
+
+                let pMap = { titleId: `exp_title_${slideIdx}`, paragraphs: [] };
+
+                if (item.desc) {
+                    item.desc.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                        let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                        if (clean) pMap.paragraphs.push({ text: clean, id: `exp_${slideIdx}_desc_${idx}` });
+                    });
+                }
+                if (item.bullets) {
+                    item.bullets.split(/<br\s*[\/]?>/gi).forEach((p, idx) => {
+                        let clean = p.replace(/<[^>]*>?/gm, '').trim();
+                        if (clean) pMap.paragraphs.push({ text: clean, id: `exp_${slideIdx}_bullets_${idx}` });
+                    });
+                }
+                expandParagraphMaps.push(pMap);
+
+                let formattedDesc = formatClickableParagraphs(item.desc, 'desc', slideIdx);
+                let formattedBullets = formatClickableParagraphs(item.bullets, 'bullets', slideIdx);
+
+                html += `
+                    <div class="expand-slide-card" id="expand-slide-${slideIdx}">
+                        <h2 id="exp_title_${slideIdx}" ondblclick="togglePauseRead()" onclick="readSpecificSlideTitle(${slideIdx})" title="Đọc tiêu đề">${slideIdx + 1}. ${item.title}</h2>
+                        ${item.img ? `<img src="${item.img}" alt="Ảnh" onerror="this.style.display='none'">` : ''}
+                        <div class="expand-desc">${formattedDesc}</div>
+                        ${formattedBullets ? `<div class="expand-bullets">${formattedBullets}</div>` : ''}
+                        <div class="tags-container">${tagsHtml}</div>
+                    </div>
+                `;
+            });
+            expandContainer.innerHTML = html;
+        }
+
+        function toggleExpandMode() {
+            document.body.classList.toggle('expand-mode');
+            const btn = document.getElementById('expandModeBtn');
+            if (document.body.classList.contains('expand-mode')) {
+                btn.innerText = '⏹️ Thoát';
+                renderExpandView();
+                highlightExpandCard(currentIndex);
+            } else {
+                btn.innerText = '📖 Expand';
+            }
+        }
+
+        function highlightExpandCard(slideIdx) {
+            document.querySelectorAll('.expand-slide-card').forEach((card, idx) => {
+                if (idx === slideIdx) {
+                    card.classList.add('active-card');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    card.classList.remove('active-card');
+                }
+            });
+        }
+
+        function updateImageUrl(val) {
+            if (data[currentIndex]) {
+                data[currentIndex].img = extractImageUrl(val);
+                document.getElementById('slide-img').src = data[currentIndex].img;
+                updateRawDataFromCurrent();
+                renderExpandView();
+            }
+        }
+
+        function updateRawDataFromCurrent() {
+            let lines = data.map(item => {
+                let t = item.tags;
+                return `${item.title}\t${item.desc}\t${item.bullets}\t${t[0]||''}\t${t[1]||''}\t${t[2]||''}\t${t[3]||''}\t${item.img}`;
+            });
+            rawInitialData = lines.join('\n');
+            saveToLocalStorage();
+        }
+
+        function nextSlide() {
+            stopRead();
+            currentIndex++;
+            if (currentIndex >= data.length) currentIndex = 0;
+            renderSlide();
+            if (isAutoplay) readSlide();
+        }
+
+        function prevSlide() {
+            stopRead();
+            currentIndex--;
+            if (currentIndex < 0) currentIndex = data.length - 1;
+            renderSlide();
+            if (isAutoplay) readSlide();
+        }
+
+        function searchGoogle(keyword) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&tbm=isch`, '_blank');
+        }
+
+        function clearActiveHighlights() {
+            document.querySelectorAll('.clickable-paragraph').forEach(el => el.classList.remove('active-speaking'));
+        }
+
+        function highlightAndScrollParagraph(paragraphIndex) {
+            clearActiveHighlights();
+            if (paragraphIndex >= 0 && paragraphIndex < paragraphElementMap.length) {
+                // Highlight ở chế độ Thường
+                let el = document.getElementById(paragraphElementMap[paragraphIndex]);
+                if (el) {
+                    el.classList.add('active-speaking');
+                    const scrollArea = document.getElementById('scrollableTextArea');
+                    scrollArea.scrollTo({
+                        top: el.offsetTop - (scrollArea.clientHeight / 2) + (el.offsetHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+
+                // Highlight đồng thời ở chế độ Expand Mode
+                if (expandParagraphMaps[currentIndex] && expandParagraphMaps[currentIndex].paragraphs[paragraphIndex]) {
+                    let expEl = document.getElementById(expandParagraphMaps[currentIndex].paragraphs[paragraphIndex].id);
+                    if (expEl) expEl.classList.add('active-speaking');
+                }
+            }
+        }
+
+        let currentQueue = [];
+        let currentQueueIndex = 0;
+
+        function speakParagraphQueue(paragraphs, queueStartIndex = 0, isReadingTitle = false) {
+            if (!synth) return;
+            currentQueue = paragraphs;
+            currentQueueIndex = queueStartIndex;
+
+            if (currentQueueIndex >= currentQueue.length) {
+                clearActiveHighlights();
+                if (isAutoplay && !isPaused) nextSlide();
+                return;
+            }
+
+            let utter = new SpeechSynthesisUtterance(currentQueue[currentQueueIndex]);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            utter.onstart = () => {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                if (isReadingTitle) {
+                    clearActiveHighlights();
+                    highlightExpandCard(currentIndex);
+                } else {
+                    highlightAndScrollParagraph(currentQueueIndex);
+                }
+            };
+
+            utter.onend = () => {
+                if (!isPaused) {
+                    if (isReadingTitle) {
+                        // Sau khi đọc xong tiêu đề, tiếp tục đọc sang danh sách nội dung
+                        speakParagraphQueue(currentSlideParagraphs, 0, false);
+                    } else {
+                        if (!isAutoplay) {
+                            clearActiveHighlights();
+                            return;
+                        }
+                        speakParagraphQueue(currentQueue, currentQueueIndex + 1, false);
+                    }
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function readSlide() {
+            if (!synth) return;
+            stopRead();
+            highlightExpandCard(currentIndex);
+            // Bắt đầu đọc từ tiêu đề trước (không highlight nội dung), sau đó tự chuyển sang nội dung
+            let titleText = data[currentIndex].title;
+            let utter = new SpeechSynthesisUtterance(titleText);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+
+            utter.onstart = () => {
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng';
+                clearActiveHighlights();
+            };
+
+            utter.onend = () => {
+                if (!isPaused) {
+                    speakParagraphQueue(currentSlideParagraphs, 0, false);
+                }
+            };
+
+            synth.speak(utter);
+        }
+
+        function readParagraphAt(textSnippet) {
+            if (!synth) return;
+            stopRead();
+            let idx = currentSlideParagraphs.indexOf(textSnippet);
+            speakParagraphQueue(currentSlideParagraphs, idx !== -1 ? idx : 0, false);
+        }
+
+        function readSpecificSlideTitle(slideIdx) {
+            if (!synth) return;
+            stopRead();
+            currentIndex = slideIdx;
+            renderSlide();
+            highlightExpandCard(slideIdx);
+            let utter = new SpeechSynthesisUtterance(data[slideIdx].title);
+            utter.lang = 'vi-VN';
+            utter.rate = speechRate;
+            synth.speak(utter);
+        }
+
+        function readSpecificSlideParagraph(slideIdx, textSnippet) {
+            if (!synth) return;
+            stopRead();
+            currentIndex = slideIdx;
+            renderSlide();
+            highlightExpandCard(slideIdx);
+
+            let item = data[slideIdx];
+            let paragraphs = [];
+            if (item.desc) item.desc.split(/<br\s*[\/]?>/gi).forEach(p => { let c = p.replace(/<[^>]*>?/gm, '').trim(); if(c) paragraphs.push(c); });
+            if (item.bullets) item.bullets.split(/<br\s*[\/]?>/gi).forEach(p => { let c = p.replace(/<[^>]*>?/gm, '').trim(); if(c) paragraphs.push(c); });
+            
+            let idx = paragraphs.indexOf(textSnippet);
+            // Gán lại mảng map tạm cho slide này để highlight đúng
+            currentSlideParagraphs = paragraphs;
+            paragraphElementMap = paragraphs.map((_, i) => `exp_${slideIdx}_desc_${i}`); // mapping giả định
+            speakParagraphQueue(paragraphs, idx !== -1 ? idx : 0, false);
+        }
+
+        function togglePauseRead() {
+            if (!synth) return;
+            if (synth.speaking) {
+                if (isPaused) { synth.resume(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; }
+                else { synth.pause(); isPaused = true; document.getElementById('pauseBtn').innerText = '▶️ Tiếp tục'; }
+            } else if (isPaused) { synth.resume(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; }
+        }
+
+        function stopRead() {
+            if (synth) { synth.cancel(); isPaused = false; document.getElementById('pauseBtn').innerText = '⏸️ Tạm dừng'; clearActiveHighlights(); }
+        }
+
+        function updateSpeechRate() {
+            speechRate = parseFloat(document.getElementById('speechRateSelect').value);
+            saveToLocalStorage();
+            if (synth && synth.speaking) readSlide();
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = document.getElementById('autoplayCheckbox').checked;
+        }
+
+        function toggleFullscreenMode() {
+            document.body.classList.toggle('fullscreen-mode');
+        }
+
+        function changeFontSize(direction) {
+            fontSizeLevel = Math.max(-3, Math.min(5, fontSizeLevel + direction));
+            applyFontSize();
+            saveToLocalStorage();
+        }
+
+        function applyFontSize() {
+            let baseDesc = 1.1 + (fontSizeLevel * 0.1);
+            let baseBullets = 0.95 + (fontSizeLevel * 0.1);
+            let baseTitle = 1.8 + (fontSizeLevel * 0.15);
+
+            document.getElementById('slide-desc').style.fontSize = `${baseDesc}rem`;
+            document.getElementById('slide-bullets').style.fontSize = `${baseBullets}rem`;
+            document.getElementById('slide-title').style.fontSize = `${baseTitle}rem`;
+
+            document.querySelectorAll('.expand-desc').forEach(el => el.style.fontSize = `${baseDesc}rem`);
+            document.querySelectorAll('.expand-bullets').forEach(el => el.style.fontSize = `${baseBullets}rem`);
+            document.querySelectorAll('.expand-slide-card h2').forEach(el => el.style.fontSize = `${baseTitle * 0.9}rem`);
+        }
+
+        function openImportModal() {
+            document.getElementById('importTextarea').value = rawInitialData;
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function processImport() {
+            const val = document.getElementById('importTextarea').value;
+            if (val.trim() !== '') {
+                rawInitialData = val;
+                data = parseData(rawInitialData);
+                currentIndex = 0;
+                saveToLocalStorage();
+                renderSlide();
+                renderExpandView();
+                closeImportModal();
+            }
+        }
+
+        function saveAsHtml() {
+            updateRawDataFromCurrent();
+            let fullHtml = document.documentElement.outerHTML;
+            fullHtml = fullHtml.replace(/let embeddedInitialData = `[\s\S]*?`;/, 'let embeddedInitialData = `' + rawInitialData.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`;');
+
+            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trinh-chieu-icarus.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('topicInput').value || 'Chủ đề học tập';
+            const promptContent = `Hãy tạo dữ liệu về chủ đề "${topic}" dưới dạng các dòng văn bản thuần túy (Plain Text) phân tách nhau bằng dấu Tab gồm đúng 8 cột theo thứ tự sau (TUYỆT ĐỐI KHÔNG CÓ CỘT SỐ THỨ TỰ Ở ĐẦU):
+1. Từ khóa chính (tiếng Việt)
+2. Kiến thức trọng tâm ngắn gọn.
+3. Nội dung chi tiết (100-200 từ, dùng thẻ <br> để ngắt ý, xuống dòng)
+4. Từ khóa đáp án tiếng Anh ngắn gọn
+5. Từ khóa tiếng anh 1 liên quan
+6. Từ khóa tiếng anh 2 liên quan
+7. Từ khóa tiếng anh 3 liên quan
+8. URL hình ảnh minh họa thực tế dạng đường dẫn thuần túy hoặc dạng markdown [Alt](url) (để trống nếu không tìm được)
+
+Chỉ trả về dữ liệu thô dạng văn bản Tab-separated, không kèm theo bất kỳ lời dẫn hay định dạng markdown nào khác.`;
+
+            navigator.clipboard.writeText(promptContent).then(() => { alert('Đã copy Prompt AI!'); });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+            if (e.key === 'ArrowRight') nextSlide();
+            else if (e.key === 'ArrowLeft') prevSlide();
+            else if (e.key === '=' || e.key === '+') changeFontSize(1);
+            else if (e.key === '-' || e.key === '_') changeFontSize(-1);
+            else if (e.key === 'Escape') {
+                if (document.body.classList.contains('fullscreen-mode')) toggleFullscreenMode();
+                if (document.body.classList.contains('expand-mode')) toggleExpandMode();
+            }
+        });
+
+        initData();
+    </script>
+
+
+</body></html>
