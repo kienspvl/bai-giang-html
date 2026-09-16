@@ -1,0 +1,1046 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cảm ứng ở thực vật - Video-as-Code Presentation (Interactive v2)</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --surface-color: #121216;
+            --surface-border: #27272a;
+            --accent-primary: #10b981; /* Xanh ngọc sinh học */
+            --accent-secondary: #3b82f6; /* Xanh dương công nghệ */
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --glow-color: rgba(16, 185, 129, 0.15);
+            --font-scale: 1rem; /* Biến điều chỉnh cỡ chữ */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            padding: 1rem;
+            font-size: var(--font-scale);
+        }
+
+        /* Top Bar: Điều khiển cỡ chữ & Nút Save As */
+        .top-toolbar {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            padding: 0 0.5rem;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .tool-btn {
+            background: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            color: var(--text-main);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover {
+            background: var(--surface-border);
+            border-color: var(--text-muted);
+        }
+
+        .tool-btn.highlight-save {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #60a5fa;
+        }
+        .tool-btn.highlight-save:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+
+        /* Container chính mô phỏng khung video 16:9 */
+        .presentation-wrapper {
+            width: 100%;
+            max-width: 1100px;
+            aspect-ratio: 16 / 9;
+            background-color: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px var(--glow-color);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Vùng chứa các Scene */
+        .scene-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: clamp(1.2rem, 3vw, 3rem);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            background: radial-gradient(circle at center, #18181b 0%, #121216 100%);
+            overflow-y: auto;
+        }
+
+        .scene.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .scene-content-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 950px;
+            margin: auto;
+        }
+
+        /* Typography & Components bên trong Scene */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0.9rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50px;
+            color: var(--accent-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: calc(var(--font-scale) * 0.8);
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            font-size: calc(var(--font-scale) * 1.8);
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: calc(var(--font-scale) * 1.05);
+            color: var(--accent-secondary);
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+        }
+
+        .main-text {
+            font-size: calc(var(--font-scale) * 0.95);
+            color: var(--text-muted);
+            line-height: 1.55;
+            margin-bottom: 1rem;
+            text-align: justify;
+            text-justify: inter-word;
+        }
+
+        /* Khu vực hiển thị Hình ảnh minh họa & Từ khóa */
+        .scene-meta-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .image-display-area {
+            width: 100%;
+            max-height: 160px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px dashed var(--surface-border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .image-display-area img {
+            max-width: 100%;
+            max-height: 150px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+        .image-placeholder-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            padding: 1rem;
+        }
+
+        /* Khung nhập URL ảnh & Từ khóa */
+        .interactive-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--surface-border);
+        }
+
+        .url-input-group {
+            display: flex;
+            gap: 0.4rem;
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .url-input {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--surface-border);
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            outline: none;
+        }
+        .url-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .load-img-btn {
+            background: var(--surface-border);
+            color: var(--text-main);
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .load-img-btn:hover {
+            background: var(--accent-primary);
+            color: #000;
+        }
+
+        /* Danh sách 3 từ khóa tiếng Anh */
+        .keywords-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .keyword-tag {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .keyword-tag:hover {
+            background: rgba(59, 130, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Chỉ số Scene góc trên */
+        .scene-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--surface-border);
+            z-index: 10;
+        }
+
+        /* Thanh Timeline ở đáy khung video */
+        .timeline-bar-wrapper {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.1s linear;
+        }
+
+        /* Bảng điều khiển bên ngoài khung video */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 0.8rem;
+            padding: 0 0.5rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .control-btn {
+            background: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            color: var(--text-main);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .control-btn:hover {
+            background: var(--surface-border);
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.primary {
+            background: var(--accent-primary);
+            color: #000;
+            border-color: var(--accent-primary);
+        }
+
+        .control-btn.primary:hover {
+            background: #059669;
+        }
+
+        .voice-status {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .voice-status.speaking i {
+            animation: pulse-icon 1s infinite alternate;
+        }
+
+        @keyframes pulse-icon {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Tối ưu cho Mobile nhỏ */
+        @media (max-width: 768px) {
+            body {
+                padding: 0.3rem;
+            }
+            .presentation-wrapper {
+                aspect-ratio: 3 / 4; /* Tăng chiều cao trên mobile để chứa đủ nội dung 150 từ */
+                border-radius: 10px;
+            }
+            .controls-bar {
+                flex-direction: column;
+                gap: 0.8rem;
+            }
+            .btn-group {
+                width: 100%;
+                justify-content: center;
+            }
+            .interactive-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .top-toolbar {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Thanh công cụ phía trên: Tăng giảm font & Save As -->
+    <div class="top-toolbar">
+        <div class="toolbar-group">
+            <button class="tool-btn" id="fontDecreaseBtn" title="Giảm cỡ chữ"><i class="fa-solid fa-a"></i>-</button>
+            <button class="tool-btn" id="fontIncreaseBtn" title="Tăng cỡ chữ"><i class="fa-solid fa-a"></i>+</button>
+            <span style="font-family: 'JetBrains Mono'; font-size: 0.8rem; color: var(--text-muted);" id="fontSizeIndicator">Cỡ chữ: Chuẩn</span>
+        </div>
+        <div class="toolbar-group">
+            <button class="tool-btn highlight-save" id="saveAsBtn"><i class="fa-solid fa-floppy-disk"></i> Save As (Lưu file kèm URL ảnh)</button>
+        </div>
+    </div>
+
+    <div class="presentation-wrapper">
+        <!-- Hiển thị số Scene -->
+        <div class="scene-indicator" id="sceneIndicator">Scene 1 / 12</div>
+
+        <!-- Khung chứa 12 Scene -->
+        <div class="scene-container" id="sceneContainer">
+
+            <!-- Scene 1 -->
+            <div class="scene active" data-speech="Chào mừng các bạn đến với thế giới thực vật kỳ diệu. Hôm nay, chúng ta sẽ cùng nhau tìm hiểu về hiện tượng cảm ứng ở thực vật. Cảm ứng ở thực vật là khả năng vô cùng đặc biệt giúp cho các loài cây có thể tiếp nhận và phản ứng linh hoạt trước những thay đổi liên tục của các yếu tố môi trường xung quanh như ánh sáng, nhiệt độ, độ ẩm, trọng lực hay các tác động cơ học từ bên ngoài. Mặc dù thực vật không có hệ thần kinh hay cơ quan vận động linh hoạt như động vật, nhưng thông qua quá trình tiến hóa hàng triệu năm, chúng đã hình thành nên những cơ chế sinh học tinh vi và kỳ diệu để sinh tồn, phát triển và tối ưu hóa khả năng quang hợp, vươn lên tìm kiếm nguồn sáng và chất dinh dưỡng trong lòng đất.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-seedling"></i> Nhập đề</div>
+                    <h2>Cảm ứng ở thực vật</h2>
+                    <div class="subtitle">Khám phá phản ứng thích nghi kỳ diệu của thế giới thực vật</div>
+                    <div class="main-text">Chào mừng các bạn đến với thế giới thực vật kỳ diệu. Hôm nay, chúng ta sẽ cùng nhau tìm hiểu về hiện tượng cảm ứng ở thực vật. Cảm ứng ở thực vật là khả năng vô cùng đặc biệt giúp cho các loài cây có thể tiếp nhận và phản ứng linh hoạt trước những thay đổi liên tục của các yếu tố môi trường xung quanh như ánh sáng, nhiệt độ, độ ẩm, trọng lực hay các tác động cơ học từ bên ngoài. Mặc dù thực vật không có hệ thần kinh hay cơ quan vận động linh hoạt như động vật, nhưng thông qua quá trình tiến hóa hàng triệu năm, chúng đã hình thành nên những cơ chế sinh học tinh vi và kỳ diệu để sinh tồn, phát triển và tối ưu hóa khả năng quang hợp, vươn lên tìm kiếm nguồn sáng và chất dinh dưỡng trong lòng đất.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=plant+sensitivity" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> plant sensitivity</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=botany+adaptation" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> botany adaptation</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=environmental+stimulus" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> environmental stimulus</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 2 -->
+            <div class="scene" data-speech="Khái niệm cơ bản về cảm ứng. Cảm ứng ở thực vật được định nghĩa là khả năng tiếp nhận các kích thích đến từ môi trường sống xung quanh và thực hiện phản ứng trả lời lại các kích thích đó bằng các hình thức sinh trưởng hoặc thay đổi sức trương nước của tế bào. Phản ứng này đóng vai trò quyết định trong việc giúp cây phân bố hợp lý trong không gian, tận dụng tối đa nguồn năng lượng mặt trời cho quá trình tổng hợp chất hữu cơ, đồng thời tìm kiếm nguồn nước và các khoáng chất cần thiết trong lòng đất để nuôi sống cơ thể. Mặc dù các phản ứng cảm ứng này thường diễn ra với tốc độ rất chậm, khó có thể quan sát trực bằng mắt thường trong khoảng thời gian ngắn, nhưng ý nghĩa sinh học của chúng lại vô cùng to lớn và sâu sắc đối với sự sinh tồn dài lâu của toàn bộ giới thực vật trên hành tinh của chúng ta.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-book-open"></i> Khái niệm</div>
+                    <h2>Định nghĩa cảm ứng</h2>
+                    <div class="subtitle">Bản chất và cơ chế phản ứng sinh học của cây</div>
+                    <div class="main-text">Khái niệm cơ bản về cảm ứng. Cảm ứng ở thực vật được định nghĩa là khả năng tiếp nhận các kích thích đến từ môi trường sống xung quanh và thực hiện phản ứng trả lời lại các kích thích đó bằng các hình thức sinh trưởng hoặc thay đổi sức trương nước của tế bào. Phản ứng này đóng vai trò quyết định trong việc giúp cây phân bố hợp lý trong không gian, tận dụng tối đa nguồn năng lượng mặt trời cho quá trình tổng hợp chất hữu cơ, đồng thời tìm kiếm nguồn nước và các khoáng chất cần thiết trong lòng đất để nuôi sống cơ thể. Mặc dù các phản ứng cảm ứng này thường diễn ra với tốc độ rất chậm, khó có thể quan sát trực bằng mắt thường trong khoảng thời gian ngắn, nhưng ý nghĩa sinh học của chúng lại vô cùng to lớn và sâu sắc đối với sự sinh tồn dài lâu của toàn bộ giới thực vật trên hành tinh của chúng ta.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=plant+physiology" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> plant physiology</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=stimulus+response" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> stimulus response</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=cellular+turgor" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> cellular turgor</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 3 -->
+            <div class="scene" data-speech="Đặc điểm sinh học chung của cảm ứng thực vật. Khác biệt rõ rệt so với động vật có hệ thần kinh trung ương và hệ cơ phát triển, thực vật không có khả năng di chuyển toàn thân hay phản ứng tức thời bằng cơ bắp. Do đó, các phản ứng cảm ứng ở thực vật thường diễn ra tương đối chậm chạp, đòi hỏi một khoảng thời gian nhất định để tích lũy các thay đổi sinh lý hóa học bên trong tế bào. Cơ chế chủ đạo bao gồm sự phân bố lại nồng độ của các hoóc môn sinh trưởng thực vật như auxin ở hai phía đối diện của cơ quan, hoặc sự biến đổi đột ngột về hàm lượng nước trong các mô chuyên hóa đặc biệt. Nhờ có những đặc điểm này, thực vật vẫn có thể định hướng chính xác sự phát triển của cơ thể, vươn mình vượt qua các chướng ngại vật trong tự nhiên để tìm đến nguồn sáng và dinh dưỡng tối ưu nhất cho sự sống.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-circle-info"></i> Đặc điểm</div>
+                    <h2>Đặc điểm sinh học</h2>
+                    <div class="subtitle">Đặc thù tốc độ và phương thức phản ứng của thực vật</div>
+                    <div class="main-text">Đặc điểm sinh học chung của cảm ứng thực vật. Khác biệt rõ rệt so với động vật có hệ thần kinh trung ương và hệ cơ phát triển, thực vật không có khả năng di chuyển toàn thân hay phản ứng tức thời bằng cơ bắp. Do đó, các phản ứng cảm ứng ở thực vật thường diễn ra tương đối chậm chạp, đòi hỏi một khoảng thời gian nhất định để tích lũy các thay đổi sinh lý hóa học bên trong tế bào. Cơ chế chủ đạo bao gồm sự phân bố lại nồng độ của các hoóc môn sinh trưởng thực vật như auxin ở hai phía đối diện của cơ quan, hoặc sự biến đổi đột ngột về hàm lượng nước trong các mô chuyên hóa đặc biệt. Nhờ có những đặc điểm này, thực vật vẫn có thể định hướng chính xác sự phát triển của cơ thể, vươn mình vượt qua các chướng ngại vật trong tự nhiên để tìm đến nguồn sáng và dinh dưỡng tối ưu nhất cho sự sống.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=plant+growth+kinetics" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> growth kinetics</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=auxin+hormone" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> auxin hormone</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=slow+plant+movement" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> slow movement</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 4 -->
+            <div class="scene" data-speech="Hướng sáng ở thực vật. Hướng sáng là một trong những hình thức hướng động quan trọng nhất, biểu hiện qua phản ứng sinh trưởng của thân và cành cây luôn uốn cong về phía có nguồn ánh sáng chiếu tới. Ánh sáng đóng vai trò sống còn trong việc cung cấp năng lượng cho quá trình quang hợp tạo ra chất hữu cơ. Khi ánh sáng chiếu không đều từ một phía lên thân cây, hoóc môn sinh trưởng auxin có xu hướng di chuyển dịch chuyển lệch sang phía bị che khuất ít ánh sáng hơn. Sự tích tụ auxin cao hơn ở phía khuất sáng kích thích các tế bào ở đây phân chia và giãn dài nhanh hơn so với phía được chiếu sáng trực tiếp, từ đó tạo ra lực đẩy làm cho thân cây uốn cong dần về phía có nguồn sáng. Hiện tượng này giúp lá cây nhận được lượng ánh sáng mặt trời phong phú và hoàn hảo nhất để sinh trưởng khỏe mạnh.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-sun"></i> Hình thức 1</div>
+                    <h2>Hướng sáng (Phototropism)</h2>
+                    <div class="subtitle">Phản ứng sinh trưởng hướng về nguồn năng lượng mặt trời</div>
+                    <div class="main-text">Hướng sáng ở thực vật. Hướng sáng là một trong những hình thức hướng động quan trọng nhất, biểu hiện qua phản ứng sinh trưởng của thân và cành cây luôn uốn cong về phía có nguồn ánh sáng chiếu tới. Ánh sáng đóng vai trò sống còn trong việc cung cấp năng lượng cho quá trình quang hợp tạo ra chất hữu cơ. Khi ánh sáng chiếu không đều từ một phía lên thân cây, hoóc môn sinh trưởng auxin có xu hướng di chuyển dịch chuyển lệch sang phía bị che khuất ít ánh sáng hơn. Sự tích tụ auxin cao hơn ở phía khuất sáng kích thích các tế bào ở đây phân chia và giãn dài nhanh hơn so với phía được chiếu sáng trực tiếp, từ đó tạo ra lực đẩy làm cho thân cây uốn cong dần về phía có nguồn sáng. Hiện tượng này giúp lá cây nhận được lượng ánh sáng mặt trời phong phú và hoàn hảo nhất để sinh trưởng khỏe mạnh.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=phototropism+stem" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> phototropism</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=plant+light+bending" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> light bending</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=auxin+distribution" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> auxin gradient</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 5 -->
+            <div class="scene" data-speech="Hướng trọng lực ở thực vật. Trọng lực là lực tác động liên tục của trái đất lên mọi sinh vật. Thực vật đã phát triển cơ chế hướng trọng lực vô cùng chính xác để định hướng không gian sinh trưởng. Cụ thể, rễ cây luôn có tính hướng trọng lực dương, tức là sinh trưởng hướng thẳng xuống lòng đất giúp cây bám chắc vào đất và dễ dàng tìm kiếm nguồn nước cùng khoáng chất. Ngược lại, phần thân và cành cây lại có tính hướng trọng lực âm, sinh trưởng ngược chiều trọng lực để vươn lên cao đón ánh nắng mặt trời. Cơ chế này dựa trên các tế bào cảm nhận trọng lực chuyên hóa chứa các hạt tinh bột nặng lắng xuống theo chiều trọng lực, từ đó điều hòa sự phân bố hoóc môn sinh trưởng không đồng đều giữa mặt trên và mặt dưới của rễ và thân, đảm bảo cây luôn mọc thẳng đứng ổn định.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-earth-americas"></i> Hình thức 2</div>
+                    <h2>Hướng trọng lực (Geotropism)</h2>
+                    <div class="subtitle">Sự định hướng không gian dựa trên lực hấp dẫn của Trái Đất</div>
+                    <div class="main-text">Hướng trọng lực ở thực vật. Trọng lực là lực tác động liên tục của trái đất lên mọi sinh vật. Thực vật đã phát triển cơ chế hướng trọng lực vô cùng chính xác để định hướng không gian sinh trưởng. Cụ thể, rễ cây luôn có tính hướng trọng lực dương, tức là sinh trưởng hướng thẳng xuống lòng đất giúp cây bám chắc vào đất và dễ dàng tìm kiếm nguồn nước cùng khoáng chất. Ngược lại, phần thân và cành cây lại có tính hướng trọng lực âm, sinh trưởng ngược chiều trọng lực để vươn lên cao đón ánh nắng mặt trời. Cơ chế này dựa trên các tế bào cảm nhận trọng lực chuyên hóa chứa các hạt tinh bột nặng lắng xuống theo chiều trọng lực, từ đó điều hòa sự phân bố hoóc môn sinh trưởng không đồng đều giữa mặt trên và mặt dưới của rễ và thân, đảm bảo cây luôn mọc thẳng đứng ổn định.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=geotropism+roots" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> geotropism</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=gravitropism+in+plants" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> gravitropism</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=root+cap+amyloplasts" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> amyloplasts</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 6 -->
+            <div class="scene" data-speech="Hướng nước ở thực vật. Nước là dung môi thiết yếu và là nguồn sống không thể thiếu cho toàn bộ các hoạt động sinh lý của tế bào thực vật. Rễ cây sở hữu khả năng hướng nước cực kỳ nhạy bén, luôn chủ động kéo dài và uốn cong về phía vùng đất có độ ẩm cao hơn hoặc nơi có nguồn nước dồi dào. Khi phát hiện gradient độ ẩm trong đất, các tế bào vùng chóp rễ sẽ truyền tín hiệu hóa học kích thích sự phân chia và sinh trưởng không đối xứng ở hai bên rễ. Nhờ đó, rễ cây có thể vượt qua những khoảng đất khô cằn để tìm đến các mạch nước ngầm hoặc vùng đất ẩm ướt, đảm bảo cung cấp đầy đủ nước cho quá trình thoát hơi nước qua lá và duy trì sức trương ổn định cho toàn bộ thân cây suốt chu kỳ sinh trưởng của mình.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-droplet"></i> Hình thức 3</div>
+                    <h2>Hướng nước (Hydrotropism)</h2>
+                    <div class="subtitle">Bản năng tìm kiếm nguồn nước và độ ẩm trong lòng đất</div>
+                    <div class="main-text">Hướng nước ở thực vật. Nước là dung môi thiết yếu và là nguồn sống không thể thiếu cho toàn bộ các hoạt động sinh lý của tế bào thực vật. Rễ cây sở hữu khả năng hướng nước cực kỳ nhạy bén, luôn chủ động kéo dài và uốn cong về phía vùng đất có độ ẩm cao hơn hoặc nơi có nguồn nước dồi dào. Khi phát hiện gradient độ ẩm trong đất, các tế bào vùng chóp rễ sẽ truyền tín hiệu hóa học kích thích sự phân chia và sinh trưởng không đối xứng ở hai bên rễ. Nhờ đó, rễ cây có thể vượt qua những khoảng đất khô cằn để tìm đến các mạch nước ngầm hoặc vùng đất ẩm ướt, đảm bảo cung cấp đầy đủ nước cho quá trình thoát hơi nước qua lá và duy trì sức trương ổn định cho toàn bộ thân cây suốt chu kỳ sinh trưởng của mình.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=hydrotropism+roots" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> hydrotropism</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=plant+water+seeking" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> water seeking</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=soil+moisture+gradient" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> moisture gradient</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 7 -->
+            <div class="scene" data-speech="Hướng hóa ở thực vật. Đất trồng là một môi trường phức tạp chứa đựng vô số các chất dinh dưỡng khoáng đa lượng, vi lượng cũng như các hợp chất hóa học khác nhau. Hướng hóa là phản ứng sinh trưởng của rễ cây hướng về phía các chất dinh dưỡng có lợi như hợp chất chứa nitơ, lân, kali, hoặc ngược lại, uốn cong tránh xa các vùng có nồng độ hóa chất độc hại hoặc kim loại nặng quá cao. Các cơ quan thụ cảm hóa học nằm nhạy cảm ở miền sinh trưởng gần chóp rễ có khả năng nhận diện chính xác nồng độ ion hòa tan trong dung dịch đất. Từ đó, cây điều phối tốc độ sinh trưởng của các tế bào xung quanh để định hướng rễ đâm xuyên qua những vùng đất giàu dinh dưỡng, tối ưu hóa khả năng hấp thụ khoáng chất phục vụ cho quá trình tổng hợp các hợp chất hữu cơ nuôi dưỡng toàn cơ thể.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-flask"></i> Hình thức 4</div>
+                    <h2>Hướng hóa (Chemotropism)</h2>
+                    <div class="subtitle">Phản ứng chọn lọc dinh dưỡng khoáng và tránh chất độc</div>
+                    <div class="main-text">Hướng hóa ở thực vật. Đất trồng là một môi trường phức tạp chứa đựng vô số các chất dinh dưỡng khoáng đa lượng, vi lượng cũng như các hợp chất hóa học khác nhau. Hướng hóa là phản ứng sinh trưởng của rễ cây hướng về phía các chất dinh dưỡng có lợi như hợp chất chứa nitơ, lân, kali, hoặc ngược lại, uốn cong tránh xa các vùng có nồng độ hóa chất độc hại hoặc kim loại nặng quá cao. Các cơ quan thụ cảm hóa học nằm nhạy cảm ở miền sinh trưởng gần chóp rễ có khả năng nhận diện chính xác nồng độ ion hòa tan trong dung dịch đất. Từ đó, cây điều phối tốc độ sinh trưởng của các tế bào xung quanh để định hướng rễ đâm xuyên qua những vùng đất giàu dinh dưỡng, tối ưu hóa khả năng hấp thụ khoáng chất phục vụ cho quá trình tổng hợp các hợp chất hữu cơ nuôi dưỡng toàn cơ thể.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=chemotropism+in+plants" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> chemotropism</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=nutrient+absorption+roots" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> nutrient uptake</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=root+chemical+sensing" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> chemical sensing</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 8 -->
+            <div class="scene" data-speech="Hướng tiếp xúc ở thực vật. Hiện tượng hướng tiếp xúc thể hiện rõ rệt và sinh động nhất ở các loài cây leo thân thảo như mướp, bầu, bí, đậu cô ve hay nho. Khi phần tua cuốn của những loại cây này chạm phải các vật thể rắn xung quanh như cành cây, giàn đỡ hoặcọc hàng rào, các tế bào tại điểm tiếp xúc sẽ lập tức truyền tín hiệu kích thích làm giảm tốc độ sinh trưởng, trong khi các tế bào ở phía đối diện lại giãn dài ra với tốc độ cực kỳ nhanh chóng. Sự chênh lệch tốc độ sinh trưởng này tạo ra lực uốn cong mạnh mẽ, khiến tua cuốn nhanh chóng xoắn vòng và ôm chặt lấy giá thể. Nhờ có cơ chế hướng tiếp xúc thông minh này, các loài cây thân leo yếu ớt có thể leo cao lên đón ánh sáng mặt trời, tránh bị che khuất dưới mặt đất và nâng cao tối đa hiệu suất sinh trưởng.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-hand"></i> Hình thức 5</div>
+                    <h2>Hướng tiếp xúc (Thigmotropism)</h2>
+                    <div class="subtitle">Sự uốn cong và bám giá thể của các loài cây dây leo</div>
+                    <div class="main-text">Hướng tiếp xúc ở thực vật. Hiện tượng hướng tiếp xúc thể hiện rõ rệt và sinh động nhất ở các loài cây leo thân thảo như mướp, bầu, bí, đậu cô ve hay nho. Khi phần tua cuốn của những loại cây này chạm phải các vật thể rắn xung quanh như cành cây, giàn đỡ hoặcọc hàng rào, các tế bào tại điểm tiếp xúc sẽ lập tức truyền tín hiệu kích thích làm giảm tốc độ sinh trưởng, trong khi các tế bào ở phía đối diện lại giãn dài ra với tốc độ cực kỳ nhanh chóng. Sự chênh lệch tốc độ sinh trưởng này tạo ra lực uốn cong mạnh mẽ, khiến tua cuốn nhanh chóng xoắn vòng và ôm chặt lấy giá thể. Nhờ có cơ chế hướng tiếp xúc thông minh này, các loài cây thân leo yếu ớt có thể leo cao lên đón ánh sáng mặt trời, tránh bị che khuất dưới mặt đất và nâng cao tối đa hiệu suất sinh trưởng.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=thigmotropism+tendrils" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> thigmotropism</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=climbing+plant+tendril" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> plant tendrils</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=mechanical+touch+response" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> touch response</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 9 -->
+            <div class="scene" data-speech="Ứng động không sinh trưởng. Ứng động không sinh trưởng là các phản ứng vận động nhanh nhạy xuất hiện không phụ thuộc vào hướng của tác nhân kích thích ngoại cảnh. Ví dụ điển hình và nổi tiếng nhất là hiện tượng cụp lá ở cây trinh nữ, hay còn gọi là cây xấu hổ, ngay khi có lực chạm cơ học hoặc luồng gió mạnh tác động. Cơ chế của hiện tượng này bắt nguồn từ sự thay đổi đột ngột về áp suất trương nước bên trong các tế bào chuyên hóa nằm ở phần phình cuống lá gọi là thể gối. Khi có kích thích cơ học, các ion kali lập tức di chuyển ồ ạt ra khỏi tế bào nửa dưới của thể gối, kéo theo nước thoát ra ngoài theo nguyên lý thẩm thấu, khiến các tế bào này xẹp xuống và làm lá cây cụp lại chỉ trong vòng vài giây. Đây là cơ chế tự vệ vô cùng hiệu quả giúp cây tránh khỏi sự phá hoại của động vật ăn cỏ.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-bolt"></i> Vận động nhanh</div>
+                    <h2>Ứng động không sinh trưởng</h2>
+                    <div class="subtitle">Phản ứng tự vệ nhanh do thay đổi áp suất trương nước</div>
+                    <div class="main-text">Ứng động không sinh trưởng. Ứng động không sinh trưởng là các phản ứng vận động nhanh nhạy xuất hiện không phụ thuộc vào hướng của tác nhân kích thích ngoại cảnh. Ví dụ điển hình và nổi tiếng nhất là hiện tượng cụp lá ở cây trinh nữ, hay còn gọi là cây xấu hổ, ngay khi có lực chạm cơ học hoặc luồng gió mạnh tác động. Cơ chế của hiện tượng này bắt nguồn từ sự thay đổi đột ngột về áp suất trương nước bên trong các tế bào chuyên hóa nằm ở phần phình cuống lá gọi là thể gối. Khi có kích thích cơ học, các ion kali lập tức di chuyển ồ ạt ra khỏi tế bào nửa dưới của thể gối, kéo theo nước thoát ra ngoài theo nguyên lý thẩm thấu, khiến các tế bào này xẹp xuống và làm lá cây cụp lại chỉ trong vòng vài giây. Đây là cơ chế tự vệ vô cùng hiệu quả giúp cây tránh khỏi sự phá hoại của động vật ăn cỏ.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=mimosa+pudica+sensitive+plant" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> mimosa pudica</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=nastic+movements+plants" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> nastic movements</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=pulvinus+turgor+pressure" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> pulvinus turgor</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 10 -->
+            <div class="scene" data-speech="Ứng động sinh trưởng. Khác với ứng động không sinh trưởng diễn ra chớp nhoáng, ứng động sinh trưởng là hình thức vận động phản ứng dưới tác động của các kích thích không định hướng như ánh sáng hoặc nhiệt độ thay đổi theo chu kỳ ngày đêm, trong đó tốc độ sinh trưởng của các tế bào ở hai mặt đối diện của cơ quan thực vật có sự chênh lệch rõ rệt. Ví dụ tiêu biểu là hiện tượng hoa tulip hoặc hoa mười giờ nở ra vào ban ngày khi có ánh sáng và nhiệt độ ấm áp, sau đó cụp lại vào ban đêm hoặc khi nhiệt độ xuống thấp. Sự biến đổi này được điều khiển bởi nhịp sinh học nội sinh bên trong tế bào kết hợp với sự kích thích của ánh sáng, giúp bảo vệ các cơ quan sinh sản bên trong hoa khỏi điều kiện thời tiết bất lợi ban đêm, đồng thời thu hút côn trùng thụ phấn hiệu quả vào thời điểm ban ngày.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-clock"></i> Theo nhịp sinh học</div>
+                    <h2>Ứng động sinh trưởng</h2>
+                    <div class="subtitle">Vận động nở và cụp hoa theo nhịp điệu ánh sáng nhiệt độ</div>
+                    <div class="main-text">Ứng động sinh trưởng. Khác với ứng động không sinh trưởng diễn ra chớp nhoáng, ứng động sinh trưởng là hình thức vận động phản ứng dưới tác động của các kích thích không định hướng như ánh sáng hoặc nhiệt độ thay đổi theo chu kỳ ngày đêm, trong đó tốc độ sinh trưởng của các tế bào ở hai mặt đối diện của cơ quan thực vật có sự chênh lệch rõ rệt. Ví dụ tiêu biểu là hiện tượng hoa tulip hoặc hoa mười giờ nở ra vào ban ngày khi có ánh sáng và nhiệt độ ấm áp, sau đó cụp lại vào ban đêm hoặc khi nhiệt độ xuống thấp. Sự biến đổi này được điều khiển bởi nhịp sinh học nội sinh bên trong tế bào kết hợp với sự kích thích của ánh sáng, giúp bảo vệ các cơ quan sinh sản bên trong hoa khỏi điều kiện thời tiết bất lợi ban đêm, đồng thời thu hút côn trùng thụ phấn hiệu quả vào thời điểm ban ngày.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=photonastic+flower+opening" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> photonastic movement</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=circadian+rhythm+plants" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> circadian rhythm</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=tulip+flower+closing" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> floral nastic</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 11 -->
+            <div class="scene" data-speech="Vai trò sinh học của cảm ứng ở thực vật. Các hiện tượng cảm ứng bao gồm cả hướng động và ứng động đóng vai trò sinh học cực kỳ thiết yếu và không thể thay thế đối với sự sống còn và phát triển của toàn bộ giới thực vật. Nhờ có các phản ứng linh hoạt này, cây có thể tận dụng tối đa nguồn năng lượng ánh sáng mặt trời để quang hợp, chủ động vươn rễ tìm kiếm nguồn nước sạch và các chất dinh dưỡng khoáng phong phú trong đất, đồng thời kịp thời né tránh hoặc chống lại các tác động bất lợi từ môi trường ngoại cảnh như gió bão, khô hạn, ngập úng hay sự tấn công của các loài động vật ăn cỏ. Có thể khẳng định rằng, cảm ứng chính là chìa khóa sinh học quan trọng giúp thực vật vượt qua mọi thử thách khắc nghiệt của tự nhiên, duy trì nòi giống và phủ xanh khắp hành tinh.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-shield-heart"></i> Ý nghĩa</div>
+                    <h2>Vai trò thực tiễn</h2>
+                    <div class="subtitle">Ý nghĩa sinh tồn và thích nghi của thực vật trong tự nhiên</div>
+                    <div class="main-text">Vai trò sinh học của cảm ứng ở thực vật. Các hiện tượng cảm ứng bao gồm cả hướng động và ứng động đóng vai trò sinh học cực kỳ thiết yếu và không thể thay thế đối với sự sống còn và phát triển của toàn bộ giới thực vật. Nhờ có các phản ứng linh hoạt này, cây có thể tận dụng tối đa nguồn năng lượng ánh sáng mặt trời để quang hợp, chủ động vươn rễ tìm kiếm nguồn nước sạch và các chất dinh dưỡng khoáng phong phú trong đất, đồng thời kịp thời né tránh hoặc chống lại các tác động bất lợi từ môi trường ngoại cảnh như gió bão, khô hạn, ngập úng hay sự tấn công của các loài động vật ăn cỏ. Có thể khẳng định rằng, cảm ứng chính là chìa khóa sinh học quan trọng giúp thực vật vượt qua mọi thử thách khắc nghiệt của tự nhiên, duy trì nòi giống và phủ xanh khắp hành tinh.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=plant+survival+adaptation" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> plant survival</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=ecological+role+plants" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> ecological role</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=botanical+adaptation" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> botanical adaptation</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 12 -->
+            <div class="scene" data-speech="Tổng kết và hoàn thành. Chúng ta đã cùng nhau khám phá trọn vẹn mười hai cảnh trong bài trình diễn Video-as-Code về chủ đề cảm ứng ở thực vật. Từ khái niệm cơ bản, năm hình thức hướng động chính cho đến các dạng ứng động sinh trưởng và không sinh trưởng, tất cả đã phác họa nên bức tranh sinh động về sự thích nghi tuyệt vời của thực vật trước môi trường sống. Hy vọng bài trình diễn này mang lại cho bạn những kiến thức bổ ích, thú vị và trải nghiệm công nghệ frontend hiện đại, mượt mà. Cảm ơn sự quan tâm theo dõi của các bạn, chúc các bạn luôn học tập tốt và hẹn gặp lại trong các chủ đề chuyên sâu tiếp theo.">
+                <div class="scene-content-body">
+                    <div class="badge"><i class="fa-solid fa-flag-checkered"></i> Kết thúc</div>
+                    <h2>Tổng kết & Hoàn thành</h2>
+                    <div class="subtitle">Lời cảm ơn và kết thúc bài trình diễn Video-as-Code</div>
+                    <div class="main-text">Tổng kết và hoàn thành. Chúng ta đã cùng nhau khám phá trọn vẹn mười hai cảnh trong bài trình diễn Video-as-Code về chủ đề cảm ứng ở thực vật. Từ khái niệm cơ bản, năm hình thức hướng động chính cho đến các dạng ứng động sinh trưởng và không sinh trưởng, tất cả đã phác họa nên bức tranh sinh động về sự thích nghi tuyệt vời của thực vật trước môi trường sống. Hy vọng bài trình diễn này mang lại cho bạn những kiến thức bổ ích, thú vị và trải nghiệm công nghệ frontend hiện đại, mượt mà. Cảm ơn sự quan tâm theo dõi của các bạn, chúc các bạn luôn học tập tốt và hẹn gặp lại trong các chủ đề chuyên sâu tiếp theo.</div>
+                </div>
+                <div class="scene-meta-box">
+                    <div class="image-display-area">
+                        <span class="image-placeholder-text">[Chưa có ảnh minh họa. Dán URL ảnh bên dưới và bấm Load]</span>
+                    </div>
+                    <div class="interactive-row">
+                        <div class="url-input-group">
+                            <input type="text" class="url-input" placeholder="Dán URL ảnh minh họa vào đây..." data-img-target>
+                            <button class="load-img-btn">Load Ảnh</button>
+                        </div>
+                        <div class="keywords-group">
+                            <a href="https://www.google.com/search?tbm=isch&q=botany+summary" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> botany summary</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=plant+science+presentation" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> plant science</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=conclusion+education" target="_blank" class="keyword-tag"><i class="fa-solid fa-magnifying-glass"></i> presentation end</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Thanh Timeline -->
+        <div class="timeline-bar-wrapper">
+            <div class="timeline-progress" id="timelineProgress"></div>
+        </div>
+    </div>
+
+    <!-- Bảng điều khiển -->
+    <div class="controls-bar">
+        <div class="btn-group">
+            <button class="control-btn" id="prevBtn"><i class="fa-solid fa-backward-step"></i> Quay lại</button>
+            <button class="control-btn primary" id="playPauseBtn"><i class="fa-solid fa-pause" id="playPauseIcon"></i> <span id="playPauseText">Tạm dừng</span></button>
+            <button class="control-btn" id="nextBtn">Tiếp theo <i class="fa-solid fa-forward-step"></i></button>
+        </div>
+        <div class="voice-status" id="voiceStatus">
+            <i class="fa-solid fa-volume-high"></i> <span id="statusText">Đang đọc nội dung...</span>
+        </div>
+    </div>
+
+    <script>
+        const scenes = document.querySelectorAll('.scene');
+        const totalScenes = scenes.length;
+        let currentSceneIndex = 0;
+        let isPlaying = true;
+        let synth = window.speechSynthesis;
+        let currentUtterance = null;
+        let sceneTimer = null;
+
+        const sceneIndicator = document.getElementById('sceneIndicator');
+        const timelineProgress = document.getElementById('timelineProgress');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playPauseIcon = document.getElementById('playPauseIcon');
+        const playPauseText = document.getElementById('playPauseText');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const voiceStatus = document.getElementById('voiceStatus');
+        const statusText = document.getElementById('statusText');
+
+        // Font size control elements
+        const fontIncreaseBtn = document.getElementById('fontIncreaseBtn');
+        const fontDecreaseBtn = document.getElementById('fontDecreaseBtn');
+        const fontSizeIndicator = document.getElementById('fontSizeIndicator');
+        let currentFontScaleIndex = 1; // 0: Nhỏ, 1: Chuẩn, 2: Lớn, 3: Rất lớn
+        const fontScales = ['0.85rem', '1rem', '1.15rem', '1.3rem'];
+        const fontScaleNames = ['Nhỏ', 'Chuẩn', 'Lớn', 'Rất lớn'];
+
+        fontIncreaseBtn.addEventListener('click', () => {
+            if (currentFontScaleIndex < fontScales.length - 1) {
+                currentFontScaleIndex++;
+                document.documentElement.style.setProperty('--font-scale', fontScales[currentFontScaleIndex]);
+                fontSizeIndicator.textContent = `Cỡ chữ: ${fontScaleNames[currentFontScaleIndex]}`;
+            }
+        });
+
+        fontDecreaseBtn.addEventListener('click', () => {
+            if (currentFontScaleIndex > 0) {
+                currentFontScaleIndex--;
+                document.documentElement.style.setProperty('--font-scale', fontScales[currentFontScaleIndex]);
+                fontSizeIndicator.textContent = `Cỡ chữ: ${fontScaleNames[currentFontScaleIndex]}`;
+            }
+        });
+
+        // Xử lý load ảnh từ URL do người dùng nhập vào từng scene
+        scenes.forEach((scene) => {
+            const loadBtn = scene.querySelector('.load-img-btn');
+            const urlInput = scene.querySelector('.url-input');
+            const displayArea = scene.querySelector('.image-display-area');
+
+            if (loadBtn && urlInput && displayArea) {
+                loadBtn.addEventListener('click', () => {
+                    const url = urlInput.value.trim();
+                    if (url) {
+                        displayArea.innerHTML = `<img src="${url}" alt="Minh họa scene" onerror="this.onerror=null; this.parentElement.innerHTML='<span style=\\'color:#ef4444; font-size:0.8rem;\\'>Không thể tải ảnh từ URL này. Vui lòng kiểm tra lại đường dẫn!</span>';">`;
+                    }
+                });
+            }
+        });
+
+        // Chức năng Save As: Xuất file HTML hiện tại kèm theo các URL ảnh mà người dùng đã nhập
+        const saveAsBtn = document.getElementById('saveAsBtn');
+        saveAsBtn.addEventListener('click', () => {
+            // Lấy nội dung HTML hiện tại của document, cập nhật các giá trị value vào attribute của input
+            scenes.forEach((scene) => {
+                const input = scene.querySelector('.url-input');
+                if (input) {
+                    if (input.value.trim()) {
+                        input.setAttribute('value', input.value.trim());
+                    } else {
+                        input.removeAttribute('value');
+                    }
+                }
+            });
+
+            const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cam_ung_thuc_vat_custom.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Hàm khởi tạo hiệu ứng GSAP cho các phần tử trong Scene
+        function animateSceneIn(sceneElement) {
+            const badge = sceneElement.querySelector('.badge');
+            const h2 = sceneElement.querySelector('h2');
+            const subtitle = sceneElement.querySelector('.subtitle');
+            const mainText = sceneElement.querySelector('.main-text');
+            const metaBox = sceneElement.querySelector('.scene-meta-box');
+
+            gsap.fromTo([badge, h2, subtitle, mainText, metaBox], 
+                { y: 25, opacity: 0 }, 
+                { y: 0, opacity: 1, duration: 0.7, stagger: 0.1, ease: "power3.out" }
+            );
+        }
+
+        // Đọc văn bản tiếng Việt sử dụng Web Speech API
+        function speakCurrentScene(onComplete) {
+            if (!synth) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            synth.cancel();
+
+            const textToSpeech = scenes[currentSceneIndex].getAttribute('data-speech');
+            if (!textToSpeech) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            currentUtterance = new SpeechSynthesisUtterance(textToSpeech);
+            currentUtterance.lang = 'vi-VN';
+            currentUtterance.rate = 1.0;
+
+            const voices = synth.getVoices();
+            const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VN'));
+            if (viVoice) {
+                currentUtterance.voice = viVoice;
+            }
+
+            voiceStatus.classList.add('speaking');
+            statusText.textContent = "Đang đọc nội dung...";
+
+            let isFinished = false;
+            const finish = () => {
+                if (isFinished) return;
+                isFinished = true;
+                voiceStatus.classList.remove('speaking');
+                statusText.textContent = isPlaying ? "Đang phát..." : "Đã tạm dừng";
+                if (onComplete) onComplete();
+            };
+
+            currentUtterance.onend = finish;
+            currentUtterance.onerror = finish;
+
+            synth.speak(currentUtterance);
+
+            // Thời gian ước tính dựa trên số lượng ký tự (khoảng 60 ký tự/giây + 3 giây buffer cho bài dài 150-200 từ)
+            const estimatedDuration = Math.max(textToSpeech.length * 60, 6000);
+            
+            if (sceneTimer) clearTimeout(sceneTimer);
+            
+            if (isPlaying) {
+                startTimelineAnimation(estimatedDuration);
+                sceneTimer = setTimeout(() => {
+                    if (isPlaying) {
+                        finish();
+                        goToNextScene();
+                    }
+                }, estimatedDuration);
+            }
+        }
+
+        // Thanh timeline progress bar
+        let startTime = null;
+        let animationFrameId = null;
+
+        function startTimelineAnimation(duration) {
+            cancelAnimationFrame(animationFrameId);
+            startTime = performance.now();
+
+            function updateProgress(currentTime) {
+                if (!isPlaying) return;
+                const elapsed = currentTime - startTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                timelineProgress.style.width = progress + '%';
+
+                if (progress < 100) {
+                    animationFrameId = requestAnimationFrame(updateProgress);
+                }
+            }
+            animationFrameId = requestAnimationFrame(updateProgress);
+        }
+
+        function resetTimeline() {
+            cancelAnimationFrame(animationFrameId);
+            timelineProgress.style.width = '0%';
+        }
+
+        // Chuyển Scene
+        function showScene(index) {
+            synth.cancel();
+            if (sceneTimer) clearTimeout(sceneTimer);
+            resetTimeline();
+
+            scenes.forEach(s => s.classList.remove('active'));
+            currentSceneIndex = (index + totalScenes) % totalScenes;
+            
+            const activeScene = scenes[currentSceneIndex];
+            activeScene.classList.add('active');
+            sceneIndicator.textContent = `Scene ${currentSceneIndex + 1} / ${totalScenes}`;
+
+            animateSceneIn(activeScene);
+
+            if (isPlaying) {
+                speakCurrentScene();
+            }
+        }
+
+        function goToNextScene() {
+            showScene(currentSceneIndex + 1);
+        }
+
+        function goToPrevScene() {
+            showScene(currentSceneIndex - 1);
+        }
+
+        // Sự kiện điều khiển nút bấm
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playPauseIcon.className = "fa-solid fa-pause";
+                playPauseText.textContent = "Tạm dừng";
+                speakCurrentScene();
+            } else {
+                playPauseIcon.className = "fa-solid fa-play";
+                playPauseText.textContent = "Phát";
+                synth.cancel();
+                if (sceneTimer) clearTimeout(sceneTimer);
+                cancelAnimationFrame(animationFrameId);
+                voiceStatus.classList.remove('speaking');
+                statusText.textContent = "Đã tạm dừng";
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            goToNextScene();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            goToPrevScene();
+        });
+
+        if (synth && synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = () => synth.getVoices();
+        }
+
+        window.addEventListener('load', () => {
+            animateSceneIn(scenes[0]);
+            setTimeout(() => {
+                if (isPlaying) {
+                    speakCurrentScene();
+                }
+            }, 600);
+        });
+    </script>
+</body>
+</html>
