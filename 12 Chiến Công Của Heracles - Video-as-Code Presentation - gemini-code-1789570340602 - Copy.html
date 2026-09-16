@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>12 Chiến Công Của Heracles - Video-as-Code Presentation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --panel-bg: rgba(24, 24, 27, 0.75);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #06b6d4;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --font-main: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            --content-font-size: 1rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Presentation Frame 16:9 responsive */
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 177.78vh;
+            max-height: 56.25vw;
+            background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, var(--bg-color) 70%);
+            border: 1px solid var(--border-color);
+            border-radius: 0px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            .presentation-container {
+                border-radius: 16px;
+                width: 94vw;
+                height: 94vh;
+            }
+        }
+
+        /* Header Bar */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .header-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .scene-counter {
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent-secondary);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+        .btn-primary:hover {
+            background: #7c3aed;
+        }
+
+        /* Main Stage */
+        .stage {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-width: 900px) {
+            .stage {
+                grid-template-columns: 1.2fr 1fr;
+            }
+        }
+
+        .scene-content-pane {
+            padding: 24px 32px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 2;
+            overflow-y: auto;
+        }
+
+        @media (min-width: 900px) {
+            .scene-content-pane {
+                padding: 40px;
+            }
+        }
+
+        .scene-texts {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .scene-subtitle {
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .scene-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #fff;
+        }
+
+        @media (min-width: 900px) {
+            .scene-title {
+                font-size: 2.3rem;
+            }
+        }
+
+        .scene-body {
+            font-size: var(--content-font-size);
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-top: 6px;
+            max-width: 600px;
+        }
+
+        /* Keywords Badges */
+        .keywords-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .keyword-badge {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #c4b5fd;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-family: var(--font-code);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .keyword-badge:hover {
+            background: rgba(139, 92, 246, 0.3);
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+
+        /* Image & Custom URL Pane */
+        .scene-media-pane {
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border-top: 1px solid var(--border-color);
+            padding: 20px;
+        }
+
+        @media (min-width: 900px) {
+            .scene-media-pane {
+                border-top: none;
+                border-left: 1px solid var(--border-color);
+                padding: 30px;
+            }
+        }
+
+        .media-frame {
+            width: 100%;
+            height: 100%;
+            max-height: 280px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            position: relative;
+            background: #121215;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @media (min-width: 900px) {
+            .media-frame {
+                max-height: 340px;
+            }
+        }
+
+        .media-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .media-frame:hover img {
+            transform: scale(1.03);
+        }
+
+        /* Input URL & Customization Toolbar */
+        .customization-bar {
+            width: 100%;
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .url-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .url-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #fff;
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .url-input:focus {
+            border-color: var(--accent-secondary);
+        }
+
+        /* Footer Controls */
+        footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            border-top: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timeline-container {
+            flex: 1;
+            margin: 0 20px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            display: none;
+        }
+
+        @media (min-width: 600px) {
+            .timeline-container {
+                display: block;
+            }
+        }
+
+        .timeline-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+            transition: width 0.1s linear;
+        }
+
+        .shortcuts-hint {
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        @media (min-width: 1100px) {
+            .shortcuts-hint {
+                display: block;
+            }
+        }
+
+        /* Utility classes */
+        .icon {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+
+<div class="presentation-container">
+    <!-- Header -->
+    <header>
+        <div class="header-title">12 Chiến Công Của Heracles</div>
+        <div class="header-controls">
+            <div class="scene-counter" id="sceneCounter">Scene 1 / 36</div>
+            <button class="btn" id="fontDecreaseBtn" title="Giảm cỡ chữ">A-</button>
+            <button class="btn" id="fontIncreaseBtn" title="Tăng cỡ chữ">A+</button>
+            <button class="btn btn-primary" id="saveAsBtn">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/></svg>
+                Save As
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Stage -->
+    <main class="stage">
+        <!-- Content Pane -->
+        <div class="scene-content-pane">
+            <div class="scene-texts">
+                <div class="scene-subtitle" id="sceneSubtitle">Chiến công 1: Sư tử Nemea</div>
+                <h2 class="scene-title" id="sceneTitle">1. Săn lùng quái thú</h2>
+                <p class="scene-body" id="sceneBody">Heracles bước vào vùng đất Nemea để đối đầu với con sư tử hung dữ có bộ lông dày miễn nhiễm với mọi thứ vũ khí bằng sắt, đồng hay đá. Người anh hùng bắt buộc phải dùng chính đôi tay trần mạnh mẽ của mình để khuất phục nó.</p>
+            </div>
+            <div class="keywords-container" id="keywordsContainer">
+                <!-- Keywords injected by JS -->
+            </div>
+        </div>
+
+        <!-- Media & Input Pane -->
+        <div class="scene-media-pane">
+            <div class="media-frame">
+                <img id="sceneImage" src="https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80" alt="Scene Illustration">
+            </div>
+            <div class="customization-bar">
+                <div class="url-input-group">
+                    <input type="text" class="url-input" id="imageUrlInput" placeholder="Dán URL hình ảnh minh họa tùy chỉnh vào đây...">
+                    <button class="btn" id="applyImageBtn">Cập nhật</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Controls -->
+    <footer>
+        <div class="playback-controls">
+            <button class="btn" id="prevBtn" title="Cảnh trước (J / ArrowLeft)">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg> Prev
+            </button>
+            <button class="btn btn-primary" id="playPauseBtn" title="Phát/Tạm dừng (Space / K)">
+                <svg class="icon" id="playPauseIcon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> <span id="playPauseText">Pause</span>
+            </button>
+            <button class="btn" id="nextBtn" title="Cảnh tiếp theo (L / ArrowRight)">
+                Next <svg class="icon" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+        </div>
+
+        <div class="timeline-container">
+            <div class="timeline-bar" id="timelineBar"></div>
+        </div>
+
+        <div class="shortcuts-hint">
+            Space/K: Play/Pause | J/L: Prev/Next | M: Mute TTS
+        </div>
+    </footer>
+</div>
+
+<script>
+    // Dữ liệu 36 Scene về 12 chiến công của Heracles (Mỗi chiến công 3 scene)
+    const scenesData = [
+        // --- CHIẾN CÔNG 1: Sư tử Nemea ---
+        {
+            subtitle: "Chiến công 1: Sư tử Nemea (Phần 1)",
+            title: "1. Thử thách bắt đầu tại Nemea",
+            body: "Vua Eurystheus giao nhiệm vụ đầu tiên đầy hiểm trở cho Heracles: tiêu diệt con sư tử Nemea có lớp da cứng như thép, gieo rắc nỗi kinh hoàng cho toàn bộ vùng thung lũng xung quanh.",
+            keywords: ["Nemean Lion", "Eurystheus", "Greek Mythology"],
+            image: "https://images.unsplash.com/photo-1534188752537-edef5405406e?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 1: Sư tử Nemea (Phần 2)",
+            title: "2. Vũ khí vô tác dụng",
+            body: "Khi phát hiện gươm giáo và cung tên hoàn toàn bất lực trước lớp da đồng của quái thú, Heracles quyết định dồn nó vào hang động tối tăm để giáp chiến trực diện bằng tay không.",
+            keywords: ["Invulnerable Skin", "Cave Battle", "Ancient Hero"],
+            image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 1: Sư tử Nemea (Phần 3)",
+            title: "3. Chiến thắng và chiến bào",
+            body: "Bằng sức mạnh vô địch, Heracles siết cổ con sư tử đến chết. Sử dụng chính móng vuốt sắc nhọn của nó để lột da, anh biến nó thành tấm áo choàng và chiếc mũ bảo hiểm bất khả chiến bại.",
+            keywords: ["Lion Pelt", "Heroic Victory", "Legendary Armor"],
+            image: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 2: Lernaean Hydra ---
+        {
+            subtitle: "Chiến công 2: Con thủy quái Lerna (Phần 1)",
+            title: "4. Đầm lầy Lerna chết chóc",
+            body: "Heracles tiến vào đầm lầy u ám Lerna để đối đầu với Hydra, con rắn nước nhiều đầu có hơi thở và nọc độc cực kỳ chết chóc, đại diện cho sự kinh hoàng từ sâu thẳm lòng đất.",
+            keywords: ["Lernaean Hydra", "Swamp Monster", "Poisonous Breath"],
+            image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 2: Con thủy quái Lerna (Phần 2)",
+            title: "5. Bài toán chặt đầu mọc lại",
+            body: "Mỗi khi Heracles chặt đứt một chiếc đầu của con thủy quái, ngay lập tức hai chiếc đầu khác lại mọc lên thay thế. Trận chiến trở nên vô cùng bế tắc nếu không có sự trợ giúp kịp thời.",
+            keywords: ["Multiple Heads", "Iolaus Assistance", "Epic Battle"],
+            image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 2: Con thủy quái Lerna (Phần 3)",
+            title: "6. Ngọn lửa và mũi tên độc",
+            body: "Được sự trợ giúp của người cháu Iolaus dùng ngọn đuốc đốt cháy các vết thương để ngăn đầu mọc lại, Heracles tiêu diệt hoàn toàn chiếc đầu bất tử cuối cùng và nhúng mũi tên vào máu độc của nó.",
+            keywords: ["Hydra Venom", "Flames", "Clever Strategy"],
+            image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 3: Ceryneian Hind ---
+        {
+            subtitle: "Chiến công 3: Hươu vàng Ceryneia (Phần 1)",
+            title: "7. Sinh vật thần thánh của Artemis",
+            body: "Heracles nhận nhiệm vụ bắt sống con hươu cái Ceryneia có bộ sừng bằng vàng ròng và đôi chân móng đồng phi nhanh hơn cả gió, vật sủng ái linh thiêng của nữ thần săn bắn Artemis.",
+            keywords: ["Ceryneian Hind", "Golden Antlers", "Goddess Artemis"],
+            image: "https://images.unsplash.com/photo-1484406566174-9da000fda645?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 3: Hươu vàng Ceryneia (Phần 2)",
+            title: "8. Cuộc rượt đuổi xuyên lục địa",
+            body: "Không được làm tổn thương con hươu thần thánh, Heracles buộc phải kiên nhẫn bám đuổi nó qua những khu rừng rậm và núi non hiểm trở suốt ròng rã cả một năm trời.",
+            keywords: ["Endurance Chase", "Wilderness", "Patient Hunter"],
+            image: "https://images.unsplash.com/photo-1511497584788-876761142212?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 3: Hươu vàng Ceryneia (Phần 3)",
+            title: "9. Sự tha thứ từ nữ thần",
+            body: "Khi con hươu mệt lả bên bờ suối, Heracles nhẹ nhàng phóng mũi tên xuyên qua gân chân nó để khống chế. Sau đó, anh khéo léo giải thích và được nữ thần Artemis tha thứ.",
+            keywords: ["Captured Deer", "Divine Forgiveness", "Triumph"],
+            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 4: Erymanthian Boar ---
+        {
+            subtitle: "Chiến công 4: Lợn rừng Erymanthus (Phần 1)",
+            title: "10. Con lợn rừng khổng lồ",
+            body: "Nhiệm vụ tiếp theo đưa Heracles lên ngọn núi cao Erymanthus tuyết phủ trắng xóa, nơi con lợn rừng hung ác đang tàn phá mùa màng và đe dọa sinh mạng người dân vô tội.",
+            keywords: ["Erymanthian Boar", "Snowy Mountain", "Fierce Beast"],
+            image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 4: Lợn rừng Erymanthus (Phần 2)",
+            title: "11. Bẫy tuyết sâu",
+            body: "Bằng tiếng hét vang dội kết hợp với việc đuổi bắt kiên trì, Heracles lùa con lợn rừng khổng lồ vào sâu trong các hố tuyết dày đặc khiến nó kiệt sức vì sụt lún.",
+            keywords: ["Deep Snow", "Chasing Boar", "Strategy"],
+            image: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 4: Lợn rừng Erymanthus (Phần 3)",
+            title: "12. Trói buộc quái thú",
+            body: "Heracles trói chặt con lợn rừng khổng lồ vào đòn gánh trên vai, thản nhiên mang nó về kinh đô Mycenae trong sự kinh ngạc tột độ của nhà vua.",
+            keywords: ["Bound Boar", "Mycenae Return", "Heroic Feat"],
+            image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 5: Augean Stables ---
+        {
+            subtitle: "Chiến công 5: Chuồng gia súc của Augeas (Phần 1)",
+            title: "13. Chuồng ngựa khổng lồ bẩn thỉu",
+            body: "Vua Augeas sở hữu hàng ngàn con gia súc thần thánh và chuồng nuôi không bao giờ được dọn dẹp suốt ba mươi năm, bốc mùi hôi thối nồng nặc cả một vùng lãnh thổ rộng lớn.",
+            keywords: ["Augean Stables", "King Augeas", "Filth and Stench"],
+            image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 5: Chuồng gia súc của Augeas (Phần 2)",
+            title: "14. Kế hoạch thông minh",
+            body: "Nhận thấy việc dọn dẹp bằng sức người là bất khả thi trong một ngày, Heracles nghĩ ra một giải pháp thiên tài: lợi dụng sức mạnh tự nhiên của dòng nước.",
+            keywords: ["Clever Engineering", "Natural Force", "Master Plan"],
+            image: "https://images.unsplash.com/photo-1434725039720-aaad6dd32dfe?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 5: Chuồng gia súc của Augeas (Phần 3)",
+            title: "15. Đổi dòng sông dội sạch",
+            body: "Heracles dùng cuốc xẻng đào thông hai dòng sông Alphaeus và Peneus, đổi hướng dòng chảy băng qua chuồng gia súc, cuốn trôi toàn bộ rác rưởi chỉ trong vòng vài giờ ngắn ngủi.",
+            keywords: ["River Diversion", "Clean Stables", "Quick Success"],
+            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 6: Stymphalian Birds ---
+        {
+            subtitle: "Chiến công 6: Chim ác hồ Stymphalos (Phần 1)",
+            title: "16. Đàn chim đồng khát máu",
+            body: "Rừng hồ Stymphalos bị chiếm đóng bởi đàn chim quái vật có bộ lông bằng đồng sắc nhọn như dao găm, cánh sắc có thể phóng ra bắn hạ người dân và ăn thịt con mồi.",
+            keywords: ["Stymphalian Birds", "Bronze Feathers", "Killer Flock"],
+            image: "https://images.unsplash.com/photo-1444464666168-49d633b86797?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 6: Chim ác hồ Stymphalos (Phần 2)",
+            title: "17. Tiếng chuông đồng vang dội",
+            body: "Được nữ thần Athena ban cho chiếc cặp xập xòa bằng đồng thiếc đặc biệt, Heracles leo lên vách núi cao gõ liên hồi để tạo ra âm thanh chói tai làm đàn chim hoảng sợ bay lên.",
+            keywords: ["Athena Rattles", "Loud Noise", "Flushing Birds"],
+            image: "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 6: Chim ác hồ Stymphalos (Phần 3)",
+            title: "18. Cung tên thần thánh",
+            body: "Khi đàn chim bay vụt lên bầu trời che khuất cả ánh mặt trời, Heracles nhanh tay dùng cung tên tẩm độc tơi tả bắn hạ phần lớn lũ chim ác, số còn lại hoảng sợ bay đi mất.",
+            keywords: ["Archery", "Scattering Flock", "Victory"],
+            image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 7: Cretan Bull ---
+        {
+            subtitle: "Chiến công 7: Bò mộng đảo Crete (Phần 1)",
+            title: "19. Con bò mộng cuồng nộ",
+            body: "Heracles vượt biển đến đảo Crete để khuất phục con bò mộng trắng khổng lồ phun ra lửa và tàn phá mùa màng do thần biển Poseidon trừng phạt nhà vua Minos.",
+            keywords: ["Cretan Bull", "King Minos", "Island of Crete"],
+            image: "https://images.unsplash.com/photo-1558788353-f76d92427f16?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 7: Bò mộng đảo Crete (Phần 2)",
+            title: "20. Cuộc giáp chiến trên đồng cỏ",
+            body: "Bằng sức mạnh tay không siêu phàm, người anh hùng lao vào ôm lấy cổ con bò mộng cuồng nộ, vật lộn quyết liệt trên những cánh đồng cỏ rộng lớn của đảo Crete.",
+            keywords: ["Wrestling Bull", "Raw Strength", "Epic Struggle"],
+            image: "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 7: Bò mộng đảo Crete (Phần 3)",
+            title: "21. Thuần hóa và vượt biển",
+            body: "Sau khi khuất phục thành công sự hung hăng của con vật, Heracles trói nó lại và cưỡi trên lưng nó bơi vượt đại dương trở về đất liền Hy Lạp.",
+            keywords: ["Tamed Beast", "Ocean Crossing", "Triumph"],
+            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 8: Mares of Diomedes ---
+        {
+            subtitle: "Chiến công 8: Đàn ngựa ăn thịt người (Phần 1)",
+            title: "22. Vương quốc Thrace tàn ác",
+            body: "Heracles đối mặt với bầy ngựa chiến dữ tợn của vua Diomedes vùng Thrace, loài vật quý hiếm chuyên được nuôi dưỡng bằng thịt người và máu tươi.",
+            keywords: ["Mares of Diomedes", "Thrace", "Man-eating Horses"],
+            image: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 8: Đàn ngựa ăn thịt người (Phần 2)",
+            title: "23. Trừng phạt bạo chúa",
+            body: "Sau khi đánh bại và ném chính bạo chúa Diomedes cho đàn ngựa ăn thịt để trả giá cho tội ác, bầy ngựa bỗng trở nên thuần tính hơn trong chốc lát.",
+            keywords: ["Tyrant's Fate", "Justice", "Beast Control"],
+            image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 8: Đàn ngựa ăn thịt người (Phần 3)",
+            title: "24. Đưa bầy ngựa về kinh đô",
+            body: "Heracles dễ dàng dẫn dắt bầy ngựa vượt qua chặng đường dài về dâng lên vua Eurystheus, sau đó chúng được thả tự do về những ngọn núi hoang dã.",
+            keywords: ["Returning Horses", "Wild Freedom", "Success"],
+            image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 9: Belt of Hippolyta ---
+        {
+            subtitle: "Chiến công 9: Chiếc đai lưng của Hippolyta (Phần 1)",
+            title: "25. Hành trình đến xứ sở Amazon",
+            body: "Heracles cùng đoàn thủy thủ dong buồm đến vùng đất của những nữ chiến binh Amazon dũng mãnh để lấy chiếc đai lưng thần kỳ theo yêu cầu của công chúa Admete.",
+            keywords: ["Amazon Warriors", "Hippolyta Belt", "Voyage"],
+            image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 9: Chiếc đai lưng của Hippolyta (Phần 2)",
+            title: "26. Âm mưu của nữ thần Hera",
+            body: "Nữ thần Hera cải trang thành một nữ chiến binh Amazon, phao tin giả rằng Heracles đến để bắt cóc nữ vương Hippolyta, khiến bộ tộc nổi giận bao vây chiến thuyền.",
+            keywords: ["Goddess Hera", "Betrayal", "Tension"],
+            image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 9: Chiếc đai lưng của Hippolyta (Phần 3)",
+            title: "27. Hoàn thành sứ mệnh ngoại giao",
+            body: "Dù xảy ra trận chiến hiểu lầm đáng tiếc, cuối cùng Heracles cũng nhận được chiếc đai lưng quý giá từ nữ vương Hippolyta và mang về hoàn thành nhiệm vụ.",
+            keywords: ["Belts Secured", "Diplomacy", "Victory"],
+            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 10: Cattle of Geryon ---
+        {
+            subtitle: "Chiến công 10: Đàn bò của Geryon (Phần 1)",
+            title: "28. Quái vật ba đầu Geryon",
+            body: "Heracles đến tận hòn đảo Erytheia xa xôi ở tận cùng phương Tây để cướp về đàn bò đỏ quý giá thuộc sở hữu của gã khổng lồ ba đầu Geryon.",
+            keywords: ["Cattle of Geryon", "Three-headed Giant", "Far West"],
+            image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 10: Đàn bò của Geryon (Phần 2)",
+            title: "29. Chiếc cốc vàng của thần Helios",
+            body: "Để vượt qua đại dương mênh mông, Heracles được thần mặt trời Helios cho mượn chiếc cốc vàng khổng lồ làm thuyền chèo lướt trên sóng nước.",
+            keywords: ["Helios Golden Cup", "Ocean Voyage", "Mythic Tool"],
+            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 10: Đàn bò của Geryon (Phần 3)",
+            title: "30. Trận chiến quyết định",
+            body: "Sau khi tiêu diệt con chó hai đầu Orthrus và gã khổng lồ Geryon bằng những mũi tên tẩm độc thần tốc, Heracles lùa toàn bộ đàn bò vượt đường dài trở về Hy Lạp.",
+            keywords: ["Archery Victory", "Driving Cattle", "Heroic Return"],
+            image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 11: Apples of the Hesperides ---
+        {
+            subtitle: "Chiến công 11: Những quả táo vàng Hesperides (Phần 1)",
+            title: "31. Vườn táo vàng thần bí",
+            body: "Heracles lên đường tìm kiếm khu vườn thần bí của các nàng tiên Hesperides, nơi cất giữ những quả táo vàng bất tử được canh gác bởi con rồng trăm đầu Ladon.",
+            keywords: ["Golden Apples", "Hesperides Garden", "Dragon Ladon"],
+            image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 11: Những quả táo vàng Hesperides (Phần 2)",
+            title: "32. Thỏa thuận với Atlas",
+            body: "Để hái được táo vàng mà không bị rồng cản trở, Heracles nhờ thần Atlas gánh vác bầu trời thay mình trong lúc Atlas đi hái những quả táo.",
+            keywords: ["Titan Atlas", "Holding the Sky", "Clever Swap"],
+            image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 11: Những quả táo vàng Hesperides (Phần 3)",
+            title: "33. Mưu mẹo vượt qua Titan",
+            body: "Khi Atlas quay lại và định bỏ mặc bầu trời cho Heracles gánh vác mãi mãi, anh nhanh trí nhờ Atlas giữ hộ một chút để chỉnh lại đệm vai rồi lập tức vác táo bỏ đi.",
+            keywords: ["Smart Trick", "Apples Secured", "Triumph"],
+            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+        },
+
+        // --- CHIẾN CÔNG 12: Cerberus ---
+        {
+            subtitle: "Chiến công 12: Chó ba đầu Cerberus (Phần 1)",
+            title: "34. Xuống âm phủ Tartarus",
+            body: "Chiến công cuối cùng đầy hiểm nguy và ám ảnh nhất: Heracles phải trực tiếp bước xuống thế giới bên kia u tối để bắt sống con chó ba đầu Cerberus canh giữ cổng địa ngục.",
+            keywords: ["Underworld", "Cerberus", "Hades Kingdom"],
+            image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 12: Chó ba đầu Cerberus (Phần 2)",
+            title: "35. Sự cho phép của thần Hades",
+            body: "Nhờ sự bảo bọc của các vị thần Athena và Hermes, Heracles diện kiến thần Hades và nhận được sự đồng ý bắt Cerberus với điều kiện không được dùng vũ khí sát thương.",
+            keywords: ["God Hades", "No Weapons", "Permission"],
+            image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+            subtitle: "Chiến công 12: Chó ba đầu Cerberus (Phần 3)",
+            title: "36. Hoàn thành 12 kỳ công",
+            body: "Bằng đôi tay thép và sức mạnh vô địch, Heracles ôm chặt cổ con quái thú ba đầu cho đến khi nó khuất phục hoàn toàn, mang về dâng vua Eurystheus, khép lại hành trình huyền thoại.",
+            keywords: ["Final Labor", "Subduing Beast", "Legendary Hero"],
+            image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80"
+        }
+    ];
+
+    let currentSceneIndex = 0;
+    let isPlaying = true;
+    let isMuted = false;
+    let speechUtterance = null;
+    let contentFontSize = 1; // rem
+
+    // DOM Elements
+    const sceneCounter = document.getElementById('sceneCounter');
+    const sceneSubtitle = document.getElementById('sceneSubtitle');
+    const sceneTitle = document.getElementById('sceneTitle');
+    const sceneBody = document.getElementById('sceneBody');
+    const keywordsContainer = document.getElementById('keywordsContainer');
+    const sceneImage = document.getElementById('sceneImage');
+    const imageUrlInput = document.getElementById('imageUrlInput');
+    const applyImageBtn = document.getElementById('applyImageBtn');
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const playPauseIcon = document.getElementById('playPauseIcon');
+    const playPauseText = document.getElementById('playPauseText');
+    const timelineBar = document.getElementById('timelineBar');
+
+    const fontDecreaseBtn = document.getElementById('fontDecreaseBtn');
+    const fontIncreaseBtn = document.getElementById('fontIncreaseBtn');
+    const saveAsBtn = document.getElementById('saveAsBtn');
+
+    // Initialize Presentation
+    function initScene(index, animate = true) {
+        if (index < 0) index = scenesData.length - 1;
+        if (index >= scenesData.length) index = 0;
+        currentSceneIndex = index;
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const scene = scenesData[currentSceneIndex];
+        sceneCounter.textContent = `Scene ${currentSceneIndex + 1} / ${scenesData.length}`;
+        sceneSubtitle.textContent = scene.subtitle;
+        sceneTitle.textContent = scene.title;
+        sceneBody.textContent = scene.body;
+        sceneImage.src = scene.image;
+        imageUrlInput.value = scene.image;
+
+        // Render Keywords
+        keywordsContainer.innerHTML = '';
+        scene.keywords.forEach(kw => {
+            const badge = document.createElement('div');
+            badge.className = 'keyword-badge';
+            badge.textContent = `#${kw}`;
+            badge.onclick = () => {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(kw + " Greek mythology")}&tbm=isch`, '_blank');
+            };
+            keywordsContainer.appendChild(badge);
+        });
+
+        // GSAP Entry Animation
+        if (animate) {
+            gsap.fromTo('.scene-content-pane', { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out' });
+            gsap.fromTo('.media-frame', { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.6, ease: 'power2.out' });
+        }
+
+        // Handle Speech & Auto-Advance Logic
+        if (isPlaying && !isMuted) {
+            speakCurrentScene();
+        } else if (isPlaying && isMuted) {
+            // Nếu mute nhưng vẫn bật play, dùng timer giả lập độ dài đọc (ví dụ 6 giây mỗi scene)
+            startTimelineSimulation(6000);
+        }
+    }
+
+    // Web Speech API Integration
+    function speakCurrentScene() {
+        const scene = scenesData[currentSceneIndex];
+        const textToSpeech = `${scene.title}. ${scene.body}`;
+        
+        speechUtterance = new SpeechSynthesisUtterance(textToSpeech);
+        speechUtterance.lang = 'vi-VN';
+        speechUtterance.rate = 1.05;
+
+        // Tính thời gian ước lượng dựa trên số lượng từ để chạy thanh timeline mượt mà
+        const wordCount = textToSpeech.split(/\s+/).length;
+        const estimatedDurationMs = Math.max(4000, wordCount * 300);
+
+        startTimelineSimulation(estimatedDurationMs);
+
+        speechUtterance.onend = () => {
+            if (isPlaying) {
+                nextScene();
+            }
+        };
+
+        speechUtterance.onerror = () => {
+            // Fallback nếu lỗi đọc tiếng Việt
+            console.warn("Speech synthesis error or interrupted.");
+        };
+
+        window.speechSynthesis.speak(speechUtterance);
+    }
+
+    let timelineTween = null;
+    function startTimelineSimulation(durationMs) {
+        if (timelineTween) timelineTween.kill();
+        timelineBar.style.width = '0%';
+        timelineTween = gsap.to(timelineBar, {
+            width: '100%',
+            duration: durationMs / 1000,
+            ease: 'linear'
+        });
+    }
+
+    function nextScene() {
+        initScene(currentSceneIndex + 1);
+    }
+
+    function prevScene() {
+        initScene(currentSceneIndex - 1);
+    }
+
+    function togglePlayPause() {
+        isPlaying = !isPlaying;
+        if (isPlaying) {
+            playPauseIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            playPauseText.textContent = 'Pause';
+            speakCurrentScene();
+        } else {
+            playPauseIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            playPauseText.textContent = 'Play';
+            window.speechSynthesis.cancel();
+            if (timelineTween) timelineTween.pause();
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        if (isMuted) {
+            window.speechSynthesis.cancel();
+            if (isPlaying) startTimelineSimulation(6000);
+        } else if (isPlaying) {
+            speakCurrentScene();
+        }
+    }
+
+    // Event Listeners for Controls
+    nextBtn.onclick = () => initScene(currentSceneIndex + 1);
+    prevBtn.onclick = () => prevScene();
+    playPauseBtn.onclick = () => togglePlayPause();
+
+    // Custom Image URL Handler
+    applyImageBtn.onclick = () => {
+        const newUrl = imageUrlInput.value.trim();
+        if (newUrl) {
+            scenesData[currentSceneIndex].image = newUrl;
+            sceneImage.src = newUrl;
+        }
+    };
+
+    imageUrlInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            applyImageBtn.click();
+        }
+    };
+
+    // Font Size Adjusters
+    fontIncreaseBtn.onclick = () => {
+        if (contentFontSize < 1.3) {
+            contentFontSize += 0.1;
+            document.documentElement.style.setProperty('--content-font-size', `${contentFontSize}rem`);
+        }
+    };
+
+    fontDecreaseBtn.onclick = () => {
+        if (contentFontSize > 0.8) {
+            contentFontSize -= 0.1;
+            document.documentElement.style.setProperty('--content-font-size', `${contentFontSize}rem`);
+        }
+    };
+
+    // Save As Client-side HTML Download Feature
+    saveAsBtn.onclick = () => {
+        // Cập nhật lại toàn bộ mã nguồn HTML hiện tại kèm theo state mới nhất của scenesData
+        const updatedHtml = document.documentElement.outerHTML;
+        const blob = new Blob([updatedHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'heracles_12_labors_updated.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return; // Bỏ qua khi đang gõ trong ô input URL
+
+        switch (e.code) {
+            case 'Space':
+            case 'KeyK':
+                e.preventDefault();
+                togglePlayPause();
+                break;
+            case 'ArrowRight':
+            case 'KeyL':
+                e.preventDefault();
+                initScene(currentSceneIndex + 1);
+                break;
+            case 'ArrowLeft':
+            case 'KeyJ':
+                e.preventDefault();
+                initScene(currentSceneIndex - 1);
+                break;
+            case 'KeyM':
+                e.preventDefault();
+                toggleMute();
+                break;
+        }
+    });
+
+    // Khởi chạy Scene đầu tiên khi trang tải xong
+    window.addEventListener('DOMContentLoaded', () => {
+        initScene(0, false);
+    });
+</script>
+
+</body>
+</html>
