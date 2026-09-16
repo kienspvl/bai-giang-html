@@ -1,0 +1,788 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tứ Bất Tử - Video-as-Code Presentation</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- GSAP & Plugins -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --panel-bg: rgba(18, 18, 24, 0.75);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #06b6d4;
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #050507;
+            color: var(--text-main);
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Ambient background glow */
+        .ambient-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.05) 50%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+            filter: blur(60px);
+        }
+
+        .presentation-container {
+            position: relative;
+            width: 1200px;
+            height: 675px; /* 16:9 aspect ratio */
+            background: var(--bg-color);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(139, 92, 246, 0.1);
+            overflow: hidden;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scene Management */
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            padding: 50px;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 40px;
+            align-items: center;
+            background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.08), transparent 50%),
+                        radial-gradient(circle at bottom left, rgba(6, 182, 212, 0.05), transparent 50%);
+        }
+
+        .scene.active {
+            display: grid;
+        }
+
+        .scene-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .scene-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #c4b5fd;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            width: fit-content;
+        }
+
+        .scene-title {
+            font-size: 2.75rem;
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .scene-desc {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+        }
+
+        .scene-bullets {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .scene-bullets li {
+            position: relative;
+            padding-left: 24px;
+            font-size: 1.05rem;
+            color: #e4e4e7;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .scene-bullets li::before {
+            content: '✦';
+            color: var(--accent-primary);
+            font-size: 0.9rem;
+            margin-top: 2px;
+        }
+
+        /* Image Frame */
+        .scene-media {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background: rgba(24, 24, 27, 0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .scene-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .scene-media::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(9, 9, 11, 0.6), transparent 50%);
+            pointer-events: none;
+        }
+
+        /* Tags container inside scene info */
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .tag {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-secondary);
+        }
+
+        /* Top Bar & Branding */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .brand {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .scene-counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Timeline / Progress Bar */
+        .timeline-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 10;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.1s linear;
+        }
+
+        /* External Controls */
+        .controls-wrapper {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 10;
+        }
+
+        .btn {
+            background: rgba(24, 24, 27, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(39, 39, 42, 0.9);
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #7c3aed;
+        }
+
+        .audio-status {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <div class="presentation-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="brand">HYPERFRAMES // TỨ BẤT TỬ</div>
+            <div class="scene-counter" id="sceneCounter">SCENE 01 / 12</div>
+        </div>
+
+        <!-- Scene 1 -->
+        <div class="scene active" data-scene="1" data-script="Sơn Tinh: Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử. Còn gọi là Tản Viên Sơn Thánh. Gắn với núi Ba Vì. Biểu tượng chinh phục và chung sống với tự nhiên.">
+            <div class="scene-content">
+                <div class="scene-badge">Vị thần núi đầu tiên</div>
+                <h2 class="scene-title">Sơn Tinh</h2>
+                <p class="scene-desc">Tản Viên Sơn Thánh là vị thần núi tiêu biểu trong Tứ Bất Tử, đại diện cho ý chí quật cường của người Việt trước thiên tai.</p>
+                <ul class="scene-bullets">
+                    <li>Còn gọi là Tản Viên Sơn Thánh</li>
+                    <li>Gắn liền với ngọn núi Ba Vì thiêng liêng</li>
+                    <li>Biểu tượng chinh phục và chung sống với tự nhiên</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Tản Vien Son Thanh</span>
+                    <span class="tag">Ba Vi Mountain</span>
+                    <span class="tag">Vietnamese mythology</span>
+                    <span class="tag">Natural disaster</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://phuday.com/wp-content/uploads/2021/11/duc-tan-vien-son-thanh-la-ai-2.jpg" alt="Sơn Tinh">
+            </div>
+        </div>
+
+        <!-- Scene 2 -->
+        <div class="scene" data-scene="2" data-script="Thánh Gióng: Phù Đổng Thiên Vương là biểu tượng chống giặc ngoại xâm. Còn gọi là Phù Đổng Thiên Vương. Đánh giặc Ân. Bay về trời sau chiến thắng.">
+            <div class="scene-content">
+                <div class="scene-badge">Biểu tượng anh hùng</div>
+                <h2 class="scene-title">Thánh Gióng</h2>
+                <p class="scene-desc">Phù Đổng Thiên Vương là biểu tượng rực rỡ cho tinh thần yêu nước và sức mạnh đoàn kết chống giặc ngoại xâm của dân tộc.</p>
+                <ul class="scene-bullets">
+                    <li>Còn gọi là Phù Đổng Thiên Vương</li>
+                    <li>Đánh tan giặc Ân xâm lược</li>
+                    <li>Bay về trời sau khi giành chiến thắng vẻ vang</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Thanh Giong</span>
+                    <span class="tag">Phu Dong Village</span>
+                    <span class="tag">Foreign invaders</span>
+                    <span class="tag">National hero</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRcVStxR3AbbnR1Ev1ZAdWy_JdBa0G1HWmf3KAyoMs-fbKGfEHynjKxp1sb&s=10" alt="Thánh Gióng">
+            </div>
+        </div>
+
+        <!-- Scene 3 -->
+        <div class="scene" data-scene="3" data-script="Chử Đồng Tử: Chử Đồng Tử là hình tượng gắn với lao động, tình yêu và đạo hiếu. Kết duyên với Tiên Dung. Khai phá và buôn bán. Tu đạo thành tiên.">
+            <div class="scene-content">
+                <div class="scene-badge">Tình yêu & Đạo lý</div>
+                <h2 class="scene-title">Chử Đồng Tử</h2>
+                <p class="scene-desc">Chử Đồng Tử là hình tượng nhân văn sâu sắc gắn liền với lao động, tình yêu tự do và đạo hiếu làm con.</p>
+                <ul class="scene-bullets">
+                    <li>Kết duyên huyền thoại cùng công chúa Tiên Dung</li>
+                    <li>Khai phá đất đai và phát triển buôn bán sầm uất</li>
+                    <li>Tu đạo thành tiên, lưu danh muôn thuở</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Chu Dong Tu</span>
+                    <span class="tag">Tien Dung</span>
+                    <span class="tag">Love</span>
+                    <span class="tag">Filial piety</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://lh3.googleusercontent.com/-NzRzaj-FxxE/VmKGyZ-pVvI/AAAAAAAADDo/D2j9sbqQ8t8/s800-Ic42/chu-dong-tu-va-cong-chua-tien-dung.jpg?w=900" alt="Chử Đồng Tử">
+            </div>
+        </div>
+
+        <!-- Scene 4 -->
+        <div class="scene" data-scene="4" data-script="Mẫu Liễu Hạnh: Mẫu Liễu Hạnh là vị nữ thần được đưa vào Tứ Bất Tử về sau. Là tiên nữ giáng trần. Có nhiều quyền năng. Gắn với tín ngưỡng thờ Mẫu.">
+            <div class="scene-content">
+                <div class="scene-badge">Tín ngưỡng tâm linh</div>
+                <h2 class="scene-title">Mẫu Liễu Hạnh</h2>
+                <p class="scene-desc">Mẫu Liễu Hạnh là vị nữ thần tối cao được tôn vinh và đưa vào hàng ngũ Tứ Bất Tử trong văn hóa tín ngưỡng Việt Nam.</p>
+                <ul class="scene-bullets">
+                    <li>Là tiên nữ giáng trần cứu độ chúng sinh</li>
+                    <li>Sở hữu nhiều quyền năng tối thượng</li>
+                    <li>Gắn liền với tín ngưỡng thờ Mẫu Tam tứ phủ</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Lieu Hanh</span>
+                    <span class="tag">Dao Mau</span>
+                    <span class="tag">Phu Giay</span>
+                    <span class="tag">Mother Goddess</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Mother_Goddess_of_Earth_M%E1%BA%ABu_%C4%90%E1%BB%8ệ_Nh%E1%BB%8B_%C4%90%E1%BB%8Ba_Ti%C3%AAn_M%E1%BA%ABu_Li%E1%BB%85u_H%E1%BA%A1nh_Four_Palace_T%E1%BB%A9_Ph%E1%BB%A7.jpg/250px-Mother_Goddess_of_Earth_M%E1%BA%ABu_%C4%90%E1%BB%8ệ_Nh%E1%BB%8B_%C4%90%E1%BB%8Ba_Ti%C3%AAn_M%E1%BA%ABu_Li%E1%BB%85u_H%E1%BA%A1nh_Four_Palace_T%E1%BB%A9_Ph%E1%BB%A7.jpg" alt="Mẫu Liễu Hạnh">
+            </div>
+        </div>
+
+        <!-- Scene 5 -->
+        <div class="scene" data-scene="5" data-script="Tứ Bất Tử: Tứ Bất Tử chỉ bốn vị thánh bất tử tiêu biểu trong văn hóa dân gian Việt Nam. Sơn Tinh. Thánh Gióng. Chử Đồng Tử. Mẫu Liễu Hạnh.">
+            <div class="scene-content">
+                <div class="scene-badge">Tổng quan hệ thống</div>
+                <h2 class="scene-title">Tứ Bất Tử</h2>
+                <p class="scene-desc">Tứ Bất Tử là bốn vị thánh bất tử tiêu biểu nhất trong kho tàng văn hóa dân gian và tâm linh của người Việt.</p>
+                <ul class="scene-bullets">
+                    <li>Sơn Tinh (Thần Núi)</li>
+                    <li>Thánh Gióng (Anh hùng chống giặc)</li>
+                    <li>Chử Đồng Tử (Biểu tượng tình yêu & lao động)</li>
+                    <li>Mẫu Liễu Hạnh (Mẫu nghi thiên hạ)</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Four Immortals</span>
+                    <span class="tag">Vietnamese folklore</span>
+                    <span class="tag">Saints</span>
+                    <span class="tag">Spiritual belief</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://dx3zevcsvah5n.cloudfront.net/images/36/feature_image.webp" alt="Tứ Bất Tử">
+            </div>
+        </div>
+
+        <!-- Scene 6 -->
+        <div class="scene" data-scene="6" data-script="Danh sách ban đầu: Danh sách Tứ Bất Tử từng thay đổi theo thời gian. Có thời gồm Từ Đạo Hạnh. Có thời gồm Nguyễn Minh Không. Danh sách hiện nay phổ biến từ đầu thế kỷ 20.">
+            <div class="scene-content">
+                <div class="scene-badge">Tiến trình lịch sử</div>
+                <h2 class="scene-title">Danh sách ban đầu</h2>
+                <p class="scene-desc">Khái niệm Tứ Bất Tử không tĩnh tại mà có sự thay đổi linh hoạt qua các triều đại lịch sử và quan niệm dân gian.</p>
+                <ul class="scene-bullets">
+                    <li>Có thời kỳ bao gồm thiền sư Từ Đạo Hạnh</li>
+                    <li>Có thời kỳ bao gồm thiền sư Nguyễn Minh Không</li>
+                    <li>Danh sách chuẩn hiện nay phổ biến từ đầu thế kỷ 20</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Early Four Immortals</span>
+                    <span class="tag">Tu Dao Hanh</span>
+                    <span class="tag">Nguyen Minh Khong</span>
+                    <span class="tag">Historical change</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHHPFgzofESaXf1DBRo6p0Wwz1SDvQcrrTOA3OPdSQqv0HWyG-OtSNjqu8&s=10" alt="Danh sách ban đầu">
+            </div>
+        </div>
+
+        <!-- Scene 7 -->
+        <div class="scene" data-scene="7" data-script="Từ Đạo Hạnh: Từ Đạo Hạnh là thiền sư từng nằm trong một số phiên bản Tứ Bất Tử. Tên thật là Từ Lộ. Gắn với chùa Láng và chùa Thầy. Có nhiều truyền thuyết kỳ bí.">
+            <div class="scene-content">
+                <div class="scene-badge">Thiền sư huyền thoại</div>
+                <h2 class="scene-title">Từ Đạo Hạnh</h2>
+                <p class="scene-desc">Thiền sư Từ Đạo Hạnh là một nhân vật lịch sử - tâm linh lỗi lạc từng giữ vị trí quan trọng trong danh sách Tứ Bất Tử xưa.</p>
+                <ul class="scene-bullets">
+                    <li>Tên thật là Từ Lộ, gắn với đạo cao đức trọng</li>
+                    <li>Gắn liền với di tích chùa Láng và chùa Thầy</li>
+                    <li>Lưu truyền nhiều huyền tích và phép thuật kỳ bí</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Tu Dao Hanh</span>
+                    <span class="tag">Thay Pagoda</span>
+                    <span class="tag">Buddhist monk</span>
+                    <span class="tag">Legend</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://media-cdn-v2.laodong.vn/storage/newsportal/2026/5/20/1705190/Chua-Lang-2..jpg" alt="Từ Đạo Hạnh">
+            </div>
+        </div>
+
+        <!-- Scene 8 -->
+        <div class="scene" data-scene="8" data-script="Nguyễn Minh Không: Nguyễn Minh Không là thiền sư nổi tiếng với khả năng chữa bệnh và đúc đồng. Còn gọi là Lý Quốc Sư. Chữa bệnh cho Lý Thần Tông. Được tôn là tổ nghề đúc đồng.">
+            <div class="scene-content">
+                <div class="scene-badge">Đại danh y & Tổ nghề</div>
+                <h2 class="scene-title">Nguyễn Minh Không</h2>
+                <p class="scene-desc">Thiền sư Nguyễn Minh Không nổi tiếng với tài năng y thuật phi thường và công lớn trong việc phát triển nghề thủ công truyền thống.</p>
+                <ul class="scene-bullets">
+                    <li>Được phong tước hiệu cao quý: Lý Quốc Sư</li>
+                    <li>Có công chữa bách bệnh hiểm nghèo cho vua Lý Thần Tông</li>
+                    <li>Được tôn kính là ông tổ của nghề đúc đồng truyền thống</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Nguyen Minh Khong</span>
+                    <span class="tag">Ly Quoc Su</span>
+                    <span class="tag">Casting bronze</span>
+                    <span class="tag">Healing</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://storage-phatsuonline-v2.sgp1.digitaloceanspaces.com/files/2026/01/6017d5e4-8eae-4955-97df-2d591547b0ca-crop.JPEG" alt="Nguyễn Minh Không">
+            </div>
+        </div>
+
+        <!-- Scene 9 -->
+        <div class="scene" data-scene="9" data-script="Ý nghĩa số bốn: Số bốn mang tính ước lệ, dùng để chọn những đại diện tiêu biểu nhất. Tứ Trấn. An Nam Tứ Đại Khí. Tứ đại tài. Four as a symbol.">
+            <div class="scene-content">
+                <div class="scene-badge">Triết học số đếm</div>
+                <h2 class="scene-title">Ý nghĩa số bốn</h2>
+                <p class="scene-desc">Con số bốn trong văn hóa phương Đông mang tính ước lệ cao, dùng để quy tụ và tôn vinh những biểu tượng tinh hoa trọn vẹn nhất.</p>
+                <ul class="scene-bullets">
+                    <li>Tương đồng với các biểu tượng lớn như Tứ Trấn</li>
+                    <li>Gắn kết với An Nam Tứ Đại Khí</li>
+                    <li>Thể hiện trọn vẹn triết lý bốn phương, bốn mùa, bốn trụ cột</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Fourfold symbolism</span>
+                    <span class="tag">Vietnamese culture</span>
+                    <span class="tag">Four symbols</span>
+                    <span class="tag">Tradition</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQECtf_oy6rCzcqM4Cv_ogY8syaKAHoKmHF7o-Md34xog&s=10" alt="Ý nghĩa số bốn">
+            </div>
+        </div>
+
+        <!-- Scene 10 -->
+        <div class="scene" data-scene="10" data-script="Ý nghĩa Sơn Tinh: Sơn Tinh tượng trưng cho khát vọng chinh phục và hòa hợp với thiên nhiên. Chống thủy tai. Khai phá đất đai. Bảo trợ cộng đồng.">
+            <div class="scene-content">
+                <div class="scene-badge">Giá trị biểu tượng</div>
+                <h2 class="scene-title">Ý nghĩa Sơn Tinh</h2>
+                <p class="scene-desc">Hình tượng Sơn Tinh khắc họa sâu sắc khát vọng sinh tồn, chinh phục thiên tai và gìn giữ không gian sống của tổ tiên.</p>
+                <ul class="scene-bullets">
+                    <li>Khả năng kỳ diệu chống lại thiên tai thủy hoạn</li>
+                    <li>Công cuộc khai phá đất đai mở mang bờ cõi</li>
+                    <li>Tinh thần bảo trợ vững chắc cho cộng đồng làng xã</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Natural harmony</span>
+                    <span class="tag">Son Tinh</span>
+                    <span class="tag">Natural disasters</span>
+                    <span class="tag">Agriculture</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://cdn.vungoi.vn/vungoi/1540865604561_ap_20090712024045595.jpg" alt="Ý nghĩa Sơn Tinh">
+            </div>
+        </div>
+
+        <!-- Scene 11 -->
+        <div class="scene" data-scene="11" data-script="Ý nghĩa Thánh Gióng: Thánh Gióng tượng trưng cho lòng yêu nước và sức mạnh cộng đồng. Đánh giặc Ân. Nhân dân góp sức. Bảo vệ đất nước.">
+            <div class="scene-content">
+                <div class="scene-badge">Giá trị biểu tượng</div>
+                <h2 class="scene-title">Ý nghĩa Thánh Gióng</h2>
+                <p class="scene-desc">Thánh Gióng là hiện thân hùng tráng của tinh thần yêu nước nồng nàn và sức mạnh đoàn kết toàn dân tộc khi có ngoại xâm.</p>
+                <ul class="scene-bullets">
+                    <li>Chiến công hiển hách đánh đuổi giặc Ân</li>
+                    <li>Sức mạnh bắt nguồn từ sự chung tay góp sức của nhân dân</li>
+                    <li>Thông điệp bảo vệ toàn vẹn lãnh thổ quốc gia</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Patriotism</span>
+                    <span class="tag">Thánh Gióng</span>
+                    <span class="tag">Community strength</span>
+                    <span class="tag">National defense</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://icdn.dantri.com.vn/2024/01/29/tranh-thanh-giong-cua-tranh-dan-gian-dong-ho-153278-1706523795683.jpg" alt="Ý nghĩa Thánh Gióng">
+            </div>
+        </div>
+
+        <!-- Scene 12 -->
+        <div class="scene" data-scene="12" data-script="Ý nghĩa Chử Đồng Tử: Chử Đồng Tử đại diện cho lao động, phồn vinh và đạo lý báo hiếu. Báo hiếu cha. Kết hôn với Tiên Dung. Khai phá và phát triển cộng đồng.">
+            <div class="scene-content">
+                <div class="scene-badge">Giá trị biểu tượng</div>
+                <h2 class="scene-title">Ý nghĩa Chử Đồng Tử</h2>
+                <p class="scene-desc">Chử Đồng Tử mang giá trị nhân văn cao đẹp, tôn vinh giá trị của lao động sáng tạo, tình yêu hạnh phúc và đạo lý làm con.</p>
+                <ul class="scene-bullets">
+                    <li>Tấm gương sáng ngời về đạo lý báo hiếu đấng sinh thành</li>
+                    <li>Mối tình tự do vượt định kiến với công chúa Tiên Dung</li>
+                    <li>Đóng góp to lớn trong việc khai phá và phát triển phồn vinh</li>
+                </ul>
+                <div class="tags-container">
+                    <span class="tag">Labor and prosperity</span>
+                    <span class="tag">Chu Dong Tu</span>
+                    <span class="tag">Tien Dung</span>
+                    <span class="tag">Filial piety</span>
+                </div>
+            </div>
+            <div class="scene-media">
+                <img src="https://media.tapchinghiencuuphathoc.vn/uploads/2024/12/10/chu-dong-tu-tien-dung-7-1733821941.jpg" alt="Ý nghĩa Chử Đồng Tử">
+            </div>
+        </div>
+
+        <!-- Timeline Progress Bar -->
+        <div class="timeline-container">
+            <div class="timeline-progress" id="timelineProgress"></div>
+        </div>
+    </div>
+
+    <!-- External Controls -->
+    <div class="controls-wrapper">
+        <button class="btn" id="prevBtn">❮ Quay lại</button>
+        <button class="btn btn-primary" id="playPauseBtn">⏸ Tạm dừng</button>
+        <button class="btn" id="nextBtn">Tiếp theo ❯</button>
+        <div class="audio-status">
+            <div class="pulse-dot" id="statusDot"></div>
+            <span id="statusText">Đang đọc nội dung...</span>
+        </div>
+    </div>
+
+    <script>
+        const scenes = document.querySelectorAll('.scene');
+        const sceneCounter = document.getElementById('sceneCounter');
+        const timelineProgress = document.getElementById('timelineProgress');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+
+        let currentIndex = 0;
+        let isPlaying = true;
+        let synth = window.speechSynthesis;
+        let currentUtterance = null;
+        let progressInterval = null;
+        let startTime = 0;
+        let estimatedDuration = 6000; // default 6s fallback per scene
+
+        const totalScenes = scenes.length;
+
+        // Initialize SpeechSynthesis Voices if needed
+        function loadVoices() {
+            synth.getVoices();
+        }
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
+
+        function animateSceneIn(sceneElement) {
+            const badge = sceneElement.querySelector('.scene-badge');
+            const title = sceneElement.querySelector('.scene-title');
+            const desc = sceneElement.querySelector('.scene-desc');
+            const bullets = sceneElement.querySelectorAll('.scene-bullets li');
+            const tags = sceneElement.querySelectorAll('.tag');
+            const media = sceneElement.querySelector('.scene-media');
+
+            gsap.set([badge, title, desc, bullets, tags, media], { clearProps: "all" });
+
+            const tl = gsap.timeline();
+            tl.fromTo(badge, { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" })
+              .fromTo(title, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, "-=0.2")
+              .fromTo(desc, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, "-=0.3")
+              .fromTo(bullets, { x: -20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, stagger: 0.1, ease: "power2.out" }, "-=0.2")
+              .fromTo(tags, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, stagger: 0.05, ease: "back.out(1.7)" }, "-=0.2")
+              .fromTo(media, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power2.out" }, "-=0.4");
+        }
+
+        function stopSpeech() {
+            if (synth.speaking || synth.pending) {
+                synth.cancel();
+            }
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
+        function playScene(index) {
+            stopSpeech();
+
+            scenes.forEach(s => s.classList.remove('active'));
+            const currentScene = scenes[index];
+            currentScene.classList.add('active');
+
+            sceneCounter.textContent = `SCENE ${String(index + 1).padStart(2, '0')} / ${totalScenes}`;
+            animateSceneIn(currentScene);
+
+            if (!isPlaying) {
+                timelineProgress.style.width = '0%';
+                statusText.textContent = 'Đã tạm dừng';
+                statusDot.style.backgroundColor = '#f59e0b';
+                statusDot.style.boxShadow = '0 0 8px #f59e0b';
+                return;
+            }
+
+            statusText.textContent = 'Đang đọc nội dung...';
+            statusDot.style.backgroundColor = '#10b981';
+            statusDot.style.boxShadow = '0 0 8px #10b981';
+
+            const scriptText = currentScene.getAttribute('data-script');
+            currentUtterance = new SpeechSynthesisUtterance(scriptText);
+            currentUtterance.lang = 'vi-VN';
+            currentUtterance.rate = 1.0;
+
+            // Estimate duration based on text length (~15 chars per second for natural reading speed, min 4s)
+            estimatedDuration = Math.max(4000, (scriptText.length / 14) * 1000);
+
+            startTime = Date.now();
+            timelineProgress.style.width = '0%';
+
+            progressInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                let pct = Math.min(100, (elapsed / estimatedDuration) * 100);
+                timelineProgress.style.width = pct + '%';
+            }, 50);
+
+            currentUtterance.onend = () => {
+                if (progressInterval) clearInterval(progressInterval);
+                timelineProgress.style.width = '100%';
+                if (isPlaying) {
+                    currentIndex = (currentIndex + 1) % totalScenes;
+                    playScene(currentIndex);
+                }
+            };
+
+            currentUtterance.onerror = () => {
+                if (progressInterval) clearInterval(progressInterval);
+                // Fallback timeout if speech fails or is blocked
+                setTimeout(() => {
+                    if (isPlaying) {
+                        currentIndex = (currentIndex + 1) % totalScenes;
+                        playScene(currentIndex);
+                    }
+                }, 3000);
+            };
+
+            synth.speak(currentUtterance);
+        }
+
+        // Controls Event Listeners
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playPauseBtn.innerHTML = '⏸ Tạm dừng';
+                playScene(currentIndex);
+            } else {
+                playPauseBtn.innerHTML = '▶ Tiếp tục';
+                stopSpeech();
+                statusText.textContent = 'Đã tạm dừng';
+                statusDot.style.backgroundColor = '#f59e0b';
+                statusDot.style.boxShadow = '0 0 8px #f59e0b';
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % totalScenes;
+            playScene(currentIndex);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex - 1 + totalScenes) % totalScenes;
+            playScene(currentIndex);
+        });
+
+        // Initial trigger on load
+        window.addEventListener('load', () => {
+            // Slight delay to ensure voices and layout are ready
+            setTimeout(() => {
+                playScene(currentIndex);
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+"""
+
+with open("tu_bat_tu_presentation.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+print("File generated successfully.")
