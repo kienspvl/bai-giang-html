@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="vi" style="--content-font-size: 1.7000000000000006rem;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cảm ứng ở thực vật - Video-as-Code Presentation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Space+Grotesk:wght@400;600;700&amp;display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GSAP Animation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --surface-color: #121216;
+            --surface-glass: rgba(18, 18, 22, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.3);
+            --accent: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.3);
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --font-main: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            --content-font-size: 1.1rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.4rem;
+        }
+
+        .presentation-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 920px; 
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timeline-container {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .timeline-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: width 0.1s linear;
+        }
+
+        .pres-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.4);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .brand-title i {
+            color: var(--primary);
+            font-size: 1.05rem;
+        }
+
+        .scene-indicator {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            color: var(--accent);
+        }
+
+        .pres-stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            padding: 1.2rem 2rem;
+            gap: 2.5rem;
+        }
+
+        .scene-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1.2rem 2rem;
+            display: flex;
+            gap: 2.5rem;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .scene-pane.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .content-col {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0.6rem;
+            z-index: 2;
+            overflow-y: auto;
+            max-height: 100%;
+            padding-right: 0.4rem;
+            scroll-behavior: smooth;
+        }
+
+        .content-col::-webkit-scrollbar {
+            width: 5px;
+        }
+        .content-col::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+        }
+        .content-col::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .scene-category {
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--primary);
+            background: var(--primary-glow);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            width: max-content;
+        }
+
+        .scene-title-wrapper {
+            display: flex;
+            align-items: baseline;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .scene-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.03em;
+            color: #ffffff;
+            display: inline;
+        }
+
+        .scene-english-badge {
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--accent);
+            background: var(--accent-glow);
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .scene-english-badge:hover {
+            background: var(--accent);
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .highlightable-text {
+            font-size: var(--content-font-size);
+            line-height: 1.45;
+            color: var(--text-main);
+            transition: font-size 0.2s ease;
+        }
+
+        .tts-sentence {
+            display: inline;
+            padding: 0.1rem 0.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .tts-sentence:hover {
+            background-color: rgba(139, 92, 246, 0.15);
+        }
+
+        .tts-sentence.active-sentence {
+            background-color: rgba(139, 92, 246, 0.35);
+            color: #ffffff;
+            box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.6);
+        }
+
+        .scene-subtitle {
+            font-size: calc(var(--content-font-size) * 0.9);
+            color: var(--text-muted);
+            font-weight: 400;
+            line-height: 1.4;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--primary);
+            padding: 0.4rem 0.6rem;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .keywords-wrapper {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-top: 0.1rem;
+        }
+
+        .keyword-badge {
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .keyword-badge:hover {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .media-col {
+            flex: 1.1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.6rem;
+            z-index: 2;
+        }
+
+        /* Mở rộng chiều cao khung ảnh trên PC và Mobile */
+        .image-card {
+            width: 100%;
+            height: 420px;
+            background: #18181b;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .image-customizer {
+            width: 100%;
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .image-customizer input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            outline: none;
+        }
+
+        .image-customizer button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.7rem;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .image-customizer button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .pres-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.6);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            font-family: var(--font-main);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: #7c3aed;
+        }
+
+        .shortcuts-hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-code);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .shortcuts-hint kbd {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            color: var(--text-main);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            color: #ffffff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .modal-body p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 180px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            resize: none;
+            outline: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Tối ưu hóa tuyệt đối cho Mobile và mở rộng khung ảnh di động */
+        @media (max-width: 900px) {
+            :root {
+                --content-font-size: 0.95rem;
+            }
+            body { 
+                padding: 0; 
+                height: 100vh;
+                height: 100dvh;
+            }
+            .presentation-container { 
+                height: 100%; 
+                max-height: 100vh; 
+                border-radius: 0; 
+                border: none;
+            }
+            .pres-header {
+                padding: 0.5rem 0.75rem;
+            }
+            .brand-title span {
+                font-size: 0.85rem;
+            }
+            .pres-stage, .scene-pane {
+                flex-direction: column;
+                padding: 0.5rem 0.75rem;
+                gap: 0.4rem;
+                overflow-y: auto;
+            }
+            .media-col { 
+                flex: unset; 
+                width: 100%;
+                gap: 0.3rem;
+            }
+            /* Mở rộng khung ảnh trên mobile tương ứng với chiều cao màn hình */
+            .image-card { 
+                height: 220px; 
+            }
+            .image-customizer input {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.5rem;
+            }
+            .image-customizer button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.65rem;
+            }
+            .content-col { 
+                flex: 1; 
+                gap: 0.35rem; 
+                max-height: none; 
+                overflow-y: visible;
+                padding-right: 0;
+            }
+            .scene-title { 
+                font-size: 1.15rem; 
+            }
+            .scene-english-badge {
+                font-size: 0.75rem;
+            }
+            .scene-subtitle {
+                padding: 0.35rem 0.5rem;
+            }
+            .pres-footer { 
+                padding: 0.4rem 0.5rem; 
+                flex-wrap: wrap; 
+                gap: 0.3rem; 
+                justify-content: space-around; 
+            }
+            .shortcuts-hint { 
+                display: none; 
+            }
+            .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation-container" id="presentationContainer">
+        <div class="timeline-container">
+            <div class="timeline-bar" id="timelineBar" style="width: 100%;"></div>
+        </div>
+
+        <header class="pres-header">
+            <div class="brand-title">
+                <i class="fa-solid fa-seedling"></i>
+                <span>Cảm ứng ở thực vật</span>
+            </div>
+            <div class="scene-indicator" id="sceneIndicator">9 / 12</div>
+        </header>
+
+        <main class="pres-stage" id="presStage">
+                    <div class="scene-pane" data-scene="1">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://vcdn1-vnexpress.vnecdn.net/2013/11/14/Saola-010-in-viet-nam-1992-ap-9875-1384401101.jpg?w=1020&amp;h=0&amp;q=100&amp;dpr=2&amp;fit=crop&amp;s=NKmv0fe6Nfp-k-uSRceUzw" alt="Scene 1 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://vcdn1-vnexpress.vnecdn.net/2013/11/14/Saola-010-in-viet-nam-1992-ap-9875-1384401101.jpg?w=1020&amp;h=0&amp;q=100&amp;dpr=2&amp;fit=crop&amp;s=NKmv0fe6Nfp-k-uSRceUzw">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 1</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Sao la"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Sao la</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Saola')" data-raw="Saola"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Saola</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài thú đặc hữu của dãy Trường Sơn, được phát hiện năm 1992 và có nguy cơ tuyệt chủng rất cao." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài thú đặc hữu của dãy Trường Sơn, được phát hiện năm 1992 và có nguy cơ tuyệt chủng rất cao.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Pseudoryx nghetinhensis&lt;br&gt;• Phân bố chủ yếu ở vùng rừng Trường Sơn Việt Nam và Lào&lt;br&gt;• Đặc điểm nổi bật: hai sừng dài, thẳng, gần song song" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Pseudoryx nghetinhensis</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Phân bố chủ yếu ở vùng rừng Trường Sơn Việt Nam và Lào</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Đặc điểm nổi bật: hai sừng dài, thẳng, gần song song</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Truong Son')"><i class="fa-solid fa-magnifying-glass"></i> Truong Son</span>
+                                <span class="keyword-badge" onclick="openSearch('Horns')"><i class="fa-solid fa-magnifying-glass"></i> Horns</span>
+                                <span class="keyword-badge" onclick="openSearch('Endangered')"><i class="fa-solid fa-magnifying-glass"></i> Endangered</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="2">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://preview.redd.it/less-than-70-left-on-earth-this-is-the-cat-ba-langur-v0-b5o48qznd5qg1.jpg?width=420&amp;format=pjpg&amp;auto=webp&amp;s=8db3999418b3d64d76faebae19b1c18f1fc839c3" alt="Scene 2 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://preview.redd.it/less-than-70-left-on-earth-this-is-the-cat-ba-langur-v0-b5o48qznd5qg1.jpg?width=420&amp;format=pjpg&amp;auto=webp&amp;s=8db3999418b3d64d76faebae19b1c18f1fc839c3">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 2</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Voọc Cát Bà"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Voọc Cát Bà</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Cat Ba langur')" data-raw="Cat Ba langur"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Cat Ba langur</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài linh trưởng đặc hữu của quần đảo Cát Bà, Hải Phòng, thuộc nhóm cực kỳ nguy cấp." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài linh trưởng đặc hữu của quần đảo Cát Bà, Hải Phòng, thuộc nhóm cực kỳ nguy cấp.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Trachypithecus poliocephalus&lt;br&gt;• Bộ lông màu đen, đầu có mảng lông vàng nhạt&lt;br&gt;• Số lượng ngoài tự nhiên rất ít" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Trachypithecus poliocephalus</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Bộ lông màu đen, đầu có mảng lông vàng nhạt</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Số lượng ngoài tự nhiên rất ít</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Cat Ba Island')"><i class="fa-solid fa-magnifying-glass"></i> Cat Ba Island</span>
+                                <span class="keyword-badge" onclick="openSearch('Primate')"><i class="fa-solid fa-magnifying-glass"></i> Primate</span>
+                                <span class="keyword-badge" onclick="openSearch('Conservation')"><i class="fa-solid fa-magnifying-glass"></i> Conservation</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="3">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://static.wikia.nocookie.net/naturerules1/images/6/68/Tonkin-snub-nosed-monkey-resurgence-offers-renewed-hope-for-rare-vietnamese-primate-5-1000x1000.png/revision/latest?cb=20210409160245" alt="Scene 3 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://static.wikia.nocookie.net/naturerules1/images/6/68/Tonkin-snub-nosed-monkey-resurgence-offers-renewed-hope-for-rare-vietnamese-primate-5-1000x1000.png/revision/latest?cb=20210409160245">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 3</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Voọc mũi hếch"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Voọc mũi hếch</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Tonkin snub-nosed monkey')" data-raw="Tonkin snub-nosed monkey"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Tonkin snub-nosed monkey</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài linh trưởng quý hiếm phân bố ở vùng núi đá vôi phía Bắc Việt Nam, đặc biệt tại Hà Giang." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài linh trưởng quý hiếm phân bố ở vùng núi đá vôi phía Bắc Việt Nam, đặc biệt tại Hà Giang.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Rhinopithecus avunculus&lt;br&gt;• Có khuôn mặt đặc trưng với mũi hếch&lt;br&gt;• Là một trong những loài linh trưởng nguy cấp nhất thế giới" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Rhinopithecus avunculus</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Có khuôn mặt đặc trưng với mũi hếch</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Là một trong những loài linh trưởng nguy cấp nhất thế giới</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Ha Giang')"><i class="fa-solid fa-magnifying-glass"></i> Ha Giang</span>
+                                <span class="keyword-badge" onclick="openSearch('Snub-nosed')"><i class="fa-solid fa-magnifying-glass"></i> Snub-nosed</span>
+                                <span class="keyword-badge" onclick="openSearch('Primate')"><i class="fa-solid fa-magnifying-glass"></i> Primate</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="4">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQw2c0dq3yYs2yxJ4tsuS1WKLTxNg3zIvEgoyGqOzNkw&amp;s" alt="Scene 4 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQw2c0dq3yYs2yxJ4tsuS1WKLTxNg3zIvEgoyGqOzNkw&amp;s">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 4</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Voọc chà vá chân nâu"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Voọc chà vá chân nâu</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Red-shanked douc')" data-raw="Red-shanked douc"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Red-shanked douc</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài linh trưởng đặc trưng của Việt Nam, nổi bật với bộ lông nhiều màu sắc và thường sống trên cây." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài linh trưởng đặc trưng của Việt Nam, nổi bật với bộ lông nhiều màu sắc và thường sống trên cây.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Pygathrix nemaeus&lt;br&gt;• Có mặt màu vàng nhạt, thân xám, chân đỏ nâu&lt;br&gt;• Phân bố ở miền Trung Việt Nam và một số khu vực lân cận" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Pygathrix nemaeus</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Có mặt màu vàng nhạt, thân xám, chân đỏ nâu</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Phân bố ở miền Trung Việt Nam và một số khu vực lân cận</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Da Nang')"><i class="fa-solid fa-magnifying-glass"></i> Da Nang</span>
+                                <span class="keyword-badge" onclick="openSearch('Primate')"><i class="fa-solid fa-magnifying-glass"></i> Primate</span>
+                                <span class="keyword-badge" onclick="openSearch('Forest')"><i class="fa-solid fa-magnifying-glass"></i> Forest</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="5">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNNwISpI4r_28M20xNnbNtF0NCtmNvvHgmJa0QPl1R-E_i8nFTCBFGjB0&amp;s=10" alt="Scene 5 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNNwISpI4r_28M20xNnbNtF0NCtmNvvHgmJa0QPl1R-E_i8nFTCBFGjB0&amp;s=10">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 5</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Voọc chà vá chân xám"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Voọc chà vá chân xám</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Grey-shanked douc')" data-raw="Grey-shanked douc"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Grey-shanked douc</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài linh trưởng đặc hữu của khu vực Trung Việt Nam, sống chủ yếu trong các khu rừng tự nhiên." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài linh trưởng đặc hữu của khu vực Trung Việt Nam, sống chủ yếu trong các khu rừng tự nhiên.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Pygathrix cinerea&lt;br&gt;• Chân có màu xám đặc trưng&lt;br&gt;• Phân bố chủ yếu tại Quảng Nam, Quảng Ngãi, Kon Tum và một số tỉnh lân cận" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Pygathrix cinerea</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Chân có màu xám đặc trưng</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Phân bố chủ yếu tại Quảng Nam, Quảng Ngãi, Kon Tum và một số tỉnh lân cận</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Central Vietnam')"><i class="fa-solid fa-magnifying-glass"></i> Central Vietnam</span>
+                                <span class="keyword-badge" onclick="openSearch('Primate')"><i class="fa-solid fa-magnifying-glass"></i> Primate</span>
+                                <span class="keyword-badge" onclick="openSearch('Rainforest')"><i class="fa-solid fa-magnifying-glass"></i> Rainforest</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="6">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRoCNEz8OpRxJQIuHrGrSyl9843R9CRYYggP02PO44mRmaC9wAYTvHCTEY&amp;s=10" alt="Scene 6 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRoCNEz8OpRxJQIuHrGrSyl9843R9CRYYggP02PO44mRmaC9wAYTvHCTEY&amp;s=10">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 6</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Voọc chà vá chân đen"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Voọc chà vá chân đen</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Black-shanked douc')" data-raw="Black-shanked douc"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Black-shanked douc</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài linh trưởng quý hiếm phân bố ở vùng rừng miền Trung Việt Nam và một số khu vực Đông Dương." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài linh trưởng quý hiếm phân bố ở vùng rừng miền Trung Việt Nam và một số khu vực Đông Dương.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Pygathrix nigripes&lt;br&gt;• Đặc trưng bởi đôi chân màu đen&lt;br&gt;• Sống thành đàn và kiếm ăn chủ yếu trên cây" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Pygathrix nigripes</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Đặc trưng bởi đôi chân màu đen</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Sống thành đàn và kiếm ăn chủ yếu trên cây</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Vietnam')"><i class="fa-solid fa-magnifying-glass"></i> Vietnam</span>
+                                <span class="keyword-badge" onclick="openSearch('Primate')"><i class="fa-solid fa-magnifying-glass"></i> Primate</span>
+                                <span class="keyword-badge" onclick="openSearch('Canopy')"><i class="fa-solid fa-magnifying-glass"></i> Canopy</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="7">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://wildplanettrust.org.uk/wp-content/uploads/2022/07/NZ_Civet_Kitten_Young_AD_LR-1-1024x683.jpg" alt="Scene 7 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://wildplanettrust.org.uk/wp-content/uploads/2022/07/NZ_Civet_Kitten_Young_AD_LR-1-1024x683.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 7</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Cầy vằn bắc"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Cầy vằn bắc</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Owston's civet')" data-raw="Owston's civet"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Owston's civet</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài thú ăn thịt nhỏ quý hiếm, được ghi nhận ở một số khu rừng miền Bắc Việt Nam." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài thú ăn thịt nhỏ quý hiếm, được ghi nhận ở một số khu rừng miền Bắc Việt Nam.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Chrotogale owstoni&lt;br&gt;• Bộ lông có các sọc và đốm nổi bật&lt;br&gt;• Hoạt động chủ yếu vào ban đêm" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Chrotogale owstoni</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Bộ lông có các sọc và đốm nổi bật</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Hoạt động chủ yếu vào ban đêm</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Northern Vietnam')"><i class="fa-solid fa-magnifying-glass"></i> Northern Vietnam</span>
+                                <span class="keyword-badge" onclick="openSearch('Civet')"><i class="fa-solid fa-magnifying-glass"></i> Civet</span>
+                                <span class="keyword-badge" onclick="openSearch('Nocturnal')"><i class="fa-solid fa-magnifying-glass"></i> Nocturnal</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="8">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/9/98/Annamite_striped_rabbit_%28Nesolagus_timminsi%29.jpg?utm_source=commons.wikimedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 8 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/9/98/Annamite_striped_rabbit_%28Nesolagus_timminsi%29.jpg?utm_source=commons.wikimedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 8</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Thỏ vằn Trường Sơn"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Thỏ vằn Trường Sơn</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Annamite striped rabbit')" data-raw="Annamite striped rabbit"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Annamite striped rabbit</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài thỏ rừng hiếm, được phát hiện tại vùng Trường Sơn và có kiểu hoa văn sọc rất đặc trưng." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài thỏ rừng hiếm, được phát hiện tại vùng Trường Sơn và có kiểu hoa văn sọc rất đặc trưng.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Nesolagus timminsi&lt;br&gt;• Bộ lông có các sọc nâu đen chạy dọc cơ thể&lt;br&gt;• Sống trong các khu rừng ẩm ở Trường Sơn" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Nesolagus timminsi</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Bộ lông có các sọc nâu đen chạy dọc cơ thể</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Sống trong các khu rừng ẩm ở Trường Sơn</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Annamite Range')"><i class="fa-solid fa-magnifying-glass"></i> Annamite Range</span>
+                                <span class="keyword-badge" onclick="openSearch('Rabbit')"><i class="fa-solid fa-magnifying-glass"></i> Rabbit</span>
+                                <span class="keyword-badge" onclick="openSearch('Striped fur')"><i class="fa-solid fa-magnifying-glass"></i> Striped fur</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane active" data-scene="9">
+                        <div class="media-col">
+                            <div class="image-card" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://imgs.mongabay.com/wp-content/uploads/sites/20/2020/08/03170847/muntjac-vertical-768-copyright-Bill-robichaus.jpg" alt="Scene 9 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://imgs.mongabay.com/wp-content/uploads/sites/20/2020/08/03170847/muntjac-vertical-768-copyright-Bill-robichaus.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">Nội dung 9</span>
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Mang lớn"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Mang lớn</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Large-antlered muntjac')" data-raw="Large-antlered muntjac"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Large-antlered muntjac</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài thú móng guốc lớn quý hiếm được phát hiện tại vùng Trường Sơn, từng được xem là một trong những phát hiện động vật lớn nổi bật của thế kỷ XX." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài thú móng guốc lớn quý hiếm được phát hiện tại vùng Trường Sơn, từng được xem là một trong những phát hiện động vật lớn nổi bật của thế kỷ XX.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Muntiacus vuquangensis&lt;br&gt;• Kích thước lớn hơn nhiều loài mang khác&lt;br&gt;• Phân bố ở vùng núi Trường Sơn" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Muntiacus vuquangensis</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Kích thước lớn hơn nhiều loài mang khác</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Phân bố ở vùng núi Trường Sơn</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('Truong Son')"><i class="fa-solid fa-magnifying-glass"></i> Truong Son</span>
+                                <span class="keyword-badge" onclick="openSearch('Muntjac')"><i class="fa-solid fa-magnifying-glass"></i> Muntjac</span>
+                                <span class="keyword-badge" onclick="openSearch('Antlers')"><i class="fa-solid fa-magnifying-glass"></i> Antlers</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="10">
+                        <div class="media-col">
+                            <div class="image-card">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Muntiacus_sp_-_Hai_Hong_Karni.jpg?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 10 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/2/24/Muntiacus_sp_-_Hai_Hong_Karni.jpg?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category">Nội dung 10</span>
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Mang Trường Sơn"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Mang Trường Sơn</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Truong Son muntjac')" data-raw="Truong Son muntjac"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Truong Son muntjac</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài mang nhỏ được phát hiện ở vùng Trường Sơn, thích nghi với môi trường rừng núi."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài mang nhỏ được phát hiện ở vùng Trường Sơn, thích nghi với môi trường rừng núi.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Muntiacus truongsonensis&lt;br&gt;• Kích thước nhỏ&lt;br&gt;• Phân bố ở các khu rừng thuộc dãy Trường Sơn"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Muntiacus truongsonensis</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Kích thước nhỏ</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Phân bố ở các khu rừng thuộc dãy Trường Sơn</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('Truong Son')"><i class="fa-solid fa-magnifying-glass"></i> Truong Son</span>
+                                <span class="keyword-badge" onclick="openSearch('Muntjac')"><i class="fa-solid fa-magnifying-glass"></i> Muntjac</span>
+                                <span class="keyword-badge" onclick="openSearch('Mountain forest')"><i class="fa-solid fa-magnifying-glass"></i> Mountain forest</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="11">
+                        <div class="media-col">
+                            <div class="image-card">
+                                <img src="https://media.doanhnghiepvn.vn/Images/Uploaded/Share/2024/11/07/Loai-thu-quy-hiem-tung-bi-nghi-da-tuyet-chung-bong-tai-xuat-o-Viet-Nam-duoc-ca-the-gioi-cung-bao-ve_1.jpg?format=webp" alt="Scene 11 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://media.doanhnghiepvn.vn/Images/Uploaded/Share/2024/11/07/Loai-thu-quy-hiem-tung-bi-nghi-da-tuyet-chung-bong-tai-xuat-o-Viet-Nam-duoc-ca-the-gioi-cung-bao-ve_1.jpg?format=webp">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category">Nội dung 11</span>
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Cầy giông sọc"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Cầy giông sọc</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Stripe-backed civet')" data-raw="Stripe-backed civet"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Stripe-backed civet</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài thú ăn thịt nhỏ có hoa văn sọc đặc trưng, phân bố ở các khu rừng nhiệt đới Việt Nam."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài thú ăn thịt nhỏ có hoa văn sọc đặc trưng, phân bố ở các khu rừng nhiệt đới Việt Nam.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Thường hoạt động về đêm&lt;br&gt;• Có cơ thể thon dài và bộ lông nhiều vệt sọc&lt;br&gt;• Thức ăn gồm các động vật nhỏ và một số loại quả"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Thường hoạt động về đêm</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Có cơ thể thon dài và bộ lông nhiều vệt sọc</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Thức ăn gồm các động vật nhỏ và một số loại quả</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('Vietnam')"><i class="fa-solid fa-magnifying-glass"></i> Vietnam</span>
+                                <span class="keyword-badge" onclick="openSearch('Civet')"><i class="fa-solid fa-magnifying-glass"></i> Civet</span>
+                                <span class="keyword-badge" onclick="openSearch('Nocturnal')"><i class="fa-solid fa-magnifying-glass"></i> Nocturnal</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="12">
+                        <div class="media-col">
+                            <div class="image-card">
+                                <img src="https://alchetron.com/cdn/tam-dao-salamander-5950605b-604b-4955-a876-d8bd50ef777-resize-750.jpeg" alt="Scene 12 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://alchetron.com/cdn/tam-dao-salamander-5950605b-604b-4955-a876-d8bd50ef777-resize-750.jpeg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category">Nội dung 12</span>
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Cá cóc Tam Đảo"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Cá cóc Tam Đảo</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Tam Dao salamander')" data-raw="Tam Dao salamander"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Tam Dao salamander</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Là loài lưỡng cư đặc hữu của vùng Tam Đảo, thường sống ở các suối núi có nước sạch."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Là loài lưỡng cư đặc hữu của vùng Tam Đảo, thường sống ở các suối núi có nước sạch.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tên khoa học: Paramesotriton deloustali&lt;br&gt;• Có cơ thể màu nâu sẫm, da sần&lt;br&gt;• Là loài đặc hữu của Việt Nam và có giá trị bảo tồn cao"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tên khoa học: Paramesotriton deloustali</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Có cơ thể màu nâu sẫm, da sần</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Là loài đặc hữu của Việt Nam và có giá trị bảo tồn cao</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('Tam Dao')"><i class="fa-solid fa-magnifying-glass"></i> Tam Dao</span>
+                                <span class="keyword-badge" onclick="openSearch('Salamander')"><i class="fa-solid fa-magnifying-glass"></i> Salamander</span>
+                                <span class="keyword-badge" onclick="openSearch('Amphibian')"><i class="fa-solid fa-magnifying-glass"></i> Amphibian</span>
+                            </div>
+                        </div>
+                    </div></main>
+
+        <footer class="pres-footer">
+            <div class="control-group">
+                <button class="btn" id="prevBtn" title="Quay lại"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                <button class="btn btn-primary" id="playBtn" title="Phát/Tạm dừng"><i class="fa-solid fa-play" id="playIcon"></i> <span id="playText">Play</span></button>
+                <button class="btn" id="nextBtn" title="Tiếp theo">Next <i class="fa-solid fa-chevron-right"></i></button>
+                <button class="btn" id="muteBtn" title="Bật/Tắt âm thanh"><i class="fa-solid fa-volume-high" id="muteIcon"></i></button>
+            </div>
+
+            <div class="control-group">
+                <button class="btn" onclick="openImportModal()" title="Import văn bản"><i class="fa-solid fa-file-import"></i> Import</button>
+                <button class="btn" onclick="adjustFontSize(0.1)" title="Tăng chữ"><span>A+</span></button>
+                <button class="btn" onclick="adjustFontSize(-0.1)" title="Giảm chữ"><span>A-</span></button>
+                <button class="btn btn-primary" onclick="saveAsHTML()" title="Lưu file"><i class="fa-solid fa-download"></i> Save</button>
+            </div>
+
+            <div class="shortcuts-hint">
+                <span><kbd>Space</kbd> Play</span>
+                <span><kbd>←/→</kbd> Nav</span>
+                <span><kbd>M</kbd> Mute</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal Import -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-import"></i> Import Dữ Liệu Presentation</h3>
+                <button class="modal-close" onclick="closeImportModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>Dán dữ liệu copy từ Google Sheet hoặc Excel (phân tách bằng tab, gồm đúng 8 cột):<br>
+                <em>[1. Tiêu đề] \t [2. Nội dung] \t [3. Subtitle] \t [4. Keyword Anh] \t [5-7. Từ khóa] \t [8. URL Ảnh]</em></p>
+                <textarea class="modal-textarea" id="importTextarea" placeholder="Dán nội dung vào đây..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeImportModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="processImportData()">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSceneIndex = 0;
+        let totalScenes = 12;
+        let isPlaying = true;
+        let isMuted = false;
+        let timelineStartTime = null;
+        let sceneDuration = 15000;
+        let animationFrameId = null;
+        let currentUtterance = null;
+        let currentFontSize = 1.1;
+
+        const panes = document.querySelectorAll('.scene-pane');
+        const sceneIndicator = document.getElementById('sceneIndicator');
+        const timelineBar = document.getElementById('timelineBar');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const muteIcon = document.getElementById('muteIcon');
+
+        // Hàm phân tách câu chuẩn xác theo đúng thứ tự đọc yêu cầu: Title -> Badge (Từ khóa chính) -> Body -> Subtitle
+        function setupSentenceSplitting() {
+            document.querySelectorAll('.scene-pane').forEach(pane => {
+                // 1. Tiêu đề chính
+                const titleEl = pane.querySelector('.tts-title');
+                if (titleEl && !titleEl.dataset.raw) {
+                    titleEl.dataset.raw = titleEl.textContent;
+                    titleEl.innerHTML = `<span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">${titleEl.textContent.trim()}</span>`;
+                }
+
+                // 2. Từ khóa chính (English badge)
+                const badgeEl = pane.querySelector('.tts-badge');
+                if (badgeEl && !badgeEl.dataset.raw) {
+                    let cleanText = badgeEl.textContent.replace(/<[^>]*>/g, '').trim();
+                    badgeEl.dataset.raw = cleanText;
+                    badgeEl.innerHTML = `<i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">${cleanText}</span>`;
+                }
+
+                // 3. Nội dung ngắn gọn (Body)
+                const bodyEl = pane.querySelector('.tts-body');
+                if (bodyEl && !bodyEl.dataset.rawHtml) {
+                    bodyEl.dataset.rawHtml = bodyEl.innerHTML;
+                    let sentences = bodyEl.textContent.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                    if (sentences) {
+                        bodyEl.innerHTML = sentences.map((s, idx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            return `<span class="tts-sentence" data-s-index="${2 + idx}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                        }).join(' ');
+                    }
+                }
+
+                // 4. Nội dung chi tiết (Subtitle)
+                const subEl = pane.querySelector('.tts-sub');
+                if (subEl && !subEl.dataset.rawHtml) {
+                    subEl.dataset.rawHtml = subEl.innerHTML;
+                    let rawHtml = subEl.innerHTML;
+                    let parts = rawHtml.split(/<br\s*[\/]?>/gi);
+                    let bodySentenceCount = bodyEl ? bodyEl.querySelectorAll('.tts-sentence').length : 0;
+                    let subIndexOffset = 2 + bodySentenceCount;
+
+                    let processedParts = parts.map((part, pIdx) => {
+                        let textOnly = part.replace(/<[^>]*>/g, '').trim();
+                        if (!textOnly) return '';
+                        let sentences = textOnly.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                        if (!sentences) return `<span class="tts-sentence" data-s-index="${subIndexOffset + pIdx}" onclick="playFromSentence(this)">${textOnly}</span>`;
+                        
+                        return sentences.map((s, sIdx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            let snip = `<span class="tts-sentence" data-s-index="${subIndexOffset}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                            subIndexOffset++;
+                            return snip;
+                        }).join(' ');
+                    });
+                    subEl.innerHTML = processedParts.filter(Boolean).join('<br>');
+                }
+            });
+        }
+
+        function initScene(index, direction = 1) {
+            const currentPanes = document.querySelectorAll('.scene-pane');
+            currentPanes.forEach((pane, i) => {
+                if (i === index) {
+                    pane.classList.add('active');
+                    const contentCol = pane.querySelector('.content-col');
+                    if (contentCol) contentCol.scrollTop = 0;
+
+                    gsap.fromTo(pane.querySelectorAll('.content-col > *, .media-col > *'), 
+                        { y: 15, opacity: 0 }, 
+                        { y: 0, opacity: 1, duration: 0.5, stagger: 0.06, ease: "power3.out", overwrite: "auto" }
+                    );
+                } else {
+                    pane.classList.remove('active');
+                }
+            });
+
+            sceneIndicator.textContent = `${index + 1} / ${totalScenes}`;
+            
+            stopSpeech();
+            clearAllHighlights();
+            if (isPlaying) {
+                playCurrentScene();
+            }
+        }
+
+        function clearAllHighlights() {
+            document.querySelectorAll('.tts-sentence').forEach(s => s.classList.remove('active-sentence'));
+        }
+
+        function openSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`, '_blank');
+        }
+
+        function openGifSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch&tbs=itp:animated`, '_blank');
+        }
+
+        function updateImage(btn) {
+            const customizer = btn.parentElement;
+            const input = customizer.querySelector('.img-url-input');
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const img = activePane.querySelector('.scene-img');
+            if (input.value.trim() !== '') {
+                img.src = input.value.trim();
+                alert('Đã cập nhật ảnh thành công!');
+            }
+        }
+
+        function adjustFontSize(delta) {
+            currentFontSize = Math.max(0.8, currentFontSize + delta);
+            document.documentElement.style.setProperty('--content-font-size', `${currentFontSize}rem`);
+        }
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('open');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('open');
+        }
+
+        function processImportData() {
+            const text = document.getElementById('importTextarea').value.trim();
+            if (!text) {
+                alert('Vui lòng dán dữ liệu vào ô trống!');
+                return;
+            }
+
+            const lines = text.split('\n');
+            const presStage = document.getElementById('presStage');
+            let newHTML = '';
+
+            lines.forEach((line, index) => {
+                const cols = line.split('\t');
+                if (cols.length >= 8) {
+                    const mainTitle = cols[0].trim();       
+                    const bodyText = cols[1].trim();        
+                    const subText = cols[2].trim();         
+                    const englishKw = cols[3].trim();       
+                    const kw1 = cols[4].trim();             
+                    const kw2 = cols[5].trim();             
+                    const kw3 = cols[6].trim();             
+                    const imgUrl = cols[7].trim() || "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=800&auto=format&fit=crop";
+
+                    newHTML += `
+                    <div class="scene-pane ${index === 0 ? 'active' : ''}" data-scene="${index + 1}">
+                        <div class="media-col">
+                            <div class="image-card">
+                                <img src="${imgUrl}" alt="Scene ${index + 1} Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="${imgUrl}">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category">Nội dung ${index + 1}</span>
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1">${mainTitle}</h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('${englishKw}')"><i class="fa-solid fa-image"></i> ${englishKw}</span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">${bodyText}</p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">${subText}</div>
+                            <div class="keywords-wrapper">
+                                ${kw1 ? `<span class="keyword-badge" onclick="openSearch('${kw1}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw1}</span>` : ''}
+                                ${kw2 ? `<span class="keyword-badge" onclick="openSearch('${kw2}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw2}</span>` : ''}
+                                ${kw3 ? `<span class="keyword-badge" onclick="openSearch('${kw3}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw3}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            });
+
+            if (newHTML) {
+                presStage.innerHTML = newHTML;
+                totalScenes = lines.length;
+                currentSceneIndex = 0;
+                setupSentenceSplitting();
+                closeImportModal();
+                initScene(0);
+                alert(`Import thành công ${totalScenes} Scene!`);
+            } else {
+                alert('Định dạng dữ liệu chưa chính xác.');
+            }
+        }
+
+        // Đảm bảo logic đọc và highlight đúng theo tuần tự: Title -> Badge -> Body -> Subtitle trên mọi nền tảng
+        function playCurrentScene(startSentenceIndex = 0) {
+            if (isMuted) {
+                startTimelineSimulation(sceneDuration);
+                return;
+            }
+
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            if (sentenceElements.length === 0) return;
+
+            let textsToSpeak = [];
+            for (let i = startSentenceIndex; i < sentenceElements.length; i++) {
+                textsToSpeak.push({
+                    element: sentenceElements[i],
+                    text: sentenceElements[i].textContent.trim()
+                });
+            }
+
+            let fullText = textsToSpeak.map(item => item.text).join(' ');
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                currentUtterance = new SpeechSynthesisUtterance(fullText);
+                currentUtterance.lang = 'vi-VN';
+                currentUtterance.rate = 1.0;
+
+                const estimatedDuration = Math.max(5000, fullText.length * 65);
+                let activeElIndex = startSentenceIndex;
+
+                clearAllHighlights();
+                if (sentenceElements[activeElIndex]) {
+                    sentenceElements[activeElIndex].classList.add('active-sentence');
+                    sentenceElements[activeElIndex].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                }
+
+                currentUtterance.onboundary = function(event) {
+                    if (event.name === 'word') {
+                        let charIndex = event.charIndex;
+                        let accumulatedLength = 0;
+                        
+                        for (let k = 0; k < textsToSpeak.length; k++) {
+                            let len = textsToSpeak[k].text.length + 1; 
+                            if (charIndex >= accumulatedLength && charIndex < accumulatedLength + len) {
+                                let targetElement = textsToSpeak[k].element;
+                                if (!targetElement.classList.contains('active-sentence')) {
+                                    clearAllHighlights();
+                                    targetElement.classList.add('active-sentence');
+                                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                                }
+                                break;
+                            }
+                            accumulatedLength += len;
+                        }
+                    }
+                };
+
+                currentUtterance.onend = function() {
+                    clearAllHighlights();
+                    if (isPlaying) {
+                        nextScene();
+                    }
+                };
+
+                currentUtterance.onerror = function() {
+                    startTimelineSimulation(estimatedDuration);
+                };
+
+                window.speechSynthesis.speak(currentUtterance);
+                startTimelineSimulation(estimatedDuration);
+            } else {
+                startTimelineSimulation(sceneDuration);
+            }
+        }
+
+        function playFromSentence(spanEl) {
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            const targetIdx = sentenceElements.indexOf(spanEl);
+            if (targetIdx !== -1) {
+                if (!isPlaying) {
+                    isPlaying = true;
+                    playIcon.className = "fa-solid fa-pause";
+                    playText.textContent = "Pause";
+                }
+                playCurrentScene(targetIdx);
+            }
+        }
+
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function startTimelineSimulation(duration) {
+            sceneDuration = duration;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            timelineStartTime = performance.now();
+
+            function updateTimeline(currentTime) {
+                if (!isPlaying) return;
+                const elapsed = currentTime - timelineStartTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                timelineBar.style.width = `${progress}%`;
+
+                if (progress < 100) {
+                    animationFrameId = requestAnimationFrame(updateTimeline);
+                } else if (!('speechSynthesis' in window) || isMuted) {
+                    nextScene();
+                }
+            }
+            animationFrameId = requestAnimationFrame(updateTimeline);
+        }
+
+        function nextScene() {
+            currentSceneIndex = (currentSceneIndex + 1) % totalScenes;
+            initScene(currentSceneIndex, 1);
+        }
+
+        function prevScene() {
+            currentSceneIndex = (currentSceneIndex - 1 + totalScenes) % totalScenes;
+            initScene(currentSceneIndex, -1);
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playIcon.className = "fa-solid fa-pause";
+                playText.textContent = "Pause";
+                playCurrentScene();
+            } else {
+                playIcon.className = "fa-solid fa-play";
+                playText.textContent = "Play";
+                stopSpeech();
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (isMuted) {
+                muteIcon.className = "fa-solid fa-volume-xmark";
+                stopSpeech();
+                playCurrentScene();
+            } else {
+                muteIcon.className = "fa-solid fa-volume-high";
+                playCurrentScene();
+            }
+        }
+
+        function saveAsHTML() {
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cam-ung-thuc-vat-updated.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Touch gestures điều hướng mượt mà
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        const container = document.getElementById('presentationContainer');
+        container.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        container.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleTouchSwipe();
+        }, {passive: true});
+
+        function handleTouchSwipe() {
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+                if (diffX < 0) {
+                    nextScene();
+                } else {
+                    prevScene();
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.code === 'Space' || e.code === 'KeyK') {
+                e.preventDefault();
+                togglePlay();
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyL') {
+                e.preventDefault();
+                nextScene();
+            } else if (e.code === 'ArrowLeft' || e.code === 'KeyJ') {
+                e.preventDefault();
+                prevScene();
+            } else if (e.code === 'KeyM') {
+                e.preventDefault();
+                toggleMute();
+            }
+        });
+
+        playBtn.addEventListener('click', togglePlay);
+        document.getElementById('nextBtn').addEventListener('click', nextScene);
+        document.getElementById('prevBtn').addEventListener('click', prevScene);
+        document.getElementById('muteBtn').addEventListener('click', toggleMute);
+
+        window.addEventListener('load', () => {
+            setupSentenceSplitting();
+            initScene(0);
+        });
+    </script>
+
+</body></html>
