@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="vi" style="--scale-factor: 1.5;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cảm ứng ở thực vật - Video-as-Code Presentation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Space+Grotesk:wght@400;600;700&amp;display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GSAP Animation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --surface-color: #121216;
+            --surface-glass: rgba(18, 18, 22, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.3);
+            --accent: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.3);
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --font-main: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            
+            /* Các biến cỡ chữ tương đối phục vụ nút A+ A- */
+            --scale-factor: 1;
+            --title-font-size: calc(1.6rem * var(--scale-factor));
+            --body-font-size: calc(1.05rem * var(--scale-factor));
+            --sub-font-size: calc(0.95rem * var(--scale-factor));
+            --keyword-font-size: calc(0.75rem * var(--scale-factor));
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.4rem;
+        }
+
+        .presentation-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 960px; 
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timeline-container {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .timeline-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: width 0.1s linear;
+        }
+
+        .pres-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.4);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .brand-title i {
+            color: var(--primary);
+            font-size: 1.05rem;
+        }
+
+        .scene-indicator {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            color: var(--accent);
+        }
+
+        .pres-stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            padding: 1rem 2rem;
+            gap: 2.5rem;
+            min-height: 0;
+        }
+
+        .scene-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 2.5rem;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            min-height: 0;
+        }
+
+        .scene-pane.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .content-col {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0.8rem;
+            z-index: 2;
+            overflow-y: auto;
+            max-height: 100%;
+            padding-right: 0.4rem;
+            scroll-behavior: smooth;
+            min-height: 0;
+        }
+
+        .content-col::-webkit-scrollbar {
+            width: 5px;
+        }
+        .content-col::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+        }
+        .content-col::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .scene-title-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-top: 0.2rem;
+            border-bottom: 2px solid rgba(139, 92, 246, 0.2);
+            padding-bottom: 0.6rem;
+        }
+
+        /* YÊU CẦU 3: Cải tiến Tiêu đề nổi bật và khác biệt hoàn toàn với nội dung */
+        .scene-title {
+            font-size: var(--title-font-size);
+            font-weight: 700;
+            line-height: 1.25;
+            letter-spacing: -0.03em;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(139, 92, 246, 0.25);
+            background: linear-gradient(135deg, #ffffff 60%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .scene-english-badge {
+            font-family: var(--font-code);
+            font-size: calc(var(--keyword-font-size) * 1.1);
+            color: var(--accent);
+            background: var(--accent-glow);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            width: fit-content;
+        }
+
+        .scene-english-badge:hover {
+            background: var(--accent);
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .highlightable-text {
+            font-size: var(--body-font-size);
+            line-height: 1.5;
+            color: var(--text-main);
+            transition: font-size 0.2s ease;
+        }
+
+        .tts-sentence {
+            display: inline;
+            padding: 0.1rem 0.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .tts-sentence:hover {
+            background-color: rgba(139, 92, 246, 0.15);
+        }
+
+        .tts-sentence.active-sentence {
+            background-color: rgba(139, 92, 246, 0.35);
+            color: #ffffff;
+            box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.6);
+        }
+
+        .scene-subtitle {
+            font-size: var(--sub-font-size);
+            color: var(--text-muted);
+            font-weight: 400;
+            line-height: 1.45;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .keywords-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.2rem;
+        }
+
+        /* YÊU CẦU 1: Từ khóa cũng thay đổi cỡ chữ theo nút A+ A- */
+        .keyword-badge {
+            font-family: var(--font-code);
+            font-size: var(--keyword-font-size);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .keyword-badge:hover {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .media-col {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 2;
+            min-height: 0;
+        }
+
+        .image-card {
+            width: 100%;
+            flex: 1;
+            min-height: 250px;
+            background: #18181b;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            cursor: zoom-in;
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover img {
+            transform: scale(1.02);
+        }
+
+        .image-customizer {
+            width: 100%;
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        .image-customizer input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            outline: none;
+        }
+
+        .image-customizer button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.7rem;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .image-customizer button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .pres-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.6);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            font-family: var(--font-main);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: #7c3aed;
+        }
+
+        .shortcuts-hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-code);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .shortcuts-hint kbd {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            color: var(--text-main);
+        }
+
+        /* LIGHTBOX STYLES */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-img-container {
+            max-width: 90vw;
+            max-height: 85vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .lightbox-img-container img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .lightbox-close:hover {
+            background: var(--primary);
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .lightbox-nav:hover {
+            background: var(--primary);
+        }
+
+        .lightbox-prev { left: 25px; }
+        .lightbox-next { right: 25px; }
+
+        /* Modal Import */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            color: #ffffff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .modal-body p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 180px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            resize: none;
+            outline: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Responsive Mobile */
+        @media (max-width: 900px) {
+            body { 
+                padding: 0; 
+                height: 100vh;
+                height: 100dvh;
+            }
+            .presentation-container { 
+                height: 100%; 
+                max-height: 100vh; 
+                border-radius: 0; 
+                border: none;
+            }
+            .pres-header {
+                padding: 0.5rem 0.75rem;
+            }
+            .brand-title span {
+                font-size: 0.85rem;
+            }
+            .pres-stage, .scene-pane {
+                flex-direction: column;
+                padding: 0.6rem 0.75rem;
+                gap: 0.5rem;
+                overflow-y: auto;
+            }
+            .media-col { 
+                flex: unset; 
+                width: 100%;
+                height: 35vh; 
+                gap: 0.3rem;
+                flex-shrink: 0;
+            }
+            .image-card { 
+                height: 100%;
+                min-height: unset; 
+            }
+            .image-customizer input {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.5rem;
+            }
+            .image-customizer button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.65rem;
+            }
+            .content-col { 
+                flex: 1; 
+                gap: 0.5rem; 
+                max-height: none; 
+                overflow-y: visible;
+                padding-right: 0;
+            }
+            .scene-title-wrapper {
+                padding-bottom: 0.4rem;
+            }
+            .scene-subtitle {
+                padding: 0.35rem 0.5rem;
+            }
+            .pres-footer { 
+                padding: 0.4rem 0.5rem; 
+                flex-wrap: wrap; 
+                gap: 0.3rem; 
+                justify-content: space-around; 
+            }
+            .shortcuts-hint { 
+                display: none; 
+            }
+            .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            .lightbox-nav {
+                width: 35px; height: 35px;
+                font-size: 0.9rem;
+            }
+            .lightbox-prev { left: 10px; }
+            .lightbox-next { right: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation-container" id="presentationContainer">
+        <div class="timeline-container">
+            <div class="timeline-bar" id="timelineBar" style="width: 47.0837%;"></div>
+        </div>
+
+        <header class="pres-header">
+            <div class="brand-title">
+                <i class="fa-solid fa-seedling"></i>
+                <span>Cảm ứng ở thực vật</span>
+            </div>
+            <div class="scene-indicator" id="sceneIndicator">1 / 17</div>
+        </header>
+
+        <main class="pres-stage" id="presStage">
+                    <div class="scene-pane active" data-scene="1">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://xcdn-cf.vuihoc.vn/upload/5c209fe6176b0/2023/08/16/3263_cong-th-C6-B0c-phan-tu-hop-chat-huu-co-1.jpg" alt="Scene 1 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://xcdn-cf.vuihoc.vn/upload/5c209fe6176b0/2023/08/16/3263_cong-th-C6-B0c-phan-tu-hop-chat-huu-co-1.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Bài 10. Hợp chất hữu cơ và hoá học hữu cơ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Bài 10. Hợp chất hữu cơ và hoá học hữu cơ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('hợp chất hữu cơ')" data-raw="hợp chất hữu cơ"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">hợp chất hữu cơ</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Giới thiệu khái niệm hợp chất hữu cơ và ngành hoá học hữu cơ" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence active-sentence" data-s-index="2" onclick="playFromSentence(this)">Giới thiệu khái niệm hợp chất hữu cơ và ngành hoá học hữu cơ</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Hợp chất hữu cơ là những hợp chất của carbon, ngoại trừ một số hợp chất vô cơ của carbon như carbon monoxide (CO), carbon dioxide (CO₂), muối carbonate, cyanide và carbide.&lt;br&gt;• Carbon là nguyên tố đặc biệt vì có khả năng tạo rất nhiều hợp chất khác nhau.&lt;br&gt;• Hoá học hữu cơ là ngành hoá học chuyên nghiên cứu cấu tạo, tính chất, phương pháp điều chế và ứng dụng của các hợp chất hữu cơ.&lt;br&gt;• Các hợp chất hữu cơ có mặt rất phổ biến trong đời sống như methane trong khí thiên nhiên, ethanol trong cồn, glucose trong thực phẩm và acetic acid trong giấm.&lt;br&gt;• Việc nghiên cứu hoá học hữu cơ có vai trò quan trọng trong sản xuất nhiên liệu, dược phẩm, polymer, mỹ phẩm và nhiều vật liệu khác." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Hợp chất hữu cơ là những hợp chất của carbon, ngoại trừ một số hợp chất vô cơ của carbon như carbon monoxide (CO), carbon dioxide (CO₂), muối carbonate, cyanide và carbide.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Carbon là nguyên tố đặc biệt vì có khả năng tạo rất nhiều hợp chất khác nhau.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Hoá học hữu cơ là ngành hoá học chuyên nghiên cứu cấu tạo, tính chất, phương pháp điều chế và ứng dụng của các hợp chất hữu cơ.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Các hợp chất hữu cơ có mặt rất phổ biến trong đời sống như methane trong khí thiên nhiên, ethanol trong cồn, glucose trong thực phẩm và acetic acid trong giấm.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Việc nghiên cứu hoá học hữu cơ có vai trò quan trọng trong sản xuất nhiên liệu, dược phẩm, polymer, mỹ phẩm và nhiều vật liệu khác.</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('hoá học hữu cơ')"><i class="fa-solid fa-magnifying-glass"></i> hoá học hữu cơ</span>
+                                <span class="keyword-badge" onclick="openSearch('carbon')"><i class="fa-solid fa-magnifying-glass"></i> carbon</span>
+                                <span class="keyword-badge" onclick="openSearch('organic chemistry')"><i class="fa-solid fa-magnifying-glass"></i> organic chemistry</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="2">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://down-vn.img.susercontent.com/file/03f7d043725e746584744fb97ef1b2f9" alt="Scene 2 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://down-vn.img.susercontent.com/file/03f7d043725e746584744fb97ef1b2f9">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Đặc điểm thành phần của hợp chất hữu cơ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Đặc điểm thành phần của hợp chất hữu cơ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('thành phần phân tử')" data-raw="thành phần phân tử"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">thành phần phân tử</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Thành phần nguyên tố và cấu tạo phân tử của hợp chất hữu cơ"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Thành phần nguyên tố và cấu tạo phân tử của hợp chất hữu cơ</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Mọi hợp chất hữu cơ đều nhất thiết chứa nguyên tố carbon trong phân tử.&lt;br&gt;• Ngoài carbon, phân tử hữu cơ thường chứa hydrogen và có thể chứa oxygen, nitrogen, sulfur, phosphorus hoặc các halogen như fluorine, chlorine, bromine, iodine.&lt;br&gt;• Thành phần nguyên tố khác nhau tạo nên sự đa dạng rất lớn của hợp chất hữu cơ.&lt;br&gt;• Các nguyên tử carbon có thể liên kết với nhau trực tiếp để tạo thành mạch carbon dài, mạch nhánh hoặc cấu trúc vòng.&lt;br&gt;• Carbon cũng liên kết với hydrogen và nhiều nguyên tố khác thông qua các liên kết hoá học thích hợp.&lt;br&gt;• Ví dụ, ethanol C₂H₅OH chứa carbon, hydrogen và oxygen; chloroethane C₂H₅Cl chứa carbon, hydrogen và chlorine.&lt;br&gt;• Chính khả năng liên kết đa dạng của carbon là cơ sở tạo nên hàng triệu hợp chất hữu cơ."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Mọi hợp chất hữu cơ đều nhất thiết chứa nguyên tố carbon trong phân tử.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Ngoài carbon, phân tử hữu cơ thường chứa hydrogen và có thể chứa oxygen, nitrogen, sulfur, phosphorus hoặc các halogen như fluorine, chlorine, bromine, iodine.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Thành phần nguyên tố khác nhau tạo nên sự đa dạng rất lớn của hợp chất hữu cơ.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Các nguyên tử carbon có thể liên kết với nhau trực tiếp để tạo thành mạch carbon dài, mạch nhánh hoặc cấu trúc vòng.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Carbon cũng liên kết với hydrogen và nhiều nguyên tố khác thông qua các liên kết hoá học thích hợp.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Ví dụ, ethanol C₂H₅OH chứa carbon, hydrogen và oxygen; chloroethane C₂H₅Cl chứa carbon, hydrogen và chlorine.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Chính khả năng liên kết đa dạng của carbon là cơ sở tạo nên hàng triệu hợp chất hữu cơ.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('mạch carbon')"><i class="fa-solid fa-magnifying-glass"></i> mạch carbon</span>
+                                <span class="keyword-badge" onclick="openSearch('carbon')"><i class="fa-solid fa-magnifying-glass"></i> carbon</span>
+                                <span class="keyword-badge" onclick="openSearch('hợp chất hữu cơ')"><i class="fa-solid fa-magnifying-glass"></i> hợp chất hữu cơ</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="3">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://img.diylooks.com/upload/store/detail_l/TBD0533879_4.jpg" alt="Scene 3 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://img.diylooks.com/upload/store/detail_l/TBD0533879_4.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Liên kết hoá học trong hợp chất hữu cơ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Liên kết hoá học trong hợp chất hữu cơ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('liên kết cộng hoá trị')" data-raw="liên kết cộng hoá trị"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">liên kết cộng hoá trị</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Liên kết cộng hoá trị và khả năng tạo mạch carbon"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Liên kết cộng hoá trị và khả năng tạo mạch carbon</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Trong phần lớn hợp chất hữu cơ, các nguyên tử liên kết với nhau chủ yếu bằng liên kết cộng hoá trị.&lt;br&gt;• Liên kết cộng hoá trị được hình thành khi các nguyên tử dùng chung một hoặc nhiều cặp electron.&lt;br&gt;• Carbon có khả năng tạo liên kết với chính các nguyên tử carbon khác, tạo thành mạch carbon.&lt;br&gt;• Mạch carbon có thể là mạch không phân nhánh, mạch phân nhánh hoặc mạch vòng.&lt;br&gt;• Giữa các nguyên tử carbon có thể tồn tại liên kết đơn, liên kết đôi hoặc liên kết ba.&lt;br&gt;• Ví dụ, methane CH₄ có một nguyên tử carbon liên kết với bốn hydrogen; ethene CH₂=CH₂ có liên kết đôi C=C; ethyne CH≡CH có liên kết ba C≡C.&lt;br&gt;• Sự đa dạng về kiểu liên kết và cấu trúc mạch carbon góp phần làm cho số lượng hợp chất hữu cơ rất lớn."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Trong phần lớn hợp chất hữu cơ, các nguyên tử liên kết với nhau chủ yếu bằng liên kết cộng hoá trị.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Liên kết cộng hoá trị được hình thành khi các nguyên tử dùng chung một hoặc nhiều cặp electron.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Carbon có khả năng tạo liên kết với chính các nguyên tử carbon khác, tạo thành mạch carbon.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Mạch carbon có thể là mạch không phân nhánh, mạch phân nhánh hoặc mạch vòng.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Giữa các nguyên tử carbon có thể tồn tại liên kết đơn, liên kết đôi hoặc liên kết ba.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Ví dụ, methane CH₄ có một nguyên tử carbon liên kết với bốn hydrogen; ethene CH₂=CH₂ có liên kết đôi C=C; ethyne CH≡CH có liên kết ba C≡C.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Sự đa dạng về kiểu liên kết và cấu trúc mạch carbon góp phần làm cho số lượng hợp chất hữu cơ rất lớn.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('mạch carbon')"><i class="fa-solid fa-magnifying-glass"></i> mạch carbon</span>
+                                <span class="keyword-badge" onclick="openSearch('liên kết C-C')"><i class="fa-solid fa-magnifying-glass"></i> liên kết C-C</span>
+                                <span class="keyword-badge" onclick="openSearch('cấu tạo phân tử')"><i class="fa-solid fa-magnifying-glass"></i> cấu tạo phân tử</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="4">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/b/bf/Nalgene_bottles.jpg?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 4 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/b/bf/Nalgene_bottles.jpg?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tính chất vật lý của hợp chất hữu cơ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tính chất vật lý của hợp chất hữu cơ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('tính chất vật lý')" data-raw="tính chất vật lý"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">tính chất vật lý</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Đặc điểm về nhiệt độ nóng chảy, nhiệt độ sôi và độ tan"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Đặc điểm về nhiệt độ nóng chảy, nhiệt độ sôi và độ tan</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Nhiều hợp chất hữu cơ có nhiệt độ nóng chảy và nhiệt độ sôi tương đối thấp nên dễ bay hơi.&lt;br&gt;• Phần lớn hợp chất hữu cơ không tan hoặc ít tan trong nước, nhưng tan tốt trong nhiều dung môi hữu cơ.&lt;br&gt;• Tuy nhiên, đây là những đặc điểm chung chứ không phải quy luật tuyệt đối cho mọi hợp chất hữu cơ.&lt;br&gt;• Độ tan phụ thuộc vào cấu tạo phân tử, kích thước phân tử và sự có mặt của các nhóm chức phân cực.&lt;br&gt;• Ví dụ, hydrocarbon như hexane hầu như không tan trong nước, trong khi ethanol có khả năng tan tốt trong nước do có nhóm hydroxyl –OH.&lt;br&gt;• Một số hợp chất hữu cơ có mùi đặc trưng và dễ bay hơi, chẳng hạn nhiều ester tạo mùi thơm trong trái cây.&lt;br&gt;• Hiểu các tính chất vật lý giúp lựa chọn phương pháp tách, tinh chế, bảo quản và sử dụng hợp chất hữu cơ phù hợp."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Nhiều hợp chất hữu cơ có nhiệt độ nóng chảy và nhiệt độ sôi tương đối thấp nên dễ bay hơi.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Phần lớn hợp chất hữu cơ không tan hoặc ít tan trong nước, nhưng tan tốt trong nhiều dung môi hữu cơ.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Tuy nhiên, đây là những đặc điểm chung chứ không phải quy luật tuyệt đối cho mọi hợp chất hữu cơ.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Độ tan phụ thuộc vào cấu tạo phân tử, kích thước phân tử và sự có mặt của các nhóm chức phân cực.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Ví dụ, hydrocarbon như hexane hầu như không tan trong nước, trong khi ethanol có khả năng tan tốt trong nước do có nhóm hydroxyl –OH.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Một số hợp chất hữu cơ có mùi đặc trưng và dễ bay hơi, chẳng hạn nhiều ester tạo mùi thơm trong trái cây.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Hiểu các tính chất vật lý giúp lựa chọn phương pháp tách, tinh chế, bảo quản và sử dụng hợp chất hữu cơ phù hợp.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('nhiệt độ sôi')"><i class="fa-solid fa-magnifying-glass"></i> nhiệt độ sôi</span>
+                                <span class="keyword-badge" onclick="openSearch('độ tan')"><i class="fa-solid fa-magnifying-glass"></i> độ tan</span>
+                                <span class="keyword-badge" onclick="openSearch('dung môi hữu cơ')"><i class="fa-solid fa-magnifying-glass"></i> dung môi hữu cơ</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="5">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUybDdla2gxNG9pZmo3aTE3aG52MWlsbXVlaDl4bjUxcTZqaG1mbzE2ZCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Swa7CpzF7xTwwK6VWQ/200w.gif" alt="Scene 5 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUybDdla2gxNG9pZmo3aTE3aG52MWlsbXVlaDl4bjUxcTZqaG1mbzE2ZCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Swa7CpzF7xTwwK6VWQ/200w.gif">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tính chất hoá học của hợp chất hữu cơ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tính chất hoá học của hợp chất hữu cơ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('phản ứng hữu cơ')" data-raw="phản ứng hữu cơ"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">phản ứng hữu cơ</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Khả năng cháy, nhiệt phân và đặc điểm phản ứng hữu cơ"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Khả năng cháy, nhiệt phân và đặc điểm phản ứng hữu cơ</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Nhiều hợp chất hữu cơ dễ cháy và khi cháy hoàn toàn thường tạo carbon dioxide và nước.&lt;br&gt;• Nhiều hợp chất hữu cơ kém bền với nhiệt nên có thể bị nhiệt phân khi đun nóng mạnh.&lt;br&gt;• Phản ứng hữu cơ thường xảy ra tương đối chậm so với nhiều phản ứng ion trong dung dịch vô cơ.&lt;br&gt;• Một phản ứng hữu cơ có thể xảy ra theo nhiều hướng và tạo thành hỗn hợp sản phẩm.&lt;br&gt;• Vì vậy, trong tổng hợp hữu cơ người ta thường sử dụng nhiệt độ thích hợp, áp suất phù hợp và chất xúc tác để tăng tốc độ hoặc định hướng phản ứng.&lt;br&gt;• Ví dụ, ethanol có thể cháy trong oxygen tạo carbon dioxide và nước: C₂H₅OH + 3O₂ → 2CO₂ + 3H₂O.&lt;br&gt;• Việc kiểm soát điều kiện phản ứng là rất quan trọng để nâng cao hiệu suất và hạn chế sản phẩm không mong muốn."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Nhiều hợp chất hữu cơ dễ cháy và khi cháy hoàn toàn thường tạo carbon dioxide và nước.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Nhiều hợp chất hữu cơ kém bền với nhiệt nên có thể bị nhiệt phân khi đun nóng mạnh.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Phản ứng hữu cơ thường xảy ra tương đối chậm so với nhiều phản ứng ion trong dung dịch vô cơ.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Một phản ứng hữu cơ có thể xảy ra theo nhiều hướng và tạo thành hỗn hợp sản phẩm.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Vì vậy, trong tổng hợp hữu cơ người ta thường sử dụng nhiệt độ thích hợp, áp suất phù hợp và chất xúc tác để tăng tốc độ hoặc định hướng phản ứng.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Ví dụ, ethanol có thể cháy trong oxygen tạo carbon dioxide và nước: C₂H₅OH + 3O₂ → 2CO₂ + 3H₂O.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Việc kiểm soát điều kiện phản ứng là rất quan trọng để nâng cao hiệu suất và hạn chế sản phẩm không mong muốn.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('tính chất hoá học')"><i class="fa-solid fa-magnifying-glass"></i> tính chất hoá học</span>
+                                <span class="keyword-badge" onclick="openSearch('cháy')"><i class="fa-solid fa-magnifying-glass"></i> cháy</span>
+                                <span class="keyword-badge" onclick="openSearch('nhiệt phân')"><i class="fa-solid fa-magnifying-glass"></i> nhiệt phân</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="6">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzGuBnTl-RMpq9m83eHrAyAnLPOqXaSz6L30gMWxy0jQ&amp;s=10" alt="Scene 6 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzGuBnTl-RMpq9m83eHrAyAnLPOqXaSz6L30gMWxy0jQ&amp;s=10">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Phân loại hợp chất hữu cơ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Phân loại hợp chất hữu cơ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('phân loại')" data-raw="phân loại"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">phân loại</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Phân chia hợp chất hữu cơ thành hydrocarbon và dẫn xuất hydrocarbon"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Phân chia hợp chất hữu cơ thành hydrocarbon và dẫn xuất hydrocarbon</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Dựa vào thành phần nguyên tố, hợp chất hữu cơ được chia thành hai loại chính là hydrocarbon và dẫn xuất của hydrocarbon.&lt;br&gt;• Hydrocarbon là những hợp chất chỉ chứa hai nguyên tố carbon và hydrogen.&lt;br&gt;• Các họ hydrocarbon tiêu biểu gồm alkane, alkene, alkyne và arene.&lt;br&gt;• Ví dụ: methane CH₄ là alkane, ethene CH₂=CH₂ là alkene, ethyne CH≡CH là alkyne và benzene C₆H₆ là arene.&lt;br&gt;• Dẫn xuất của hydrocarbon được tạo thành khi thay thế một hay nhiều nguyên tử hydrogen trong phân tử hydrocarbon bằng nguyên tử hoặc nhóm nguyên tử khác.&lt;br&gt;• Các dẫn xuất tiêu biểu gồm dẫn xuất halogen, alcohol, aldehyde, ketone, carboxylic acid, ester và amine.&lt;br&gt;• Cách phân loại này giúp hệ thống hoá số lượng rất lớn các hợp chất hữu cơ và thuận tiện cho việc nghiên cứu tính chất hoá học."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Dựa vào thành phần nguyên tố, hợp chất hữu cơ được chia thành hai loại chính là hydrocarbon và dẫn xuất của hydrocarbon.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Hydrocarbon là những hợp chất chỉ chứa hai nguyên tố carbon và hydrogen.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Các họ hydrocarbon tiêu biểu gồm alkane, alkene, alkyne và arene.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Ví dụ: methane CH₄ là alkane, ethene CH₂=CH₂ là alkene, ethyne CH≡CH là alkyne và benzene C₆H₆ là arene.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Dẫn xuất của hydrocarbon được tạo thành khi thay thế một hay nhiều nguyên tử hydrogen trong phân tử hydrocarbon bằng nguyên tử hoặc nhóm nguyên tử khác.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Các dẫn xuất tiêu biểu gồm dẫn xuất halogen, alcohol, aldehyde, ketone, carboxylic acid, ester và amine.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Cách phân loại này giúp hệ thống hoá số lượng rất lớn các hợp chất hữu cơ và thuận tiện cho việc nghiên cứu tính chất hoá học.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('hydrocarbon')"><i class="fa-solid fa-magnifying-glass"></i> hydrocarbon</span>
+                                <span class="keyword-badge" onclick="openSearch('dẫn xuất hydrocarbon')"><i class="fa-solid fa-magnifying-glass"></i> dẫn xuất hydrocarbon</span>
+                                <span class="keyword-badge" onclick="openSearch('alkane alkene')"><i class="fa-solid fa-magnifying-glass"></i> alkane alkene</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="7">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://sciencetallis.weebly.com/uploads/9/9/6/6/99666290/ani-octane_orig.gif" alt="Scene 7 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://sciencetallis.weebly.com/uploads/9/9/6/6/99666290/ani-octane_orig.gif">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Hydrocarbon"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Hydrocarbon</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('hydrocarbon')" data-raw="hydrocarbon"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">hydrocarbon</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Nhóm hợp chất chỉ gồm carbon và hydrogen"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Nhóm hợp chất chỉ gồm carbon và hydrogen</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Hydrocarbon là hợp chất hữu cơ chỉ được tạo thành từ hai nguyên tố carbon và hydrogen.&lt;br&gt;• Dựa vào đặc điểm liên kết và cấu trúc, hydrocarbon được chia thành nhiều họ khác nhau.&lt;br&gt;• Alkane là hydrocarbon no, trong phân tử chủ yếu có các liên kết đơn C–C và C–H; methane CH₄ là alkane đơn giản nhất.&lt;br&gt;• Alkene chứa ít nhất một liên kết đôi carbon-carbon, ví dụ ethene CH₂=CH₂.&lt;br&gt;• Alkyne chứa ít nhất một liên kết ba carbon-carbon, ví dụ ethyne CH≡CH.&lt;br&gt;• Arene là nhóm hydrocarbon thơm, tiêu biểu là benzene C₆H₆ có cấu trúc vòng đặc trưng.&lt;br&gt;• Hydrocarbon có nhiều ứng dụng trong đời sống và công nghiệp, đặc biệt là làm nhiên liệu và nguyên liệu cho công nghiệp hoá dầu.&lt;br&gt;• Việc nhận biết kiểu liên kết và cấu trúc carbon giúp dự đoán nhiều tính chất của hydrocarbon."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Hydrocarbon là hợp chất hữu cơ chỉ được tạo thành từ hai nguyên tố carbon và hydrogen.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Dựa vào đặc điểm liên kết và cấu trúc, hydrocarbon được chia thành nhiều họ khác nhau.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Alkane là hydrocarbon no, trong phân tử chủ yếu có các liên kết đơn C–C và C–H; methane CH₄ là alkane đơn giản nhất.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Alkene chứa ít nhất một liên kết đôi carbon-carbon, ví dụ ethene CH₂=CH₂.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Alkyne chứa ít nhất một liên kết ba carbon-carbon, ví dụ ethyne CH≡CH.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Arene là nhóm hydrocarbon thơm, tiêu biểu là benzene C₆H₆ có cấu trúc vòng đặc trưng.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Hydrocarbon có nhiều ứng dụng trong đời sống và công nghiệp, đặc biệt là làm nhiên liệu và nguyên liệu cho công nghiệp hoá dầu.</span><br><span class="tts-sentence" data-s-index="10" onclick="playFromSentence(this)">• Việc nhận biết kiểu liên kết và cấu trúc carbon giúp dự đoán nhiều tính chất của hydrocarbon.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('alkane')"><i class="fa-solid fa-magnifying-glass"></i> alkane</span>
+                                <span class="keyword-badge" onclick="openSearch('alkene')"><i class="fa-solid fa-magnifying-glass"></i> alkene</span>
+                                <span class="keyword-badge" onclick="openSearch('alkyne')"><i class="fa-solid fa-magnifying-glass"></i> alkyne</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="8">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://video.vietjack.com/upload2/images/1760800821/index_html_e2c0a9ffec3f79b9.gif" alt="Scene 8 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://video.vietjack.com/upload2/images/1760800821/index_html_e2c0a9ffec3f79b9.gif">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Dẫn xuất của hydrocarbon"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Dẫn xuất của hydrocarbon</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('dẫn xuất hydrocarbon')" data-raw="dẫn xuất hydrocarbon"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">dẫn xuất hydrocarbon</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Khái niệm và một số nhóm dẫn xuất quan trọng"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Khái niệm và một số nhóm dẫn xuất quan trọng</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Dẫn xuất của hydrocarbon là những hợp chất thu được khi thay thế một hay nhiều nguyên tử hydrogen trong phân tử hydrocarbon bằng nguyên tử hoặc nhóm nguyên tử khác.&lt;br&gt;• Các nguyên tố thường xuất hiện trong dẫn xuất gồm oxygen, nitrogen, sulfur và halogen.&lt;br&gt;• Dẫn xuất halogen chứa nguyên tử halogen, ví dụ chloromethane CH₃Cl.&lt;br&gt;• Alcohol chứa nhóm hydroxyl –OH, ví dụ ethanol C₂H₅OH.&lt;br&gt;• Carboxylic acid chứa nhóm carboxyl –COOH, ví dụ acetic acid CH₃COOH.&lt;br&gt;• Ngoài ra còn có aldehyde, ketone, ester, amine và nhiều nhóm hợp chất khác.&lt;br&gt;• Các dẫn xuất thường có tính chất hoá học khác đáng kể so với hydrocarbon ban đầu do sự xuất hiện của nhóm chức.&lt;br&gt;• Việc xác định nhóm chức là bước quan trọng để phân loại và dự đoán tính chất của một hợp chất hữu cơ."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Dẫn xuất của hydrocarbon là những hợp chất thu được khi thay thế một hay nhiều nguyên tử hydrogen trong phân tử hydrocarbon bằng nguyên tử hoặc nhóm nguyên tử khác.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Các nguyên tố thường xuất hiện trong dẫn xuất gồm oxygen, nitrogen, sulfur và halogen.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Dẫn xuất halogen chứa nguyên tử halogen, ví dụ chloromethane CH₃Cl.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Alcohol chứa nhóm hydroxyl –OH, ví dụ ethanol C₂H₅OH.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Carboxylic acid chứa nhóm carboxyl –COOH, ví dụ acetic acid CH₃COOH.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Ngoài ra còn có aldehyde, ketone, ester, amine và nhiều nhóm hợp chất khác.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Các dẫn xuất thường có tính chất hoá học khác đáng kể so với hydrocarbon ban đầu do sự xuất hiện của nhóm chức.</span><br><span class="tts-sentence" data-s-index="10" onclick="playFromSentence(this)">• Việc xác định nhóm chức là bước quan trọng để phân loại và dự đoán tính chất của một hợp chất hữu cơ.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('dẫn xuất halogen')"><i class="fa-solid fa-magnifying-glass"></i> dẫn xuất halogen</span>
+                                <span class="keyword-badge" onclick="openSearch('alcohol')"><i class="fa-solid fa-magnifying-glass"></i> alcohol</span>
+                                <span class="keyword-badge" onclick="openSearch('carboxylic acid')"><i class="fa-solid fa-magnifying-glass"></i> carboxylic acid</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="9">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/AminoAcidball.svg/330px-AminoAcidball.svg.png?utm_source=vi.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail" alt="Scene 9 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/AminoAcidball.svg/330px-AminoAcidball.svg.png?utm_source=vi.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Nhóm chức trong phân tử hữu cơ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Nhóm chức trong phân tử hữu cơ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('nhóm chức')" data-raw="nhóm chức"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">nhóm chức</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Khái niệm nhóm chức và vai trò quyết định tính chất hoá học"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Khái niệm nhóm chức và vai trò quyết định tính chất hoá học</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Nhóm chức là nguyên tử hoặc nhóm nguyên tử trong phân tử gây ra những tính chất hoá học đặc trưng của hợp chất hữu cơ.&lt;br&gt;• Các hợp chất có cùng nhóm chức thường có một số tính chất hoá học tương tự nhau.&lt;br&gt;• Dẫn xuất halogen có nhóm –X, trong đó X có thể là F, Cl, Br hoặc I.&lt;br&gt;• Alcohol có nhóm –OH; aldehyde có nhóm –CHO; ketone có nhóm &amp;gt;C=O.&lt;br&gt;• Carboxylic acid có nhóm –COOH; ester có nhóm –COO–; amine có nhóm –NH₂; ether có nhóm –O–.&lt;br&gt;• Ví dụ, CH₃OH chứa nhóm –OH nên thuộc alcohol; CH₃CHO chứa nhóm –CHO nên thuộc aldehyde; CH₃COOH chứa nhóm –COOH nên thuộc carboxylic acid.&lt;br&gt;• Nhóm chức là cơ sở quan trọng để gọi tên, phân loại, dự đoán tính chất và lựa chọn phản ứng đặc trưng của hợp chất hữu cơ."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Nhóm chức là nguyên tử hoặc nhóm nguyên tử trong phân tử gây ra những tính chất hoá học đặc trưng của hợp chất hữu cơ.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Các hợp chất có cùng nhóm chức thường có một số tính chất hoá học tương tự nhau.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Dẫn xuất halogen có nhóm –X, trong đó X có thể là F, Cl, Br hoặc I.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Alcohol có nhóm –OH; aldehyde có nhóm –CHO; ketone có nhóm &gt;C=O.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Carboxylic acid có nhóm –COOH; ester có nhóm –COO–; amine có nhóm –NH₂; ether có nhóm –O–.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Ví dụ, CH₃OH chứa nhóm –OH nên thuộc alcohol; CH₃CHO chứa nhóm –CHO nên thuộc aldehyde; CH₃COOH chứa nhóm –COOH nên thuộc carboxylic acid.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Nhóm chức là cơ sở quan trọng để gọi tên, phân loại, dự đoán tính chất và lựa chọn phản ứng đặc trưng của hợp chất hữu cơ.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('alcohol')"><i class="fa-solid fa-magnifying-glass"></i> alcohol</span>
+                                <span class="keyword-badge" onclick="openSearch('aldehyde')"><i class="fa-solid fa-magnifying-glass"></i> aldehyde</span>
+                                <span class="keyword-badge" onclick="openSearch('ketone')"><i class="fa-solid fa-magnifying-glass"></i> ketone</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="10">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/Carboxylic-acid-group-3D.png?utm_source=commons.wikimedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 10 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/0/09/Carboxylic-acid-group-3D.png?utm_source=commons.wikimedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Các nhóm chức cơ bản"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Các nhóm chức cơ bản</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('carboxylic acid')" data-raw="carboxylic acid"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">carboxylic acid</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Một số nhóm chức thường gặp trong hoá học hữu cơ"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Một số nhóm chức thường gặp trong hoá học hữu cơ</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Nhóm –X là nhóm chức của dẫn xuất halogen, với X = F, Cl, Br hoặc I; ví dụ CH₃Cl.&lt;br&gt;• Nhóm –OH là nhóm chức của alcohol; ví dụ CH₃OH và C₂H₅OH.&lt;br&gt;• Nhóm –CHO đặc trưng cho aldehyde; ví dụ CH₃CHO.&lt;br&gt;• Nhóm &amp;gt;C=O đặc trưng cho ketone; ví dụ CH₃COCH₃.&lt;br&gt;• Nhóm –COOH đặc trưng cho carboxylic acid; ví dụ CH₃COOH.&lt;br&gt;• Nhóm –COO– xuất hiện trong ester; ví dụ CH₃COOCH₃.&lt;br&gt;• Nhóm –NH₂ là nhóm chức thường gặp của amine; ví dụ CH₃NH₂.&lt;br&gt;• Nhóm –O– là nhóm chức của ether; ví dụ CH₃OCH₃.&lt;br&gt;• Khi gặp một công thức cấu tạo, có thể quan sát các nguyên tử hoặc nhóm nguyên tử đặc biệt để xác định nhóm chức và từ đó nhận biết loại hợp chất hữu cơ."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Nhóm –X là nhóm chức của dẫn xuất halogen, với X = F, Cl, Br hoặc I; ví dụ CH₃Cl.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Nhóm –OH là nhóm chức của alcohol; ví dụ CH₃OH và C₂H₅OH.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Nhóm –CHO đặc trưng cho aldehyde; ví dụ CH₃CHO.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Nhóm &gt;C=O đặc trưng cho ketone; ví dụ CH₃COCH₃.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Nhóm –COOH đặc trưng cho carboxylic acid; ví dụ CH₃COOH.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Nhóm –COO– xuất hiện trong ester; ví dụ CH₃COOCH₃.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Nhóm –NH₂ là nhóm chức thường gặp của amine; ví dụ CH₃NH₂.</span><br><span class="tts-sentence" data-s-index="10" onclick="playFromSentence(this)">• Nhóm –O– là nhóm chức của ether; ví dụ CH₃OCH₃.</span><br><span class="tts-sentence" data-s-index="11" onclick="playFromSentence(this)">• Khi gặp một công thức cấu tạo, có thể quan sát các nguyên tử hoặc nhóm nguyên tử đặc biệt để xác định nhóm chức và từ đó nhận biết loại hợp chất hữu cơ.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('ester')"><i class="fa-solid fa-magnifying-glass"></i> ester</span>
+                                <span class="keyword-badge" onclick="openSearch('amine')"><i class="fa-solid fa-magnifying-glass"></i> amine</span>
+                                <span class="keyword-badge" onclick="openSearch('ether')"><i class="fa-solid fa-magnifying-glass"></i> ether</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="11">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://img.loigiaihay.com/picture/2025/0507/1746600319859-mceclip0.png" alt="Scene 11 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://img.loigiaihay.com/picture/2025/0507/1746600319859-mceclip0.png">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Phổ hồng ngoại IR"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Phổ hồng ngoại IR</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('phổ hồng ngoại')" data-raw="phổ hồng ngoại"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">phổ hồng ngoại</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Khái niệm và nguyên lý sử dụng phổ hồng ngoại để nghiên cứu hợp chất hữu cơ"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Khái niệm và nguyên lý sử dụng phổ hồng ngoại để nghiên cứu hợp chất hữu cơ</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Phổ hồng ngoại, viết tắt là IR, là một phương pháp vật lý quan trọng dùng để nghiên cứu cấu tạo phân tử.&lt;br&gt;• Khi chiếu bức xạ hồng ngoại vào mẫu, các liên kết trong phân tử có thể hấp thụ những vùng năng lượng đặc trưng và thực hiện các dao động khác nhau.&lt;br&gt;• Phổ IR thường biểu diễn độ truyền qua (%) theo số sóng, đơn vị cm⁻¹.&lt;br&gt;• Trên phổ, sự hấp thụ bức xạ thường được biểu hiện bằng các cực tiểu của độ truyền qua, thường gọi là peak hấp thụ.&lt;br&gt;• Vị trí và hình dạng của các tín hiệu cung cấp thông tin về những liên kết hoặc nhóm chức có trong phân tử.&lt;br&gt;• Vì mỗi nhóm chức có những vùng hấp thụ đặc trưng, phổ IR có thể được sử dụng để nhận biết hoặc kiểm tra sự có mặt của nhóm chức.&lt;br&gt;• Phân tích IR thường được kết hợp với các phương pháp khác để xác định đầy đủ cấu trúc của hợp chất hữu cơ."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Phổ hồng ngoại, viết tắt là IR, là một phương pháp vật lý quan trọng dùng để nghiên cứu cấu tạo phân tử.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Khi chiếu bức xạ hồng ngoại vào mẫu, các liên kết trong phân tử có thể hấp thụ những vùng năng lượng đặc trưng và thực hiện các dao động khác nhau.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Phổ IR thường biểu diễn độ truyền qua (%) theo số sóng, đơn vị cm⁻¹.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Trên phổ, sự hấp thụ bức xạ thường được biểu hiện bằng các cực tiểu của độ truyền qua, thường gọi là peak hấp thụ.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Vị trí và hình dạng của các tín hiệu cung cấp thông tin về những liên kết hoặc nhóm chức có trong phân tử.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Vì mỗi nhóm chức có những vùng hấp thụ đặc trưng, phổ IR có thể được sử dụng để nhận biết hoặc kiểm tra sự có mặt của nhóm chức.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Phân tích IR thường được kết hợp với các phương pháp khác để xác định đầy đủ cấu trúc của hợp chất hữu cơ.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('IR')"><i class="fa-solid fa-magnifying-glass"></i> IR</span>
+                                <span class="keyword-badge" onclick="openSearch('số sóng')"><i class="fa-solid fa-magnifying-glass"></i> số sóng</span>
+                                <span class="keyword-badge" onclick="openSearch('hấp thụ hồng ngoại')"><i class="fa-solid fa-magnifying-glass"></i> hấp thụ hồng ngoại</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="12">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://video.vietjack.com/upload2/images/1769855567/image12.png" alt="Scene 12 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://video.vietjack.com/upload2/images/1769855567/image12.png">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Nhận biết alcohol bằng phổ IR"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Nhận biết alcohol bằng phổ IR</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('alcohol')" data-raw="alcohol"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">alcohol</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Đặc điểm tín hiệu IR của nhóm hydroxyl –OH"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Đặc điểm tín hiệu IR của nhóm hydroxyl –OH</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Alcohol chứa nhóm chức hydroxyl –OH liên kết với nguyên tử carbon no.&lt;br&gt;• Trên phổ hồng ngoại, dao động của liên kết O–H thường tạo một dải hấp thụ rộng trong vùng khoảng 3 500–3 200 cm⁻¹.&lt;br&gt;• Dải O–H của alcohol thường khá rộng do ảnh hưởng của liên kết hydrogen giữa các phân tử.&lt;br&gt;• Khi phân tích một phổ IR, nếu xuất hiện dải hấp thụ rộng trong vùng này, có thể dự đoán mẫu có nhóm –OH của alcohol, nhưng cần kết hợp với các tín hiệu khác để kết luận chính xác.&lt;br&gt;• Ví dụ, ethanol C₂H₅OH có nhóm –OH nên phổ IR của ethanol có tín hiệu đặc trưng của dao động O–H.&lt;br&gt;• Việc nhận biết nhóm –OH bằng IR giúp phân biệt alcohol với nhiều hydrocarbon không chứa oxygen.&lt;br&gt;• Cần chú ý rằng một số hợp chất khác cũng có liên kết O–H, vì vậy không nên chỉ dựa vào một peak duy nhất."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Alcohol chứa nhóm chức hydroxyl –OH liên kết với nguyên tử carbon no.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Trên phổ hồng ngoại, dao động của liên kết O–H thường tạo một dải hấp thụ rộng trong vùng khoảng 3 500–3 200 cm⁻¹.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Dải O–H của alcohol thường khá rộng do ảnh hưởng của liên kết hydrogen giữa các phân tử.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Khi phân tích một phổ IR, nếu xuất hiện dải hấp thụ rộng trong vùng này, có thể dự đoán mẫu có nhóm –OH của alcohol, nhưng cần kết hợp với các tín hiệu khác để kết luận chính xác.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Ví dụ, ethanol C₂H₅OH có nhóm –OH nên phổ IR của ethanol có tín hiệu đặc trưng của dao động O–H.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Việc nhận biết nhóm –OH bằng IR giúp phân biệt alcohol với nhiều hydrocarbon không chứa oxygen.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Cần chú ý rằng một số hợp chất khác cũng có liên kết O–H, vì vậy không nên chỉ dựa vào một peak duy nhất.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('nhóm OH')"><i class="fa-solid fa-magnifying-glass"></i> nhóm OH</span>
+                                <span class="keyword-badge" onclick="openSearch('IR 3500 3200 cm⁻¹')"><i class="fa-solid fa-magnifying-glass"></i> IR 3500 3200 cm⁻¹</span>
+                                <span class="keyword-badge" onclick="openSearch('liên kết O-H')"><i class="fa-solid fa-magnifying-glass"></i> liên kết O-H</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="13">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://img.loigiaihay.com/picture/2024/1120/1732090061723-mceclip0.png" alt="Scene 13 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://img.loigiaihay.com/picture/2024/1120/1732090061723-mceclip0.png">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Nhận biết aldehyde và ketone bằng phổ IR"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Nhận biết aldehyde và ketone bằng phổ IR</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('aldehyde')" data-raw="aldehyde"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">aldehyde</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Đặc điểm hấp thụ của nhóm carbonyl và aldehyde"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Đặc điểm hấp thụ của nhóm carbonyl và aldehyde</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Aldehyde và ketone đều chứa nhóm carbonyl C=O nên có tín hiệu hấp thụ mạnh trong vùng đặc trưng của liên kết C=O.&lt;br&gt;• Aldehyde có vùng hấp thụ C=O khoảng 1 740–1 685 cm⁻¹ và còn có tín hiệu C–H đặc trưng khoảng 2 830–2 695 cm⁻¹.&lt;br&gt;• Ketone có nhóm &amp;gt;C=O và thường hấp thụ trong vùng khoảng 1 715–1 666 cm⁻¹.&lt;br&gt;• Khi phân tích phổ IR, sự xuất hiện của tín hiệu carbonyl giúp gợi ý hợp chất có aldehyde hoặc ketone, nhưng cần quan sát thêm các vùng khác để phân biệt.&lt;br&gt;• Ví dụ, ethanal CH₃CHO là aldehyde, còn propanone CH₃COCH₃ là ketone.&lt;br&gt;• Phổ IR vì vậy không chỉ cho biết có oxygen mà còn cung cấp thông tin về loại liên kết và nhóm chức cụ thể.&lt;br&gt;• Khi kết hợp nhiều tín hiệu, độ tin cậy của việc nhận dạng cấu trúc sẽ cao hơn."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Aldehyde và ketone đều chứa nhóm carbonyl C=O nên có tín hiệu hấp thụ mạnh trong vùng đặc trưng của liên kết C=O.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Aldehyde có vùng hấp thụ C=O khoảng 1 740–1 685 cm⁻¹ và còn có tín hiệu C–H đặc trưng khoảng 2 830–2 695 cm⁻¹.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Ketone có nhóm &gt;C=O và thường hấp thụ trong vùng khoảng 1 715–1 666 cm⁻¹.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Khi phân tích phổ IR, sự xuất hiện của tín hiệu carbonyl giúp gợi ý hợp chất có aldehyde hoặc ketone, nhưng cần quan sát thêm các vùng khác để phân biệt.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Ví dụ, ethanal CH₃CHO là aldehyde, còn propanone CH₃COCH₃ là ketone.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Phổ IR vì vậy không chỉ cho biết có oxygen mà còn cung cấp thông tin về loại liên kết và nhóm chức cụ thể.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Khi kết hợp nhiều tín hiệu, độ tin cậy của việc nhận dạng cấu trúc sẽ cao hơn.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('ketone')"><i class="fa-solid fa-magnifying-glass"></i> ketone</span>
+                                <span class="keyword-badge" onclick="openSearch('carbonyl')"><i class="fa-solid fa-magnifying-glass"></i> carbonyl</span>
+                                <span class="keyword-badge" onclick="openSearch('C=O')"><i class="fa-solid fa-magnifying-glass"></i> C=O</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="14">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://orgchemboulder.com/Spectroscopy/irtutor/images/ethanol.gif" alt="Scene 14 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://orgchemboulder.com/Spectroscopy/irtutor/images/ethanol.gif">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Nhận biết carboxylic acid bằng phổ IR"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Nhận biết carboxylic acid bằng phổ IR</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('carboxylic acid')" data-raw="carboxylic acid"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">carboxylic acid</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Đặc điểm phổ IR của nhóm carboxyl –COOH"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Đặc điểm phổ IR của nhóm carboxyl –COOH</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Carboxylic acid chứa nhóm chức carboxyl –COOH, gồm đồng thời liên kết O–H và C=O.&lt;br&gt;• Trong phổ IR, dao động O–H của carboxylic acid thường tạo một dải rất rộng trong khoảng 3 300–2 500 cm⁻¹.&lt;br&gt;• Liên kết C=O của nhóm carboxyl thường cho tín hiệu hấp thụ mạnh trong khoảng 1 760–1 690 cm⁻¹.&lt;br&gt;• Vì vậy, khi quan sát phổ IR có một dải O–H rất rộng kết hợp với peak C=O mạnh, có thể nghĩ đến sự hiện diện của carboxylic acid.&lt;br&gt;• Ví dụ, acetic acid CH₃COOH có nhóm –COOH và thể hiện cả hai đặc điểm hấp thụ này.&lt;br&gt;• Cần phân biệt carboxylic acid với alcohol: cả hai đều có O–H, nhưng carboxylic acid có thêm tín hiệu C=O đặc trưng.&lt;br&gt;• Đây là ví dụ điển hình cho cách sử dụng nhiều tín hiệu trên phổ IR để xác định nhóm chức."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Carboxylic acid chứa nhóm chức carboxyl –COOH, gồm đồng thời liên kết O–H và C=O.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Trong phổ IR, dao động O–H của carboxylic acid thường tạo một dải rất rộng trong khoảng 3 300–2 500 cm⁻¹.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Liên kết C=O của nhóm carboxyl thường cho tín hiệu hấp thụ mạnh trong khoảng 1 760–1 690 cm⁻¹.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Vì vậy, khi quan sát phổ IR có một dải O–H rất rộng kết hợp với peak C=O mạnh, có thể nghĩ đến sự hiện diện của carboxylic acid.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Ví dụ, acetic acid CH₃COOH có nhóm –COOH và thể hiện cả hai đặc điểm hấp thụ này.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Cần phân biệt carboxylic acid với alcohol: cả hai đều có O–H, nhưng carboxylic acid có thêm tín hiệu C=O đặc trưng.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Đây là ví dụ điển hình cho cách sử dụng nhiều tín hiệu trên phổ IR để xác định nhóm chức.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('COOH')"><i class="fa-solid fa-magnifying-glass"></i> COOH</span>
+                                <span class="keyword-badge" onclick="openSearch('IR O-H')"><i class="fa-solid fa-magnifying-glass"></i> IR O-H</span>
+                                <span class="keyword-badge" onclick="openSearch('C=O')"><i class="fa-solid fa-magnifying-glass"></i> C=O</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="15">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://video.vietjack.com/upload2/quiz_source1/2024/07/blobid0-1722262532.png" alt="Scene 15 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://video.vietjack.com/upload2/quiz_source1/2024/07/blobid0-1722262532.png">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Nhận biết ester bằng phổ IR"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Nhận biết ester bằng phổ IR</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('ester')" data-raw="ester"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">ester</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Đặc điểm hấp thụ của nhóm ester"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Đặc điểm hấp thụ của nhóm ester</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Ester là dẫn xuất của carboxylic acid, có nhóm chức –COO–.&lt;br&gt;• Trong cấu tạo ester có liên kết carbonyl C=O nên phổ IR thường xuất hiện peak hấp thụ mạnh của C=O trong khoảng 1 750–1 715 cm⁻¹.&lt;br&gt;• Ví dụ, methyl acetate CH₃COOCH₃ là một ester có nhóm –COO–.&lt;br&gt;• Khi phân tích phổ IR của một hợp chất, nếu thấy peak C=O mạnh trong vùng đặc trưng của ester, có thể dự đoán sự hiện diện của nhóm carbonyl thuộc ester.&lt;br&gt;• Tuy nhiên, không nên chỉ dựa vào một peak duy nhất để kết luận vì nhiều hợp chất khác cũng chứa liên kết C=O.&lt;br&gt;• Cần kết hợp với các tín hiệu khác trong vùng fingerprint và vùng đặc trưng của liên kết C–O để tăng độ chính xác.&lt;br&gt;• Phổ IR đặc biệt hữu ích khi cần kiểm tra nhanh sản phẩm sau một phản ứng tổng hợp hữu cơ."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Ester là dẫn xuất của carboxylic acid, có nhóm chức –COO–.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Trong cấu tạo ester có liên kết carbonyl C=O nên phổ IR thường xuất hiện peak hấp thụ mạnh của C=O trong khoảng 1 750–1 715 cm⁻¹.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Ví dụ, methyl acetate CH₃COOCH₃ là một ester có nhóm –COO–.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Khi phân tích phổ IR của một hợp chất, nếu thấy peak C=O mạnh trong vùng đặc trưng của ester, có thể dự đoán sự hiện diện của nhóm carbonyl thuộc ester.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Tuy nhiên, không nên chỉ dựa vào một peak duy nhất để kết luận vì nhiều hợp chất khác cũng chứa liên kết C=O.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Cần kết hợp với các tín hiệu khác trong vùng fingerprint và vùng đặc trưng của liên kết C–O để tăng độ chính xác.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Phổ IR đặc biệt hữu ích khi cần kiểm tra nhanh sản phẩm sau một phản ứng tổng hợp hữu cơ.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('COO')"><i class="fa-solid fa-magnifying-glass"></i> COO</span>
+                                <span class="keyword-badge" onclick="openSearch('C=O')"><i class="fa-solid fa-magnifying-glass"></i> C=O</span>
+                                <span class="keyword-badge" onclick="openSearch('phổ IR')"><i class="fa-solid fa-magnifying-glass"></i> phổ IR</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="16">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://img.loigiaihay.com/picture/question_lgh/2023_11/1700040661-2l0e.jpg" alt="Scene 16 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://img.loigiaihay.com/picture/question_lgh/2023_11/1700040661-2l0e.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Quy trình phân tích phổ IR"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Quy trình phân tích phổ IR</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('phân tích phổ IR')" data-raw="phân tích phổ IR"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">phân tích phổ IR</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Các bước cơ bản để dự đoán nhóm chức từ phổ hồng ngoại"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Các bước cơ bản để dự đoán nhóm chức từ phổ hồng ngoại</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Bước 1: Quan sát trục số sóng và xác định các vùng hấp thụ đáng chú ý trên phổ IR.&lt;br&gt;• Bước 2: Tìm các peak hoặc dải hấp thụ mạnh, rộng hoặc có vị trí đặc trưng.&lt;br&gt;• Bước 3: Đối chiếu số sóng hấp thụ với bảng vùng đặc trưng của các nhóm chức.&lt;br&gt;• Bước 4: Xác định những nhóm chức có khả năng xuất hiện trong phân tử.&lt;br&gt;• Bước 5: Kiểm tra sự phù hợp của các tín hiệu khác để loại trừ những khả năng không phù hợp.&lt;br&gt;• Ví dụ, một dải rộng khoảng 3 500–3 200 cm⁻¹ gợi ý nhóm –OH của alcohol; peak mạnh khoảng 1 715–1 666 cm⁻¹ có thể gợi ý nhóm C=O của ketone.&lt;br&gt;• Khi phân tích IR, cần xem xét toàn bộ phổ thay vì chỉ một tín hiệu riêng lẻ.&lt;br&gt;• IR giúp nhận biết nhóm chức nhanh chóng nhưng thường cần kết hợp với công thức phân tử và các phương pháp phổ khác để xác định cấu trúc hoàn chỉnh."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Bước 1: Quan sát trục số sóng và xác định các vùng hấp thụ đáng chú ý trên phổ IR.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Bước 2: Tìm các peak hoặc dải hấp thụ mạnh, rộng hoặc có vị trí đặc trưng.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Bước 3: Đối chiếu số sóng hấp thụ với bảng vùng đặc trưng của các nhóm chức.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Bước 4: Xác định những nhóm chức có khả năng xuất hiện trong phân tử.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Bước 5: Kiểm tra sự phù hợp của các tín hiệu khác để loại trừ những khả năng không phù hợp.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Ví dụ, một dải rộng khoảng 3 500–3 200 cm⁻¹ gợi ý nhóm –OH của alcohol; peak mạnh khoảng 1 715–1 666 cm⁻¹ có thể gợi ý nhóm C=O của ketone.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Khi phân tích IR, cần xem xét toàn bộ phổ thay vì chỉ một tín hiệu riêng lẻ.</span><br><span class="tts-sentence" data-s-index="10" onclick="playFromSentence(this)">• IR giúp nhận biết nhóm chức nhanh chóng nhưng thường cần kết hợp với công thức phân tử và các phương pháp phổ khác để xác định cấu trúc hoàn chỉnh.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('peak hấp thụ')"><i class="fa-solid fa-magnifying-glass"></i> peak hấp thụ</span>
+                                <span class="keyword-badge" onclick="openSearch('số sóng')"><i class="fa-solid fa-magnifying-glass"></i> số sóng</span>
+                                <span class="keyword-badge" onclick="openSearch('nhóm chức')"><i class="fa-solid fa-magnifying-glass"></i> nhóm chức</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="17">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://sudospaces.com/vietchem/2023/11/chat-huu-co-la-gi-1.png" alt="Scene 17 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://sudospaces.com/vietchem/2023/11/chat-huu-co-la-gi-1.png">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tổng kết Bài 10"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tổng kết Bài 10</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('tổng kết')" data-raw="tổng kết"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">tổng kết</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Hệ thống hoá các kiến thức trọng tâm về hợp chất hữu cơ và phổ IR"><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Hệ thống hoá các kiến thức trọng tâm về hợp chất hữu cơ và phổ IR</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Hợp chất hữu cơ là hợp chất của carbon, ngoại trừ một số hợp chất vô cơ của carbon.&lt;br&gt;• Hợp chất hữu cơ chủ yếu có liên kết cộng hoá trị và carbon có khả năng liên kết trực tiếp với nhau tạo thành mạch carbon đa dạng.&lt;br&gt;• Dựa vào thành phần nguyên tố, hợp chất hữu cơ được chia thành hydrocarbon và dẫn xuất của hydrocarbon.&lt;br&gt;• Nhóm chức là nguyên tử hoặc nhóm nguyên tử quyết định những tính chất hoá học đặc trưng của hợp chất hữu cơ.&lt;br&gt;• Một số nhóm chức quan trọng gồm –X, –OH, –CHO, &amp;gt;C=O, –COOH, –COO–, –NH₂ và –O–.&lt;br&gt;• Phổ IR biểu diễn độ truyền qua theo số sóng và cho phép nhận biết nhóm chức dựa trên các vùng hấp thụ đặc trưng.&lt;br&gt;• Khi đọc phổ IR, cần quan sát vị trí, cường độ và dạng của các dải hấp thụ, đồng thời kết hợp nhiều tín hiệu để đưa ra kết luận hợp lý.&lt;br&gt;• Kiến thức về nhóm chức và IR là nền tảng quan trọng để nghiên cứu cấu tạo và phản ứng của hợp chất hữu cơ."><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Hợp chất hữu cơ là hợp chất của carbon, ngoại trừ một số hợp chất vô cơ của carbon.</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Hợp chất hữu cơ chủ yếu có liên kết cộng hoá trị và carbon có khả năng liên kết trực tiếp với nhau tạo thành mạch carbon đa dạng.</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Dựa vào thành phần nguyên tố, hợp chất hữu cơ được chia thành hydrocarbon và dẫn xuất của hydrocarbon.</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Nhóm chức là nguyên tử hoặc nhóm nguyên tử quyết định những tính chất hoá học đặc trưng của hợp chất hữu cơ.</span><br><span class="tts-sentence" data-s-index="7" onclick="playFromSentence(this)">• Một số nhóm chức quan trọng gồm –X, –OH, –CHO, &gt;C=O, –COOH, –COO–, –NH₂ và –O–.</span><br><span class="tts-sentence" data-s-index="8" onclick="playFromSentence(this)">• Phổ IR biểu diễn độ truyền qua theo số sóng và cho phép nhận biết nhóm chức dựa trên các vùng hấp thụ đặc trưng.</span><br><span class="tts-sentence" data-s-index="9" onclick="playFromSentence(this)">• Khi đọc phổ IR, cần quan sát vị trí, cường độ và dạng của các dải hấp thụ, đồng thời kết hợp nhiều tín hiệu để đưa ra kết luận hợp lý.</span><br><span class="tts-sentence" data-s-index="10" onclick="playFromSentence(this)">• Kiến thức về nhóm chức và IR là nền tảng quan trọng để nghiên cứu cấu tạo và phản ứng của hợp chất hữu cơ.</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('hợp chất hữu cơ')"><i class="fa-solid fa-magnifying-glass"></i> hợp chất hữu cơ</span>
+                                <span class="keyword-badge" onclick="openSearch('nhóm chức')"><i class="fa-solid fa-magnifying-glass"></i> nhóm chức</span>
+                                <span class="keyword-badge" onclick="openSearch('phổ IR')"><i class="fa-solid fa-magnifying-glass"></i> phổ IR</span>
+                            </div>
+                        </div>
+                    </div></main>
+
+        <footer class="pres-footer">
+            <div class="control-group">
+                <button class="btn" id="prevBtn" title="Quay lại"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                <button class="btn btn-primary" id="playBtn" title="Phát/Tạm dừng"><i class="fa-solid fa-pause" id="playIcon"></i> <span id="playText">Pause</span></button>
+                <button class="btn" id="nextBtn" title="Tiếp theo">Next <i class="fa-solid fa-chevron-right"></i></button>
+                <button class="btn" id="muteBtn" title="Bật/Tắt âm thanh"><i class="fa-solid fa-volume-high" id="muteIcon"></i></button>
+            </div>
+
+            <div class="control-group">
+                <button class="btn" onclick="openImportModal()" title="Import văn bản"><i class="fa-solid fa-file-import"></i> Import</button>
+                <button class="btn" onclick="adjustFontSize(0.1)" title="Tăng chữ"><span>A+</span></button>
+                <button class="btn" onclick="adjustFontSize(-0.1)" title="Giảm chữ"><span>A-</span></button>
+                <button class="btn btn-primary" onclick="saveAsHTML()" title="Lưu file"><i class="fa-solid fa-download"></i> Save</button>
+            </div>
+
+            <div class="shortcuts-hint">
+                <span><kbd>Space</kbd> Play</span>
+                <span><kbd>←/→</kbd> Nav</span>
+                <span><kbd>M</kbd> Mute</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Lightbox Overlay -->
+    <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
+        <button class="lightbox-nav lightbox-prev" onclick="event.stopPropagation(); changeLightboxSlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="lightbox-nav lightbox-next" onclick="event.stopPropagation(); changeLightboxSlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="lightbox-img-container" onclick="event.stopPropagation()">
+            <img id="lightboxImg" src="" alt="Lightbox Image">
+        </div>
+    </div>
+
+    <!-- Modal Import -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-import"></i> Import Dữ Liệu Presentation</h3>
+                <button class="modal-close" onclick="closeImportModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>Dán dữ liệu copy từ Google Sheet hoặc Excel (phân tách bằng tab, gồm đúng 8 cột):<br>
+                <em>[1. Tiêu đề] \t [2. Nội dung] \t [3. Subtitle] \t [4. Keyword Anh] \t [5-7. Từ khóa] \t [8. URL Ảnh]</em></p>
+                <textarea class="modal-textarea" id="importTextarea" placeholder="Dán nội dung vào đây..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeImportModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="processImportData()">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSceneIndex = 0;
+        let totalScenes = 12;
+        let isPlaying = true;
+        let isMuted = false;
+        let timelineStartTime = null;
+        let sceneDuration = 15000;
+        let animationFrameId = null;
+        let currentUtterance = null;
+        let currentScaleFactor = 1;
+
+        const panes = document.querySelectorAll('.scene-pane');
+        const sceneIndicator = document.getElementById('sceneIndicator');
+        const timelineBar = document.getElementById('timelineBar');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const muteIcon = document.getElementById('muteIcon');
+        const lightboxOverlay = document.getElementById('lightboxOverlay');
+        const lightboxImg = document.getElementById('lightboxImg');
+
+        // YÊU CẦU 2: Giữ màn hình luôn sáng trên mobile bằng Screen Wake Lock API
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function setupSentenceSplitting() {
+            document.querySelectorAll('.scene-pane').forEach(pane => {
+                const titleEl = pane.querySelector('.tts-title');
+                if (titleEl && !titleEl.dataset.raw) {
+                    titleEl.dataset.raw = titleEl.textContent;
+                    titleEl.innerHTML = `<span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">${titleEl.textContent.trim()}</span>`;
+                }
+
+                const badgeEl = pane.querySelector('.tts-badge');
+                if (badgeEl && !badgeEl.dataset.raw) {
+                    let cleanText = badgeEl.textContent.replace(/<[^>]*>/g, '').trim();
+                    badgeEl.dataset.raw = cleanText;
+                    badgeEl.innerHTML = `<i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">${cleanText}</span>`;
+                }
+
+                const bodyEl = pane.querySelector('.tts-body');
+                if (bodyEl && !bodyEl.dataset.rawHtml) {
+                    bodyEl.dataset.rawHtml = bodyEl.innerHTML;
+                    let sentences = bodyEl.textContent.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                    if (sentences) {
+                        bodyEl.innerHTML = sentences.map((s, idx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            return `<span class="tts-sentence" data-s-index="${2 + idx}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                        }).join(' ');
+                    }
+                }
+
+                const subEl = pane.querySelector('.tts-sub');
+                if (subEl && !subEl.dataset.rawHtml) {
+                    subEl.dataset.rawHtml = subEl.innerHTML;
+                    let rawHtml = subEl.innerHTML;
+                    let parts = rawHtml.split(/<br\s*[\/]?>/gi);
+                    let bodySentenceCount = bodyEl ? bodyEl.querySelectorAll('.tts-sentence').length : 0;
+                    let subIndexOffset = 2 + bodySentenceCount;
+
+                    let processedParts = parts.map((part, pIdx) => {
+                        let textOnly = part.replace(/<[^>]*>/g, '').trim();
+                        if (!textOnly) return '';
+                        let sentences = textOnly.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                        if (!sentences) return `<span class="tts-sentence" data-s-index="${subIndexOffset + pIdx}" onclick="playFromSentence(this)">${textOnly}</span>`;
+                        
+                        return sentences.map((s, sIdx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            let snip = `<span class="tts-sentence" data-s-index="${subIndexOffset}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                            subIndexOffset++;
+                            return snip;
+                        }).join(' ');
+                    });
+                    subEl.innerHTML = processedParts.filter(Boolean).join('<br>');
+                }
+            });
+        }
+
+        function initScene(index, direction = 1) {
+            const currentPanes = document.querySelectorAll('.scene-pane');
+            currentPanes.forEach((pane, i) => {
+                if (i === index) {
+                    pane.classList.add('active');
+                    const contentCol = pane.querySelector('.content-col');
+                    if (contentCol) contentCol.scrollTop = 0;
+
+                    gsap.fromTo(pane.querySelectorAll('.content-col > *, .media-col > *'), 
+                        { y: 15, opacity: 0 }, 
+                        { y: 0, opacity: 1, duration: 0.5, stagger: 0.06, ease: "power3.out", overwrite: "auto" }
+                    );
+                } else {
+                    pane.classList.remove('active');
+                }
+            });
+
+            sceneIndicator.textContent = `${index + 1} / ${totalScenes}`;
+            
+            stopSpeech();
+            clearAllHighlights();
+            if (isPlaying) {
+                playCurrentScene();
+            }
+        }
+
+        function clearAllHighlights() {
+            document.querySelectorAll('.tts-sentence').forEach(s => s.classList.remove('active-sentence'));
+        }
+
+        function openSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`, '_blank');
+        }
+
+        function openGifSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch&tbs=itp:animated`, '_blank');
+        }
+
+        function openLightbox(cardEl) {
+            const img = cardEl.querySelector('.scene-img');
+            if (img) {
+                lightboxImg.src = img.src;
+                lightboxOverlay.classList.add('open');
+                if (isPlaying) togglePlay();
+            }
+        }
+
+        function closeLightbox() {
+            lightboxOverlay.classList.remove('open');
+        }
+
+        function changeLightboxSlide(direction) {
+            currentSceneIndex = (currentSceneIndex + direction + totalScenes) % totalScenes;
+            initScene(currentSceneIndex);
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const activeImg = activePane.querySelector('.scene-img');
+            if (activeImg) {
+                lightboxImg.src = activeImg.src;
+            }
+        }
+
+        function updateImage(btn) {
+            const customizer = btn.parentElement;
+            const input = customizer.querySelector('.img-url-input');
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const img = activePane.querySelector('.scene-img');
+            if (input.value.trim() !== '') {
+                img.src = input.value.trim();
+                alert('Đã cập nhật ảnh thành công!');
+            }
+        }
+
+        // YÊU CẦU 1: Điều chỉnh hệ số scale cho toàn bộ chữ (tiêu đề, nội dung, phụ đề, từ khóa)
+        function adjustFontSize(delta) {
+            currentScaleFactor = Math.max(0.75, Math.min(1.6, currentScaleFactor + delta));
+            document.documentElement.style.setProperty('--scale-factor', currentScaleFactor);
+        }
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('open');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('open');
+        }
+
+        function processImportData() {
+            const text = document.getElementById('importTextarea').value.trim();
+            if (!text) {
+                alert('Vui lòng dán dữ liệu vào ô trống!');
+                return;
+            }
+
+            const lines = text.split('\n');
+            const presStage = document.getElementById('presStage');
+            let newHTML = '';
+
+            lines.forEach((line, index) => {
+                const cols = line.split('\t');
+                if (cols.length >= 8) {
+                    const mainTitle = cols[0].trim();       
+                    const bodyText = cols[1].trim();        
+                    const subText = cols[2].trim();         
+                    const englishKw = cols[3].trim();       
+                    const kw1 = cols[4].trim();             
+                    const kw2 = cols[5].trim();             
+                    const kw3 = cols[6].trim();             
+                    const imgUrl = cols[7].trim() || "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=1200&auto=format&fit=crop";
+
+                    newHTML += `
+                    <div class="scene-pane ${index === 0 ? 'active' : ''}" data-scene="${index + 1}">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="${imgUrl}" alt="Scene ${index + 1} Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="${imgUrl}">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1">${mainTitle}</h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('${englishKw}')"><i class="fa-solid fa-image"></i> ${englishKw}</span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">${bodyText}</p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">${subText}</div>
+                            <div class="keywords-wrapper">
+                                ${kw1 ? `<span class="keyword-badge" onclick="openSearch('${kw1}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw1}</span>` : ''}
+                                ${kw2 ? `<span class="keyword-badge" onclick="openSearch('${kw2}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw2}</span>` : ''}
+                                ${kw3 ? `<span class="keyword-badge" onclick="openSearch('${kw3}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw3}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            });
+
+            if (newHTML) {
+                presStage.innerHTML = newHTML;
+                totalScenes = lines.length;
+                currentSceneIndex = 0;
+                setupSentenceSplitting();
+                closeImportModal();
+                initScene(0);
+                alert(`Import thành công ${totalScenes} Scene!`);
+            } else {
+                alert('Định dạng dữ liệu chưa chính xác.');
+            }
+        }
+
+        function playCurrentScene(startSentenceIndex = 0) {
+            if (isMuted) {
+                startTimelineSimulation(sceneDuration);
+                return;
+            }
+
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            if (sentenceElements.length === 0) return;
+
+            let textsToSpeak = [];
+            for (let i = startSentenceIndex; i < sentenceElements.length; i++) {
+                textsToSpeak.push({
+                    element: sentenceElements[i],
+                    text: sentenceElements[i].textContent.trim()
+                });
+            }
+
+            let fullText = textsToSpeak.map(item => item.text).join(' ');
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                currentUtterance = new SpeechSynthesisUtterance(fullText);
+                currentUtterance.lang = 'vi-VN';
+                currentUtterance.rate = 1.0;
+
+                const estimatedDuration = Math.max(5000, fullText.length * 65);
+                let activeElIndex = startSentenceIndex;
+
+                clearAllHighlights();
+                if (sentenceElements[activeElIndex]) {
+                    sentenceElements[activeElIndex].classList.add('active-sentence');
+                    sentenceElements[activeElIndex].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                }
+
+                currentUtterance.onboundary = function(event) {
+                    if (event.name === 'word') {
+                        let charIndex = event.charIndex;
+                        let accumulatedLength = 0;
+                        
+                        for (let k = 0; k < textsToSpeak.length; k++) {
+                            let len = textsToSpeak[k].text.length + 1; 
+                            if (charIndex >= accumulatedLength && charIndex < accumulatedLength + len) {
+                                let targetElement = textsToSpeak[k].element;
+                                if (!targetElement.classList.contains('active-sentence')) {
+                                    clearAllHighlights();
+                                    targetElement.classList.add('active-sentence');
+                                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                                }
+                                break;
+                            }
+                            accumulatedLength += len;
+                        }
+                    }
+                };
+
+                currentUtterance.onend = function() {
+                    clearAllHighlights();
+                    if (isPlaying) {
+                        nextScene();
+                    }
+                };
+
+                currentUtterance.onerror = function() {
+                    startTimelineSimulation(estimatedDuration);
+                };
+
+                window.speechSynthesis.speak(currentUtterance);
+                startTimelineSimulation(estimatedDuration);
+            } else {
+                startTimelineSimulation(sceneDuration);
+            }
+        }
+
+        function playFromSentence(spanEl) {
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            const targetIdx = sentenceElements.indexOf(spanEl);
+            if (targetIdx !== -1) {
+                if (!isPlaying) {
+                    isPlaying = true;
+                    playIcon.className = "fa-solid fa-pause";
+                    playText.textContent = "Pause";
+                }
+                playCurrentScene(targetIdx);
+            }
+        }
+
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function startTimelineSimulation(duration) {
+            sceneDuration = duration;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            timelineStartTime = performance.now();
+
+            function updateTimeline(currentTime) {
+                if (!isPlaying) return;
+                const elapsed = currentTime - timelineStartTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                timelineBar.style.width = `${progress}%`;
+
+                if (progress < 100) {
+                    animationFrameId = requestAnimationFrame(updateTimeline);
+                } else if (!('speechSynthesis' in window) || isMuted) {
+                    nextScene();
+                }
+            }
+            animationFrameId = requestAnimationFrame(updateTimeline);
+        }
+
+        function nextScene() {
+            currentSceneIndex = (currentSceneIndex + 1) % totalScenes;
+            initScene(currentSceneIndex, 1);
+        }
+
+        function prevScene() {
+            currentSceneIndex = (currentSceneIndex - 1 + totalScenes) % totalScenes;
+            initScene(currentSceneIndex, -1);
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playIcon.className = "fa-solid fa-pause";
+                playText.textContent = "Pause";
+                playCurrentScene();
+            } else {
+                playIcon.className = "fa-solid fa-play";
+                playText.textContent = "Play";
+                stopSpeech();
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (isMuted) {
+                muteIcon.className = "fa-solid fa-volume-xmark";
+                stopSpeech();
+                playCurrentScene();
+            } else {
+                muteIcon.className = "fa-solid fa-volume-high";
+                playCurrentScene();
+            }
+        }
+
+        function saveAsHTML() {
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cam-ung-thuc-vat-updated.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        const container = document.getElementById('presentationContainer');
+        container.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        container.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleTouchSwipe();
+        }, {passive: true});
+
+        function handleTouchSwipe() {
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+                if (lightboxOverlay.classList.contains('open')) {
+                    if (diffX < 0) {
+                        changeLightboxSlide(1);
+                    } else {
+                        changeLightboxSlide(-1);
+                    }
+                } else {
+                    if (diffX < 0) {
+                        nextScene();
+                    } else {
+                        prevScene();
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.code === 'Space' || e.code === 'KeyK') {
+                e.preventDefault();
+                togglePlay();
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyL') {
+                e.preventDefault();
+                if (lightboxOverlay.classList.contains('open')) {
+                    changeLightboxSlide(1);
+                } else {
+                    nextScene();
+                }
+            } else if (e.code === 'ArrowLeft' || e.code === 'KeyJ') {
+                e.preventDefault();
+                if (lightboxOverlay.classList.contains('open')) {
+                    changeLightboxSlide(-1);
+                } else {
+                    prevScene();
+                }
+            } else if (e.code === 'KeyM') {
+                e.preventDefault();
+                toggleMute();
+            } else if (e.code === 'Escape') {
+                closeLightbox();
+            }
+        });
+
+        playBtn.addEventListener('click', togglePlay);
+        document.getElementById('nextBtn').addEventListener('click', nextScene);
+        document.getElementById('prevBtn').addEventListener('click', prevScene);
+        document.getElementById('muteBtn').addEventListener('click', toggleMute);
+
+        window.addEventListener('load', () => {
+            setupSentenceSplitting();
+            initScene(0);
+            requestWakeLock(); // Kích hoạt giữ sáng màn hình khi load trang
+        });
+    </script>
+
+</body></html>
