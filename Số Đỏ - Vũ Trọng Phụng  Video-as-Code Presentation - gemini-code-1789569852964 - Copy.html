@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Số Đỏ - Vũ Trọng Phụng | Video-as-Code Presentation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --surface-color: #121216;
+            --surface-border: #27272a;
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.3);
+            --accent: #06b6d4;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --font-main: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            --base-font-size: 1rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* App Container - 16:9 Max or Responsive Viewport */
+        .app-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 177.78vh; /* 16:9 aspect ratio cap */
+            max-height: 56.25vw;
+            background: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-aspect-ratio: 16/9) {
+            .app-container {
+                width: calc(100vh * 16 / 9);
+                height: 100vh;
+            }
+        }
+        @media (max-aspect-ratio: 16/9) {
+            .app-container {
+                width: 100vw;
+                height: calc(100vw * 9 / 16);
+            }
+        }
+
+        /* Header / Top Bar */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--surface-border);
+            background: rgba(18, 18, 22, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-icon {
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 15px var(--accent); }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .brand-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .scene-counter {
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--surface-border);
+            color: var(--text-muted);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--surface-border);
+            color: var(--text-main);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        /* Main Presentation Stage */
+        .stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem;
+        }
+
+        .scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            padding: 0 3rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .scene.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .scene-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .scene-badge {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            align-self: flex-start;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        .scene-title {
+            font-size: clamp(1.8rem, 2.5vw, 2.6rem);
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.03em;
+            color: #fff;
+        }
+
+        .scene-subtitle {
+            font-size: 1.1rem;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .scene-desc {
+            font-size: var(--base-font-size);
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        /* Keyword Badges Container */
+        .keywords-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .keyword-tag {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            background: rgba(139, 92, 246, 0.1);
+            color: #c4b5fd;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .keyword-tag:hover {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 0 12px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+
+        /* Scene Media / Visual Container */
+        .scene-visual {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid var(--surface-border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .scene-visual img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .scene-visual:hover img {
+            transform: scale(1.03);
+        }
+
+        /* Image URL Input overlay / bar */
+        .image-input-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(9, 9, 11, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+            border-top: 1px solid var(--surface-border);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .scene-visual:hover .image-input-bar {
+            transform: translateY(0);
+        }
+
+        .image-url-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--surface-border);
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            color: #fff;
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            outline: none;
+        }
+
+        .image-url-input:focus {
+            border-color: var(--accent);
+        }
+
+        .update-img-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        /* Footer & Timeline controls */
+        .app-footer {
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid var(--surface-border);
+            background: rgba(18, 18, 22, 0.9);
+        }
+
+        .timeline-bar {
+            width: 100%;
+            height: 3px;
+            background: var(--surface-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timeline-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            transition: width 0.1s linear;
+        }
+
+        .footer-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 2rem;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--surface-border);
+            color: var(--text-main);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--text-muted);
+        }
+
+        .tool-btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .tool-btn.primary:hover {
+            background: #7c3aed;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .shortcuts-hint {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        kbd {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--surface-border);
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="appContainer">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-icon"></div>
+                <div class="brand-title">SỐ ĐỎ — VŨ TRỌNG PHỤNG</div>
+            </div>
+            <div class="header-controls">
+                <div class="scene-counter" id="sceneCounter">Scene 1 / 12</div>
+                <button class="control-btn" id="ttsToggleBtn" title="Bật/Tắt âm thanh đọc">🔊 Tiếng: Bật</button>
+            </div>
+        </header>
+
+        <!-- Stage Container (12 Scenes) -->
+        <div class="stage" id="stage">
+            <!-- Scenes will be injected here via JavaScript -->
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="timeline-bar">
+                <div class="timeline-progress" id="timelineProgress"></div>
+            </div>
+            <div class="footer-toolbar">
+                <div class="toolbar-group">
+                    <button class="tool-btn" id="prevBtn" title="Scene trước (J / Left)">← Trước</button>
+                    <button class="tool-btn primary" id="playPauseBtn" title="Phát/Tạm dừng (Space / K)">⏸ Tạm dừng</button>
+                    <button class="tool-btn" id="nextBtn" title="Scene sau (L / Right)">Tiếp →</button>
+                </div>
+                <div class="shortcuts-hint">
+                    Phím tắt: <kbd>Space</kbd> Play/Pause | <kbd>←</kbd><kbd>→</kbd> Chuyển cảnh | <kbd>M</kbd> Mute
+                </div>
+                <div class="toolbar-group">
+                    <button class="tool-btn" id="fontDec" title="Giảm cỡ chữ">A-</button>
+                    <button class="tool-btn" id="fontInc" title="Tăng cỡ chữ">A+</button>
+                    <button class="tool-btn" id="saveAsBtn" title="Lưu lại file HTML kèm tùy chỉnh">💾 Save As</button>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // 12 Scene dataset for "Số Đỏ - Vũ Trọng Phụng"
+        const scenesData = [
+            {
+                badge: "Phần I: Tổng quan tác phẩm",
+                title: "Bối cảnh xã hội Việt Nam trước 1945",
+                subtitle: "Thời kỳ 'chó ăn đá, gà ăn muối' và sự Âu hóa nửa mùa",
+                desc: "Xã hội Việt Nam trong giai đoạn trước Cách mạng tháng Tám chìm trong khủng hoảng sâu sắc dưới ách đô hộ của thực dân Pháp. Phong trào Âu hóa ồ ạt tràn vào đô thị nhưng chỉ tạo ra một lớp bù nhìn tư sản lố lăng, học đòi lối sống phương Tây một cách mù quáng, xa rời thuần phong mỹ tục.",
+                keywords: ["colonial vietnam", "urban satire", "historical context"],
+                image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần I: Tác giả Vũ Trọng Phụng",
+                title: "Chân dung 'Ông vua phóng sự đất Bắc'",
+                subtitle: "Ngòi bút châm biếm sắc sảo và hiện thực chủ nghĩa",
+                desc: "Vũ Trọng Phụng là nhà văn tài năng bậc nhất của dòng văn học hiện thực phê phán Việt Nam. Với tư duy sắc sảo, năng lực quan sát tinh tường và thái độ bất mãn với xã hội tư bản thực dân giả tạo, ông đã để lại gia tài đồ sộ với những kiệt tác mang giá trị nhân bản và thời đại sâu sắc.",
+                keywords: ["vu trong phung", "vietnamese literature", "satirical writer"],
+                image: "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần II: Nhân vật chính",
+                title: "Xuân Tóc Đỏ - Từ kẻ hạ lưu lên đỉnh cao danh vọng",
+                subtitle: "Biểu tượng của sự thăng tiến nhờ lóp ngóp thời loạn",
+                desc: "Từ một kẻ nhặt banh quần vợt, bán thuốc lậu, Xuân Tóc Đỏ đã phất lên như diều gặp gió nhờ một xã hội lố lăng chuộng hư danh. Hắn bước những bước dài qua các bậc thang danh vọng xã hội, trở thành 'đốc-tơ', cố vấn cho các hội thể thao và là thần tượng của giới thượng lưu rởm đời.",
+                keywords: ["xuan toc do", "social climber", "literary character"],
+                image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần II: Thế lực thượng lưu",
+                title: "Gia đình cố Hồng và cái 'phúc đức'",
+                subtitle: "Đạo đức giả và sự suy đồi luân lý đạo đức gia đình",
+                desc: "Gia đình cố Hồng tiêu biểu cho tầng lớp tư sản thành thị lúc bấy giờ: giàu có nhưng rỗng tuếch và đồi bại về đạo đức. Câu nói kinh điển 'Biết rồi, khổ lắm, nói mãi' của cụ cố Hồng bộc lộ sự vô cảm, chán chường trước chính những người ruột thịt và các vấn đề luân thường đạo lý trong nhà.",
+                keywords: ["bourgeois family", "hypocrisy", "moral decay"],
+                image: "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần III: Trào lưu xã hội",
+                title: "Phong trào 'Vui vẻ trẻ trung' và sự lố lăng",
+                subtitle: "Khi văn hóa giải trí trở thành trò hề lố bịch",
+                desc: "Phong trào Âu hóa và hiện đại hóa đời sống do nhóm 'Vui vẻ trẻ trung' khởi xướng thực chất là sân chơi cho sự đú đởn, học đòi kệch cỡm. Những buổi hội họp, khiêu vũ, thể thao đều mang màu sắc kệch cỡm, phản ánh một xã hội đang mất gốc và tự đánh mất bản sắc văn hóa dân tộc.",
+                keywords: ["westernization", "absurd culture", "social movement"],
+                image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần III: Bi kịch thời đại",
+                title: "Đám tang cụ cố tổ - Bản kịch cợm lớn của xã hội",
+                subtitle: "Hiếu thảo giả tạo và niềm vui trá hình",
+                desc: "Đám tang cụ cố tổ là đỉnh cao nghệ thuật châm biếm của Vũ Trọng Phụng. Một sự kiện đau buồn lại biến thành sân khấu thời trang mốt mới, nơi người ta khoe khoang danh vị, thể hiện sự hiếu thảo giả tạo, và đặc biệt là cháu con ai nấy đều mừng rỡ ngầm vì sắp được chia gia tài.",
+                keywords: ["funeral satire", "fake grief", "social comedy"],
+                image: "https://images.unsplash.com/photo-1533227268428-f9ed0900fb3b?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần IV: Biếm họa nhân vật",
+                title: "Bà Phó Đoan và những góc khuất đạo đức",
+                subtitle: "Sự bất luân sau lớp vỏ bọc quý phái",
+                desc: "Bà Phó Đoan đại diện cho tầng lớp phụ nữ thượng lưu đua đòi, lẳng lơ và đầy mâu thuẫn nội tâm. Che đậy dưới vẻ ngoài đạo mạo, nền nã của một góa phụ nhà giàu là lối sống buông thả, thực dụng và sẵn sàng thỏa hiệp với mọi chuẩn mực đạo đức thấp hèn nhất để thỏa mãn bản năng.",
+                keywords: ["aristocratic lady", "immorality", "satirical portrait"],
+                image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần IV: Giới trí thức rởm",
+                title: "Văn minh rởm và những 'nhà bác học' bất đắc dĩ",
+                subtitle: "Sự nông cạn được bao bọc bởi danh hiệu hào nhoáng",
+                desc: "Tác phẩm châm biếm sâu cay những kẻ tự xưng là trí thức, nhà cải cách xã hội nhưng thực chất vô học và dốt nát. Họ dùng những danh hiệu khoa học, các hội đoàn tân thời làm vỏ bọc cho sự trống rỗng về trí tuệ và sự đồi bại về nhân cách, làm lung lay nền tảng văn hóa truyền thống.",
+                keywords: ["pseudo intellectual", "fake science", "satire"],
+                image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần V: Nghệ thuật tiểu thuyết",
+                title: "Nghệ thuật trào phúng đỉnh cao của Vũ Trọng Phụng",
+                subtitle: "Kết cấu kịch tính, ngôn ngữ cay độc và hình tượng độc đáo",
+                desc: "Số Đỏ sở hữu một cốt truyện vô cùng kịch tính với chuỗi tình huống oái oăm, trùng hợp bất ngờ nhưng cực kỳ logic. Ngôn ngữ trào phụng sắc bén, giọng văn giễu nhại linh hoạt kết hợp với hệ thống nhân vật mang tính điển hình cao đã tạo nên giá trị nghệ thuật bền vững cho tác phẩm.",
+                keywords: ["literary technique", "satirical novel", "narrative structure"],
+                image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần V: Giá trị hiện thực",
+                title: "Giá trị hiện thực và nhân đạo sâu sắc",
+                subtitle: "Tiếng cười đau đớn đằng sau bức tranh xã hội lố lăng",
+                desc: "Đằng sau những tràng cười sảng khoái là tiếng thở dài chua xót về một xã hội bế tắc, nơi cái ác và sự dốt nát lên ngôi, còn đạo đức lương tri bị đạp dưới chân. Tác phẩm thể hiện cái nhìn tinh tường, lòng thương cảm sâu kín của nhà văn đối với số phận con người trong vòng xoáy thực dân phong kiến.",
+                keywords: ["social critique", "humanitarian value", "classic novel"],
+                image: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần VI: Đón nhận và di sản",
+                title: "Sức sống mãnh liệt qua thời gian",
+                subtitle: "Từ trang sách đến sân khấu và màn ảnh hiện đại",
+                desc: "Trải qua gần một thế kỷ, Số Đỏ vẫn giữ nguyên vẹn tính thời sự nóng hổi về thói hư tật xấu, bệnh sĩ diện và sự sùng bái vật chất mù quáng. Tác phẩm đã được chuyển thể thành công sang kịch nói, điện ảnh, khẳng định sức sống trường tồn trong nền văn học nghệ thuật Việt Nam.",
+                keywords: ["cultural legacy", "theatre adaptation", "timeless classic"],
+                image: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80"
+            },
+            {
+                badge: "Phần VI: Tổng kết",
+                title: "Bài học lịch sử và thông điệp nhân sinh",
+                subtitle: "Nhìn lại quá khứ để trân trọng giá trị chân thực",
+                desc: "Số Đỏ không chỉ là một bức tranh biếm họa sắc nét về một thời đoạn lịch sử đầy biến động mà còn là lời cảnh tỉnh muôn đời về việc giữ gìn bản sắc văn hóa, liêm sỉ và nhân phẩm trước những cám dỗ phù phiếm của xã hội hiện đại. Một kiệt tác vô giá của văn học Việt Nam.",
+                keywords: ["moral lesson", "vietnamese heritage", "conclusion"],
+                image: "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=800&q=80"
+            }
+        ];
+
+        let currentSceneIndex = 0;
+        let isPlaying = true;
+        let isMuted = false;
+        let sceneDurationTimer = null;
+        let currentUtterance = null;
+        let fontSizeMultiplier = 1;
+
+        const stageEl = document.getElementById('stage');
+        const sceneCounterEl = document.getElementById('sceneCounter');
+        const timelineProgressEl = document.getElementById('timelineProgress');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const ttsToggleBtn = document.getElementById('ttsToggleBtn');
+
+        // Initialize Scenes in DOM
+        function renderScenes() {
+            stageEl.innerHTML = '';
+            scenesData.forEach((scene, index) => {
+                const sceneDiv = document.createElement('div');
+                sceneDiv.className = `scene ${index === 0 ? 'active' : ''}`;
+                sceneDiv.id = `scene-${index}`;
+                sceneDiv.innerHTML = `
+                    <div class="scene-content">
+                        <span class="scene-badge">${scene.badge}</span>
+                        <h2 class="scene-title">${scene.title}</h2>
+                        <div class="scene-subtitle">${scene.subtitle}</div>
+                        <p class="scene-desc" style="font-size: calc(var(--base-font-size) * ${fontSizeMultiplier});">${scene.desc}</p>
+                        <div class="keywords-container">
+                            ${scene.keywords.map(kw => `<a class="keyword-tag" href="https://www.google.com/search?q=${encodeURIComponent(kw)}&tbm=isch" target="_blank">#${kw} ↗</a>`).join('')}
+                        </div>
+                    </div>
+                    <div class="scene-visual">
+                        <img src="${scene.image}" alt="${scene.title}" id="img-${index}" crossorigin="anonymous">
+                        <div class="image-input-bar">
+                            <input type="text" class="image-url-input" value="${scene.image}" placeholder="Dán URL ảnh mới..." id="input-img-${index}">
+                            <button class="update-img-btn" onclick="updateSceneImage(${index})">Đổi ảnh</button>
+                        </div>
+                    </div>
+                `;
+                stageEl.appendChild(sceneDiv);
+            });
+        }
+
+        // Update custom image for scene
+        window.updateSceneImage = function(index) {
+            const inputVal = document.getElementById(`input-img-${index}`).value;
+            if (inputVal) {
+                scenesData[index].image = inputVal;
+                document.getElementById(`img-${index}`).src = inputVal;
+            }
+        }
+
+        // Switch to specific scene with GSAP animation
+        function goToScene(index, direction = 1) {
+            if (index < 0 || index >= scenesData.length) return;
+            
+            // Stop current speech
+            window.speechSynthesis.cancel();
+            if (sceneDurationTimer) clearTimeout(sceneDurationTimer);
+
+            const oldScene = document.getElementById(`scene-${currentSceneIndex}`);
+            currentSceneIndex = index;
+            const newScene = document.getElementById(`scene-${currentSceneIndex}`);
+
+            sceneCounterEl.textContent = `Scene ${currentSceneIndex + 1} / ${scenesData.length}`;
+
+            // GSAP Transition
+            gsap.to(oldScene, { opacity: 0, x: -50 * direction, duration: 0.3, onComplete: () => {
+                oldScene.classList.remove('active');
+            }});
+
+            newScene.classList.add('active');
+            gsap.fromTo(newScene, 
+                { opacity: 0, x: 50 * direction }, 
+                { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }
+            );
+
+            // Animate internal elements
+            gsap.fromTo(newScene.querySelectorAll('.scene-content > *'), 
+                { y: 20, opacity: 0 }, 
+                { y: 0, opacity: 1, duration: 0.4, stagger: 0.08, ease: 'power2.out' }
+            );
+
+            // Handle Audio & Timeline
+            if (isPlaying) {
+                playCurrentScene();
+            }
+        }
+
+        // Text-to-Speech & Auto-advance logic
+        function playCurrentScene() {
+            if (!isPlaying || isMuted) return;
+
+            window.speechSynthesis.cancel();
+            const textToSpeak = `${scenesData[currentSceneIndex].title}. ${scenesData[currentSceneIndex].desc}`;
+            currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+            currentUtterance.lang = 'vi-VN';
+            currentUtterance.rate = 1.05;
+
+            // Estimate duration or use speech onend
+            let startTime = Date.now();
+            let estimatedDuration = Math.max(5000, textToSpeak.length * 70); // approx ms
+
+            // Animate timeline bar
+            gsap.killTweensOf(timelineProgressEl);
+            gsap.fromTo(timelineProgressEl, { width: '0%' }, { width: '100%', duration: estimatedDuration / 1000, ease: 'linear' });
+
+            currentUtterance.onend = () => {
+                if (isPlaying) {
+                    if (currentSceneIndex < scenesData.length - 1) {
+                        goToScene(currentSceneIndex + 1, 1);
+                    } else {
+                        // Loop back or stop at end
+                        isPlaying = false;
+                        updatePlayPauseUI();
+                    }
+                }
+            };
+
+            currentUtterance.onerror = () => {
+                // Fallback timer if speech fails
+                sceneDurationTimer = setTimeout(() => {
+                    if (isPlaying && currentSceneIndex < scenesData.length - 1) {
+                        goToScene(currentSceneIndex + 1, 1);
+                    }
+                }, 6000);
+            };
+
+            window.speechSynthesis.speak(currentUtterance);
+        }
+
+        function updatePlayPauseUI() {
+            if (isPlaying) {
+                playPauseBtn.innerHTML = "⏸ Tạm dừng";
+                playPauseBtn.classList.add("primary");
+                playCurrentScene();
+            } else {
+                playPauseBtn.innerHTML = "▶ Phát";
+                playPauseBtn.classList.remove("primary");
+                window.speechSynthesis.cancel();
+                gsap.killTweensOf(timelineProgressEl);
+                if (sceneDurationTimer) clearTimeout(sceneDurationTimer);
+            }
+        }
+
+        // Controls Event Listeners
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            goToScene((currentSceneIndex + 1) % scenesData.length, 1);
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            goToScene((currentSceneIndex - 1 + scenesData.length) % scenesData.length, -1);
+        });
+
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            updatePlayPauseUI();
+        });
+
+        ttsToggleBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                ttsToggleBtn.textContent = "🔇 Tiếng: Tắt";
+                window.speechSynthesis.cancel();
+            } else {
+                ttsToggleBtn.textContent = "🔊 Tiếng: Bật";
+                if (isPlaying) playCurrentScene();
+            }
+        });
+
+        // Font size adjust
+        document.getElementById('fontInc').addEventListener('click', () => {
+            if (fontSizeMultiplier < 1.3) {
+                fontSizeMultiplier += 0.1;
+                updateFontSizes();
+            }
+        });
+
+        document.getElementById('fontDec').addEventListener('click', () => {
+            if (fontSizeMultiplier > 0.8) {
+                fontSizeMultiplier -= 0.1;
+                updateFontSizes();
+            }
+        });
+
+        function updateFontSizes() {
+            document.querySelectorAll('.scene-desc').forEach(el => {
+                el.style.fontSize = `calc(var(--base-font-size) * ${fontSizeMultiplier})`;
+            });
+        }
+
+        // Save As current HTML file with embedded state
+        document.getElementById('saveAsBtn').addEventListener('click', () => {
+            // Collect latest inputs into data
+            scenesData.forEach((scene, i) => {
+                const inp = document.getElementById(`input-img-${i}`);
+                if (inp) scene.image = inp.value;
+            });
+
+            // Generate HTML string representation
+            const htmlContent = `<!DOCTYPE html>\n` + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'So-Do-Vu-Trong-Phung-Presentation.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.code === 'Space' || e.code === 'KeyK') {
+                e.preventDefault();
+                isPlaying = !isPlaying;
+                updatePlayPauseUI();
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyL') {
+                e.preventDefault();
+                goToScene((currentSceneIndex + 1) % scenesData.length, 1);
+            } else if (e.code === 'ArrowLeft' || e.code === 'KeyJ') {
+                e.preventDefault();
+                goToScene((currentSceneIndex - 1 + scenesData.length) % scenesData.length, -1);
+            } else if (e.code === 'KeyM') {
+                e.preventDefault();
+                ttsToggleBtn.click();
+            }
+        });
+
+        // Initial setup
+        window.addEventListener('DOMContentLoaded', () => {
+            renderScenes();
+            // Initial entry animation for first scene
+            gsap.fromTo('#scene-0 .scene-content > *', 
+                { y: 20, opacity: 0 }, 
+                { y: 0, opacity: 1, duration: 0.6, stagger: 0.1, ease: 'power2.out' }
+            );
+            // Autoplay start on first user interaction or immediate if permitted
+            setTimeout(() => {
+                if (isPlaying) playCurrentScene();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
