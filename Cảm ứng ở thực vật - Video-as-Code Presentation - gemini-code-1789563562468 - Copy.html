@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cảm ứng ở thực vật - Video-as-Code Presentation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GSAP Animation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --surface-color: #121216;
+            --surface-glass: rgba(18, 18, 22, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.3);
+            --accent: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.3);
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --font-main: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            --content-font-size: 1.1rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.4rem;
+        }
+
+        .presentation-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 920px; 
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timeline-container {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .timeline-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: width 0.1s linear;
+        }
+
+        .pres-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.4);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .brand-title i {
+            color: var(--primary);
+            font-size: 1.05rem;
+        }
+
+        .scene-indicator {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            color: var(--accent);
+        }
+
+        .pres-stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            padding: 1.2rem 2rem;
+            gap: 2.5rem;
+        }
+
+        .scene-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1.2rem 2rem;
+            display: flex;
+            gap: 2.5rem;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .scene-pane.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .content-col {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0.6rem;
+            z-index: 2;
+            overflow-y: auto;
+            max-height: 100%;
+            padding-right: 0.4rem;
+            scroll-behavior: smooth;
+        }
+
+        .content-col::-webkit-scrollbar {
+            width: 5px;
+        }
+        .content-col::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+        }
+        .content-col::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .scene-category {
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--primary);
+            background: var(--primary-glow);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            width: max-content;
+        }
+
+        .scene-title-wrapper {
+            display: flex;
+            align-items: baseline;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .scene-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.03em;
+            color: #ffffff;
+            display: inline;
+        }
+
+        .scene-english-badge {
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--accent);
+            background: var(--accent-glow);
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .scene-english-badge:hover {
+            background: var(--accent);
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .highlightable-text {
+            font-size: var(--content-font-size);
+            line-height: 1.45;
+            color: var(--text-main);
+            transition: font-size 0.2s ease;
+        }
+
+        .tts-sentence {
+            display: inline;
+            padding: 0.1rem 0.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .tts-sentence:hover {
+            background-color: rgba(139, 92, 246, 0.15);
+        }
+
+        .tts-sentence.active-sentence {
+            background-color: rgba(139, 92, 246, 0.35);
+            color: #ffffff;
+            box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.6);
+        }
+
+        .scene-subtitle {
+            font-size: calc(var(--content-font-size) * 0.9);
+            color: var(--text-muted);
+            font-weight: 400;
+            line-height: 1.4;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--primary);
+            padding: 0.4rem 0.6rem;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .keywords-wrapper {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-top: 0.1rem;
+        }
+
+        .keyword-badge {
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .keyword-badge:hover {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .media-col {
+            flex: 1.1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.6rem;
+            z-index: 2;
+        }
+
+        /* Mở rộng chiều cao khung ảnh trên PC và Mobile */
+        .image-card {
+            width: 100%;
+            height: 420px;
+            background: #18181b;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .image-customizer {
+            width: 100%;
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .image-customizer input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            outline: none;
+        }
+
+        .image-customizer button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.7rem;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .image-customizer button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .pres-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.6);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            font-family: var(--font-main);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: #7c3aed;
+        }
+
+        .shortcuts-hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-code);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .shortcuts-hint kbd {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            color: var(--text-main);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            color: #ffffff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .modal-body p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 180px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            resize: none;
+            outline: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Tối ưu hóa tuyệt đối cho Mobile và mở rộng khung ảnh di động */
+        @media (max-width: 900px) {
+            :root {
+                --content-font-size: 0.95rem;
+            }
+            body { 
+                padding: 0; 
+                height: 100vh;
+                height: 100dvh;
+            }
+            .presentation-container { 
+                height: 100%; 
+                max-height: 100vh; 
+                border-radius: 0; 
+                border: none;
+            }
+            .pres-header {
+                padding: 0.5rem 0.75rem;
+            }
+            .brand-title span {
+                font-size: 0.85rem;
+            }
+            .pres-stage, .scene-pane {
+                flex-direction: column;
+                padding: 0.5rem 0.75rem;
+                gap: 0.4rem;
+                overflow-y: auto;
+            }
+            .media-col { 
+                flex: unset; 
+                width: 100%;
+                gap: 0.3rem;
+            }
+            /* Mở rộng khung ảnh trên mobile tương ứng với chiều cao màn hình */
+            .image-card { 
+                height: 220px; 
+            }
+            .image-customizer input {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.5rem;
+            }
+            .image-customizer button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.65rem;
+            }
+            .content-col { 
+                flex: 1; 
+                gap: 0.35rem; 
+                max-height: none; 
+                overflow-y: visible;
+                padding-right: 0;
+            }
+            .scene-title { 
+                font-size: 1.15rem; 
+            }
+            .scene-english-badge {
+                font-size: 0.75rem;
+            }
+            .scene-subtitle {
+                padding: 0.35rem 0.5rem;
+            }
+            .pres-footer { 
+                padding: 0.4rem 0.5rem; 
+                flex-wrap: wrap; 
+                gap: 0.3rem; 
+                justify-content: space-around; 
+            }
+            .shortcuts-hint { 
+                display: none; 
+            }
+            .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation-container" id="presentationContainer">
+        <div class="timeline-container">
+            <div class="timeline-bar" id="timelineBar"></div>
+        </div>
+
+        <header class="pres-header">
+            <div class="brand-title">
+                <i class="fa-solid fa-seedling"></i>
+                <span>Cảm ứng ở thực vật</span>
+            </div>
+            <div class="scene-indicator" id="sceneIndicator">1 / 12</div>
+        </header>
+
+        <main class="pres-stage" id="presStage">
+
+            <!-- SCENE 1 -->
+            <div class="scene-pane active" data-scene="1">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=800&auto=format&fit=crop" alt="Scene 1 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 1: Khái quát</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Khái niệm Cảm ứng ở thực vật</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Plant Irritability')"><i class="fa-solid fa-image"></i> Plant Irritability</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Cảm ứng ở thực vật là khả năng tiếp nhận và phản ứng lại các kích thích từ môi trường sống như ánh sáng, trọng lực, nước, chất hóa học hay va chạm.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Tên khoa học: Plant stimulus response.<br>• Giúp cây thích nghi, sinh trưởng và phát triển tối ưu.<br>• Không có hệ thần kinh chuyên hóa như động vật.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Plant Stimulus')"><i class="fa-solid fa-magnifying-glass"></i> Plant Stimulus</span>
+                        <span class="keyword-badge" onclick="openSearch('Adaptation')"><i class="fa-solid fa-magnifying-glass"></i> Adaptation</span>
+                        <span class="keyword-badge" onclick="openSearch('Environment')"><i class="fa-solid fa-magnifying-glass"></i> Environment</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 2 -->
+            <div class="scene-pane" data-scene="2">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1463936575829-25148e1db1b8?q=80&w=800&auto=format&fit=crop" alt="Scene 2 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1463936575829-25148e1db1b8?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 2: Phân loại</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Hai dạng cảm ứng chính</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Tropism and Nastic')"><i class="fa-solid fa-image"></i> Tropism and Nastic</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Cảm ứng ở thực vật được chia thành hai hình thức lớn bao gồm Hướng động và Ứng động.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Hướng động: Vận động sinh trưởng có hướng đối với tác nhân kích thích.<br>• Ứng động: Vận động không theo hướng, phụ thuộc cấu trúc hoặc sức trương nước.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Tropism')"><i class="fa-solid fa-magnifying-glass"></i> Tropism</span>
+                        <span class="keyword-badge" onclick="openSearch('Nastic movement')"><i class="fa-solid fa-magnifying-glass"></i> Nastic movement</span>
+                        <span class="keyword-badge" onclick="openSearch('Growth movement')"><i class="fa-solid fa-magnifying-glass"></i> Growth movement</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 3 -->
+            <div class="scene-pane" data-scene="3">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=800&auto=format&fit=crop" alt="Scene 3 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 3: Hướng động</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Tính quang hướng</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Phototropism')"><i class="fa-solid fa-image"></i> Phototropism</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Quang hướng dương là phản ứng sinh trưởng của thân và cành cây hướng về phía nguồn sáng.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Nguyên nhân do hormone Auxin phân bố không đều.<br>• Phía tối có hàm lượng auxin cao hơn kích thích tế bào sinh trưởng mạnh.<br>• Khiến thân cây uốn cong về phía có ánh sáng.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Phototropism')"><i class="fa-solid fa-magnifying-glass"></i> Phototropism</span>
+                        <span class="keyword-badge" onclick="openSearch('Auxin hormone')"><i class="fa-solid fa-magnifying-glass"></i> Auxin hormone</span>
+                        <span class="keyword-badge" onclick="openSearch('Light growth')"><i class="fa-solid fa-magnifying-glass"></i> Light growth</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 4 -->
+            <div class="scene-pane" data-scene="4">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop" alt="Scene 4 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 3: Hướng động</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Hướng trọng lực</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Gravitropism')"><i class="fa-solid fa-image"></i> Gravitropism</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Sự điều hướng sinh trưởng theo lực hút của Trái Đất giúp rễ bám chắc và thân vươn lên không gian.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Rễ có hướng trọng lực dương, thân có hướng trọng lực âm.<br>• Hạt amyloplast chứa tinh bột đóng vai trò cảm thụ trọng lực.<br>• Định hướng sự phát triển của hệ thống cơ quan.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Gravitropism')"><i class="fa-solid fa-magnifying-glass"></i> Gravitropism</span>
+                        <span class="keyword-badge" onclick="openSearch('Statoliths')"><i class="fa-solid fa-magnifying-glass"></i> Statoliths</span>
+                        <span class="keyword-badge" onclick="openSearch('Root gravity')"><i class="fa-solid fa-magnifying-glass"></i> Root gravity</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 5 -->
+            <div class="scene-pane" data-scene="5">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=800&auto=format&fit=crop" alt="Scene 5 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 3: Hướng động</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Hướng nước và Hóa hướng động</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Hydrotropism')"><i class="fa-solid fa-image"></i> Hydrotropism</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Chủ động tìm kiếm nguồn dinh dưỡng thiết yếu và nguồn độ ẩm cao trong lòng đất.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Hướng nước giúp rễ tìm kiếm nơi có độ ẩm cao.<br>• Hóa hướng động phản ứng với chất dinh dưỡng hoặc tránh chất độc.<br>• Tối ưu hóa việc hấp thụ khoáng chất và nước.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Hydrotropism')"><i class="fa-solid fa-magnifying-glass"></i> Hydrotropism</span>
+                        <span class="keyword-badge" onclick="openSearch('Chemotropism')"><i class="fa-solid fa-magnifying-glass"></i> Chemotropism</span>
+                        <span class="keyword-badge" onclick="openSearch('Water uptake')"><i class="fa-solid fa-magnifying-glass"></i> Water uptake</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 6 -->
+            <div class="scene-pane" data-scene="6">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1525498128493-380d1990a112?q=80&w=800&auto=format&fit=crop" alt="Scene 6 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1525498128493-380d1990a112?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 3: Hướng động</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Hướng tiếp xúc</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Thigmotropism')"><i class="fa-solid fa-image"></i> Thigmotropism</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Phản ứng sinh trưởng hướng về phía có vật bám hoặc tránh xa vật cản khi tiếp xúc cơ học.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Phổ biến ở các loài cây thân leo, tua cuốn.<br>• Tế bào phía tiếp xúc co ngắn, phía đối diện dài ra giúp tua cuốn quấn chặt.<br>• Giúp cây vươn lên đón ánh sáng tốt hơn.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Thigmotropism')"><i class="fa-solid fa-magnifying-glass"></i> Thigmotropism</span>
+                        <span class="keyword-badge" onclick="openSearch('Tendril coiling')"><i class="fa-solid fa-magnifying-glass"></i> Tendril coiling</span>
+                        <span class="keyword-badge" onclick="openSearch('Vine climbing')"><i class="fa-solid fa-magnifying-glass"></i> Vine climbing</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 7 -->
+            <div class="scene-pane" data-scene="7">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?q=80&w=800&auto=format&fit=crop" alt="Scene 7 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1522383225653-ed111181a951?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 4: Ứng động</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Ứng động sinh trưởng (Quang ứng động)</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Photonasty')"><i class="fa-solid fa-image"></i> Photonasty</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Vận động phản ứng theo chu kỳ ánh sáng ngày và đêm không có hướng xác định.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Do tốc độ sinh trưởng khác biệt ở các mặt cánh hoa.<br>• Ví dụ: Hoa tulip hoặc bồ công anh nở ban ngày, cụp lại ban đêm.<br>• Thích nghi với nhịp sinh học tự nhiên.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Photonasty')"><i class="fa-solid fa-magnifying-glass"></i> Photonasty</span>
+                        <span class="keyword-badge" onclick="openSearch('Flower opening')"><i class="fa-solid fa-magnifying-glass"></i> Flower opening</span>
+                        <span class="keyword-badge" onclick="openSearch('Growth nastic')"><i class="fa-solid fa-magnifying-glass"></i> Growth nastic</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 8 -->
+            <div class="scene-pane" data-scene="8">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1563245372-f21724e3856d?q=80&w=800&auto=format&fit=crop" alt="Scene 8 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1563245372-f21724e3856d?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 4: Ứng động</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Ứng động nhiệt</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Thermonasty')"><i class="fa-solid fa-image"></i> Thermonasty</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Phản ứng nhạy cảm với sự thay đổi nhiệt độ đột ngột của môi trường xung quanh.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Hoa nghệ tây hoặc tulip nở bung khi nhiệt độ tăng.<br>• Cụp cánh lại khi nhiệt độ hạ xuống.<br>• Bảo vệ cơ quan sinh sản khỏi thời tiết bất lợi.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Thermonasty')"><i class="fa-solid fa-magnifying-glass"></i> Thermonasty</span>
+                        <span class="keyword-badge" onclick="openSearch('Temperature nastic')"><i class="fa-solid fa-magnifying-glass"></i> Temperature nastic</span>
+                        <span class="keyword-badge" onclick="openSearch('Floral response')"><i class="fa-solid fa-magnifying-glass"></i> Floral response</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 9 -->
+            <div class="scene-pane" data-scene="9">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop" alt="Scene 9 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 4: Ứng động</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Ứng động tiếp xúc và Sức trương nước</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Thigmonasty')"><i class="fa-solid fa-image"></i> Thigmonasty</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Cơ chế vận động cực nhanh dựa trên sự biến đổi sức trương nước ở cây trinh nữ.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Khi bị chạm, ion kali di chuyển nhanh ra khỏi tế bào.<br>• Nước thoát theo làm giảm sức trương tại các thể gối.<br>• Lá cây cụp xuống tức thì để tự vệ.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Mimosa pudica')"><i class="fa-solid fa-magnifying-glass"></i> Mimosa pudica</span>
+                        <span class="keyword-badge" onclick="openSearch('Turgor pressure')"><i class="fa-solid fa-magnifying-glass"></i> Turgor pressure</span>
+                        <span class="keyword-badge" onclick="openSearch('Thigmonasty')"><i class="fa-solid fa-magnifying-glass"></i> Thigmonasty</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 10 -->
+            <div class="scene-pane" data-scene="10">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=800&auto=format&fit=crop" alt="Scene 10 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 5: Thực tiễn</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Ứng dụng trong nông nghiệp</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Agriculture')"><i class="fa-solid fa-image"></i> Agriculture</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Tối ưu hóa năng suất và kỹ thuật chăm sóc cây trồng dựa trên hiểu biết về cảm ứng.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Trồng xen canh tận dụng tính hướng sáng của cây.<br>• Thiết kế giàn leo phù hợp cho cây thân quấn.<br>• Điều chỉnh phân bón và tưới tiêu kích thích bộ rễ phát triển.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Agriculture')"><i class="fa-solid fa-magnifying-glass"></i> Agriculture</span>
+                        <span class="keyword-badge" onclick="openSearch('Crop management')"><i class="fa-solid fa-magnifying-glass"></i> Crop management</span>
+                        <span class="keyword-badge" onclick="openSearch('Smart farming')"><i class="fa-solid fa-magnifying-glass"></i> Smart farming</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 11 -->
+            <div class="scene-pane" data-scene="11">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?q=80&w=800&auto=format&fit=crop" alt="Scene 11 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1532094349884-543bc11b234d?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Phần 5: Thực tiễn</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Sinh học phân tử</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Molecular biology')"><i class="fa-solid fa-image"></i> Molecular biology</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Giải mã tín hiệu cấp độ tế bào ở thực vật ứng dụng công nghệ di truyền hiện đại.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Nghiên cứu thụ thể ánh sáng phototropin và phytochrome.<br>• Khảo sát dòng ion truyền tín hiệu cảm ứng.<br>• Tạo giống cây chống chịu biến đổi khí hậu.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Molecular biology')"><i class="fa-solid fa-magnifying-glass"></i> Molecular biology</span>
+                        <span class="keyword-badge" onclick="openSearch('Photoreceptors')"><i class="fa-solid fa-magnifying-glass"></i> Photoreceptors</span>
+                        <span class="keyword-badge" onclick="openSearch('Stress resistance')"><i class="fa-solid fa-magnifying-glass"></i> Stress resistance</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 12 -->
+            <div class="scene-pane" data-scene="12">
+                <div class="media-col">
+                    <div class="image-card">
+                        <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=800&auto=format&fit=crop" alt="Scene 12 Image" class="scene-img">
+                    </div>
+                    <div class="image-customizer">
+                        <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=800&auto=format&fit=crop">
+                        <button onclick="updateImage(this)">Đổi ảnh</button>
+                    </div>
+                </div>
+                <div class="content-col">
+                    <span class="scene-category">Tổng kết</span>
+                    <div class="scene-title-wrapper">
+                        <h2 class="scene-title tts-title" data-tts-order="1">Tổng kết cảm ứng ở thực vật</h2>
+                        <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Evolution')"><i class="fa-solid fa-image"></i> Evolution</span>
+                    </div>
+                    <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">Sự kỳ diệu của thế giới thực vật tĩnh mà động minh chứng cho quá trình tiến hóa tuyệt vời.</p>
+                    <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">• Thực vật sở hữu hệ thống cảm ứng tinh vi để sinh tồn.<br>• Từ hướng động chậm chạp đến ứng động chớp nhoáng.<br>• Giúp cây hòa hợp hoàn hảo với tự nhiên.</div>
+                    <div class="keywords-wrapper">
+                        <span class="keyword-badge" onclick="openSearch('Evolution')"><i class="fa-solid fa-magnifying-glass"></i> Evolution</span>
+                        <span class="keyword-badge" onclick="openSearch('Plant ecology')"><i class="fa-solid fa-magnifying-glass"></i> Plant ecology</span>
+                        <span class="keyword-badge" onclick="openSearch('Botany science')"><i class="fa-solid fa-magnifying-glass"></i> Botany science</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="pres-footer">
+            <div class="control-group">
+                <button class="btn" id="prevBtn" title="Quay lại"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                <button class="btn btn-primary" id="playBtn" title="Phát/Tạm dừng"><i class="fa-solid fa-pause" id="playIcon"></i> <span id="playText">Pause</span></button>
+                <button class="btn" id="nextBtn" title="Tiếp theo">Next <i class="fa-solid fa-chevron-right"></i></button>
+                <button class="btn" id="muteBtn" title="Bật/Tắt âm thanh"><i class="fa-solid fa-volume-high" id="muteIcon"></i></button>
+            </div>
+
+            <div class="control-group">
+                <button class="btn" onclick="openImportModal()" title="Import văn bản"><i class="fa-solid fa-file-import"></i> Import</button>
+                <button class="btn" onclick="adjustFontSize(0.1)" title="Tăng chữ"><span>A+</span></button>
+                <button class="btn" onclick="adjustFontSize(-0.1)" title="Giảm chữ"><span>A-</span></button>
+                <button class="btn btn-primary" onclick="saveAsHTML()" title="Lưu file"><i class="fa-solid fa-download"></i> Save</button>
+            </div>
+
+            <div class="shortcuts-hint">
+                <span><kbd>Space</kbd> Play</span>
+                <span><kbd>←/→</kbd> Nav</span>
+                <span><kbd>M</kbd> Mute</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal Import -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-import"></i> Import Dữ Liệu Presentation</h3>
+                <button class="modal-close" onclick="closeImportModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>Dán dữ liệu copy từ Google Sheet hoặc Excel (phân tách bằng tab, gồm đúng 8 cột):<br>
+                <em>[1. Tiêu đề] \t [2. Nội dung] \t [3. Subtitle] \t [4. Keyword Anh] \t [5-7. Từ khóa] \t [8. URL Ảnh]</em></p>
+                <textarea class="modal-textarea" id="importTextarea" placeholder="Dán nội dung vào đây..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeImportModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="processImportData()">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSceneIndex = 0;
+        let totalScenes = 12;
+        let isPlaying = true;
+        let isMuted = false;
+        let timelineStartTime = null;
+        let sceneDuration = 15000;
+        let animationFrameId = null;
+        let currentUtterance = null;
+        let currentFontSize = 1.1;
+
+        const panes = document.querySelectorAll('.scene-pane');
+        const sceneIndicator = document.getElementById('sceneIndicator');
+        const timelineBar = document.getElementById('timelineBar');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const muteIcon = document.getElementById('muteIcon');
+
+        // Hàm phân tách câu chuẩn xác theo đúng thứ tự đọc yêu cầu: Title -> Badge (Từ khóa chính) -> Body -> Subtitle
+        function setupSentenceSplitting() {
+            document.querySelectorAll('.scene-pane').forEach(pane => {
+                // 1. Tiêu đề chính
+                const titleEl = pane.querySelector('.tts-title');
+                if (titleEl && !titleEl.dataset.raw) {
+                    titleEl.dataset.raw = titleEl.textContent;
+                    titleEl.innerHTML = `<span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">${titleEl.textContent.trim()}</span>`;
+                }
+
+                // 2. Từ khóa chính (English badge)
+                const badgeEl = pane.querySelector('.tts-badge');
+                if (badgeEl && !badgeEl.dataset.raw) {
+                    let cleanText = badgeEl.textContent.replace(/<[^>]*>/g, '').trim();
+                    badgeEl.dataset.raw = cleanText;
+                    badgeEl.innerHTML = `<i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">${cleanText}</span>`;
+                }
+
+                // 3. Nội dung ngắn gọn (Body)
+                const bodyEl = pane.querySelector('.tts-body');
+                if (bodyEl && !bodyEl.dataset.rawHtml) {
+                    bodyEl.dataset.rawHtml = bodyEl.innerHTML;
+                    let sentences = bodyEl.textContent.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                    if (sentences) {
+                        bodyEl.innerHTML = sentences.map((s, idx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            return `<span class="tts-sentence" data-s-index="${2 + idx}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                        }).join(' ');
+                    }
+                }
+
+                // 4. Nội dung chi tiết (Subtitle)
+                const subEl = pane.querySelector('.tts-sub');
+                if (subEl && !subEl.dataset.rawHtml) {
+                    subEl.dataset.rawHtml = subEl.innerHTML;
+                    let rawHtml = subEl.innerHTML;
+                    let parts = rawHtml.split(/<br\s*[\/]?>/gi);
+                    let bodySentenceCount = bodyEl ? bodyEl.querySelectorAll('.tts-sentence').length : 0;
+                    let subIndexOffset = 2 + bodySentenceCount;
+
+                    let processedParts = parts.map((part, pIdx) => {
+                        let textOnly = part.replace(/<[^>]*>/g, '').trim();
+                        if (!textOnly) return '';
+                        let sentences = textOnly.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                        if (!sentences) return `<span class="tts-sentence" data-s-index="${subIndexOffset + pIdx}" onclick="playFromSentence(this)">${textOnly}</span>`;
+                        
+                        return sentences.map((s, sIdx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            let snip = `<span class="tts-sentence" data-s-index="${subIndexOffset}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                            subIndexOffset++;
+                            return snip;
+                        }).join(' ');
+                    });
+                    subEl.innerHTML = processedParts.filter(Boolean).join('<br>');
+                }
+            });
+        }
+
+        function initScene(index, direction = 1) {
+            const currentPanes = document.querySelectorAll('.scene-pane');
+            currentPanes.forEach((pane, i) => {
+                if (i === index) {
+                    pane.classList.add('active');
+                    const contentCol = pane.querySelector('.content-col');
+                    if (contentCol) contentCol.scrollTop = 0;
+
+                    gsap.fromTo(pane.querySelectorAll('.content-col > *, .media-col > *'), 
+                        { y: 15, opacity: 0 }, 
+                        { y: 0, opacity: 1, duration: 0.5, stagger: 0.06, ease: "power3.out", overwrite: "auto" }
+                    );
+                } else {
+                    pane.classList.remove('active');
+                }
+            });
+
+            sceneIndicator.textContent = `${index + 1} / ${totalScenes}`;
+            
+            stopSpeech();
+            clearAllHighlights();
+            if (isPlaying) {
+                playCurrentScene();
+            }
+        }
+
+        function clearAllHighlights() {
+            document.querySelectorAll('.tts-sentence').forEach(s => s.classList.remove('active-sentence'));
+        }
+
+        function openSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`, '_blank');
+        }
+
+        function openGifSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch&tbs=itp:animated`, '_blank');
+        }
+
+        function updateImage(btn) {
+            const customizer = btn.parentElement;
+            const input = customizer.querySelector('.img-url-input');
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const img = activePane.querySelector('.scene-img');
+            if (input.value.trim() !== '') {
+                img.src = input.value.trim();
+                alert('Đã cập nhật ảnh thành công!');
+            }
+        }
+
+        function adjustFontSize(delta) {
+            currentFontSize = Math.max(0.8, currentFontSize + delta);
+            document.documentElement.style.setProperty('--content-font-size', `${currentFontSize}rem`);
+        }
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('open');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('open');
+        }
+
+        function processImportData() {
+            const text = document.getElementById('importTextarea').value.trim();
+            if (!text) {
+                alert('Vui lòng dán dữ liệu vào ô trống!');
+                return;
+            }
+
+            const lines = text.split('\n');
+            const presStage = document.getElementById('presStage');
+            let newHTML = '';
+
+            lines.forEach((line, index) => {
+                const cols = line.split('\t');
+                if (cols.length >= 8) {
+                    const mainTitle = cols[0].trim();       
+                    const bodyText = cols[1].trim();        
+                    const subText = cols[2].trim();         
+                    const englishKw = cols[3].trim();       
+                    const kw1 = cols[4].trim();             
+                    const kw2 = cols[5].trim();             
+                    const kw3 = cols[6].trim();             
+                    const imgUrl = cols[7].trim() || "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=800&auto=format&fit=crop";
+
+                    newHTML += `
+                    <div class="scene-pane ${index === 0 ? 'active' : ''}" data-scene="${index + 1}">
+                        <div class="media-col">
+                            <div class="image-card">
+                                <img src="${imgUrl}" alt="Scene ${index + 1} Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="${imgUrl}">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <span class="scene-category">Nội dung ${index + 1}</span>
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1">${mainTitle}</h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('${englishKw}')"><i class="fa-solid fa-image"></i> ${englishKw}</span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">${bodyText}</p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">${subText}</div>
+                            <div class="keywords-wrapper">
+                                ${kw1 ? `<span class="keyword-badge" onclick="openSearch('${kw1}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw1}</span>` : ''}
+                                ${kw2 ? `<span class="keyword-badge" onclick="openSearch('${kw2}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw2}</span>` : ''}
+                                ${kw3 ? `<span class="keyword-badge" onclick="openSearch('${kw3}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw3}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            });
+
+            if (newHTML) {
+                presStage.innerHTML = newHTML;
+                totalScenes = lines.length;
+                currentSceneIndex = 0;
+                setupSentenceSplitting();
+                closeImportModal();
+                initScene(0);
+                alert(`Import thành công ${totalScenes} Scene!`);
+            } else {
+                alert('Định dạng dữ liệu chưa chính xác.');
+            }
+        }
+
+        // Đảm bảo logic đọc và highlight đúng theo tuần tự: Title -> Badge -> Body -> Subtitle trên mọi nền tảng
+        function playCurrentScene(startSentenceIndex = 0) {
+            if (isMuted) {
+                startTimelineSimulation(sceneDuration);
+                return;
+            }
+
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            if (sentenceElements.length === 0) return;
+
+            let textsToSpeak = [];
+            for (let i = startSentenceIndex; i < sentenceElements.length; i++) {
+                textsToSpeak.push({
+                    element: sentenceElements[i],
+                    text: sentenceElements[i].textContent.trim()
+                });
+            }
+
+            let fullText = textsToSpeak.map(item => item.text).join(' ');
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                currentUtterance = new SpeechSynthesisUtterance(fullText);
+                currentUtterance.lang = 'vi-VN';
+                currentUtterance.rate = 1.0;
+
+                const estimatedDuration = Math.max(5000, fullText.length * 65);
+                let activeElIndex = startSentenceIndex;
+
+                clearAllHighlights();
+                if (sentenceElements[activeElIndex]) {
+                    sentenceElements[activeElIndex].classList.add('active-sentence');
+                    sentenceElements[activeElIndex].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                }
+
+                currentUtterance.onboundary = function(event) {
+                    if (event.name === 'word') {
+                        let charIndex = event.charIndex;
+                        let accumulatedLength = 0;
+                        
+                        for (let k = 0; k < textsToSpeak.length; k++) {
+                            let len = textsToSpeak[k].text.length + 1; 
+                            if (charIndex >= accumulatedLength && charIndex < accumulatedLength + len) {
+                                let targetElement = textsToSpeak[k].element;
+                                if (!targetElement.classList.contains('active-sentence')) {
+                                    clearAllHighlights();
+                                    targetElement.classList.add('active-sentence');
+                                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                                }
+                                break;
+                            }
+                            accumulatedLength += len;
+                        }
+                    }
+                };
+
+                currentUtterance.onend = function() {
+                    clearAllHighlights();
+                    if (isPlaying) {
+                        nextScene();
+                    }
+                };
+
+                currentUtterance.onerror = function() {
+                    startTimelineSimulation(estimatedDuration);
+                };
+
+                window.speechSynthesis.speak(currentUtterance);
+                startTimelineSimulation(estimatedDuration);
+            } else {
+                startTimelineSimulation(sceneDuration);
+            }
+        }
+
+        function playFromSentence(spanEl) {
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            const targetIdx = sentenceElements.indexOf(spanEl);
+            if (targetIdx !== -1) {
+                if (!isPlaying) {
+                    isPlaying = true;
+                    playIcon.className = "fa-solid fa-pause";
+                    playText.textContent = "Pause";
+                }
+                playCurrentScene(targetIdx);
+            }
+        }
+
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function startTimelineSimulation(duration) {
+            sceneDuration = duration;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            timelineStartTime = performance.now();
+
+            function updateTimeline(currentTime) {
+                if (!isPlaying) return;
+                const elapsed = currentTime - timelineStartTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                timelineBar.style.width = `${progress}%`;
+
+                if (progress < 100) {
+                    animationFrameId = requestAnimationFrame(updateTimeline);
+                } else if (!('speechSynthesis' in window) || isMuted) {
+                    nextScene();
+                }
+            }
+            animationFrameId = requestAnimationFrame(updateTimeline);
+        }
+
+        function nextScene() {
+            currentSceneIndex = (currentSceneIndex + 1) % totalScenes;
+            initScene(currentSceneIndex, 1);
+        }
+
+        function prevScene() {
+            currentSceneIndex = (currentSceneIndex - 1 + totalScenes) % totalScenes;
+            initScene(currentSceneIndex, -1);
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playIcon.className = "fa-solid fa-pause";
+                playText.textContent = "Pause";
+                playCurrentScene();
+            } else {
+                playIcon.className = "fa-solid fa-play";
+                playText.textContent = "Play";
+                stopSpeech();
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (isMuted) {
+                muteIcon.className = "fa-solid fa-volume-xmark";
+                stopSpeech();
+                playCurrentScene();
+            } else {
+                muteIcon.className = "fa-solid fa-volume-high";
+                playCurrentScene();
+            }
+        }
+
+        function saveAsHTML() {
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cam-ung-thuc-vat-updated.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Touch gestures điều hướng mượt mà
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        const container = document.getElementById('presentationContainer');
+        container.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        container.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleTouchSwipe();
+        }, {passive: true});
+
+        function handleTouchSwipe() {
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+                if (diffX < 0) {
+                    nextScene();
+                } else {
+                    prevScene();
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.code === 'Space' || e.code === 'KeyK') {
+                e.preventDefault();
+                togglePlay();
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyL') {
+                e.preventDefault();
+                nextScene();
+            } else if (e.code === 'ArrowLeft' || e.code === 'KeyJ') {
+                e.preventDefault();
+                prevScene();
+            } else if (e.code === 'KeyM') {
+                e.preventDefault();
+                toggleMute();
+            }
+        });
+
+        playBtn.addEventListener('click', togglePlay);
+        document.getElementById('nextBtn').addEventListener('click', nextScene);
+        document.getElementById('prevBtn').addEventListener('click', prevScene);
+        document.getElementById('muteBtn').addEventListener('click', toggleMute);
+
+        window.addEventListener('load', () => {
+            setupSentenceSplitting();
+            initScene(0);
+        });
+    </script>
+</body>
+</html>
