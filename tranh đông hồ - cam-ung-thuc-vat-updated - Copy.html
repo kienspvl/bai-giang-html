@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="vi" style="--scale-factor: 1.5;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cảm ứng ở thực vật - Video-as-Code Presentation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Space+Grotesk:wght@400;600;700&amp;display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GSAP Animation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --surface-color: #121216;
+            --surface-glass: rgba(18, 18, 22, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.3);
+            --accent: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.3);
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --font-main: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            
+            /* Các biến cỡ chữ tương đối phục vụ nút A+ A- */
+            --scale-factor: 1;
+            --title-font-size: calc(1.6rem * var(--scale-factor));
+            --body-font-size: calc(1.05rem * var(--scale-factor));
+            --sub-font-size: calc(0.95rem * var(--scale-factor));
+            --keyword-font-size: calc(0.75rem * var(--scale-factor));
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.4rem;
+        }
+
+        .presentation-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 960px; 
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timeline-container {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .timeline-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: width 0.1s linear;
+        }
+
+        .pres-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.4);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .brand-title i {
+            color: var(--primary);
+            font-size: 1.05rem;
+        }
+
+        .scene-indicator {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            color: var(--accent);
+        }
+
+        .pres-stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            padding: 1rem 2rem;
+            gap: 2.5rem;
+            min-height: 0;
+        }
+
+        .scene-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 2.5rem;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            min-height: 0;
+        }
+
+        .scene-pane.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .content-col {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0.8rem;
+            z-index: 2;
+            overflow-y: auto;
+            max-height: 100%;
+            padding-right: 0.4rem;
+            scroll-behavior: smooth;
+            min-height: 0;
+        }
+
+        .content-col::-webkit-scrollbar {
+            width: 5px;
+        }
+        .content-col::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+        }
+        .content-col::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .scene-title-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-top: 0.2rem;
+            border-bottom: 2px solid rgba(139, 92, 246, 0.2);
+            padding-bottom: 0.6rem;
+        }
+
+        /* YÊU CẦU 3: Cải tiến Tiêu đề nổi bật và khác biệt hoàn toàn với nội dung */
+        .scene-title {
+            font-size: var(--title-font-size);
+            font-weight: 700;
+            line-height: 1.25;
+            letter-spacing: -0.03em;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(139, 92, 246, 0.25);
+            background: linear-gradient(135deg, #ffffff 60%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .scene-english-badge {
+            font-family: var(--font-code);
+            font-size: calc(var(--keyword-font-size) * 1.1);
+            color: var(--accent);
+            background: var(--accent-glow);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            width: fit-content;
+        }
+
+        .scene-english-badge:hover {
+            background: var(--accent);
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .highlightable-text {
+            font-size: var(--body-font-size);
+            line-height: 1.5;
+            color: var(--text-main);
+            transition: font-size 0.2s ease;
+        }
+
+        .tts-sentence {
+            display: inline;
+            padding: 0.1rem 0.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .tts-sentence:hover {
+            background-color: rgba(139, 92, 246, 0.15);
+        }
+
+        .tts-sentence.active-sentence {
+            background-color: rgba(139, 92, 246, 0.35);
+            color: #ffffff;
+            box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.6);
+        }
+
+        .scene-subtitle {
+            font-size: var(--sub-font-size);
+            color: var(--text-muted);
+            font-weight: 400;
+            line-height: 1.45;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .keywords-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.2rem;
+        }
+
+        /* YÊU CẦU 1: Từ khóa cũng thay đổi cỡ chữ theo nút A+ A- */
+        .keyword-badge {
+            font-family: var(--font-code);
+            font-size: var(--keyword-font-size);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .keyword-badge:hover {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .media-col {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 2;
+            min-height: 0;
+        }
+
+        .image-card {
+            width: 100%;
+            flex: 1;
+            min-height: 250px;
+            background: #18181b;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            cursor: zoom-in;
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover img {
+            transform: scale(1.02);
+        }
+
+        .image-customizer {
+            width: 100%;
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        .image-customizer input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            outline: none;
+        }
+
+        .image-customizer button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.7rem;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .image-customizer button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .pres-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background: rgba(9, 9, 11, 0.6);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            font-family: var(--font-main);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: #7c3aed;
+        }
+
+        .shortcuts-hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-code);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .shortcuts-hint kbd {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            color: var(--text-main);
+        }
+
+        /* LIGHTBOX STYLES */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-img-container {
+            max-width: 90vw;
+            max-height: 85vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .lightbox-img-container img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .lightbox-close:hover {
+            background: var(--primary);
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .lightbox-nav:hover {
+            background: var(--primary);
+        }
+
+        .lightbox-prev { left: 25px; }
+        .lightbox-next { right: 25px; }
+
+        /* Modal Import */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            color: #ffffff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .modal-body p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 180px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem;
+            color: var(--text-main);
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            resize: none;
+            outline: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Responsive Mobile */
+        @media (max-width: 900px) {
+            body { 
+                padding: 0; 
+                height: 100vh;
+                height: 100dvh;
+            }
+            .presentation-container { 
+                height: 100%; 
+                max-height: 100vh; 
+                border-radius: 0; 
+                border: none;
+            }
+            .pres-header {
+                padding: 0.5rem 0.75rem;
+            }
+            .brand-title span {
+                font-size: 0.85rem;
+            }
+            .pres-stage, .scene-pane {
+                flex-direction: column;
+                padding: 0.6rem 0.75rem;
+                gap: 0.5rem;
+                overflow-y: auto;
+            }
+            .media-col { 
+                flex: unset; 
+                width: 100%;
+                height: 35vh; 
+                gap: 0.3rem;
+                flex-shrink: 0;
+            }
+            .image-card { 
+                height: 100%;
+                min-height: unset; 
+            }
+            .image-customizer input {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.5rem;
+            }
+            .image-customizer button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.65rem;
+            }
+            .content-col { 
+                flex: 1; 
+                gap: 0.5rem; 
+                max-height: none; 
+                overflow-y: visible;
+                padding-right: 0;
+            }
+            .scene-title-wrapper {
+                padding-bottom: 0.4rem;
+            }
+            .scene-subtitle {
+                padding: 0.35rem 0.5rem;
+            }
+            .pres-footer { 
+                padding: 0.4rem 0.5rem; 
+                flex-wrap: wrap; 
+                gap: 0.3rem; 
+                justify-content: space-around; 
+            }
+            .shortcuts-hint { 
+                display: none; 
+            }
+            .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            .lightbox-nav {
+                width: 35px; height: 35px;
+                font-size: 0.9rem;
+            }
+            .lightbox-prev { left: 10px; }
+            .lightbox-next { right: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation-container" id="presentationContainer">
+        <div class="timeline-container">
+            <div class="timeline-bar" id="timelineBar" style="width: 7.24834%;"></div>
+        </div>
+
+        <header class="pres-header">
+            <div class="brand-title">
+                <i class="fa-solid fa-seedling"></i>
+                <span>Cảm ứng ở thực vật</span>
+            </div>
+            <div class="scene-indicator" id="sceneIndicator">1 / 22</div>
+        </header>
+
+        <main class="pres-stage" id="presStage">
+                    <div class="scene-pane active" data-scene="1">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <img src="https://toquoc.mediacdn.vn/2019/10/27/tranh-dong-ho-2-1572136251450391662452.gif" alt="Scene 1 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://toquoc.mediacdn.vn/2019/10/27/tranh-dong-ho-2-1572136251450391662452.gif">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Đông Hồ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Đông Hồ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Dong Ho folk painting')" data-raw="Dong Ho folk painting"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Dong Ho folk painting</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Tranh dân gian Đông Hồ là dòng tranh khắc gỗ nổi tiếng của Việt Nam, gắn với vùng Kinh Bắc." style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence active-sentence" data-s-index="2" onclick="playFromSentence(this)">Tranh dân gian Đông Hồ là dòng tranh khắc gỗ nổi tiếng của Việt Nam, gắn với vùng Kinh Bắc.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tranh được in từ ván khắc gỗ&lt;br&gt;• Sử dụng màu từ vật liệu tự nhiên&lt;br&gt;• Nội dung gần gũi với đời sống dân gian" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tranh được in từ ván khắc gỗ</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Sử dụng màu từ vật liệu tự nhiên</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Nội dung gần gũi với đời sống dân gian</span></div>
+                            <div class="keywords-wrapper" style="translate: none; rotate: none; scale: none; opacity: 1; transform: translate(0px, 0px);">
+                                <span class="keyword-badge" onclick="openSearch('folk painting')"><i class="fa-solid fa-magnifying-glass"></i> folk painting</span>
+                                <span class="keyword-badge" onclick="openSearch('Vietnamese art')"><i class="fa-solid fa-magnifying-glass"></i> Vietnamese art</span>
+                                <span class="keyword-badge" onclick="openSearch('woodblock print')"><i class="fa-solid fa-magnifying-glass"></i> woodblock print</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="2">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://vstatic.vietnam.vn/vietnam/resource/IMAGE/2025/5/7/a186d028f57b487793c0c69dfba617e1" alt="Scene 2 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://vstatic.vietnam.vn/vietnam/resource/IMAGE/2025/5/7/a186d028f57b487793c0c69dfba617e1">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Làng tranh Đông Hồ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Làng tranh Đông Hồ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Dong Ho painting village')" data-raw="Dong Ho painting village"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Dong Ho painting village</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Làng tranh Đông Hồ thuộc xã Song Hồ, huyện Thuận Thành, tỉnh Bắc Ninh, là nơi hình thành và phát triển nghề làm tranh Đông Hồ."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Làng tranh Đông Hồ thuộc xã Song Hồ, huyện Thuận Thành, tỉnh Bắc Ninh, là nơi hình thành và phát triển nghề làm tranh Đông Hồ.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Làng nghề nằm bên sông Đuống&lt;br&gt;• Nổi tiếng với nghề làm tranh dân gian&lt;br&gt;• Là điểm đến văn hóa truyền thống"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Làng nghề nằm bên sông Đuống</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Nổi tiếng với nghề làm tranh dân gian</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Là điểm đến văn hóa truyền thống</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('Dong Ho village')"><i class="fa-solid fa-magnifying-glass"></i> Dong Ho village</span>
+                                <span class="keyword-badge" onclick="openSearch('Bac Ninh')"><i class="fa-solid fa-magnifying-glass"></i> Bac Ninh</span>
+                                <span class="keyword-badge" onclick="openSearch('Vietnamese village')"><i class="fa-solid fa-magnifying-glass"></i> Vietnamese village</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="3">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://mir-s3-cdn-cf.behance.net/projects/404/5a231d62041479.Y3JvcCw4MTIsNjM1LDQwLDM0MQ.jpg" alt="Scene 3 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://mir-s3-cdn-cf.behance.net/projects/404/5a231d62041479.Y3JvcCw4MTIsNjM1LDQwLDM0MQ.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Lịch sử tranh Đông Hồ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Lịch sử tranh Đông Hồ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Dong Ho painting history')" data-raw="Dong Ho painting history"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Dong Ho painting history</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Nghề làm tranh Đông Hồ có lịch sử lâu đời, phát triển mạnh từ khoảng thế kỷ XVII–XVIII và từng phổ biến trong đời sống người Việt."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Nghề làm tranh Đông Hồ có lịch sử lâu đời, phát triển mạnh từ khoảng thế kỷ XVII–XVIII và từng phổ biến trong đời sống người Việt.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Tranh thường được mua vào dịp Tết&lt;br&gt;• Nghề tranh được truyền qua nhiều thế hệ&lt;br&gt;• Tranh phản ánh đời sống xã hội"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Tranh thường được mua vào dịp Tết</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Nghề tranh được truyền qua nhiều thế hệ</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Tranh phản ánh đời sống xã hội</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('traditional craft')"><i class="fa-solid fa-magnifying-glass"></i> traditional craft</span>
+                                <span class="keyword-badge" onclick="openSearch('history of Vietnam')"><i class="fa-solid fa-magnifying-glass"></i> history of Vietnam</span>
+                                <span class="keyword-badge" onclick="openSearch('Tet tradition')"><i class="fa-solid fa-magnifying-glass"></i> Tet tradition</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="4">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/DanhGhen.JPG/250px-DanhGhen.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail" alt="Scene 4 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/DanhGhen.JPG/250px-DanhGhen.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Ván khắc tranh"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Ván khắc tranh</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('woodblock')" data-raw="woodblock"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">woodblock</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Ván khắc là bản gỗ được chạm khắc hình ảnh hoặc chữ để làm khuôn in tranh."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Ván khắc là bản gỗ được chạm khắc hình ảnh hoặc chữ để làm khuôn in tranh.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Mỗi màu thường có một bản khắc riêng&lt;br&gt;• Nghệ nhân khắc hình đảo chiều trên ván&lt;br&gt;• Ván được sử dụng để in nhiều bản tranh"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Mỗi màu thường có một bản khắc riêng</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Nghệ nhân khắc hình đảo chiều trên ván</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Ván được sử dụng để in nhiều bản tranh</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('carved wood')"><i class="fa-solid fa-magnifying-glass"></i> carved wood</span>
+                                <span class="keyword-badge" onclick="openSearch('block printing')"><i class="fa-solid fa-magnifying-glass"></i> block printing</span>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="5">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Capizshell.jpg/330px-Capizshell.jpg?utm_source=vi.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail" alt="Scene 5 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Capizshell.jpg/330px-Capizshell.jpg?utm_source=vi.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Giấy điệp"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Giấy điệp</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Diep paper')" data-raw="Diep paper"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Diep paper</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Giấy điệp là loại giấy truyền thống được quét một lớp bột điệp tạo bề mặt óng ánh đặc trưng cho tranh Đông Hồ."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Giấy điệp là loại giấy truyền thống được quét một lớp bột điệp tạo bề mặt óng ánh đặc trưng cho tranh Đông Hồ.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Bột điệp thường tạo ánh bạc hoặc trắng lấp lánh&lt;br&gt;• Giấy có độ bền tương đối cao&lt;br&gt;• Là nền tranh đặc trưng"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Bột điệp thường tạo ánh bạc hoặc trắng lấp lánh</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Giấy có độ bền tương đối cao</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Là nền tranh đặc trưng</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('Do paper')"><i class="fa-solid fa-magnifying-glass"></i> Do paper</span>
+                                <span class="keyword-badge" onclick="openSearch('sea shell powder')"><i class="fa-solid fa-magnifying-glass"></i> sea shell powder</span>
+                                <span class="keyword-badge" onclick="openSearch('traditional paper')"><i class="fa-solid fa-magnifying-glass"></i> traditional paper</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="6">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://cdn.tgdd.vn/2020/08/CookProductThumb/v-620x620-29.jpg" alt="Scene 6 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://cdn.tgdd.vn/2020/08/CookProductThumb/v-620x620-29.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Màu tự nhiên"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Màu tự nhiên</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('natural pigments')" data-raw="natural pigments"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">natural pigments</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Tranh Đông Hồ sử dụng nhiều màu được chế biến từ nguyên liệu tự nhiên như cây cỏ, khoáng chất và than."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Tranh Đông Hồ sử dụng nhiều màu được chế biến từ nguyên liệu tự nhiên như cây cỏ, khoáng chất và than.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Đen: than lá tre&lt;br&gt;• Xanh: lá chàm&lt;br&gt;• Đỏ: sỏi son hoặc khoáng chất"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Đen: than lá tre</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Xanh: lá chàm</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Đỏ: sỏi son hoặc khoáng chất</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('plant pigments')"><i class="fa-solid fa-magnifying-glass"></i> plant pigments</span>
+                                <span class="keyword-badge" onclick="openSearch('mineral pigments')"><i class="fa-solid fa-magnifying-glass"></i> mineral pigments</span>
+                                <span class="keyword-badge" onclick="openSearch('natural color')"><i class="fa-solid fa-magnifying-glass"></i> natural color</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="7">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://genk.mediacdn.vn/zoom/700_438/139269124445442048/2026/1/20/bot-than-tre-134348-1768901853793-17689018542451152725588-30-0-1230-1920-crop-17689019555191102938698.jpg" alt="Scene 7 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://genk.mediacdn.vn/zoom/700_438/139269124445442048/2026/1/20/bot-than-tre-134348-1768901853793-17689018542451152725588-30-0-1230-1920-crop-17689019555191102938698.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Màu đen"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Màu đen</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('black pigment')" data-raw="black pigment"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">black pigment</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Màu đen truyền thống thường được tạo từ than lá tre hoặc than của vật liệu thực vật."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Màu đen truyền thống thường được tạo từ than lá tre hoặc than của vật liệu thực vật.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Than được nghiền nhỏ&lt;br&gt;• Pha với chất kết dính để tạo mực&lt;br&gt;• Dùng in nét và các mảng màu đen"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Than được nghiền nhỏ</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Pha với chất kết dính để tạo mực</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Dùng in nét và các mảng màu đen</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('bamboo charcoal')"><i class="fa-solid fa-magnifying-glass"></i> bamboo charcoal</span>
+                                <span class="keyword-badge" onclick="openSearch('black ink')"><i class="fa-solid fa-magnifying-glass"></i> black ink</span>
+                                <span class="keyword-badge" onclick="openSearch('natural dye')"><i class="fa-solid fa-magnifying-glass"></i> natural dye</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="8">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://i2.ex-cdn.com/nongthonmoi.danviet.vn/files/content/2026/02/10/4-giay-sac-hong-dieu-do-het-suc-ruc-ro-1100.jpg" alt="Scene 8 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://i2.ex-cdn.com/nongthonmoi.danviet.vn/files/content/2026/02/10/4-giay-sac-hong-dieu-do-het-suc-ruc-ro-1100.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Màu đỏ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Màu đỏ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('red pigment')" data-raw="red pigment"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">red pigment</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Màu đỏ trong tranh truyền thống có thể được tạo từ nguyên liệu khoáng chất như sỏi son."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Màu đỏ trong tranh truyền thống có thể được tạo từ nguyên liệu khoáng chất như sỏi son.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Màu đỏ tạo điểm nhấn mạnh&lt;br&gt;• Thường xuất hiện ở trang phục, đồ vật hoặc nền tranh&lt;br&gt;• Mang sắc thái ấm áp"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Màu đỏ tạo điểm nhấn mạnh</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Thường xuất hiện ở trang phục, đồ vật hoặc nền tranh</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Mang sắc thái ấm áp</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('red ochre')"><i class="fa-solid fa-magnifying-glass"></i> red ochre</span>
+                                <span class="keyword-badge" onclick="openSearch('mineral pigment')"><i class="fa-solid fa-magnifying-glass"></i> mineral pigment</span>
+                                <span class="keyword-badge" onclick="openSearch('red color')"><i class="fa-solid fa-magnifying-glass"></i> red color</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="9">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://rungvang.vn/wp-content/uploads/2018/07/hoa-hoe-AVT.jpg" alt="Scene 9 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://rungvang.vn/wp-content/uploads/2018/07/hoa-hoe-AVT.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Màu vàng"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Màu vàng</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('yellow pigment')" data-raw="yellow pigment"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">yellow pigment</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Màu vàng thường được chế tạo từ nguyên liệu tự nhiên như hoa hòe hoặc các chất màu truyền thống khác."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Màu vàng thường được chế tạo từ nguyên liệu tự nhiên như hoa hòe hoặc các chất màu truyền thống khác.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Màu vàng tạo cảm giác tươi sáng&lt;br&gt;• Có thể dùng cho quần áo, nền và đồ vật&lt;br&gt;• Kết hợp hài hòa với đỏ, xanh, đen"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Màu vàng tạo cảm giác tươi sáng</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Có thể dùng cho quần áo, nền và đồ vật</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Kết hợp hài hòa với đỏ, xanh, đen</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('safflower dye')"><i class="fa-solid fa-magnifying-glass"></i> safflower dye</span>
+                                <span class="keyword-badge" onclick="openSearch('natural yellow')"><i class="fa-solid fa-magnifying-glass"></i> natural yellow</span>
+                                <span class="keyword-badge" onclick="openSearch('traditional pigment')"><i class="fa-solid fa-magnifying-glass"></i> traditional pigment</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="10">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://artnam.vn/wp-content/uploads/2025/09/1-3.png" alt="Scene 10 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://artnam.vn/wp-content/uploads/2025/09/1-3.png">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Màu xanh"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Màu xanh</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('blue pigment')" data-raw="blue pigment"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">blue pigment</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Màu xanh trong tranh Đông Hồ thường được tạo từ nguyên liệu tự nhiên và tạo sự cân bằng cho bố cục."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Màu xanh trong tranh Đông Hồ thường được tạo từ nguyên liệu tự nhiên và tạo sự cân bằng cho bố cục.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Xanh tạo cảm giác mát&lt;br&gt;• Thường kết hợp với vàng, đỏ và đen&lt;br&gt;• Là một màu quan trọng trong bảng màu truyền thống"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Xanh tạo cảm giác mát</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Thường kết hợp với vàng, đỏ và đen</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Là một màu quan trọng trong bảng màu truyền thống</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('natural blue')"><i class="fa-solid fa-magnifying-glass"></i> natural blue</span>
+                                <span class="keyword-badge" onclick="openSearch('indigo dye')"><i class="fa-solid fa-magnifying-glass"></i> indigo dye</span>
+                                <span class="keyword-badge" onclick="openSearch('traditional colors')"><i class="fa-solid fa-magnifying-glass"></i> traditional colors</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="11">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://artnam.vn/wp-content/uploads/2026/01/ve-tranh-dong-ho-3.jpg" alt="Scene 11 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://artnam.vn/wp-content/uploads/2026/01/ve-tranh-dong-ho-3.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="In tranh"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">In tranh</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('printing process')" data-raw="printing process"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">printing process</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Tranh được in bằng cách đặt giấy lên ván khắc đã quét màu rồi ép hoặc miết để màu truyền sang giấy."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Tranh được in bằng cách đặt giấy lên ván khắc đã quét màu rồi ép hoặc miết để màu truyền sang giấy.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Khắc ván&lt;br&gt;• Quét màu lên ván&lt;br&gt;• Đặt giấy và in từng lớp màu&lt;br&gt;• Phơi tranh"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Khắc ván</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Quét màu lên ván</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Đặt giấy và in từng lớp màu</span><br><span class="tts-sentence" data-s-index="6" onclick="playFromSentence(this)">• Phơi tranh</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('woodblock printing')"><i class="fa-solid fa-magnifying-glass"></i> woodblock printing</span>
+                                <span class="keyword-badge" onclick="openSearch('hand printing')"><i class="fa-solid fa-magnifying-glass"></i> hand printing</span>
+                                <span class="keyword-badge" onclick="openSearch('Dong Ho art')"><i class="fa-solid fa-magnifying-glass"></i> Dong Ho art</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="12">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://tranhdaquynamkhanh.com/wp-content/uploads/2026/01/Tranh-da-quy-dan-gian-5.jpg" alt="Scene 12 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://tranhdaquynamkhanh.com/wp-content/uploads/2026/01/Tranh-da-quy-dan-gian-5.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Kỹ thuật in nhiều màu"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Kỹ thuật in nhiều màu</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('multicolor printing')" data-raw="multicolor printing"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">multicolor printing</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Mỗi màu trong tranh thường tương ứng với một bản khắc, nghệ nhân in lần lượt các màu để hoàn thành hình ảnh."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Mỗi màu trong tranh thường tương ứng với một bản khắc, nghệ nhân in lần lượt các màu để hoàn thành hình ảnh.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Một tranh có thể cần nhiều bản khắc&lt;br&gt;• Phải căn chỉnh chính xác từng lớp màu&lt;br&gt;• In màu nhạt và màu đậm theo trình tự"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Một tranh có thể cần nhiều bản khắc</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Phải căn chỉnh chính xác từng lớp màu</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• In màu nhạt và màu đậm theo trình tự</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('color blocks')"><i class="fa-solid fa-magnifying-glass"></i> color blocks</span>
+                                <span class="keyword-badge" onclick="openSearch('printmaking')"><i class="fa-solid fa-magnifying-glass"></i> printmaking</span>
+                                <span class="keyword-badge" onclick="openSearch('woodblock art')"><i class="fa-solid fa-magnifying-glass"></i> woodblock art</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="13">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://mythuatms.com/image/data/HUONG%20LY/Bo%20cuc%20mau/Dang%20thuc%20va%20bo%20cuc%20tranh%20dan%20gian%20DH/bo-cuc-tranh-dan-gian-2.webp" alt="Scene 13 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://mythuatms.com/image/data/HUONG%20LY/Bo%20cuc%20mau/Dang%20thuc%20va%20bo%20cuc%20tranh%20dan%20gian%20DH/bo-cuc-tranh-dan-gian-2.webp">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Bố cục tranh Đông Hồ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Bố cục tranh Đông Hồ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('composition')" data-raw="composition"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">composition</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Bố cục tranh thường rõ ràng, cân đối, hình ảnh được sắp xếp đơn giản nhưng giàu tính biểu tượng."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Bố cục tranh thường rõ ràng, cân đối, hình ảnh được sắp xếp đơn giản nhưng giàu tính biểu tượng.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Nhân vật thường được thể hiện nổi bật&lt;br&gt;• Hình và nền có sự phân tách rõ&lt;br&gt;• Ít chú trọng phối cảnh hiện thực"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Nhân vật thường được thể hiện nổi bật</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Hình và nền có sự phân tách rõ</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Ít chú trọng phối cảnh hiện thực</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('folk art composition')"><i class="fa-solid fa-magnifying-glass"></i> folk art composition</span>
+                                <span class="keyword-badge" onclick="openSearch('flat composition')"><i class="fa-solid fa-magnifying-glass"></i> flat composition</span>
+                                <span class="keyword-badge" onclick="openSearch('Vietnamese painting')"><i class="fa-solid fa-magnifying-glass"></i> Vietnamese painting</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="14">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://thinhvuongvietnam.com/Content/UploadFiles/EditorFiles/images/2020/Quy3/dh120092020095453.jpg" alt="Scene 14 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://thinhvuongvietnam.com/Content/UploadFiles/EditorFiles/images/2020/Quy3/dh120092020095453.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Nét vẽ tranh Đông Hồ"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Nét vẽ tranh Đông Hồ</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('bold lines')" data-raw="bold lines"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">bold lines</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Nét tranh thường khỏe, rõ và dứt khoát, tạo nên vẻ mộc mạc, sinh động."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Nét tranh thường khỏe, rõ và dứt khoát, tạo nên vẻ mộc mạc, sinh động.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Đường nét bao quanh hình rõ ràng&lt;br&gt;• Hình tượng được cách điệu&lt;br&gt;• Nét đen thường làm khung cho các mảng màu"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Đường nét bao quanh hình rõ ràng</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Hình tượng được cách điệu</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Nét đen thường làm khung cho các mảng màu</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('folk art linework')"><i class="fa-solid fa-magnifying-glass"></i> folk art linework</span>
+                                <span class="keyword-badge" onclick="openSearch('black outline')"><i class="fa-solid fa-magnifying-glass"></i> black outline</span>
+                                <span class="keyword-badge" onclick="openSearch('woodblock drawing')"><i class="fa-solid fa-magnifying-glass"></i> woodblock drawing</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="15">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://bizweb.dktcdn.net/100/438/304/files/tranh-giay-dong-ho-ga-dan-26x37.jpg?v=1683608916887" alt="Scene 15 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://bizweb.dktcdn.net/100/438/304/files/tranh-giay-dong-ho-ga-dan-26x37.jpg?v=1683608916887">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Gà đàn"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Gà đàn</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Brood Hen and Chicks')" data-raw="Brood Hen and Chicks"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Brood Hen and Chicks</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Gà đàn là một trong những hình tượng nổi tiếng của tranh Đông Hồ, thể hiện đàn gà quây quần và mang ý nghĩa về gia đình, hạnh phúc."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Gà đàn là một trong những hình tượng nổi tiếng của tranh Đông Hồ, thể hiện đàn gà quây quần và mang ý nghĩa về gia đình, hạnh phúc.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Gà mẹ và gà con tạo cảm giác sum họp&lt;br&gt;• Thường được hiểu là biểu tượng của gia đình đông vui&lt;br&gt;• Phù hợp trang trí dịp Tết"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Gà mẹ và gà con tạo cảm giác sum họp</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Thường được hiểu là biểu tượng của gia đình đông vui</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Phù hợp trang trí dịp Tết</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('hen and chicks')"><i class="fa-solid fa-magnifying-glass"></i> hen and chicks</span>
+                                <span class="keyword-badge" onclick="openSearch('family symbolism')"><i class="fa-solid fa-magnifying-glass"></i> family symbolism</span>
+                                <span class="keyword-badge" onclick="openSearch('Dong Ho painting')"><i class="fa-solid fa-magnifying-glass"></i> Dong Ho painting</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="16">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://media-cdn-v2.laodong.vn/storage/newsportal/2020/1/20/779763/Dam-Cuoi-Chuot.jpg" alt="Scene 16 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://media-cdn-v2.laodong.vn/storage/newsportal/2020/1/20/779763/Dam-Cuoi-Chuot.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Đám cưới chuột"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Đám cưới chuột</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('The Rat's Wedding')" data-raw="The Rat's Wedding"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">The Rat's Wedding</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Đám cưới chuột là tác phẩm nổi tiếng phản ánh xã hội bằng hình thức hài hước, châm biếm."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Đám cưới chuột là tác phẩm nổi tiếng phản ánh xã hội bằng hình thức hài hước, châm biếm.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Đoàn chuột mang lễ vật đi biếu mèo&lt;br&gt;• Hình ảnh có tính trào phúng&lt;br&gt;• Gợi suy ngẫm về quan hệ quyền lực"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Đoàn chuột mang lễ vật đi biếu mèo</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Hình ảnh có tính trào phúng</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Gợi suy ngẫm về quan hệ quyền lực</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('rat wedding')"><i class="fa-solid fa-magnifying-glass"></i> rat wedding</span>
+                                <span class="keyword-badge" onclick="openSearch('satirical folk art')"><i class="fa-solid fa-magnifying-glass"></i> satirical folk art</span>
+                                <span class="keyword-badge" onclick="openSearch('Vietnamese satire')"><i class="fa-solid fa-magnifying-glass"></i> Vietnamese satire</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="17">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/6/68/H%C3%A1i_d%E1%BB%ABa.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 17 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/6/68/H%C3%A1i_d%E1%BB%ABa.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Hứng dừa"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Hứng dừa</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Catching Coconuts')" data-raw="Catching Coconuts"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Catching Coconuts</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Hứng dừa là tranh dân gian thể hiện cảnh sinh hoạt vui nhộn, thường được giải thích theo hướng hài hước và giàu tính dân gian."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Hứng dừa là tranh dân gian thể hiện cảnh sinh hoạt vui nhộn, thường được giải thích theo hướng hài hước và giàu tính dân gian.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Hình ảnh nhân vật được cách điệu&lt;br&gt;• Tạo không khí vui vẻ&lt;br&gt;• Có yếu tố dí dỏm và đời thường"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Hình ảnh nhân vật được cách điệu</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Tạo không khí vui vẻ</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Có yếu tố dí dỏm và đời thường</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('coconut catching')"><i class="fa-solid fa-magnifying-glass"></i> coconut catching</span>
+                                <span class="keyword-badge" onclick="openSearch('folk humor')"><i class="fa-solid fa-magnifying-glass"></i> folk humor</span>
+                                <span class="keyword-badge" onclick="openSearch('Dong Ho folk art')"><i class="fa-solid fa-magnifying-glass"></i> Dong Ho folk art</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="18">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://dialykientruc.org/wp-content/uploads/2024/09/345599372_196080946590743_3129255109520196139_n-1-1024x722-3.jpg" alt="Scene 18 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://dialykientruc.org/wp-content/uploads/2024/09/345599372_196080946590743_3129255109520196139_n-1-1024x722-3.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Lợn đàn"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Lợn đàn</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Brood Pigs')" data-raw="Brood Pigs"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Brood Pigs</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Lợn đàn thể hiện hình ảnh lợn mẹ cùng đàn lợn con, thường tượng trưng cho sự sung túc, đông đúc và no đủ."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Lợn đàn thể hiện hình ảnh lợn mẹ cùng đàn lợn con, thường tượng trưng cho sự sung túc, đông đúc và no đủ.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Lợn có hình dáng tròn đầy&lt;br&gt;• Đàn con tạo cảm giác sinh sôi&lt;br&gt;• Thường được dùng làm tranh chúc tụng"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Lợn có hình dáng tròn đầy</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Đàn con tạo cảm giác sinh sôi</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Thường được dùng làm tranh chúc tụng</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('pig family')"><i class="fa-solid fa-magnifying-glass"></i> pig family</span>
+                                <span class="keyword-badge" onclick="openSearch('prosperity symbol')"><i class="fa-solid fa-magnifying-glass"></i> prosperity symbol</span>
+                                <span class="keyword-badge" onclick="openSearch('Tet decoration')"><i class="fa-solid fa-magnifying-glass"></i> Tet decoration</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="19">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/0/0d/Vinh_hoa.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 19 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/0/0d/Vinh_hoa.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Vinh hoa"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Vinh hoa</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Vinh Hoa')" data-raw="Vinh Hoa"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Vinh Hoa</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Tranh Vinh hoa thường thể hiện em bé ôm hoặc đứng cạnh con gà, mang ý nghĩa chúc phúc, vinh hiển và thành đạt."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Tranh Vinh hoa thường thể hiện em bé ôm hoặc đứng cạnh con gà, mang ý nghĩa chúc phúc, vinh hiển và thành đạt.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Hình tượng em bé khỏe mạnh&lt;br&gt;• Gà trống gợi sự mạnh mẽ&lt;br&gt;• Thường đi cùng tranh Phú quý"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Hình tượng em bé khỏe mạnh</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Gà trống gợi sự mạnh mẽ</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Thường đi cùng tranh Phú quý</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('glory and honor')"><i class="fa-solid fa-magnifying-glass"></i> glory and honor</span>
+                                <span class="keyword-badge" onclick="openSearch('boy with rooster')"><i class="fa-solid fa-magnifying-glass"></i> boy with rooster</span>
+                                <span class="keyword-badge" onclick="openSearch('folk blessing')"><i class="fa-solid fa-magnifying-glass"></i> folk blessing</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="20">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Ph%C3%BA_qu%C3%BD.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 20 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/0/0e/Ph%C3%BA_qu%C3%BD.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Phú quý"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Phú quý</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Phu Quy')" data-raw="Phu Quy"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Phu Quy</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Tranh Phú quý thường thể hiện em bé bên con vịt, mang ý nghĩa chúc giàu sang, phú túc và may mắn."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Tranh Phú quý thường thể hiện em bé bên con vịt, mang ý nghĩa chúc giàu sang, phú túc và may mắn.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Em bé là hình tượng phúc lành&lt;br&gt;• Vịt tượng trưng cho sự no đủ&lt;br&gt;• Thường kết hợp với tranh Vinh hoa"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Em bé là hình tượng phúc lành</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Vịt tượng trưng cho sự no đủ</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Thường kết hợp với tranh Vinh hoa</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('prosperity')"><i class="fa-solid fa-magnifying-glass"></i> prosperity</span>
+                                <span class="keyword-badge" onclick="openSearch('boy with duck')"><i class="fa-solid fa-magnifying-glass"></i> boy with duck</span>
+                                <span class="keyword-badge" onclick="openSearch('folk blessing')"><i class="fa-solid fa-magnifying-glass"></i> folk blessing</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="21">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://tranhdangiandongho.vn/upload/files/TRANH%20M%E1%BB%9AI%2011.2024/C%C3%81%20CH%C3%89P%20CAM.jpg" alt="Scene 21 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://tranhdangiandongho.vn/upload/files/TRANH%20M%E1%BB%9AI%2011.2024/C%C3%81%20CH%C3%89P%20CAM.jpg">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Cá chép"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Cá chép</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('carp painting')" data-raw="carp painting"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">carp painting</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Tranh cá chép là hình tượng mang nhiều ý nghĩa tốt đẹp như may mắn, thành công và sự thăng tiến."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Tranh cá chép là hình tượng mang nhiều ý nghĩa tốt đẹp như may mắn, thành công và sự thăng tiến.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Cá chép gắn với truyền thuyết vượt Vũ Môn&lt;br&gt;• Thường được dùng làm tranh chúc tụng&lt;br&gt;• Có thể kết hợp với hình ảnh hoa sen"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Cá chép gắn với truyền thuyết vượt Vũ Môn</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Thường được dùng làm tranh chúc tụng</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Có thể kết hợp với hình ảnh hoa sen</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('carp symbol')"><i class="fa-solid fa-magnifying-glass"></i> carp symbol</span>
+                                <span class="keyword-badge" onclick="openSearch('Vu Mon legend')"><i class="fa-solid fa-magnifying-glass"></i> Vu Mon legend</span>
+                                <span class="keyword-badge" onclick="openSearch('lotus')"><i class="fa-solid fa-magnifying-glass"></i> lotus</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-pane" data-scene="22">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/3/39/M%E1%BB%A5c_%C4%91%E1%BB%93ng_h%E1%BB%8Dc_b%C3%A0i.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original" alt="Scene 22 Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="https://upload.wikimedia.org/wikipedia/commons/3/39/M%E1%BB%A5c_%C4%91%E1%BB%93ng_h%E1%BB%8Dc_b%C3%A0i.JPG?utm_source=vi.wikipedia.org&amp;utm_campaign=index&amp;utm_content=original">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1" data-raw="Tranh Mục đồng"><span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">Tranh Mục đồng</span></h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('Buffalo Boy')" data-raw="Buffalo Boy"><i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">Buffalo Boy</span></span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body" data-raw-html="Tranh Mục đồng thường thể hiện hình ảnh trẻ chăn trâu, gợi cuộc sống nông thôn thanh bình và tuổi thơ."><span class="tts-sentence" data-s-index="2" onclick="playFromSentence(this)">Tranh Mục đồng thường thể hiện hình ảnh trẻ chăn trâu, gợi cuộc sống nông thôn thanh bình và tuổi thơ.</span></p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub" data-raw-html="• Trẻ em cưỡi hoặc chăn trâu&lt;br&gt;• Không gian mang tính dân dã&lt;br&gt;• Thể hiện vẻ đẹp đời sống nông nghiệp"><span class="tts-sentence" data-s-index="3" onclick="playFromSentence(this)">• Trẻ em cưỡi hoặc chăn trâu</span><br><span class="tts-sentence" data-s-index="4" onclick="playFromSentence(this)">• Không gian mang tính dân dã</span><br><span class="tts-sentence" data-s-index="5" onclick="playFromSentence(this)">• Thể hiện vẻ đẹp đời sống nông nghiệp</span></div>
+                            <div class="keywords-wrapper">
+                                <span class="keyword-badge" onclick="openSearch('herdboy')"><i class="fa-solid fa-magnifying-glass"></i> herdboy</span>
+                                <span class="keyword-badge" onclick="openSearch('water buffalo')"><i class="fa-solid fa-magnifying-glass"></i> water buffalo</span>
+                                <span class="keyword-badge" onclick="openSearch('rural life')"><i class="fa-solid fa-magnifying-glass"></i> rural life</span>
+                            </div>
+                        </div>
+                    </div></main>
+
+        <footer class="pres-footer">
+            <div class="control-group">
+                <button class="btn" id="prevBtn" title="Quay lại"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                <button class="btn btn-primary" id="playBtn" title="Phát/Tạm dừng"><i class="fa-solid fa-pause" id="playIcon"></i> <span id="playText">Pause</span></button>
+                <button class="btn" id="nextBtn" title="Tiếp theo">Next <i class="fa-solid fa-chevron-right"></i></button>
+                <button class="btn" id="muteBtn" title="Bật/Tắt âm thanh"><i class="fa-solid fa-volume-high" id="muteIcon"></i></button>
+            </div>
+
+            <div class="control-group">
+                <button class="btn" onclick="openImportModal()" title="Import văn bản"><i class="fa-solid fa-file-import"></i> Import</button>
+                <button class="btn" onclick="adjustFontSize(0.1)" title="Tăng chữ"><span>A+</span></button>
+                <button class="btn" onclick="adjustFontSize(-0.1)" title="Giảm chữ"><span>A-</span></button>
+                <button class="btn btn-primary" onclick="saveAsHTML()" title="Lưu file"><i class="fa-solid fa-download"></i> Save</button>
+            </div>
+
+            <div class="shortcuts-hint">
+                <span><kbd>Space</kbd> Play</span>
+                <span><kbd>←/→</kbd> Nav</span>
+                <span><kbd>M</kbd> Mute</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Lightbox Overlay -->
+    <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
+        <button class="lightbox-nav lightbox-prev" onclick="event.stopPropagation(); changeLightboxSlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="lightbox-nav lightbox-next" onclick="event.stopPropagation(); changeLightboxSlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="lightbox-img-container" onclick="event.stopPropagation()">
+            <img id="lightboxImg" src="https://xcdn-cf.vuihoc.vn/upload/5c209fe6176b0/2023/08/16/3263_cong-th-C6-B0c-phan-tu-hop-chat-huu-co-1.jpg" alt="Lightbox Image">
+        </div>
+    </div>
+
+    <!-- Modal Import -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-import"></i> Import Dữ Liệu Presentation</h3>
+                <button class="modal-close" onclick="closeImportModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>Dán dữ liệu copy từ Google Sheet hoặc Excel (phân tách bằng tab, gồm đúng 8 cột):<br>
+                <em>[1. Tiêu đề] \t [2. Nội dung] \t [3. Subtitle] \t [4. Keyword Anh] \t [5-7. Từ khóa] \t [8. URL Ảnh]</em></p>
+                <textarea class="modal-textarea" id="importTextarea" placeholder="Dán nội dung vào đây..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeImportModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="processImportData()">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSceneIndex = 0;
+        let totalScenes = 12;
+        let isPlaying = true;
+        let isMuted = false;
+        let timelineStartTime = null;
+        let sceneDuration = 15000;
+        let animationFrameId = null;
+        let currentUtterance = null;
+        let currentScaleFactor = 1;
+
+        const panes = document.querySelectorAll('.scene-pane');
+        const sceneIndicator = document.getElementById('sceneIndicator');
+        const timelineBar = document.getElementById('timelineBar');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const muteIcon = document.getElementById('muteIcon');
+        const lightboxOverlay = document.getElementById('lightboxOverlay');
+        const lightboxImg = document.getElementById('lightboxImg');
+
+        // YÊU CẦU 2: Giữ màn hình luôn sáng trên mobile bằng Screen Wake Lock API
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function setupSentenceSplitting() {
+            document.querySelectorAll('.scene-pane').forEach(pane => {
+                const titleEl = pane.querySelector('.tts-title');
+                if (titleEl && !titleEl.dataset.raw) {
+                    titleEl.dataset.raw = titleEl.textContent;
+                    titleEl.innerHTML = `<span class="tts-sentence" data-s-index="0" onclick="playFromSentence(this)">${titleEl.textContent.trim()}</span>`;
+                }
+
+                const badgeEl = pane.querySelector('.tts-badge');
+                if (badgeEl && !badgeEl.dataset.raw) {
+                    let cleanText = badgeEl.textContent.replace(/<[^>]*>/g, '').trim();
+                    badgeEl.dataset.raw = cleanText;
+                    badgeEl.innerHTML = `<i class="fa-solid fa-image"></i> <span class="tts-sentence" data-s-index="1" onclick="playFromSentence(this)">${cleanText}</span>`;
+                }
+
+                const bodyEl = pane.querySelector('.tts-body');
+                if (bodyEl && !bodyEl.dataset.rawHtml) {
+                    bodyEl.dataset.rawHtml = bodyEl.innerHTML;
+                    let sentences = bodyEl.textContent.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                    if (sentences) {
+                        bodyEl.innerHTML = sentences.map((s, idx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            return `<span class="tts-sentence" data-s-index="${2 + idx}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                        }).join(' ');
+                    }
+                }
+
+                const subEl = pane.querySelector('.tts-sub');
+                if (subEl && !subEl.dataset.rawHtml) {
+                    subEl.dataset.rawHtml = subEl.innerHTML;
+                    let rawHtml = subEl.innerHTML;
+                    let parts = rawHtml.split(/<br\s*[\/]?>/gi);
+                    let bodySentenceCount = bodyEl ? bodyEl.querySelectorAll('.tts-sentence').length : 0;
+                    let subIndexOffset = 2 + bodySentenceCount;
+
+                    let processedParts = parts.map((part, pIdx) => {
+                        let textOnly = part.replace(/<[^>]*>/g, '').trim();
+                        if (!textOnly) return '';
+                        let sentences = textOnly.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g);
+                        if (!sentences) return `<span class="tts-sentence" data-s-index="${subIndexOffset + pIdx}" onclick="playFromSentence(this)">${textOnly}</span>`;
+                        
+                        return sentences.map((s, sIdx) => {
+                            let trimmed = s.trim();
+                            if (!trimmed) return '';
+                            let snip = `<span class="tts-sentence" data-s-index="${subIndexOffset}" onclick="playFromSentence(this)">${trimmed}</span>`;
+                            subIndexOffset++;
+                            return snip;
+                        }).join(' ');
+                    });
+                    subEl.innerHTML = processedParts.filter(Boolean).join('<br>');
+                }
+            });
+        }
+
+        function initScene(index, direction = 1) {
+            const currentPanes = document.querySelectorAll('.scene-pane');
+            currentPanes.forEach((pane, i) => {
+                if (i === index) {
+                    pane.classList.add('active');
+                    const contentCol = pane.querySelector('.content-col');
+                    if (contentCol) contentCol.scrollTop = 0;
+
+                    gsap.fromTo(pane.querySelectorAll('.content-col > *, .media-col > *'), 
+                        { y: 15, opacity: 0 }, 
+                        { y: 0, opacity: 1, duration: 0.5, stagger: 0.06, ease: "power3.out", overwrite: "auto" }
+                    );
+                } else {
+                    pane.classList.remove('active');
+                }
+            });
+
+            sceneIndicator.textContent = `${index + 1} / ${totalScenes}`;
+            
+            stopSpeech();
+            clearAllHighlights();
+            if (isPlaying) {
+                playCurrentScene();
+            }
+        }
+
+        function clearAllHighlights() {
+            document.querySelectorAll('.tts-sentence').forEach(s => s.classList.remove('active-sentence'));
+        }
+
+        function openSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`, '_blank');
+        }
+
+        function openGifSearch(query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch&tbs=itp:animated`, '_blank');
+        }
+
+        function openLightbox(cardEl) {
+            const img = cardEl.querySelector('.scene-img');
+            if (img) {
+                lightboxImg.src = img.src;
+                lightboxOverlay.classList.add('open');
+                if (isPlaying) togglePlay();
+            }
+        }
+
+        function closeLightbox() {
+            lightboxOverlay.classList.remove('open');
+        }
+
+        function changeLightboxSlide(direction) {
+            currentSceneIndex = (currentSceneIndex + direction + totalScenes) % totalScenes;
+            initScene(currentSceneIndex);
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const activeImg = activePane.querySelector('.scene-img');
+            if (activeImg) {
+                lightboxImg.src = activeImg.src;
+            }
+        }
+
+        function updateImage(btn) {
+            const customizer = btn.parentElement;
+            const input = customizer.querySelector('.img-url-input');
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const img = activePane.querySelector('.scene-img');
+            if (input.value.trim() !== '') {
+                img.src = input.value.trim();
+                alert('Đã cập nhật ảnh thành công!');
+            }
+        }
+
+        // YÊU CẦU 1: Điều chỉnh hệ số scale cho toàn bộ chữ (tiêu đề, nội dung, phụ đề, từ khóa)
+        function adjustFontSize(delta) {
+            currentScaleFactor = Math.max(0.75, Math.min(1.6, currentScaleFactor + delta));
+            document.documentElement.style.setProperty('--scale-factor', currentScaleFactor);
+        }
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('open');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('open');
+        }
+
+        function processImportData() {
+            const text = document.getElementById('importTextarea').value.trim();
+            if (!text) {
+                alert('Vui lòng dán dữ liệu vào ô trống!');
+                return;
+            }
+
+            const lines = text.split('\n');
+            const presStage = document.getElementById('presStage');
+            let newHTML = '';
+
+            lines.forEach((line, index) => {
+                const cols = line.split('\t');
+                if (cols.length >= 8) {
+                    const mainTitle = cols[0].trim();       
+                    const bodyText = cols[1].trim();        
+                    const subText = cols[2].trim();         
+                    const englishKw = cols[3].trim();       
+                    const kw1 = cols[4].trim();             
+                    const kw2 = cols[5].trim();             
+                    const kw3 = cols[6].trim();             
+                    const imgUrl = cols[7].trim() || "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=1200&auto=format&fit=crop";
+
+                    newHTML += `
+                    <div class="scene-pane ${index === 0 ? 'active' : ''}" data-scene="${index + 1}">
+                        <div class="media-col">
+                            <div class="image-card" onclick="openLightbox(this)">
+                                <img src="${imgUrl}" alt="Scene ${index + 1} Image" class="scene-img">
+                            </div>
+                            <div class="image-customizer" onclick="event.stopPropagation()">
+                                <input type="text" class="img-url-input" placeholder="Dán URL ảnh mới..." value="${imgUrl}">
+                                <button onclick="updateImage(this)">Đổi ảnh</button>
+                            </div>
+                        </div>
+                        <div class="content-col">
+                            <div class="scene-title-wrapper">
+                                <h2 class="scene-title tts-title" data-tts-order="1">${mainTitle}</h2>
+                                <span class="scene-english-badge tts-badge" data-tts-order="2" onclick="openGifSearch('${englishKw}')"><i class="fa-solid fa-image"></i> ${englishKw}</span>
+                            </div>
+                            <p class="highlightable-text tts-body" data-tts-order="3" data-text-role="body">${bodyText}</p>
+                            <div class="scene-subtitle highlightable-text tts-sub" data-tts-order="4" data-text-role="sub">${subText}</div>
+                            <div class="keywords-wrapper">
+                                ${kw1 ? `<span class="keyword-badge" onclick="openSearch('${kw1}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw1}</span>` : ''}
+                                ${kw2 ? `<span class="keyword-badge" onclick="openSearch('${kw2}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw2}</span>` : ''}
+                                ${kw3 ? `<span class="keyword-badge" onclick="openSearch('${kw3}')"><i class="fa-solid fa-magnifying-glass"></i> ${kw3}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            });
+
+            if (newHTML) {
+                presStage.innerHTML = newHTML;
+                totalScenes = lines.length;
+                currentSceneIndex = 0;
+                setupSentenceSplitting();
+                closeImportModal();
+                initScene(0);
+                alert(`Import thành công ${totalScenes} Scene!`);
+            } else {
+                alert('Định dạng dữ liệu chưa chính xác.');
+            }
+        }
+
+        function playCurrentScene(startSentenceIndex = 0) {
+            if (isMuted) {
+                startTimelineSimulation(sceneDuration);
+                return;
+            }
+
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            if (sentenceElements.length === 0) return;
+
+            let textsToSpeak = [];
+            for (let i = startSentenceIndex; i < sentenceElements.length; i++) {
+                textsToSpeak.push({
+                    element: sentenceElements[i],
+                    text: sentenceElements[i].textContent.trim()
+                });
+            }
+
+            let fullText = textsToSpeak.map(item => item.text).join(' ');
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                currentUtterance = new SpeechSynthesisUtterance(fullText);
+                currentUtterance.lang = 'vi-VN';
+                currentUtterance.rate = 1.0;
+
+                const estimatedDuration = Math.max(5000, fullText.length * 65);
+                let activeElIndex = startSentenceIndex;
+
+                clearAllHighlights();
+                if (sentenceElements[activeElIndex]) {
+                    sentenceElements[activeElIndex].classList.add('active-sentence');
+                    sentenceElements[activeElIndex].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                }
+
+                currentUtterance.onboundary = function(event) {
+                    if (event.name === 'word') {
+                        let charIndex = event.charIndex;
+                        let accumulatedLength = 0;
+                        
+                        for (let k = 0; k < textsToSpeak.length; k++) {
+                            let len = textsToSpeak[k].text.length + 1; 
+                            if (charIndex >= accumulatedLength && charIndex < accumulatedLength + len) {
+                                let targetElement = textsToSpeak[k].element;
+                                if (!targetElement.classList.contains('active-sentence')) {
+                                    clearAllHighlights();
+                                    targetElement.classList.add('active-sentence');
+                                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                                }
+                                break;
+                            }
+                            accumulatedLength += len;
+                        }
+                    }
+                };
+
+                currentUtterance.onend = function() {
+                    clearAllHighlights();
+                    if (isPlaying) {
+                        nextScene();
+                    }
+                };
+
+                currentUtterance.onerror = function() {
+                    startTimelineSimulation(estimatedDuration);
+                };
+
+                window.speechSynthesis.speak(currentUtterance);
+                startTimelineSimulation(estimatedDuration);
+            } else {
+                startTimelineSimulation(sceneDuration);
+            }
+        }
+
+        function playFromSentence(spanEl) {
+            const activePane = document.querySelectorAll('.scene-pane')[currentSceneIndex];
+            const sentenceElements = Array.from(activePane.querySelectorAll('.tts-sentence'));
+            const targetIdx = sentenceElements.indexOf(spanEl);
+            if (targetIdx !== -1) {
+                if (!isPlaying) {
+                    isPlaying = true;
+                    playIcon.className = "fa-solid fa-pause";
+                    playText.textContent = "Pause";
+                }
+                playCurrentScene(targetIdx);
+            }
+        }
+
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function startTimelineSimulation(duration) {
+            sceneDuration = duration;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            timelineStartTime = performance.now();
+
+            function updateTimeline(currentTime) {
+                if (!isPlaying) return;
+                const elapsed = currentTime - timelineStartTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                timelineBar.style.width = `${progress}%`;
+
+                if (progress < 100) {
+                    animationFrameId = requestAnimationFrame(updateTimeline);
+                } else if (!('speechSynthesis' in window) || isMuted) {
+                    nextScene();
+                }
+            }
+            animationFrameId = requestAnimationFrame(updateTimeline);
+        }
+
+        function nextScene() {
+            currentSceneIndex = (currentSceneIndex + 1) % totalScenes;
+            initScene(currentSceneIndex, 1);
+        }
+
+        function prevScene() {
+            currentSceneIndex = (currentSceneIndex - 1 + totalScenes) % totalScenes;
+            initScene(currentSceneIndex, -1);
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playIcon.className = "fa-solid fa-pause";
+                playText.textContent = "Pause";
+                playCurrentScene();
+            } else {
+                playIcon.className = "fa-solid fa-play";
+                playText.textContent = "Play";
+                stopSpeech();
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (isMuted) {
+                muteIcon.className = "fa-solid fa-volume-xmark";
+                stopSpeech();
+                playCurrentScene();
+            } else {
+                muteIcon.className = "fa-solid fa-volume-high";
+                playCurrentScene();
+            }
+        }
+
+        function saveAsHTML() {
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cam-ung-thuc-vat-updated.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        const container = document.getElementById('presentationContainer');
+        container.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        container.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleTouchSwipe();
+        }, {passive: true});
+
+        function handleTouchSwipe() {
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+                if (lightboxOverlay.classList.contains('open')) {
+                    if (diffX < 0) {
+                        changeLightboxSlide(1);
+                    } else {
+                        changeLightboxSlide(-1);
+                    }
+                } else {
+                    if (diffX < 0) {
+                        nextScene();
+                    } else {
+                        prevScene();
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.code === 'Space' || e.code === 'KeyK') {
+                e.preventDefault();
+                togglePlay();
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyL') {
+                e.preventDefault();
+                if (lightboxOverlay.classList.contains('open')) {
+                    changeLightboxSlide(1);
+                } else {
+                    nextScene();
+                }
+            } else if (e.code === 'ArrowLeft' || e.code === 'KeyJ') {
+                e.preventDefault();
+                if (lightboxOverlay.classList.contains('open')) {
+                    changeLightboxSlide(-1);
+                } else {
+                    prevScene();
+                }
+            } else if (e.code === 'KeyM') {
+                e.preventDefault();
+                toggleMute();
+            } else if (e.code === 'Escape') {
+                closeLightbox();
+            }
+        });
+
+        playBtn.addEventListener('click', togglePlay);
+        document.getElementById('nextBtn').addEventListener('click', nextScene);
+        document.getElementById('prevBtn').addEventListener('click', prevScene);
+        document.getElementById('muteBtn').addEventListener('click', toggleMute);
+
+        window.addEventListener('load', () => {
+            setupSentenceSplitting();
+            initScene(0);
+            requestWakeLock(); // Kích hoạt giữ sáng màn hình khi load trang
+        });
+    </script>
+
+</body></html>
