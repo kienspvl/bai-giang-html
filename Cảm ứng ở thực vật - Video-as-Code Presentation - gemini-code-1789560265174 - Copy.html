@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cảm ứng ở thực vật - Video-as-Code Presentation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --surface-color: #121216;
+            --surface-border: #27272a;
+            --accent-primary: #10b981; /* Xanh ngọc sinh học */
+            --accent-secondary: #3b82f6; /* Xanh dương công nghệ */
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --glow-color: rgba(16, 185, 129, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            padding: 1rem;
+        }
+
+        /* Container chính mô phỏng khung video 16:9 */
+        .presentation-wrapper {
+            width: 100%;
+            max-width: 1100px;
+            aspect-ratio: 16 / 9;
+            background-color: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px var(--glow-color);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Vùng chứa các Scene */
+        .scene-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: clamp(1.5rem, 4vw, 4rem);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            background: radial-gradient(circle at center, #18181b 0%, #121216 100%);
+        }
+
+        .scene.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* Typography & Components bên trong Scene */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50px;
+            color: var(--accent-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            font-size: clamp(1.5rem, 3.5vw, 2.75rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            font-size: clamp(0.95rem, 1.8vw, 1.25rem);
+            color: var(--text-muted);
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        .code-box {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--surface-border);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            font-size: clamp(0.8rem, 1.4vw, 1rem);
+            color: var(--accent-primary);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .highlight {
+            color: var(--accent-secondary);
+        }
+
+        /* Chỉ số Scene góc trên */
+        .scene-indicator {
+            position: absolute;
+            top: 1.2rem;
+            right: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--surface-border);
+            z-index: 10;
+        }
+
+        /* Thanh Timeline ở đáy khung video */
+        .timeline-bar-wrapper {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.1s linear;
+        }
+
+        /* Bảng điều khiển bên ngoài khung video */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 1.2rem;
+            padding: 0 0.5rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .control-btn {
+            background: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            color: var(--text-main);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .control-btn:hover {
+            background: var(--surface-border);
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.primary {
+            background: var(--accent-primary);
+            color: #000;
+            border-color: var(--accent-primary);
+        }
+
+        .control-btn.primary:hover {
+            background: #059669;
+        }
+
+        .voice-status {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .voice-status.speaking i {
+            animation: pulse-icon 1s infinite alternate;
+        }
+
+        @keyframes pulse-icon {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Tối ưu cho Mobile nhỏ */
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            .presentation-wrapper {
+                aspect-ratio: 4 / 3; /* Linh hoạt hơn trên màn hình đứng di động */
+                border-radius: 12px;
+            }
+            .controls-bar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .btn-group {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation-wrapper">
+        <!-- Hiển thị số Scene -->
+        <div class="scene-indicator" id="sceneIndicator">Scene 1 / 12</div>
+
+        <!-- Khung chứa 12 Scene -->
+        <div class="scene-container" id="sceneContainer">
+
+            <!-- Scene 1 -->
+            <div class="scene active" data-speech="Chào mừng các bạn đến với thế giới thực vật. Hôm nay chúng ta sẽ tìm hiểu về Cảm ứng ở thực vật, những phản ứng kỳ diệu giúp cây thích nghi với môi trường xung quanh.">
+                <div class="badge"><i class="fa-solid fa-seedling"></i> Nhập đề</div>
+                <h2>Cảm ứng ở thực vật</h2>
+                <p>Khám phá khả năng phản ứng tinh tế và kỳ diệu của thế giới thực vật trước các kích thích từ môi trường sống.</p>
+                <div class="code-box">&gt; init_module: plant_sensitivity.exe</div>
+            </div>
+
+            <!-- Scene 2 -->
+            <div class="scene" data-speech="Cảm ứng ở thực vật là gì? Đó là khả năng tiếp nhận và phản ứng lại các kích thích từ môi trường sống như ánh sáng, trọng lực, nước, nhiệt độ và các tác động cơ học.">
+                <div class="badge"><i class="fa-solid fa-book-open"></i> Khái niệm</div>
+                <h2>Cảm ứng là gì?</h2>
+                <p>Là khả năng tiếp nhận và phản ứng lại các kích thích từ môi trường (ánh sáng, trọng lực, nước, v.v.) đảm bảo cho cây sinh trưởng và phát triển.</p>
+                <div class="code-box">stimulus -&gt; <span class="highlight">plant_response</span></div>
+            </div>
+
+            <!-- Scene 3 -->
+            <div class="scene" data-speech="Đặc điểm chung của cảm ứng ở thực vật là gì? Phản ứng thường diễn ra chậm, khó nhận thấy bằng mắt thường, và theo hướng của tác nhân kích thích hoặc không định hướng.">
+                <div class="badge"><i class="fa-solid fa-circle-info"></i> Đặc điểm</div>
+                <h2>Đặc điểm sinh học</h2>
+                <p>Phản ứng diễn ra chậm chạp so với động vật, chủ yếu thông qua sinh trưởng định hướng hoặc do thay đổi hàm lượng nước trong tế bào chuyên hóa.</p>
+                <div class="code-box">speed: slow | accuracy: high</div>
+            </div>
+
+            <!-- Scene 4 -->
+            <div class="scene" data-speech="Hướng sáng. Hướng sáng là phản ứng sinh trưởng của thân và cành hướng về phía có nguồn ánh sáng, giúp lá cây tối đa hóa khả năng hấp thụ quang năng.">
+                <div class="badge"><i class="fa-solid fa-sun"></i> Hình thức 1</div>
+                <h2>Hướng sáng (Phototropism)</h2>
+                <p>Thân và cành cây uốn cong về phía có nguồn ánh sáng nhờ sự phân bố lại hormone Auxin ở hai phía đối diện của thân cây.</p>
+                <div class="code-box">auxin_gradient = <span class="highlight">shaded_side &gt; lighted_side</span></div>
+            </div>
+
+            <!-- Scene 5 -->
+            <div class="scene" data-speech="Hướng trọng lực. Rễ cây luôn có tính hướng trọng lực dương, mọc hướng xuống lòng đất để tìm nước và dinh dưỡng, trong khi thân cây có hướng trọng lực âm mọc ngược lên cao.">
+                <div class="badge"><i class="fa-solid fa-earth-americas"></i> Hình thức 2</div>
+                <h2>Hướng trọng lực (Geotropism)</h2>
+                <p>Rễ cây hướng đất dương (mọc xuống dưới) để bám trụ và hấp thụ nước, thân cây hướng đất âm (mọc hướng lên trời).</p>
+                <div class="code-box">root.growth = <span class="highlight">+gravity</span> | stem.growth = <span class="highlight">-gravity</span></div>
+            </div>
+
+            <!-- Scene 6 -->
+            <div class="scene" data-speech="Hướng nước. Rễ cây thể hiện tính hướng nước rất rõ nét, luôn dài ra và uốn cong về phía có nguồn nước hoặc vùng đất ẩm ướt để nuôi dưỡng toàn bộ cây.">
+                <div class="badge"><i class="fa-solid fa-droplet"></i> Hình thức 3</div>
+                <h2>Hướng nước (Hydrotropism)</h2>
+                <p>Sự dịch chuyển của rễ cây tìm kiếm nguồn nước trong đất, ưu tiên vùng có độ ẩm cao hơn để đảm bảo sinh tồn.</p>
+                <div class="code-box">water_source_detected -&gt; root_redirect()</div>
+            </div>
+
+            <!-- Scene 7 -->
+            <div class="scene" data-speech="Hướng hóa. Rễ cây hướng tới các chất dinh dưỡng khoáng có lợi và tránh xa các chất độc hại trong đất nhờ cơ quan thụ cảm hóa học ở đỉnh rễ.">
+                <div class="badge"><i class="fa-solid fa-flask"></i> Hình thức 4</div>
+                <h2>Hướng hóa (Chemotropism)</h2>
+                <p>Phản ứng sinh trưởng của rễ hướng về các chất dinh dưỡng (phân bón, muối khoáng) hoặc tránh xa các hóa chất độc hại.</p>
+                <div class="code-box">nutrients_filter(active_ions)</div>
+            </div>
+
+            <!-- Scene 8 -->
+            <div class="scene" data-speech="Hướng tiếp xúc. Các loài cây leo như mướp, bầu, bí có khả năng quấn quanh giá thể khi chạm vào nhờ sự sinh trưởng nhanh của các tế bào phía đối diện tua cuốn.">
+                <div class="badge"><i class="fa-solid fa-hand"></i> Hình thức 5</div>
+                <h2>Hướng tiếp xúc (Thigmotropism)</h2>
+                <p>Đặc trưng ở các loài cây leo; tua cuốn uốn cong và ôm chặt lấy giá thể ngay khi có lực tiếp xúc cơ học.</p>
+                <div class="code-box">touch_event -&gt; coiling_sequence</div>
+            </div>
+
+            <!-- Scene 9 -->
+            <div class="scene" data-speech="Ứng động không sinh trưởng. Đây là các phản ứng nhanh không theo hướng của tác nhân kích thích, ví dụ như sự cụp lá của cây trinh nữ khi bị chạm vào.">
+                <div class="badge"><i class="fa-solid fa-bolt"></i> Vận động nhanh</div>
+                <h2>Ứng động không sinh trưởng</h2>
+                <p>Phản ứng nhanh do sự thay đổi hàm lượng nước ở các thể gối (phần phình ra ở cuống lá), ví dụ ở cây Trinh Nữ (Xấu hổ).</p>
+                <div class="code-box">turgor_pressure_drop() -&gt; <span class="highlight">fold_leaves</span></div>
+            </div>
+
+            <!-- Scene 10 -->
+            <div class="scene" data-speech="Ứng động sinh trưởng. Là vận động phản ứng dưới tác động của các kích thích không định hướng như ánh sáng hoặc nhiệt độ, ví dụ sự nở và cụp của hoa tulip hay hoa mười giờ.">
+                <div class="badge"><i class="fa-solid fa-clock"></i> Theo nhịp sinh học</div>
+                <h2>Ứng động sinh trưởng</h2>
+                <p>Tốc độ sinh trưởng của các tế bào ở hai mặt trên và dưới của cơ quan (cánh hoa, lá) khác nhau do tác động của ánh sáng hoặc nhiệt độ.</p>
+                <div class="code-box">circadian_rhythm.trigger()</div>
+            </div>
+
+            <!-- Scene 11 -->
+            <div class="scene" data-speech="Vai trò của cảm ứng. Cảm ứng giúp thực vật tận dụng tối đa nguồn sáng, chất dinh dưỡng, nước và tránh khỏi các tác động bất lợi từ môi trường để sinh tồn và phát triển.">
+                <div class="badge"><i class="fa-solid fa-shield-heart"></i> Ý nghĩa</div>
+                <h2>Vai trò đối với thực vật</h2>
+                <p>Giúp cây thích nghi linh hoạt với các biến động của môi trường ngoại cảnh, đảm bảo hiệu quả quang hợp và duy trì nòi giống.</p>
+                <div class="code-box">adaptation_index = <span class="highlight">100% optimized</span></div>
+            </div>
+
+            <!-- Scene 12 -->
+            <div class="scene" data-speech="Cảm ơn các bạn đã theo dõi bài trình bày về cảm ứng ở thực vật. Hẹn gặp lại các bạn trong những chủ đề Video-as-Code tiếp theo.">
+                <div class="badge"><i class="fa-solid fa-flag-checkered"></span> Kết thúc</div>
+                <h2>Tổng kết &amp; Hoàn thành</h2>
+                <p>Cảm ơn bạn đã theo dõi bài trình diễn theo phong cách Video-as-Code. Chúc bạn có những trải nghiệm học tập tuyệt vời!</p>
+                <div class="code-box">&gt; exit_process: success.</div>
+            </div>
+
+        </div>
+
+        <!-- Thanh Timeline -->
+        <div class="timeline-bar-wrapper">
+            <div class="timeline-progress" id="timelineProgress"></div>
+        </div>
+    </div>
+
+    <!-- Bảng điều khiển -->
+    <div class="controls-bar">
+        <div class="btn-group">
+            <button class="control-btn" id="prevBtn"><i class="fa-solid fa-backward-step"></i> Quay lại</button>
+            <button class="control-btn primary" id="playPauseBtn"><i class="fa-solid fa-pause" id="playPauseIcon"></i> <span id="playPauseText">Tạm dừng</span></button>
+            <button class="control-btn" id="nextBtn">Tiếp theo <i class="fa-solid fa-forward-step"></i></button>
+        </div>
+        <div class="voice-status" id="voiceStatus">
+            <i class="fa-solid fa-volume-high"></i> <span id="statusText">Đang đọc nội dung...</span>
+        </div>
+    </div>
+
+    <script>
+        const scenes = document.querySelectorAll('.scene');
+        const totalScenes = scenes.length;
+        let currentSceneIndex = 0;
+        let isPlaying = true;
+        let synth = window.speechSynthesis;
+        let currentUtterance = null;
+        let sceneTimer = null;
+
+        const sceneIndicator = document.getElementById('sceneIndicator');
+        const timelineProgress = document.getElementById('timelineProgress');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playPauseIcon = document.getElementById('playPauseIcon');
+        const playPauseText = document.getElementById('playPauseText');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const voiceStatus = document.getElementById('voiceStatus');
+        const statusText = document.getElementById('statusText');
+
+        // Hàm khởi tạo hiệu ứng GSAP cho các phần tử trong Scene
+        function animateSceneIn(sceneElement) {
+            const badge = sceneElement.querySelector('.badge');
+            const h2 = sceneElement.querySelector('h2');
+            const p = sceneElement.querySelector('p');
+            const codeBox = sceneElement.querySelector('.code-box');
+
+            gsap.fromTo([badge, h2, p, codeBox], 
+                { y: 30, opacity: 0 }, 
+                { y: 0, opacity: 1, duration: 0.8, stagger: 0.15, ease: "power3.out" }
+            );
+        }
+
+        // Đọc văn bản tiếng Việt sử dụng Web Speech API
+        function speakCurrentScene(onComplete) {
+            if (!synth) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            // Hủy giọng đọc cũ nếu có
+            synth.cancel();
+
+            const textToSpeech = scenes[currentSceneIndex].getAttribute('data-speech');
+            if (!textToSpeech) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            currentUtterance = new SpeechSynthesisUtterance(textToSpeech);
+            currentUtterance.lang = 'vi-VN';
+            currentUtterance.rate = 1.0; // Tốc độ đọc tự nhiên
+
+            // Cố gắng chọn giọng đọc tiếng Việt nếu trình duyệt hỗ trợ
+            const voices = synth.getVoices();
+            const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VN'));
+            if (viVoice) {
+                currentUtterance.voice = viVoice;
+            }
+
+            voiceStatus.classList.add('speaking');
+            statusText.textContent = "Đang đọc nội dung...";
+
+            let isFinished = false;
+            const finish = () => {
+                if (isFinished) return;
+                isFinished = true;
+                voiceStatus.classList.remove('speaking');
+                statusText.textContent = isPlaying ? "Đang phát..." : "Đã tạm dừng";
+                if (onComplete) onComplete();
+            };
+
+            currentUtterance.onend = finish;
+            currentUtterance.onerror = finish;
+
+            synth.speak(currentUtterance);
+
+            // Fallback an toàn phòng trường hợp sự kiện onend của trình duyệt không bắn
+            // Tính toán thời gian dựa trên số lượng ký tự (khoảng 15 ký tự mỗi giây + 2 giây buffer)
+            const estimatedDuration = Math.max(textToSpeech.length * 75, 4000);
+            
+            // Xóa timer cũ
+            if (sceneTimer) clearTimeout(sceneTimer);
+            
+            if (isPlaying) {
+                startTimelineAnimation(estimatedDuration);
+                sceneTimer = setTimeout(() => {
+                    if (isPlaying) {
+                        finish();
+                        goToNextScene();
+                    }
+                }, estimatedDuration);
+            }
+        }
+
+        // Thanh timeline progress bar
+        let startTime = null;
+        let animationFrameId = null;
+
+        function startTimelineAnimation(duration) {
+            cancelAnimationFrame(animationFrameId);
+            startTime = performance.now();
+
+            function updateProgress(currentTime) {
+                if (!isPlaying) return;
+                const elapsed = currentTime - startTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                timelineProgress.style.width = progress + '%';
+
+                if (progress < 100) {
+                    animationFrameId = requestAnimationFrame(updateProgress);
+                }
+            }
+            animationFrameId = requestAnimationFrame(updateProgress);
+        }
+
+        function resetTimeline() {
+            cancelAnimationFrame(animationFrameId);
+            timelineProgress.style.width = '0%';
+        }
+
+        // Chuyển Scene
+        function showScene(index) {
+            synth.cancel();
+            if (sceneTimer) clearTimeout(sceneTimer);
+            resetTimeline();
+
+            scenes.forEach(s => s.classList.remove('active'));
+            currentSceneIndex = (index + totalScenes) % totalScenes;
+            
+            const activeScene = scenes[currentSceneIndex];
+            activeScene.classList.add('active');
+            sceneIndicator.textContent = `Scene ${currentSceneIndex + 1} / ${totalScenes}`;
+
+            animateSceneIn(activeScene);
+
+            if (isPlaying) {
+                speakCurrentScene();
+            }
+        }
+
+        function goToNextScene() {
+            showScene(currentSceneIndex + 1);
+        }
+
+        function goToPrevScene() {
+            showScene(currentSceneIndex - 1);
+        }
+
+        // Sự kiện điều khiển nút bấm
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playPauseIcon.className = "fa-solid fa-pause";
+                playPauseText.textContent = "Tạm dừng";
+                speakCurrentScene();
+            } else {
+                playPauseIcon.className = "fa-solid fa-play";
+                playPauseText.textContent = "Phát";
+                synth.cancel();
+                if (sceneTimer) clearTimeout(sceneTimer);
+                cancelAnimationFrame(animationFrameId);
+                voiceStatus.classList.remove('speaking');
+                statusText.textContent = "Đã tạm dừng";
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            goToNextScene();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            goToPrevScene();
+        });
+
+        // Đảm bảo load danh sách voice của trình duyệt
+        if (synth && synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = () => synth.getVoices();
+        }
+
+        // Khởi động Scene đầu tiên khi trang sẵn sàng
+        window.addEventListener('load', () => {
+            animateSceneIn(scenes[0]);
+            // Đợi 1 chút cho user tương tác mở khóa audio policy của trình duyệt nếu cần, sau đó chạy
+            setTimeout(() => {
+                if (isPlaying) {
+                    speakCurrentScene();
+                }
+            }, 600);
+        });
+    </script>
+</body>
+</html>
