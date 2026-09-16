@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Sử Nước Nga - Video As Code Pro</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --font-size-scale: 1rem;
+            --h1-size: 2.5rem;
+            --p-size: 1.05rem;
+            --en-size: 0.95rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #07090e;
+            font-family: 'Montserrat', sans-serif;
+            color: #ffffff;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #131c2e 0%, #07090e 100%);
+        }
+
+        /* Nút tăng giảm cỡ chữ (A+ / A-) */
+        .font-resize-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 300;
+        }
+
+        .font-btn {
+            background: rgba(212, 175, 55, 0.2);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .font-btn:hover {
+            background: #d4af37;
+            color: #07090e;
+        }
+
+        /* Khung hiển thị nội dung */
+        .scene {
+            position: absolute;
+            width: 85%;
+            max-width: 900px;
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.95) translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-height: 75vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .scene.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+
+        .tag {
+            font-family: 'Cinzel', serif;
+            font-size: calc(1.1rem * var(--font-size-scale));
+            letter-spacing: 3px;
+            color: #d4af37;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: calc(var(--h1-size) * var(--font-size-scale));
+            font-weight: 800;
+            margin-bottom: 15px;
+            line-height: 1.2;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+
+        /* Khung chứa đoạn văn chi tiết */
+        .detail-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-top: 10px;
+            backdrop-filter: blur(5px);
+            width: 100%;
+        }
+
+        p {
+            font-size: calc(var(--p-size) * var(--font-size-scale));
+            line-height: 1.6;
+            color: #cbd5e1;
+            font-weight: 300;
+            text-align: justify;
+        }
+
+        p.en-text {
+            color: #f3e5ab;
+            font-style: italic;
+            margin-bottom: 12px;
+            font-size: calc(var(--en-size) * var(--font-size-scale));
+            border-left: 3px solid #d4af37;
+            padding-left: 10px;
+            text-align: left;
+        }
+
+        /* Hiệu ứng con trỏ máy đánh chữ */
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 0.7s infinite;
+            color: #d4af37;
+            font-weight: bold;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Nút điều hướng Trái / Phải thủ công */
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(212, 175, 55, 0.1);
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            font-size: 1.8rem;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+
+        .nav-btn:hover {
+            background: #d4af37;
+            color: #07090e;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+        }
+
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+
+        /* Bảng điều khiển phía dưới */
+        .controls {
+            position: absolute;
+            bottom: 25px;
+            display: flex;
+            gap: 15px;
+            z-index: 200;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0 10px;
+        }
+
+        button.control-btn {
+            background: rgba(212, 175, 55, 0.2);
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            padding: 8px 20px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        button.control-btn:hover {
+            background: #d4af37;
+            color: #07090e;
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        /* Hiệu ứng nền hạt */
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            opacity: 0.3;
+        }
+        
+        .particle {
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50%;
+            animation: float 12s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(105vh) scale(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-5vh) scale(1); opacity: 0; }
+        }
+
+        /* ================= TỐI ƯU CHO MOBILE ================= */
+        @media screen and (max-width: 768px) {
+            .scene {
+                width: 92%;
+                padding: 10px;
+                max-height: 70vh;
+            }
+
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            #prevBtn { left: 10px; }
+            #nextBtn { right: 10px; }
+
+            .controls {
+                bottom: 15px;
+                gap: 10px;
+            }
+
+            button.control-btn {
+                padding: 6px 14px;
+                font-size: 0.8rem;
+            }
+
+            .font-resize-box {
+                top: 10px;
+                right: 10px;
+            }
+
+            .detail-box {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="video-container">
+        <!-- Hiệu ứng hạt nền -->
+        <div class="particles" id="particles"></div>
+
+        <!-- Nút tăng giảm chữ -->
+        <div class="font-resize-box">
+            <button class="font-btn" id="decreaseFont" title="Giảm cỡ chữ">A-</button>
+            <button class="font-btn" id="increaseFont" title="Tăng cỡ chữ">A+</button>
+        </div>
+
+        <!-- Nút Trái / Phải -->
+        <button class="nav-btn" id="prevBtn" title="Mốc trước">&#10094;</button>
+        <button class="nav-btn" id="nextBtn" title="Mốc tiếp theo">&#10095;</button>
+
+        <!-- ================= CÁC MỐC THỜI GIAN (LỊCH SỬ NƯỚC NGA) ================= -->
+
+        <!-- Cảnh 1 -->
+        <div class="scene active" data-index="0">
+            <div class="tag">Chương I • Thế kỷ IX - XIII</div>
+            <h1 class="typing-title">Rus Kiev & Thời Kỳ Khởi Nguyên</h1>
+            <div class="detail-box">
+                <p class="en-text typing-en">In the 9th century, the East Slavic tribes united to form Kievan Rus, centered around Kiev, laying the foundation for Russian, Ukrainian, and Belarusian culture and adopting Orthodox Christianity in 988.</p>
+                <p class="typing-vi">Vào thế kỷ thứ 9, các bộ tộc Đông Slav đã đoàn kết lại để thành lập nhà nước Rus Kiev, lấy Kiev làm trung tâm. Đây là cái nôi khai sinh văn hóa của các dân tộc Nga, Ukraine và Belarus. Sự kiện Hoàng tử Vladimir Đại đế cải đạo sang Chính thống giáo vào năm 988 đã định hình sâu sắc bản sắc tinh thần và chính trị của toàn khu vực.</p>
+            </div>
+        </div>
+
+        <!-- Cảnh 2 -->
+        <div class="scene" data-index="1">
+            <div class="tag">Chương II • Thế kỷ XIII - XV</div>
+            <h1 class="typing-title">Ách Thống Trị Mông-Cổ & Sự Trỗi Dậy Của Moscow</h1>
+            <div class="detail-box">
+                <p class="en-text typing-en">The Mongol invasion in the 13th century devastated Kievan Rus. However, the Grand Duchy of Moscow gradually rose to prominence, uniting Russian lands and eventually throwing off the Mongol yoke.</p>
+                <p class="typing-vi">Cuộc xâm lược tàn khốc của Đế quốc Mông-Cổ vào thế kỷ 13 đã đập tan nhà nước Rus Kiev, đẩy các vùng đất vào cảnh chia rẽ và tàn phá. Dẫu vậy, Đại công quốc Moscow dưới sự lãnh đạo tài tình đã từng bước vươn lên, củng cố lực lượng, đoàn kết các xứ sở Nga và cuối cùng lật đổ ách thống trị của Kim Trướng Hãn quốc.</p>
+            </div>
+        </div>
+
+        <!-- Cảnh 3 -->
+        <div class="scene" data-index="2">
+            <div class="tag">Chương III • 1547 - 1721</div>
+            <h1 class="typing-title">Sa Hoàng Nga & Đế Chế Đại Đế Peter</h1>
+            <div class="detail-box">
+                <p class="en-text typing-en">Ivan the Terrible became the first Tsar of Russia, expanding its borders. Later, Peter the Great modernized the nation, built Saint Petersburg, and proclaimed the Russian Empire in 1721.</p>
+                <p class="typing-vi">Ivan Bạo chúa chính thức đăng quang trở thành Sa hoàng đầu tiên của Nga, mở rộng bờ cõi rộng lớn sang phía Đông. Đến thời Peter Đại đế, nước Nga đã trải qua một cuộc cải cách toàn diện theo hướng Tây Âu, xây dựng kinh đô mới St. Petersburg và chính thức được tuyên bố thành lập Đế quốc Nga vào năm 1721.</p>
+            </div>
+        </div>
+
+        <!-- Cảnh 4 -->
+        <div class="scene" data-index="3">
+            <div class="tag">Chương IV • Thế kỷ XIX</div>
+            <h1 class="typing-title">Chiến Tranh Vệ Quốc Chống Napoleon & Cải Cách</h1>
+            <div class="detail-box">
+                <p class="en-text typing-en">In 1812, Russia successfully repelled Napoleon's invasion. Despite this military glory, deep internal pressure grew, leading to the emancipation of serfs in 1861 by Tsar Alexander II.</p>
+                <p class="typing-vi">Năm 1812, nước Nga lập nên chiến công hiển hách khi đánh bại đại quân xâm lược của Napoleon Bonaparte, cứu vãn châu Âu. Mặc dù đạt được vị thế quân sự lớn mạnh, những bất bình đẳng xã hội tồn đọng đã thôi thúc Sa hoàng Alexander II ban hành sắc lệnh giải phóng nông nô lịch sử vào năm 1861 nhằm hiện đại hóa đất nước.</p>
+            </div>
+        </div>
+
+        <!-- Cảnh 5 -->
+        <div class="scene" data-index="4">
+            <div class="tag">Chương V • 1917</div>
+            <h1 class="typing-title">Cách Mạng Tháng Mười & Kỷ Nguyên Xô Viết</h1>
+            <div class="detail-box">
+                <p class="en-text typing-en">The hardships of World War I triggered the Russian Revolutions of 1917. The Bolsheviks, led by Vladimir Lenin, seized power, overthrowing the monarchy and establishing the world's first socialist state.</p>
+                <p class="typing-vi">Những áp lực nặng nề từ Chiến tranh Thế giới thứ nhất đã châm ngòi cho các cuộc cách mạng năm 1917. Đỉnh điểm là cuộc Cách mạng Tháng Mười Bolshevik do Vladimir Lenin lãnh đạo đã lật đổ chính quyền tư sản, chấm dứt chế độ Sa hoàng và khai sinh ra nhà nước xã hội chủ nghĩa đầu tiên trên thế giới.</p>
+            </div>
+        </div>
+
+        <!-- Cảnh 6 -->
+        <div class="scene" data-index="5">
+            <div class="tag">Chương VI • 1939 - 1945</div>
+            <h1 class="typing-title">Chiến Tranh Vệ Quốc Vĩ Đại & Siêu Cường Thế Giới</h1>
+            <div class="detail-box">
+                <p class="en-text typing-en">During WWII, the Soviet Union bore the heaviest burden in defeating Nazi Germany, suffering massive losses. Afterward, the USSR emerged as a global superpower, initiating the Space Age with Sputnik.</p>
+                <p class="typing-vi">Trong Chiến tranh Thế giới thứ hai (Chiến tranh Vệ quốc Vĩ đại), Liên Xô là lực lượng chịu tổn thất nặng nề nhất nhưng cũng đóng vai trò quyết định trong việc tiêu diệt chủ nghĩa phát xít Đức. Sau chiến tranh, Liên Xô vươn lên thành siêu cường toàn cầu, dẫn đầu công nghệ vũ trụ khi đưa con người và vệ tinh nhân tạo đầu tiên ra không gian.</p>
+            </div>
+        </div>
+
+        <!-- Cảnh 7 -->
+        <div class="scene" data-index="6">
+            <div class="tag">Chương VII • 1991 - Hiện Tại</div>
+            <h1 class="typing-title">Sự Sụp Đổ Của Liên Xô & Liên Bang Nga Hiện Đại</h1>
+            <div class="detail-box">
+                <p class="en-text typing-en">The Soviet Union dissolved in December 1991, leading to the birth of the modern Russian Federation. Today, Russia remains a major geopolitical power with vast cultural, technological, and natural influence.</p>
+                <p class="typing-vi">Tháng 12 năm 1991, Liên Xô chính thức tan rã, đánh dấu sự ra đời của Liên bang Nga hiện đại. Vượt qua giai đoạn khủng hoảng chuyển đổi đầy chông gai, nước Nga ngày nay tiếp tục khẳng định vị thế là một cường quốc toàn cầu có ảnh hưởng to lớn về địa chính trị, năng lượng, văn hóa và khoa học kỹ thuật.</p>
+            </div>
+        </div>
+
+        <!-- Bảng điều khiển phía dưới -->
+        <div class="controls">
+            <button class="control-btn" id="playPauseBtn">Tạm dừng Tự động</button>
+            <span class="status-text" id="statusText">Trạng thái: Đang phát (Chờ đọc xong...)</span>
+        </div>
+    </div>
+
+    <script>
+        // Tạo hạt nền hiệu ứng
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 40; i++) {
+            const p = document.createElement('div');
+            p.classList.add('particle');
+            p.style.left = `${Math.random() * 100}%`;
+            p.style.width = `${Math.random() * 3 + 1}px`;
+            p.style.height = p.style.width;
+            p.style.animationDuration = `${Math.random() * 6 + 6}s`;
+            p.style.animationDelay = `${Math.random() * 5}s`;
+            particlesContainer.appendChild(p);
+        }
+
+        const scenes = document.querySelectorAll('.scene');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const statusText = document.getElementById('statusText');
+        
+        // Nút tăng giảm cỡ chữ
+        const increaseFontBtn = document.getElementById('increaseFont');
+        const decreaseFontBtn = document.getElementById('decreaseFont');
+        let currentScale = 1;
+
+        increaseFontBtn.addEventListener('click', () => {
+            if (currentScale < 1.4) {
+                currentScale += 0.1;
+                document.documentElement.style.setProperty('--font-size-scale', currentScale);
+            }
+        });
+
+        decreaseFontBtn.addEventListener('click', () => {
+            if (currentScale > 0.8) {
+                currentScale -= 0.1;
+                document.documentElement.style.setProperty('--font-size-scale', currentScale);
+            }
+        });
+
+        let currentIndex = 0;
+        let isAutoPlay = true;
+        let speechSynth = window.speechSynthesis;
+        let currentUtterance = null;
+        let typingTimeouts = [];
+
+        // Hàm xóa toàn bộ timeout typing đang chạy để tránh xung đột chữ chập chờn
+        function clearTypingTimeouts() {
+            typingTimeouts.forEach(t => clearTimeout(t));
+            typingTimeouts = [];
+        }
+
+        // Hàm hiệu ứng máy đánh chữ (Typing effect)
+        function typeWriter(element, text, speed = 25, callback) {
+            if (!element) return;
+            element.innerHTML = "";
+            element.classList.add('typing-cursor');
+            let i = 0;
+
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    let timeout = setTimeout(type, speed);
+                    typingTimeouts.push(timeout);
+                } else {
+                    element.classList.remove('typing-cursor');
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        // Hàm xử lý hiển thị cảnh và hiệu ứng gõ chữ
+        function showScene(index, manualAction = false) {
+            if (speechSynth.speaking) {
+                speechSynth.cancel();
+            }
+            clearTypingTimeouts();
+
+            if (manualAction) {
+                isAutoPlay = false;
+                playPauseBtn.innerText = "Tiếp tục Tự động";
+                statusText.innerText = "Trạng thái: Thủ công (Đã dừng tự động)";
+            }
+
+            scenes.forEach((scene, idx) => {
+                if (idx === index) {
+                    scene.classList.add('active');
+                    
+                    // Lấy các thành phần text trong scene hiện tại
+                    const h1El = scene.querySelector('.typing-title');
+                    const enEl = scene.querySelector('.typing-en');
+                    const viEl = scene.querySelector('.typing-vi');
+
+                    // Lưu lại nội dung gốc để chạy hiệu ứng
+                    const h1Text = h1El.getAttribute('data-original') || h1El.innerText;
+                    const enText = enEl.getAttribute('data-original') || enEl.innerText;
+                    const viText = viEl.getAttribute('data-original') || viEl.innerText;
+
+                    if (!h1El.getAttribute('data-original')) {
+                        h1El.setAttribute('data-original', h1Text);
+                        enEl.setAttribute('data-original', enText);
+                        viEl.setAttribute('data-original', viText);
+                    }
+
+                    // Chạy hiệu ứng gõ chữ lần lượt
+                    h1El.innerHTML = "";
+                    enEl.innerHTML = "";
+                    viEl.innerHTML = "";
+
+                    typeWriter(h1El, h1Text, 30, () => {
+                        typeWriter(enEl, enText, 15, () => {
+                            typeWriter(viEl, viText, 10, () => {
+                                // Sau khi gõ xong chữ, tiến hành đọc Audio tiếng Anh
+                                playSpeech(enText);
+                            });
+                        });
+                    });
+
+                } else {
+                    scene.classList.remove('active');
+                }
+            });
+
+            currentIndex = index;
+        }
+
+        // Hàm đọc Text-to-Speech tiếng Anh & chuyển cảnh khi đọc xong
+        function playSpeech(textToSpeak) {
+            if (textToSpeak && 'speechSynthesis' in window) {
+                currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+                currentUtterance.lang = 'en-US'; 
+                currentUtterance.rate = 0.95; 
+
+                currentUtterance.onend = function() {
+                    if (isAutoPlay) {
+                        let nextIndex = currentIndex + 1;
+                        if (nextIndex < scenes.length) {
+                            showScene(nextIndex, false);
+                        } else {
+                            isAutoPlay = false;
+                            playPauseBtn.innerText = "Phát lại từ đầu";
+                            statusText.innerText = "Trạng thái: Đã hoàn thành video!";
+                        }
+                    }
+                };
+
+                speechSynth.speak(currentUtterance);
+                if (isAutoPlay) {
+                    statusText.innerText = `Trạng thái: Đang đọc mốc ${currentIndex + 1}/${scenes.length}...`;
+                }
+            }
+        }
+
+        window.addEventListener('load', () => {
+            statusText.innerText = "Trạng thái: Bấm nút ▶ hoặc Mũi tên để bắt đầu";
+        });
+
+        prevBtn.addEventListener('click', () => {
+            let targetIndex = currentIndex - 1;
+            if (targetIndex < 0) targetIndex = scenes.length - 1;
+            showScene(targetIndex, true);
+        });
+
+        nextBtn.addEventListener('click', () => {
+            let targetIndex = currentIndex + 1;
+            if (targetIndex >= scenes.length) targetIndex = 0;
+            showScene(targetIndex, true);
+        });
+
+        playPauseBtn.addEventListener('click', () => {
+            if (currentIndex >= scenes.length - 1 && !isAutoPlay) {
+                currentIndex = 0;
+                isAutoPlay = true;
+                playPauseBtn.innerText = "Tạm dừng Tự động";
+                showScene(currentIndex, false);
+                return;
+            }
+
+            isAutoPlay = !isAutoPlay;
+            if (isAutoPlay) {
+                playPauseBtn.innerText = "Tạm dừng Tự động";
+                showScene(currentIndex, false);
+            } else {
+                playPauseBtn.innerText = "Tiếp tục Tự động";
+                if (speechSynth.speaking) {
+                    speechSynth.cancel();
+                }
+                clearTypingTimeouts();
+                statusText.innerText = "Trạng thái: Đã tạm dừng giọng đọc.";
+            }
+        });
+
+        // Kích hoạt tương tác đầu tiên để vượt qua chính sách chặn Audio của trình duyệt
+        document.body.addEventListener('click', function initAudioOnce() {
+            if (currentIndex === 0 && !speechSynth.speaking && statusText.innerText.includes("Bấm nút")) {
+                showScene(0, false);
+            }
+        }, { once: true });
+    </script>
+</body>
+</html>
