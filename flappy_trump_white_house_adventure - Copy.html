@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Trump: White House Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            user-select: none;
+            touch-action: manipulation;
+            background: #1e293b;
+        }
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen text-white overflow-hidden p-2 sm:p-4">
+
+    <div class="relative w-full max-w-[480px] h-[700px] bg-slate-900 rounded-3xl shadow-2xl border-4 border-amber-500 overflow-hidden flex flex-col">
+        
+        <!-- Top Header Bar -->
+        <div class="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+            <div>
+                <span class="text-xs text-amber-300 font-bold block pixel-font">SCORE</span>
+                <span id="currentScore" class="text-3xl font-black text-yellow-400 pixel-font drop-shadow-md">0</span>
+            </div>
+            <div class="text-right">
+                <span class="text-xs text-amber-300 font-bold block pixel-font">BEST</span>
+                <span id="bestScore" class="text-xl font-black text-amber-400 pixel-font drop-shadow-md">0</span>
+            </div>
+        </div>
+
+        <!-- Speech Bubble Popup / Milestone ticker -->
+        <div id="speechBubble" class="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-white text-slate-900 px-4 py-2 rounded-2xl shadow-xl font-bold text-sm text-center border-2 border-amber-500 transition-all duration-300 opacity-0 scale-75 pointer-events-none max-w-[90%]">
+            "Tremendous score, folks!" 🇺🇸
+        </div>
+
+        <!-- Canvas Game Screen -->
+        <canvas id="gameCanvas" class="w-full h-full cursor-pointer"></canvas>
+
+        <!-- Start Screen Overlay -->
+        <div id="startScreen" class="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+            <div class="mb-4 animate-bounce">
+                <span class="text-5xl">🏛️🦅🇺🇸</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-black text-amber-400 pixel-font mb-2 leading-tight">FLAPPY TRUMP</h1>
+            <p class="text-slate-300 text-sm mb-6 max-w-xs">Navigate the White House briefing room podiums and make politics great again!</p>
+            
+            <button id="startBtn" class="w-full max-w-xs bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black py-4 px-8 rounded-2xl shadow-lg transform transition active:scale-95 text-lg pixel-font border-b-4 border-amber-700">
+                START CAMPAIGN
+            </button>
+            <div class="mt-4 text-xs text-slate-400">Tap, Click, or Press Space to Fly</div>
+        </div>
+
+        <!-- Game Over Screen Overlay -->
+        <div id="gameOverScreen" class="absolute inset-0 z-40 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center hidden">
+            <h2 class="text-3xl font-black text-red-500 pixel-font mb-4">FAKE NEWS! (GAME OVER)</h2>
+            
+            <div class="bg-slate-800/90 border-2 border-amber-500/50 rounded-2xl p-6 w-full max-w-xs mb-6 shadow-inner">
+                <div class="flex justify-between mb-3 border-b border-slate-700 pb-2">
+                    <span class="text-slate-400 font-bold text-sm">Final Score</span>
+                    <span id="finalScore" class="text-2xl font-black text-yellow-400 pixel-font">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400 font-bold text-sm">Best Record</span>
+                    <span id="finalBest" class="text-xl font-black text-amber-400 pixel-font">0</span>
+                </div>
+            </div>
+
+            <button id="restartBtn" class="w-full max-w-xs bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black py-4 px-8 rounded-2xl shadow-lg transform transition active:scale-95 text-lg pixel-font border-b-4 border-amber-700">
+                RUN AGAIN
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Footer Credit -->
+    <div class="mt-3 text-xs text-slate-500 text-center">
+        White House Edition &bull; HTML5 Canvas Arcade Experience
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Elements
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const currentScoreEl = document.getElementById('currentScore');
+        const bestScoreEl = document.getElementById('bestScore');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalBestEl = document.getElementById('finalBest');
+        const speechBubble = document.getElementById('speechBubble');
+
+        // Responsive internal resolution setup
+        const WIDTH = 480;
+        const HEIGHT = 700;
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        // Game States
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let score = 0;
+        let highscore = localStorage.getItem('flappy_trump_highscore') || 0;
+        bestScoreEl.textContent = highscore;
+
+        // Trump Bird Object
+        let trump = {
+            x: 100,
+            y: HEIGHT / 2,
+            radius: 28,
+            gravity: 0.38,
+            lift: -7.5,
+            velocity: 0,
+            rotation: 0
+        };
+
+        // Obstacles (Podiums)
+        let pipes = [];
+        let pipeWidth = 75;
+        let pipeGap = 185;
+        let pipeSpeed = 3.2;
+        let frameCount = 0;
+
+        // Dollar floating particles / effects
+        let dollars = [];
+        let speechQuotes = [
+            "Tremendous flying, folks!",
+            "Nobody flies better than me!",
+            "Absolute landslide!",
+            "So much winning!",
+            "Very legal, very cool!"
+        ];
+
+        // Audio Helper (Web Audio API synth effects to avoid external asset loading errors)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'jump') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'score') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); // E5
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.25);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.25);
+            } else if (type === 'hit') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        // Trigger speech milestone popup
+        function triggerSpeech() {
+            const quote = speechQuotes[Math.floor(Math.random() * speechQuotes.length)];
+            speechBubble.textContent = `"${quote}" 🇺🇸`;
+            speechBubble.style.opacity = '1';
+            speechBubble.style.transform = 'translate(-50%, 0) scale(1)';
+            setTimeout(() => {
+                speechBubble.style.opacity = '0';
+                speechBubble.style.transform = 'translate(-50%, -10px) scale(0.75)';
+            }, 1800);
+        }
+
+        // Reset Game Variables
+        function resetGame() {
+            trump.y = HEIGHT / 2;
+            trump.velocity = 0;
+            trump.rotation = 0;
+            pipes = [];
+            score = 0;
+            frameCount = 0;
+            dollars = [];
+            currentScoreEl.textContent = score;
+        }
+
+        // Input Handlers
+        function handleJump() {
+            if (gameState === 'START') {
+                startGame();
+            } else if (gameState === 'PLAYING') {
+                trump.velocity = trump.lift;
+                playSound('jump');
+                // Spawn dollar particle on jump
+                dollars.push({
+                    x: trump.x,
+                    y: trump.y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: Math.random() * -2 - 1,
+                    alpha: 1
+                });
+            } else if (gameState === 'GAMEOVER') {
+                // Prevent immediate restart click bugs
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                handleJump();
+            }
+        });
+
+        canvas.addEventListener('click', () => {
+            handleJump();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleJump();
+        }, { passive: false });
+
+        startBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame();
+        });
+
+        restartBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            restartGame();
+            gameOverScreen.classList.add('hidden');
+            gameState = 'PLAYING';
+        });
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            resetGame();
+            gameState = 'PLAYING';
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            playSound('hit');
+            if (score > highscore) {
+                highscore = score;
+                localStorage.setItem('flappy_trump_highscore', highscore);
+                bestScoreEl.textContent = highscore;
+            }
+            finalScoreEl.textContent = score;
+            finalBestEl.textContent = highscore;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function drawBackground() {
+            // Sky Gradient
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+            skyGrad.addColorStop(0, '#38bdf8');
+            skyGrad.addColorStop(0.7, '#bae6fd');
+            skyGrad.addColorStop(1, '#fef08a');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            // Washington Monument Silhouette in distance
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.moveTo(380, HEIGHT - 140);
+            ctx.lineTo(395, HEIGHT - 140);
+            ctx.lineTo(400, 240);
+            ctx.lineTo(405, HEIGHT - 140);
+            ctx.lineTo(420, HEIGHT - 140);
+            ctx.closePath();
+            ctx.fill();
+
+            // White House Colonnade Background Silhouette
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillRect(50, HEIGHT - 200, 220, 70);
+            ctx.fillStyle = '#cbd5e1';
+            // Pillars
+            for (let i = 0; i < 7; i++) {
+                ctx.fillRect(65 + (i * 30), HEIGHT - 225, 14, 95);
+            }
+            // Dome hint
+            ctx.beginPath();
+            ctx.arc(160, HEIGHT - 200, 45, Math.PI, 0, false);
+            ctx.fillStyle = '#f8fafc';
+            ctx.fill();
+
+            // Rolling Lawns (Green hills at bottom)
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.moveTo(0, HEIGHT - 130);
+            ctx.quadraticCurveTo(WIDTH / 4, HEIGHT - 160, WIDTH / 2, HEIGHT - 130);
+            ctx.quadraticCurveTo(3 * WIDTH / 4, HEIGHT - 100, WIDTH, HEIGHT - 130);
+            ctx.lineTo(WIDTH, HEIGHT);
+            ctx.lineTo(0, HEIGHT);
+            ctx.closePath();
+            ctx.fill();
+
+            // Foreground Grass Strip
+            ctx.fillStyle = '#16a34a';
+            ctx.fillRect(0, HEIGHT - 100, WIDTH, 100);
+            
+            // US Flag small accent on ground
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(20, HEIGHT - 120, 4, 30);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(24, HEIGHT - 120);
+            ctx.lineTo(40, HEIGHT - 112);
+            ctx.lineTo(24, HEIGHT - 104);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawTrump() {
+            ctx.save();
+            ctx.translate(trump.x, trump.y);
+            
+            // Rotation based on velocity
+            trump.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (trump.velocity / 10)));
+            ctx.rotate(trump.rotation);
+
+            // Red Tie & Blue Suit Body Base
+            ctx.fillStyle = '#1e3a8a'; // Navy Suit
+            ctx.beginPath();
+            ctx.arc(0, 12, 18, 0, Math.PI, false);
+            ctx.fill();
+
+            // Red Tie
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(-3, 10);
+            ctx.lineTo(3, 10);
+            ctx.lineTo(2, 32);
+            ctx.lineTo(0, 38);
+            ctx.lineTo(-2, 32);
+            ctx.closePath();
+            ctx.fill();
+            
+            // White Shirt Collar
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(-6, 10);
+            ctx.lineTo(0, 18);
+            ctx.lineTo(6, 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Head (Tan / Orange-Peach Skin)
+            ctx.fillStyle = '#fca5a5';
+            ctx.beginPath();
+            ctx.arc(0, -4, trump.radius - 4, 0, Math.PI * 2);
+            ctx.fill();
+            // Tanned skin tone overlay
+            ctx.fillStyle = '#f87171';
+            ctx.beginPath();
+            ctx.arc(0, -2, trump.radius - 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Determined Eyes & Eyebrows
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(4, -10, 6, 4); // Eye
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(2, -15);
+            ctx.lineTo(12, -13);
+            ctx.stroke();
+
+            // Determined Expression / Mouth
+            ctx.strokeStyle = '#7f1d1d';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(4, 2, 8, 0.1 * Math.PI, 0.8 * Math.PI, false);
+            ctx.stroke();
+
+            // Iconic Signature Blonde Hair (Swept Forward / Puffy)
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.moveTo(-24, -12);
+            ctx.bezierCurveTo(-30, -28, -5, -36, 12, -28);
+            ctx.bezierCurveTo(24, -22, 28, -12, 22, -8);
+            ctx.bezierCurveTo(18, -18, -2, -22, -14, -12);
+            ctx.closePath();
+            ctx.fill();
+
+            // Extra hair wave tuft
+            ctx.beginPath();
+            ctx.arc(-8, -24, 10, Math.PI, 2 * Math.PI, false);
+            ctx.fillStyle = '#fef08a';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawPipes() {
+            for (let pipe of pipes) {
+                // Podium Styling (Dark wood texture look with presidential seal color accents)
+                let woodGrad = ctx.createLinearGradient(pipe.x, 0, pipe.x + pipeWidth, 0);
+                woodGrad.addColorStop(0, '#78350f');
+                woodGrad.addColorStop(0.5, '#92400e');
+                woodGrad.addColorStop(1, '#78350f');
+
+                // Top Podium (Bottom side flipped)
+                ctx.fillStyle = woodGrad;
+                ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+                
+                // Podium Top Lip
+                ctx.fillStyle = '#451a03';
+                ctx.fillRect(pipe.x - 6, pipe.top - 20, pipeWidth + 12, 20);
+
+                // Presidential Seal badge on top podium
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(pipe.x + pipeWidth / 2, pipe.top - 10, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Bottom Podium
+                ctx.fillStyle = woodGrad;
+                ctx.fillRect(pipe.x, HEIGHT - pipe.bottom, pipeWidth, pipe.bottom);
+
+                // Podium Base Lip
+                ctx.fillStyle = '#451a03';
+                ctx.fillRect(pipe.x - 6, HEIGHT - pipe.bottom, pipeWidth + 12, 20);
+
+                // Presidential Seal on bottom podium
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(pipe.x + pipeWidth / 2, HEIGHT - pipe.bottom + 10, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // Floating Dollar Particles update
+        function updateAndDrawDollars() {
+            for (let i = dollars.length - 1; i >= 0; i--) {
+                let d = dollars[i];
+                d.x += d.vx;
+                d.y += d.vy;
+                d.alpha -= 0.02;
+
+                if (d.alpha <= 0) {
+                    dollars.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = d.alpha;
+                ctx.font = 'bold 20px monospace';
+                ctx.fillStyle = '#22c55e';
+                ctx.fillText('$', d.x, d.y);
+                ctx.restore();
+            }
+        }
+
+        // Game Loop Update logic
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            frameCount++;
+
+            // Trump Physics
+            trump.velocity += trump.gravity;
+            trump.y += trump.velocity;
+
+            // Ground & Ceiling Collision
+            if (trump.y + trump.radius >= HEIGHT - 100) {
+                trump.y = HEIGHT - 100 - trump.radius;
+                gameOver();
+            }
+            if (trump.y - trump.radius <= 0) {
+                trump.y = trump.radius;
+                trump.velocity = 0;
+            }
+
+            // Spawn Podiums
+            if (frameCount % 100 === 0) {
+                let minHeight = 60;
+                let maxHeight = HEIGHT - 300 - pipeGap;
+                let topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+                let bottomHeight = HEIGHT - topHeight - pipeGap - 100;
+
+                pipes.push({
+                    x: WIDTH,
+                    top: topHeight,
+                    bottom: bottomHeight,
+                    passed: false
+                });
+            }
+
+            // Move and Check Pipes
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= pipeSpeed;
+
+                // Score check
+                if (!pipes[i].passed && pipes[i].x + pipeWidth < trump.x) {
+                    pipes[i].passed = true;
+                    score++;
+                    currentScoreEl.textContent = score;
+                    playSound('score');
+
+                    if (score % 5 === 0) {
+                        triggerSpeech();
+                    }
+                }
+
+                // Collision Detection with Podiums
+                if (
+                    trump.x + trump.radius > pipes[i].x &&
+                    trump.x - trump.radius < pipes[i].x + pipeWidth &&
+                    (trump.y - trump.radius < pipes[i].top || trump.y + trump.radius > HEIGHT - pipes[i].bottom)
+                ) {
+                    gameOver();
+                }
+
+                // Remove off-screen pipes
+                if (pipes[i].x + pipeWidth < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+        }
+
+        // Render Frame
+        function draw() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            drawBackground();
+            drawPipes();
+            updateAndDrawDollars();
+            drawTrump();
+        }
+
+        // Main Loop
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Initialize on load
+        drawBackground();
+        drawTrump();
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+</html>
