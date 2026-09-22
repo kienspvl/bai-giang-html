@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài 17: Các mức ưu tiên của bộ chọn CSS & Pseudo-classes</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        botanical: {
+                            50: '#f4f7f4',
+                            100: '#e5eee5',
+                            200: '#cbddcb',
+                            300: '#a3c5a3',
+                            500: '#5c8a5c',
+                            700: '#3d5c3d',
+                            800: '#2d442d',
+                            900: '#1e2d1e',
+                            mint: '#e0f2fe',
+                            accent: '#10b981',
+                            warm: '#fdfbf7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Inter & Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8faf7;
+            color: #1e2d1e;
+        }
+        code, pre {
+            font-family: 'Fira Code', monospace;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(163, 197, 163, 0.3);
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e5eee5;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a3c5a3;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5c8a5c;
+        }
+    </style>
+</head>
+<body class="bg-botanical-50 text-botanical-900 min-h-screen flex flex-col selection:bg-botanical-300 selection:text-botanical-900">
+
+    <!-- Sticky Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-botanical-200 shadow-sm transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-botanical-700 to-botanical-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    🌿
+                </div>
+                <div>
+                    <span class="text-xs uppercase tracking-wider text-botanical-500 font-semibold">Tin học 12 • Kết nối tri thức</span>
+                    <h1 class="text-lg font-bold text-botanical-900 leading-tight">Bài 17. Các mức ưu tiên của bộ chọn</h1>
+                </div>
+            </div>
+
+            <!-- Desktop Menu -->
+            <nav class="hidden lg:flex items-center space-x-1 text-sm font-medium text-botanical-800">
+                <a href="#overview" class="px-3 py-2 rounded-xl hover:bg-botanical-100 transition">Tổng quan</a>
+                <a href="#pseudo" class="px-3 py-2 rounded-xl hover:bg-botanical-100 transition">Pseudo-class & Element</a>
+                <a href="#priority" class="px-3 py-2 rounded-xl hover:bg-botanical-100 transition">Thứ tự ưu tiên</a>
+                <a href="#specificity" class="px-3 py-2 rounded-xl hover:bg-botanical-100 transition">Trọng số CSS</a>
+                <a href="#practice" class="px-3 py-2 rounded-xl hover:bg-botanical-100 transition">Luyện tập</a>
+                <a href="#gallery" class="px-3 py-2 rounded-xl hover:bg-botanical-100 transition">Thư viện & Ví dụ</a>
+                <a href="#discussion" class="px-3 py-2 rounded-xl hover:bg-botanical-100 transition">Thảo luận</a>
+            </nav>
+
+            <div class="hidden md:flex items-center space-x-3">
+                <button onclick="readGlobalSummary()" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-botanical-500 text-white font-medium hover:bg-botanical-700 transition shadow-md hover:shadow-lg">
+                    <span>🔊 Đọc tóm tắt bài học</span>
+                </button>
+            </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-xl text-botanical-800 hover:bg-botanical-100 focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden lg:hidden bg-white border-b border-botanical-200 px-4 pt-2 pb-4 space-y-1">
+            <a href="#overview" class="block px-3 py-2 rounded-xl hover:bg-botanical-100 font-medium">Tổng quan</a>
+            <a href="#pseudo" class="block px-3 py-2 rounded-xl hover:bg-botanical-100 font-medium">Pseudo-class & Element</a>
+            <a href="#priority" class="block px-3 py-2 rounded-xl hover:bg-botanical-100 font-medium">Thứ tự ưu tiên</a>
+            <a href="#specificity" class="block px-3 py-2 rounded-xl hover:bg-botanical-100 font-medium">Trọng số CSS</a>
+            <a href="#practice" class="block px-3 py-2 rounded-xl hover:bg-botanical-100 font-medium">Luyện tập</a>
+            <a href="#gallery" class="block px-3 py-2 rounded-xl hover:bg-botanical-100 font-medium">Thư viện & Ví dụ</a>
+            <a href="#discussion" class="block px-3 py-2 rounded-xl hover:bg-botanical-100 font-medium">Thảo luận</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="overview" class="relative overflow-hidden pt-12 pb-20 bg-gradient-to-b from-botanical-100/60 to-botanical-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-botanical-200/70 text-botanical-800 text-xs font-semibold uppercase tracking-wider">
+                        <span>✨ Infographic Đồ Họa Trực Quan</span>
+                        <span>•</span>
+                        <span>Chuyên đề CSS Nâng Cao</span>
+                    </div>
+                    <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-botanical-900 leading-tight tracking-tight">
+                        Chinh phục <span class="text-transparent bg-clip-text bg-gradient-to-r from-botanical-700 to-emerald-600">Bộ chọn & Mức ưu tiên</span> trong CSS
+                    </h2>
+                    <p class="text-lg text-botanical-800/80 leading-relaxed">
+                        Nắm vững khái niệm về <strong>lớp giả (Pseudo-class)</strong>, <strong>phần tử giả (Pseudo-element)</strong> và quy tắc tính <strong>trọng số (Specificity)</strong> để làm chủ hoàn toàn cách trình duyệt áp dụng định dạng trên trang web.
+                    </p>
+                    <div class="flex flex-wrap gap-4 pt-2">
+                        <a href="#pseudo" class="px-6 py-3.5 rounded-2xl bg-botanical-700 text-white font-bold hover:bg-botanical-800 transition shadow-lg hover:shadow-botanical-700/30 flex items-center space-x-2">
+                            <span>Khám phá ngay</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </a>
+                        <a href="#practice" class="px-6 py-3.5 rounded-2xl bg-white text-botanical-800 font-bold border border-botanical-300 hover:bg-botanical-100 transition shadow-sm">
+                            Làm bài tập trắc nghiệm
+                        </a>
+                    </div>
+
+                    <!-- Stats Badges -->
+                    <div class="grid grid-cols-3 gap-4 pt-6 border-t border-botanical-200/60">
+                        <div class="glass-card p-4 rounded-2xl text-center shadow-sm">
+                            <span class="block text-2xl font-extrabold text-botanical-700">:hover</span>
+                            <span class="text-xs text-botanical-600 font-medium">Pseudo-class</span>
+                        </div>
+                        <div class="glass-card p-4 rounded-2xl text-center shadow-sm">
+                            <span class="block text-2xl font-extrabold text-botanical-700">::first-letter</span>
+                            <span class="text-xs text-botanical-600 font-medium">Pseudo-element</span>
+                        </div>
+                        <div class="glass-card p-4 rounded-2xl text-center shadow-sm">
+                            <span class="block text-2xl font-extrabold text-botanical-700">ID = 100</span>
+                            <span class="text-xs text-botanical-600 font-medium">Trọng số CSS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hero Visual Infographic Banner -->
+                <div class="lg:col-span-5 relative">
+                    <div class="absolute -inset-1.5 bg-gradient-to-r from-botanical-500 to-emerald-400 rounded-3xl blur-xl opacity-30 animate-pulse"></div>
+                    <div class="relative glass-card p-8 rounded-3xl shadow-2xl border border-botanical-200 space-y-6">
+                        <div class="flex items-center justify-between pb-4 border-b border-botanical-200">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                            </div>
+                            <span class="text-xs font-mono text-botanical-600">specificity.css</span>
+                        </div>
+                        <div class="space-y-3 font-mono text-xs sm:text-sm bg-botanical-900 text-botanical-100 p-5 rounded-2xl shadow-inner">
+                            <p class="text-emerald-400">/* 1. !important (Highest) */</p>
+                            <p>.element <span class="text-yellow-300">{ color: red !important; }</span></p>
+                            <p class="text-emerald-400 pt-2">/* 2. Inline Style */</p>
+                            <p>&lt;p <span class="text-sky-300">style="color: blue;"</span>&gt;</p>
+                            <p class="text-emerald-400 pt-2">/* 3. Specificity Score */</p>
+                            <p>#id <span class="text-pink-300">(100)</span> &gt; .class <span class="text-pink-300">(10)</span> &gt; element <span class="text-pink-300">(1)</span></p>
+                        </div>
+                        <div class="bg-botanical-100/80 p-4 rounded-2xl flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">🎯</span>
+                                <div>
+                                    <h4 class="text-sm font-bold text-botanical-900">Mục tiêu bài học</h4>
+                                    <p class="text-xs text-botanical-700">Phân biệt Pseudo-class & tính trọng số chính xác.</p>
+                                </div>
+                            </div>
+                            <span class="px-3 py-1 rounded-xl bg-botanical-700 text-white text-xs font-bold">Bài 17</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Content Section -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
+
+        <!-- Section 1: Pseudo-class & Pseudo-element -->
+        <section id="pseudo" class="space-y-12">
+            <div class="text-center max-w-3xl mx-auto space-y-4">
+                <span class="text-xs font-bold uppercase tracking-widest text-botanical-700 bg-botanical-200/60 px-3 py-1 rounded-full">Phần 1</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-botanical-900">Kiểu bộ chọn Pseudo-class và Pseudo-element</h2>
+                <p class="text-botanical-800/80">Tìm hiểu các trạng thái đặc biệt của phần tử HTML và cách chọn lọc các thành phần con một cách tinh tế.</p>
+            </div>
+
+            <!-- Subsection A: Pseudo-class -->
+            <div class="glass-card rounded-3xl p-6 sm:p-10 shadow-xl border border-botanical-200 space-y-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-botanical-200 pb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-2xl bg-botanical-700 text-white flex items-center justify-center font-bold text-xl shadow-md">1a</div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-botanical-900">Bộ chọn Pseudo-class (Lớp giả)</h3>
+                            <p class="text-sm text-botanical-700">Ký hiệu bằng dấu đơn <code class="bg-botanical-100 px-1.5 py-0.5 rounded text-botanical-800">:pseudo-class</code> chỉ trạng thái đặc biệt.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="speakText('pseudoClassDesc')" class="px-4 py-2 rounded-xl bg-botanical-200 text-botanical-900 font-semibold text-sm hover:bg-botanical-300 transition flex items-center space-x-2">
+                            <span>🔊 Đọc nội dung</span>
+                        </button>
+                        <div class="flex flex-wrap gap-1.5">
+                            <a href="https://www.google.com/search?tbm=isch&q=css+pseudo+class+examples" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-medium hover:bg-emerald-200 transition">#PseudoClass ↗</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=css+hover+link+visited" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-medium hover:bg-emerald-200 transition">#HoverLink ↗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pseudoClassDesc" class="prose max-w-none text-botanical-800/90 leading-relaxed">
+                    <p class="mb-4">
+                        <strong>Pseudo-class (lớp giả)</strong> là khái niệm chỉ các trạng thái đặc biệt của phần tử HTML. Các trạng thái này không cần định nghĩa mà mặc định được coi như các lớp có sẵn của CSS. Cú pháp: <code>:pseudo-class { thuộc tính: giá trị; }</code>
+                    </p>
+                </div>
+
+                <!-- Table for Pseudo-classes -->
+                <div class="overflow-x-auto rounded-2xl border border-botanical-200 shadow-sm bg-white">
+                    <table class="w-full text-left border-collapse text-sm sm:text-base">
+                        <thead>
+                            <tr class="bg-botanical-100 text-botanical-900 font-bold border-b border-botanical-200">
+                                <th class="p-4">Bộ chọn</th>
+                                <th class="p-4">Ý nghĩa</th>
+                                <th class="p-4">Ví dụ minh họa</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-botanical-100 text-botanical-800">
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">:link</td>
+                                <td class="p-4">Tất cả các liên kết khi chưa được kích hoạt.</td>
+                                <td class="p-4"><code class="bg-botanical-100 px-2 py-1 rounded text-xs">a:link { color: blue; }</code></td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">:visited</td>
+                                <td class="p-4">Tất cả các liên kết sau khi đã kích hoạt một lần.</td>
+                                <td class="p-4"><code class="bg-botanical-100 px-2 py-1 rounded text-xs">a:visited { color: gray; }</code></td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">:hover</td>
+                                <td class="p-4">Tất cả các phần tử khi con trỏ chuột di chuyển lên.</td>
+                                <td class="p-4"><code class="bg-botanical-100 px-2 py-1 rounded text-xs">#home:hover { font-size: 150%; }</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-botanical-100/60 border border-botanical-200 flex items-center justify-between cursor-pointer hover:bg-botanical-100 transition" onclick="openModal('modalPseudoClass')">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-xl">💡</span>
+                        <span class="text-sm font-semibold text-botanical-900">Xem thẻ chi tiết & Mẹo ghi nhớ Pseudo-class</span>
+                    </div>
+                    <span class="text-xs font-bold text-botanical-700 bg-white px-3 py-1.5 rounded-xl shadow-sm">Bấm để mở ↗</span>
+                </div>
+            </div>
+
+            <!-- Subsection B: Pseudo-element -->
+            <div class="glass-card rounded-3xl p-6 sm:p-10 shadow-xl border border-botanical-200 space-y-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-botanical-200 pb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-2xl bg-botanical-700 text-white flex items-center justify-center font-bold text-xl shadow-md">1b</div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-botanical-900">Bộ chọn kiểu Pseudo-element (Phần tử giả)</h3>
+                            <p class="text-sm text-botanical-700">Ký hiệu bằng dấu kép <code class="bg-botanical-100 px-1.5 py-0.5 rounded text-botanical-800">::pseudo-element</code> chỉ định dạng một phần nhỏ của phần tử.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="speakText('pseudoElementDesc')" class="px-4 py-2 rounded-xl bg-botanical-200 text-botanical-900 font-semibold text-sm hover:bg-botanical-300 transition flex items-center space-x-2">
+                            <span>🔊 Đọc nội dung</span>
+                        </button>
+                        <div class="flex flex-wrap gap-1.5">
+                            <a href="https://www.google.com/search?tbm=isch&q=css+pseudo+elements+first+letter" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-medium hover:bg-emerald-200 transition">#PseudoElement ↗</a>
+                            <a href="https://www.google.com/search?tbm=isch&q=css+first+line+selection" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-medium hover:bg-emerald-200 transition">#FirstLetter ↗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pseudoElementDesc" class="prose max-w-none text-botanical-800/90 leading-relaxed">
+                    <p class="mb-4">
+                        <strong>Pseudo-element (phần tử giả)</strong> chỉ một phần (hoặc một thành phần) của các phần tử bình thường, có thể thiết lập định dạng CSS độc lập. Quy định viết sau dấu đôi <code>::</code>.
+                    </p>
+                </div>
+
+                <!-- Table for Pseudo-elements -->
+                <div class="overflow-x-auto rounded-2xl border border-botanical-200 shadow-sm bg-white">
+                    <table class="w-full text-left border-collapse text-sm sm:text-base">
+                        <thead>
+                            <tr class="bg-botanical-100 text-botanical-900 font-bold border-b border-botanical-200">
+                                <th class="p-4">Bộ chọn</th>
+                                <th class="p-4">Mô tả</th>
+                                <th class="p-4">Ví dụ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-botanical-100 text-botanical-800">
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">::first-line</td>
+                                <td class="p-4">Dòng đầu tiên của đối tượng văn bản.</td>
+                                <td class="p-4"><code class="bg-botanical-100 px-2 py-1 rounded text-xs">p.test::first-line { font-family: monospace; }</code></td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">::first-letter</td>
+                                <td class="p-4">Kí tự đầu tiên của đối tượng văn bản.</td>
+                                <td class="p-4"><code class="bg-botanical-100 px-2 py-1 rounded text-xs">#first::first-letter { font-size: 200%; }</code></td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">::selection</td>
+                                <td class="p-4">Phần văn bản được người dùng bôi đen (chọn) trên màn hình.</td>
+                                <td class="p-4"><code class="bg-botanical-100 px-2 py-1 rounded text-xs">::selection { background-color: lime; }</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Priority Levels & Specificity -->
+        <section id="priority" class="space-y-12">
+            <div class="text-center max-w-3xl mx-auto space-y-4">
+                <span class="text-xs font-bold uppercase tracking-widest text-botanical-700 bg-botanical-200/60 px-3 py-1 rounded-full">Phần 2</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-botanical-900">Mức độ ưu tiên và Trọng số CSS (Specificity)</h2>
+                <p class="text-botanical-800/80">Khi có nhiều quy tắc CSS cùng tác động lên một phần tử, trình duyệt sẽ tuân theo các cấp bậc ưu tiên nghiêm ngặt.</p>
+            </div>
+
+            <!-- Priority Hierarchy Table (7 levels) -->
+            <div class="glass-card rounded-3xl p-6 sm:p-10 shadow-xl border border-botanical-200 space-y-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-botanical-200 pb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-2xl bg-botanical-700 text-white flex items-center justify-center font-bold text-xl shadow-md">7</div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-botanical-900">7 Mức độ ưu tiên CSS (Từ cao xuống thấp)</h3>
+                            <p class="text-sm text-botanical-700">Số thứ tự ưu tiên lớn hơn sẽ ghi đè lên số nhỏ hơn.</p>
+                        </div>
+                    </div>
+                    <button onclick="speakText('priorityLevelsDesc')" class="px-4 py-2 rounded-xl bg-botanical-200 text-botanical-900 font-semibold text-sm hover:bg-botanical-300 transition flex items-center space-x-2">
+                        <span>🔊 Đọc bảng ưu tiên</span>
+                    </button>
+                </div>
+
+                <div id="priorityLevelsDesc" class="overflow-x-auto rounded-2xl border border-botanical-200 shadow-sm bg-white">
+                    <table class="w-full text-left border-collapse text-sm sm:text-base">
+                        <thead>
+                            <tr class="bg-botanical-100 text-botanical-900 font-bold border-b border-botanical-200">
+                                <th class="p-4 w-16 text-center">STT</th>
+                                <th class="p-4 w-48">Loại CSS / Nguyên tắc</th>
+                                <th class="p-4">Giải thích chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-botanical-100 text-botanical-800">
+                            <tr class="hover:bg-botanical-50/50 transition bg-emerald-50/40">
+                                <td class="p-4 text-center font-bold text-botanical-700">1</td>
+                                <td class="p-4 font-bold text-emerald-800">!important</td>
+                                <td class="p-4">Các thuộc tính đi kèm từ khóa <code>!important</code> có mức ưu tiên cao nhất tuyệt đối.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 text-center font-bold text-botanical-700">2</td>
+                                <td class="p-4 font-semibold">Inline CSS</td>
+                                <td class="p-4">Các định dạng đặt trực tiếp trong thuộc tính <code>style="..."</code> của thẻ HTML.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 text-center font-bold text-botanical-700">3</td>
+                                <td class="p-4 font-semibold">Media Type / Query</td>
+                                <td class="p-4">Điều khiển hiển thị phụ thuộc vào kích thước màn hình thiết bị.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 text-center font-bold text-botanical-700">4</td>
+                                <td class="p-4 font-semibold">Trọng số CSS (Specificity)</td>
+                                <td class="p-4">Điểm số tính dựa trên cấu trúc bộ chọn (ID, Class, Element).</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 text-center font-bold text-botanical-700">5</td>
+                                <td class="p-4 font-semibold">Nguyên tắc thứ tự cuối (Rule order)</td>
+                                <td class="p-4">Nếu cùng trọng số, định dạng khai báo ở dòng dưới/sau sẽ đè lên dòng trước.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 text-center font-bold text-botanical-700">6</td>
+                                <td class="p-4 font-semibold">Kế thừa CSS từ thẻ cha</td>
+                                <td class="p-4">Nhận thông số từ phần tử chứa nó nếu không có định dạng riêng.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 text-center font-bold text-botanical-700">7</td>
+                                <td class="p-4 font-semibold text-gray-500">Mặc định trình duyệt</td>
+                                <td class="p-4 text-gray-500">Trình duyệt tự quy định nếu không có bất kì khai báo CSS nào.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Specificity Weight Calculation Section -->
+            <div id="specificity" class="glass-card rounded-3xl p-6 sm:p-10 shadow-xl border border-botanical-200 space-y-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-botanical-200 pb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-2xl bg-botanical-700 text-white flex items-center justify-center font-bold text-xl shadow-md">🔢</div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-botanical-900">Bảng giá trị đóng góp trọng số CSS</h3>
+                            <p class="text-sm text-botanical-700">Quy tắc cộng điểm cho từng thành phần trong bộ chọn.</p>
+                        </div>
+                    </div>
+                    <button onclick="speakText('specificityRules')" class="px-4 py-2 rounded-xl bg-botanical-200 text-botanical-900 font-semibold text-sm hover:bg-botanical-300 transition flex items-center space-x-2">
+                        <span>🔊 Đọc công thức tính</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="p-5 rounded-2xl bg-white border border-botanical-200 text-center shadow-sm space-y-2">
+                        <span class="text-3xl font-extrabold text-botanical-700">100</span>
+                        <h4 class="font-bold text-botanical-900">Mã định danh (ID)</h4>
+                        <p class="text-xs text-botanical-600">Ví dụ: <code class="bg-botanical-100 px-1 rounded">#home</code></p>
+                    </div>
+                    <div class="p-5 rounded-2xl bg-white border border-botanical-200 text-center shadow-sm space-y-2">
+                        <span class="text-3xl font-extrabold text-botanical-700">10</span>
+                        <h4 class="font-bold text-botanical-900">Class, Lớp giả, Thuộc tính</h4>
+                        <p class="text-xs text-botanical-600">Ví dụ: <code class="bg-botanical-100 px-1 rounded">.test</code>, <code class="bg-botanical-100 px-1 rounded">:hover</code></p>
+                    </div>
+                    <div class="p-5 rounded-2xl bg-white border border-botanical-200 text-center shadow-sm space-y-2">
+                        <span class="text-3xl font-extrabold text-botanical-700">1</span>
+                        <h4 class="font-bold text-botanical-900">Phần tử, Phần tử giả</h4>
+                        <p class="text-xs text-botanical-600">Ví dụ: <code class="bg-botanical-100 px-1 rounded">p</code>, <code class="bg-botanical-100 px-1 rounded">::first-letter</code></p>
+                    </div>
+                    <div class="p-5 rounded-2xl bg-white border border-botanical-200 text-center shadow-sm space-y-2">
+                        <span class="text-3xl font-extrabold text-botanical-700">0</span>
+                        <h4 class="font-bold text-botanical-900">Bộ chọn vạn năng</h4>
+                        <p class="text-xs text-botanical-600">Ví dụ: <code class="bg-botanical-100 px-1 rounded">*</code></p>
+                    </div>
+                </div>
+
+                <!-- Specificity Examples Table -->
+                <div id="specificityRules" class="overflow-x-auto rounded-2xl border border-botanical-200 shadow-sm bg-white">
+                    <table class="w-full text-left border-collapse text-sm sm:text-base">
+                        <thead>
+                            <tr class="bg-botanical-100 text-botanical-900 font-bold border-b border-botanical-200">
+                                <th class="p-4">Bộ chọn (Selector)</th>
+                                <th class="p-4 w-32 text-center">Trọng số</th>
+                                <th class="p-4">Giải thích thành phần</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-botanical-100 text-botanical-800">
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">p > em</td>
+                                <td class="p-4 text-center font-bold bg-botanical-50">2</td>
+                                <td class="p-4">Gồm 2 phần tử thẻ (p và em): 1 + 1 = 2.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">.test #p11</td>
+                                <td class="p-4 text-center font-bold bg-botanical-50">110</td>
+                                <td class="p-4">Gồm 1 class (10) và 1 id (#p11 = 100): 100 + 10 = 110.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">p.test em.more</td>
+                                <td class="p-4 text-center font-bold bg-botanical-50">22</td>
+                                <td class="p-4">Gồm 2 phần tử (2 x 1 = 2) và 2 lớp (2 x 10 = 20): Tổng = 22.</td>
+                            </tr>
+                            <tr class="hover:bg-botanical-50/50 transition">
+                                <td class="p-4 font-mono font-bold text-botanical-700">p > em#p123</td>
+                                <td class="p-4 text-center font-bold bg-botanical-50">102</td>
+                                <td class="p-4">Gồm 2 phần tử (2) và 1 id (100): Tổng = 102.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Scientific Concept Unicode Box -->
+                <div class="p-6 rounded-2xl bg-gradient-to-r from-botanical-700 to-botanical-800 text-white space-y-3 shadow-lg">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-2xl">✨</span>
+                        <h4 class="font-bold text-lg">Ví dụ thực tế: Cụm từ "Tin học 12"</h4>
+                    </div>
+                    <p class="text-botanical-100 text-sm leading-relaxed">
+                        Xét phần tử <code class="bg-botanical-900 px-2 py-0.5 rounded text-emerald-300">&lt;p&gt;Tin học 12&lt;/p&gt;</code> có 2 định dạng CSS áp dụng: Định dạng phía trên dùng <strong>Pseudo-class</strong> (trọng số 10), định dạng phía dưới dùng <strong>Element</strong> (trọng số 1). Kết quả: Định dạng trọng số lớn hơn (10) được chọn và chữ hiển thị màu xanh lá cây!
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Practice & Quiz -->
+        <section id="practice" class="space-y-12">
+            <div class="text-center max-w-3xl mx-auto space-y-4">
+                <span class="text-xs font-bold uppercase tracking-widest text-botanical-700 bg-botanical-200/60 px-3 py-1 rounded-full">Luyện tập</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-botanical-900">Kiểm tra kiến thức trực tuyến</h2>
+                <p class="text-botanical-800/80">Thử sức với các câu hỏi bám sát nội dung sách giáo khoa để củng cố mức độ hiểu bài.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Quiz Question 1 -->
+                <div class="glass-card rounded-3xl p-6 sm:p-8 shadow-xl border border-botanical-200 space-y-6 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="px-3 py-1 rounded-full bg-botanical-200 text-botanical-800 text-xs font-bold">Câu hỏi 1 / 2</span>
+                            <button onclick="speakText('quiz1Text')" class="text-xs text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc câu hỏi</span></button>
+                        </div>
+                        <h3 id="quiz1Text" class="text-lg font-bold text-botanical-900">Bộ định dạng nào sau đây KHÔNG thuộc kiểu pseudo-element?</h3>
+                        
+                        <div class="space-y-3 pt-2" id="q1-options">
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q1" value="wrong" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">::first-letter</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q1" value="wrong" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">::first-line</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q1" value="wrong" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">::selection</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q1" value="correct" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">::visited (hoặc :visited)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="space-y-3 pt-4 border-t border-botanical-200">
+                        <button onclick="checkQuiz(1)" class="w-full py-3 rounded-2xl bg-botanical-700 text-white font-bold hover:bg-botanical-800 transition shadow-md">Kiểm tra đáp án</button>
+                        <div id="q1-feedback" class="hidden p-3 rounded-xl text-sm font-semibold text-center"></div>
+                    </div>
+                </div>
+
+                <!-- Quiz Question 2 -->
+                <div class="glass-card rounded-3xl p-6 sm:p-8 shadow-xl border border-botanical-200 space-y-6 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="px-3 py-1 rounded-full bg-botanical-200 text-botanical-800 text-xs font-bold">Câu hỏi 2 / 2</span>
+                            <button onclick="speakText('quiz2Text')" class="text-xs text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc câu hỏi</span></button>
+                        </div>
+                        <h3 id="quiz2Text" class="text-lg font-bold text-botanical-900">Bộ chọn nào sau đây có tổng trọng số là 102?</h3>
+                        
+                        <div class="space-y-3 pt-2" id="q2-options">
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q2" value="correct" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">p > em#p123 (2 phần tử = 2 + 1 id = 100)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q2" value="wrong" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">p > em (Trọng số = 2)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q2" value="wrong" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">p.test em.more (Trọng số = 22)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3.5 rounded-2xl border border-botanical-200 bg-white hover:bg-botanical-50 cursor-pointer transition">
+                                <input type="radio" name="q2" value="wrong" class="w-4 h-4 text-botanical-700">
+                                <span class="font-mono text-sm">.test #p11 (Trọng số = 110)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="space-y-3 pt-4 border-t border-botanical-200">
+                        <button onclick="checkQuiz(2)" class="w-full py-3 rounded-2xl bg-botanical-700 text-white font-bold hover:bg-botanical-800 transition shadow-md">Kiểm tra đáp án</button>
+                        <div id="q2-feedback" class="hidden p-3 rounded-xl text-sm font-semibold text-center"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Gallery & Expanded Examples (12 Items) -->
+        <section id="gallery" class="space-y-12">
+            <div class="text-center max-w-3xl mx-auto space-y-4">
+                <span class="text-xs font-bold uppercase tracking-widest text-botanical-700 bg-botanical-200/60 px-3 py-1 rounded-full">Mở rộng & Thực tế</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-botanical-900">Thư viện 12 Ví dụ & Ứng dụng Thực tế</h2>
+                <p class="text-botanical-800/80">Khám phá các ví dụ sinh động, bấm vào ảnh để phóng to Lightbox, nghe phát âm và tìm kiếm hình ảnh nhanh chóng.</p>
+            </div>
+
+            <div class="bento-grid">
+                <!-- Item 1 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(0)">
+                            <img src="https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80" alt="Web Development" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Web+CSS'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 01</span>
+                            <h3 id="ex1Title" class="text-lg font-bold text-botanical-900">Trạng thái Link chưa bấm (:link)</h3>
+                            <p id="ex1Desc" class="text-sm text-botanical-800/80">Áp dụng màu sắc cho các liên kết Hyperlink chưa từng được truy cập trong văn bản tài liệu.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex1Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+link+pseudo+class" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#Hyperlink ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 2 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(1)">
+                            <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80" alt="Code Editor" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Code+Editor'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 02</span>
+                            <h3 id="ex2Title" class="text-lg font-bold text-botanical-900">Liên kết đã xem (:visited)</h3>
+                            <p id="ex2Desc" class="text-sm text-botanical-800/80">Giúp người dùng nhận biết các trang web hoặc bài viết đã từng truy cập trước đó.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex2Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=visited+link+css" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#VisitedLink ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 3 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(2)">
+                            <img src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80" alt="Hover Effect" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Hover+Effect'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 03</span>
+                            <h3 id="ex3Title" class="text-lg font-bold text-botanical-900">Hiệu ứng rê chuột (:hover)</h3>
+                            <p id="ex3Desc" class="text-sm text-botanical-800/80">Tạo hiệu ứng động tăng cỡ chữ hoặc đổi màu khi con trỏ lướt qua nút bấm hoặc tiêu đề.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex3Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+hover+effect" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#HoverEffect ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 4 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(3)">
+                            <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=600&q=80" alt="Typography First Line" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=First+Line'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 04</span>
+                            <h3 id="ex4Title" class="text-lg font-bold text-botanical-900">Định dạng dòng đầu (::first-line)</h3>
+                            <p id="ex4Desc" class="text-sm text-botanical-800/80">Tạo kiểu dáng độc đáo cho dòng đầu tiên của đoạn văn bản báo chí hoặc tài liệu học tập.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex4Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+first+line" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#FirstLine ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 5 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(4)">
+                            <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80" alt="Drop Cap" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Drop+Cap'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 05</span>
+                            <h3 id="ex5Title" class="text-lg font-bold text-botanical-900">Kí tự đầu tiên lớn (::first-letter)</h3>
+                            <p id="ex5Desc" class="text-sm text-botanical-800/80">Hiệu ứng Drop Cap truyền thống cho chữ cái đầu tiên của chương sách hoặc bài báo.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex5Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+drop+cap" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#DropCap ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 6 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(5)">
+                            <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80" alt="Text Selection" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Selection'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 06</span>
+                            <h3 id="ex6Title" class="text-lg font-bold text-botanical-900">Vùng bôi đen văn bản (::selection)</h3>
+                            <p id="ex6Desc" class="text-sm text-botanical-800/80">Tùy chỉnh màu nền và màu chữ khi người dùng kéo chuột bôi đen nội dung trên trang.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex6Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+selection+color" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#TextSelection ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 7 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(6)">
+                            <img src="https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80" alt="Important Keyword" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Important'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 07</span>
+                            <h3 id="ex7Title" class="text-lg font-bold text-botanical-900">Từ khóa quyền lực !important</h3>
+                            <p id="ex7Desc" class="text-sm text-botanical-800/80">Ghi đè tất cả mọi quy tắc định dạng xung đột khác để bắt buộc áp dụng thuộc tính.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex7Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+important+keyword" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#Important ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 8 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(7)">
+                            <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80" alt="Inline Style" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Inline+Style'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 08</span>
+                            <h3 id="ex8Title" class="text-lg font-bold text-botanical-900">Định dạng Inline trực tiếp</h3>
+                            <p id="ex8Desc" class="text-sm text-botanical-800/80">Sử dụng thuộc tính style ngay trong thẻ HTML để tạo ngoại lệ nhanh chóng.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex8Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=html+inline+style" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#InlineStyle ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 9 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(8)">
+                            <img src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80" alt="ID Specificity" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=ID+Specificity'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 09</span>
+                            <h3 id="ex9Title" class="text-lg font-bold text-botanical-900">Sức mạnh mã định danh ID (100)</h3>
+                            <p id="ex9Desc" class="text-sm text-botanical-800/80">Bộ chọn ID có trọng số rất cao, dễ dàng vượt qua các lớp thông thường.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex9Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+id+selector" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#SelectorID ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 10 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(9)">
+                            <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=600&q=80" alt="Class Specificity" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Class+Specificity'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 10</span>
+                            <h3 id="ex10Title" class="text-lg font-bold text-botanical-900">Bộ chọn Lớp (Class - 10)</h3>
+                            <p id="ex10Desc" class="text-sm text-botanical-800/80">Giải pháp linh hoạt để áp dụng định dạng chung cho nhiều phần tử tái sử dụng.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex10Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+class+selector" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#SelectorClass ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 11 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(10)">
+                            <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80" alt="Rule Order" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=Rule+Order'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 11</span>
+                            <h3 id="ex11Title" class="text-lg font-bold text-botanical-900">Nguyên tắc thứ tự cuối</h3>
+                            <p id="ex11Desc" class="text-sm text-botanical-800/80">Khi hai quy tắc có trọng số ngang nhau, quy tắc khai báo ở dòng sau sẽ chiến thắng.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex11Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+cascade+rule+order" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#RuleOrder ↗</a>
+                    </div>
+                </div>
+
+                <!-- Item 12 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-botanical-200 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative overflow-hidden h-48 cursor-pointer" onclick="openLightbox(11)">
+                            <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80" alt="Inheritance CSS" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x400/5c8a5c/ffffff?text=CSS+Inheritance'">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">🔍 Phóng to</div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-2.5 py-1 rounded-full">Ví dụ 12</span>
+                            <h3 id="ex12Title" class="text-lg font-bold text-botanical-900">Tính kế thừa từ thẻ cha</h3>
+                            <p id="ex12Desc" class="text-sm text-botanical-800/80">Các thuộc tính font chữ, màu sắc văn bản tự động lan truyền từ phần tử chứa sang phần tử con.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-botanical-100 mt-4">
+                        <button onclick="speakText('ex12Desc')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Đọc</span></button>
+                        <a href="https://www.google.com/search?tbm=isch&q=css+inheritance" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">#Inheritance ↗</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Discussion & Testimonials -->
+        <section id="discussion" class="space-y-12">
+            <div class="text-center max-w-3xl mx-auto space-y-4">
+                <span class="text-xs font-bold uppercase tracking-widest text-botanical-700 bg-botanical-200/60 px-3 py-1 rounded-full">Thảo luận & Phản hồi</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-botanical-900">Góc nhìn từ học sinh và giáo viên</h2>
+                <p class="text-botanical-800/80">Chia sẻ và suy ngẫm về tầm quan trọng của việc hiểu rõ quy tắc ưu tiên CSS trong lập trình web.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Testimonial 1 -->
+                <div class="glass-card rounded-3xl p-8 shadow-xl border border-botanical-200 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-botanical-700 text-white font-bold flex items-center justify-center">A</div>
+                            <div>
+                                <h4 class="font-bold text-botanical-900">Nguyễn Văn An</h4>
+                                <span class="text-xs text-botanical-600">Học sinh lớp 12A1</span>
+                            </div>
+                        </div>
+                        <p id="t1" class="text-sm text-botanical-800 leading-relaxed">
+                            "Trước đây mình hay bị lỗi CSS viết rồi mà không ăn style, nhờ bảng tính trọng số 100-10-1 và 7 mức ưu tiên mà giờ mình đã tự tin fix bug nhanh chóng!"
+                        </p>
+                    </div>
+                    <button onclick="speakText('t1')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Nghe nhận xét</span></button>
+                </div>
+
+                <!-- Testimonial 2 -->
+                <div class="glass-card rounded-3xl p-8 shadow-xl border border-botanical-200 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-emerald-700 text-white font-bold flex items-center justify-center">T</div>
+                            <div>
+                                <h4 class="font-bold text-botanical-900">Thầy Trần Minh Tâm</h4>
+                                <span class="text-xs text-botanical-600">Giáo viên Tin học</span>
+                            </div>
+                        </div>
+                        <p id="t2" class="text-sm text-botanical-800 leading-relaxed">
+                            "Giao diện infographic trực quan giúp học sinh tiếp thu khái niệm trừu tượng về Pseudo-class và Specificity rất tự nhiên, trực quan và dễ nhớ."
+                        </p>
+                    </div>
+                    <button onclick="speakText('t2')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Nghe nhận xét</span></button>
+                </div>
+
+                <!-- Testimonial 3 -->
+                <div class="glass-card rounded-3xl p-8 shadow-xl border border-botanical-200 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-botanical-500 text-white font-bold flex items-center justify-center">L</div>
+                            <div>
+                                <h4 class="font-bold text-botanical-900">Lê Thu Hà</h4>
+                                <span class="text-xs text-botanical-600">Thành viên CLB Lập trình</span>
+                            </div>
+                        </div>
+                        <p id="t3" class="text-sm text-botanical-800 leading-relaxed">
+                            "Tính năng Text-to-Speech và phím tắt Space cực kỳ tiện lợi khi thuyết trình bài học trên máy chiếu trước lớp."
+                        </p>
+                    </div>
+                    <button onclick="speakText('t3')" class="text-xs font-semibold text-botanical-700 hover:underline flex items-center space-x-1"><span>🔊 Nghe nhận xét</span></button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-botanical-900 text-botanical-100 py-12 border-t border-botanical-800 mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+            <div class="space-y-3">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-xl bg-botanical-500 flex items-center justify-center text-white font-bold">🌿</div>
+                    <h3 class="text-lg font-bold text-white">Tin học 12 - Kết nối tri thức</h3>
+                </div>
+                <p class="text-xs text-botanical-300">Tài nguyên học tập số tối ưu hóa cho giáo viên và học sinh phổ thông.</p>
+            </div>
+            <div class="text-center text-xs text-botanical-400 space-y-1">
+                <p>© 2026 Bài 17. Các mức ưu tiên của bộ chọn CSS.</p>
+                <p>Thiết kế theo chuẩn Infographic tương tác hiện đại.</p>
+            </div>
+            <div class="flex justify-md-end justify-center space-x-4 text-sm font-semibold">
+                <a href="#overview" class="hover:text-emerald-400 transition">Đầu trang ↑</a>
+                <a href="#practice" class="hover:text-emerald-400 transition">Bài tập</a>
+                <a href="#gallery" class="hover:text-emerald-400 transition">Thư viện ảnh</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal Dialog for Details -->
+    <div id="contentModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-card max-w-2xl w-full rounded-3xl p-8 shadow-2xl border border-botanical-200 space-y-6 relative bg-white">
+            <button onclick="closeModal()" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-botanical-100 text-botanical-900 font-bold flex items-center justify-center hover:bg-botanical-200 transition">✕</button>
+            <div class="space-y-2">
+                <span class="text-xs font-bold text-botanical-700 bg-botanical-200 px-3 py-1 rounded-full">Chi tiết mở rộng</span>
+                <h3 id="modalTitle" class="text-2xl font-extrabold text-botanical-900">Tiêu đề Modal</h3>
+            </div>
+            <div id="modalBody" class="text-botanical-800 leading-relaxed text-base">
+                Nội dung chi tiết sẽ hiển thị ở đây...
+            </div>
+            <div class="flex items-center justify-between pt-4 border-t border-botanical-200">
+                <button onclick="speakModalText()" class="px-4 py-2 rounded-xl bg-botanical-200 text-botanical-900 font-semibold text-sm hover:bg-botanical-300 transition flex items-center space-x-2">
+                    <span>🔊 Đọc nội dung này</span>
+                </button>
+                <span class="text-xs text-botanical-500 font-mono">Gợi ý: Bấm phím Space để đóng/mở nhanh</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Overlay -->
+    <div id="lightbox" class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white text-3xl font-bold p-2 hover:text-emerald-400 transition">✕</button>
+        <button onclick="prevImage()" class="absolute left-6 text-white text-4xl font-bold p-3 hover:text-emerald-400 transition bg-black/40 rounded-full">‹</button>
+        <button onclick="nextImage()" class="absolute right-6 text-white text-4xl font-bold p-3 hover:text-emerald-400 transition bg-black/40 rounded-full">›</button>
+        
+        <div class="max-w-4xl max-h-[85vh] text-center space-y-4">
+            <img id="lightboxImg" src="" alt="Expanded View" class="max-h-[70vh] mx-auto rounded-2xl shadow-2xl object-contain border border-botanical-700">
+            <h3 id="lightboxCaption" class="text-white text-lg font-bold">Chú thích ảnh</h3>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Mobile Menu Toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Web Speech API TTS Helper
+        function speakText(elementIdOrText) {
+            if (!('speechSynthesis' in window)) {
+                alert('Trình duyệt của bạn không hỗ trợ tính năng đọc văn bản (Text-to-Speech).');
+                return;
+            }
+            window.speechSynthesis.cancel();
+            let textToRead = '';
+            const el = document.getElementById(elementIdOrText);
+            if (el) {
+                textToRead = el.innerText || el.textContent;
+            } else {
+                textToRead = elementIdOrText;
+            }
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = 'vi-VN';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function readGlobalSummary() {
+            speakText("Chào mừng các bạn đến với bài 17. Các mức ưu tiên của bộ chọn CSS. Bài học giúp bạn nắm vững bộ chọn lớp giả, phần tử giả và quy tắc tính trọng số để làm chủ kỹ thuật định dạng trang web.");
+        }
+
+        // Quiz Checker Logic
+        function checkQuiz(questionNumber) {
+            if (questionNumber === 1) {
+                const selected = document.querySelector('input[name="q1"]:checked');
+                const feedback = document.getElementById('q1-feedback');
+                feedback.classList.remove('hidden');
+                if (!selected) {
+                    feedback.className = 'p-3 rounded-xl text-sm font-semibold text-center bg-yellow-100 text-yellow-800';
+                    feedback.innerText = 'Vui lòng chọn một đáp án trước khi kiểm tra!';
+                    return;
+                }
+                if (selected.value === 'correct') {
+                    feedback.className = 'p-3 rounded-xl text-sm font-semibold text-center bg-emerald-100 text-emerald-800';
+                    feedback.innerText = '🎉 Chính xác! ::visited thực chất là trạng thái liên kết (pseudo-class), không phải pseudo-element.';
+                } else {
+                    feedback.className = 'p-3 rounded-xl text-sm font-semibold text-center bg-red-100 text-red-800';
+                    feedback.innerText = '❌ Chưa chính xác. Hãy nhớ ::first-letter, ::first-line, ::selection là pseudo-element!';
+                }
+            } else if (questionNumber === 2) {
+                const selected = document.querySelector('input[name="q2"]:checked');
+                const feedback = document.getElementById('q2-feedback');
+                feedback.classList.remove('hidden');
+                if (!selected) {
+                    feedback.className = 'p-3 rounded-xl text-sm font-semibold text-center bg-yellow-100 text-yellow-800';
+                    feedback.innerText = 'Vui lòng chọn một đáp án trước khi kiểm tra!';
+                    return;
+                }
+                if (selected.value === 'correct') {
+                    feedback.className = 'p-3 rounded-xl text-sm font-semibold text-center bg-emerald-100 text-emerald-800';
+                    feedback.innerText = '🎉 Chính xác! p > em#p123 có 2 phần tử (2) và 1 id (100) = Tổng 102.';
+                } else {
+                    feedback.className = 'p-3 rounded-xl text-sm font-semibold text-center bg-red-100 text-red-800';
+                    feedback.innerText = '❌ Chưa chính xác. Hãy tính lại trọng số ID=100 và Element=1 nhé!';
+                }
+            }
+        }
+
+        // Modal View Logic
+        function openModal(type) {
+            const modal = document.getElementById('contentModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            
+            if (type === 'modalPseudoClass') {
+                title.innerText = 'Ghi nhớ chuyên sâu: Pseudo-class & Pseudo-element';
+                body.innerHTML = `
+                    <p class="mb-3"><strong>Pseudo-class</strong> phản ánh trạng thái động của phần tử (như khi rê chuột :hover, liên kết chưa bấm :link, đã bấm :visited).</p>
+                    <p class="mb-3"><strong>Pseudo-element</strong> cho phép định dạng một phần nhỏ cấu trúc văn bản bên trong thẻ (như dòng đầu tiên ::first-line hoặc kí tự đầu tiên ::first-letter).</p>
+                    <p class="text-xs text-botanical-600 font-mono">Quy tắc ký hiệu: Dấu đơn ':' cho lớp giả và dấu đôi '::' cho phần tử giả theo chuẩn CSS3.</p>
+                `;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('contentModal').classList.add('hidden');
+        }
+
+        function speakModalText() {
+            const body = document.getElementById('modalBody').innerText;
+            speakText(body);
+        }
+
+        // Lightbox Gallery Logic (12 items)
+        const galleryItems = [
+            { img: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 01: Trạng thái Link chưa bấm (:link)" },
+            { img: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 02: Liên kết đã xem (:visited)" },
+            { img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 03: Hiệu ứng rê chuột (:hover)" },
+            { img: "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 04: Định dạng dòng đầu (::first-line)" },
+            { img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 05: Kí tự đầu tiên lớn (::first-letter)" },
+            { img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 06: Vùng bôi đen văn bản (::selection)" },
+            { img: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 07: Từ khóa quyền lực !important" },
+            { img: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 08: Định dạng Inline trực tiếp" },
+            { img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 09: Sức mạnh mã định danh ID (100)" },
+            { img: "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 10: Bộ chọn Lớp (Class - 10)" },
+            { img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 11: Nguyên tắc thứ tự cuối" },
+            { img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80", title: "Ví dụ 12: Tính kế thừa từ thẻ cha" }
+        ];
+
+        let currentImageIndex = 0;
+
+        function openLightbox(index) {
+            currentImageIndex = index;
+            updateLightboxContent();
+            document.getElementById('lightbox').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.add('hidden');
+        }
+
+        function prevImage() {
+            currentImageIndex = (currentImageIndex - 1 + galleryItems.length) % galleryItems.length;
+            updateLightboxContent();
+        }
+
+        function nextImage() {
+            currentImageIndex = (currentImageIndex + 1) % galleryItems.length;
+            updateLightboxContent();
+        }
+
+        function updateLightboxContent() {
+            const item = galleryItems[currentImageIndex];
+            document.getElementById('lightboxImg').src = item.img;
+            document.getElementById('lightboxCaption').innerText = item.title;
+        }
+
+        // Keyboard Shortcut: Spacebar support for closing modal/lightbox or flipping
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                const modal = document.getElementById('contentModal');
+                const lightbox = document.getElementById('lightbox');
+                if (!modal.classList.contains('hidden')) {
+                    closeModal();
+                } else if (!lightbox.classList.contains('hidden')) {
+                    closeLightbox();
+                } else {
+                    openModal('modalPseudoClass');
+                }
+            } else if (e.code === 'ArrowRight') {
+                const lightbox = document.getElementById('lightbox');
+                if (!lightbox.classList.contains('hidden')) nextImage();
+            } else if (e.code === 'ArrowLeft') {
+                const lightbox = document.getElementById('lightbox');
+                if (!lightbox.classList.contains('hidden')) prevImage();
+            }
+        });
+    </script>
+</body>
+</html>
