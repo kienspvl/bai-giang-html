@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="blueprint">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chuyển Động Thẳng Biến Đổi Đều — Vật Lý 10 Chuyên Sâu</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                        serif: ['Playfair Display', 'Georgia', 'serif']
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Theme 1: Science Tech Blueprint (Light / Cyan & Slate) */
+        :root {
+            --bg-color: #f4f7f6;
+            --text-color: #111827;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(14, 165, 233, 0.25);
+            --accent-color: #0284c7;
+            --accent-glow: rgba(2, 132, 199, 0.15);
+            --tag-bg: #e0f2fe;
+            --tag-text: #0369a1;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Theme 2: Deep Space / Dark Scientific Mode */
+        [data-theme="space"] {
+            --bg-color: #030712;
+            --text-color: #f3f4f6;
+            --card-bg: rgba(17, 24, 39, 0.85);
+            --border-color: rgba(99, 102, 241, 0.3);
+            --accent-color: #818cf8;
+            --accent-glow: rgba(129, 140, 248, 0.2);
+            --tag-bg: #1e1b4b;
+            --tag-text: #c7d2fe;
+        }
+
+        /* Theme 3: Modern Cyber Neon Blueprint */
+        [data-theme="cyber"] {
+            --bg-color: #050505;
+            --text-color: #ecfeff;
+            --card-bg: rgba(15, 23, 42, 0.9);
+            --border-color: rgba(20, 184, 166, 0.35);
+            --accent-color: #2dd4bf;
+            --accent-glow: rgba(45, 212, 191, 0.25);
+            --tag-bg: #042f2e;
+            --tag-text: #5eead4;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            transition: background-color 0.6s ease, color 0.6s ease;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Responsive Fluid Typography clamps - strictly >= 1.2rem */
+        .title-h1 {
+            font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+            line-height: 1.2;
+        }
+        .title-h2 {
+            font-size: clamp(1.8rem, 2.8vw, 2.8rem);
+            line-height: 1.3;
+        }
+        .body-text {
+            font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+            line-height: 1.8;
+        }
+        .caption-text {
+            font-size: clamp(1.2rem, 1.2vw, 1.4rem);
+            line-height: 1.6;
+        }
+        .formula-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(1.3rem, 2vw, 1.7rem);
+        }
+
+        /* Glassmorphism card styling */
+        .glass-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(16px);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease, background-color 0.6s ease, border-color 0.6s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px var(--accent-glow);
+        }
+
+        /* Scroll progress bar */
+        #scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: var(--accent-color);
+            width: 0%;
+            z-index: 100;
+            transition: width 0.1s linear, background-color 0.6s ease;
+        }
+
+        /* Keyword tags */
+        .tag-badge {
+            background-color: var(--tag-bg);
+            color: var(--tag-text);
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+        .tag-badge:hover {
+            transform: scale(1.06);
+            filter: brightness(1.15);
+        }
+
+        /* Morphing Intersection Observer State */
+        .morph-section {
+            opacity: 0;
+            transform: translateY(60px) scale(0.97);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .morph-section.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="selection:bg-cyan-500/30">
+
+    <div id="scroll-progress"></div>
+
+    <main class="w-full flex flex-col items-center">
+
+        <!-- SECTION 1: Hero Section -->
+        <section id="sec-1" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center relative">
+            <div class="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none select-none font-mono">
+                <span class="text-[20vw] font-bold">Δv/Δt</span>
+            </div>
+            <span class="tag-badge px-4 py-1.5 rounded-full text-sm font-semibold tracking-widest uppercase mb-6 shadow-sm">Vật Lý 10 • Cơ Học Cổ Điển</span>
+            <h1 class="title-h1 font-bold mb-6 tracking-tight max-w-5xl">Chuyển Động Thẳng Biến Đổi Đều</h1>
+            <p class="body-text max-w-3xl opacity-90 mb-10 font-light">
+                Khảo sát sự biến thiên vận tốc theo thời gian với gia tốc không đổi. Nền tảng cốt lõi giải mã các hiện tượng chuyển động trong tự nhiên và kỹ thuật.
+            </p>
+            <div class="flex flex-wrap gap-3 justify-center">
+                <a href="https://images.google.com/search?q=Uniformly+accelerated+motion" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#UniformlyAcceleratedMotion</a>
+                <a href="https://images.google.com/search?q=Kinematics+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#KinematicsPhysics</a>
+                <a href="https://images.google.com/search?q=Acceleration+vector" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#AccelerationVector</a>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Split-Screen Showcase Layout -->
+        <section id="sec-2" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 02 • Khái niệm cơ bản</span>
+                    <h2 class="title-h2 font-bold">Định Nghĩa Chuyển Động Biến Đổi Đều</h2>
+                    <p class="body-text opacity-90">
+                        Là chuyển động thẳng trong đó vận tốc tức thời tăng đều hoặc giảm đều theo thời gian. Quỹ đạo chuyển động là một đường thẳng và gia tốc có độ lớn hoàn toàn không đổi.
+                    </p>
+                    <ul class="space-y-3 body-text opacity-90 list-disc pl-5">
+                        <li>Vận tốc thay đổi những lượng bằng nhau trong những khoảng thời gian bằng nhau.</li>
+                        <li>Gia tốc a = hằng số (a ≠ 0).</li>
+                        <li>Hướng của vectơ gia tốc không đổi trong suốt quá trình.</li>
+                    </ul>
+                    <div class="flex flex-wrap gap-3 pt-2">
+                        <a href="https://images.google.com/search?q=Linear+motion" target="_blank" rel="noopener noreferrer" class="tag-badge px-3.5 py-1.5 rounded-lg text-sm font-medium">#LinearMotion</a>
+                        <a href="https://images.google.com/search?q=Constant+acceleration" target="_blank" rel="noopener noreferrer" class="tag-badge px-3.5 py-1.5 rounded-lg text-sm font-medium">#ConstantAcceleration</a>
+                        <a href="https://images.google.com/search?q=Physics+mechanics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3.5 py-1.5 rounded-lg text-sm font-medium">#PhysicsMechanics</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl shadow-xl relative overflow-hidden flex flex-col justify-center items-center text-center min-h-[380px]">
+                    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#0284c7_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <span class="formula-box font-bold mb-4 opacity-90">a = Δv / Δt = (v - v₀) / t = const</span>
+                    <p class="caption-text opacity-80">Định luật biến thiên vận tốc theo thời gian trong cơ học.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Bento Grid Layout -->
+        <section id="sec-3" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 03 • Phân loại chuyển động</span>
+                <h2 class="title-h2 font-bold mt-3">Nhanh Dần Đều & Chậm Dần Đều</h2>
+                <p class="body-text opacity-90 mt-2">Phân biệt hai trạng thái cơ bản dựa trên dấu của tích số giữa vận tốc và gia tốc.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="glass-card p-10 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <span class="tag-badge px-3 py-1 rounded-md text-xs font-bold uppercase">Trạng thái 1</span>
+                        <h3 class="font-serif text-3xl font-bold mt-4 mb-4">Chuyển Động Nhanh Dần Đều</h3>
+                        <p class="body-text opacity-90">Vận tốc tăng dần theo thời gian. Vectơ gia tốc a cùng chiều với vectơ vận tốc v (tích số a.v > 0). Xe tăng tốc trên đường trường.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-8">
+                        <a href="https://images.google.com/search?q=Accelerated+motion" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#AcceleratedMotion</a>
+                        <a href="https://images.google.com/search?q=Speeding+up" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#SpeedingUp</a>
+                    </div>
+                </div>
+                <div class="glass-card p-10 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <span class="tag-badge px-3 py-1 rounded-md text-xs font-bold uppercase">Trạng thái 2</span>
+                        <h3 class="font-serif text-3xl font-bold mt-4 mb-4">Chuyển Động Chậm Dần Đều</h3>
+                        <p class="body-text opacity-90">Vận tốc giảm dần theo thời gian. Vectơ gia tốc a ngược chiều với vectơ vận tốc v (tích số a.v < 0). Xe đang phanh gấp.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-8">
+                        <a href="https://images.google.com/search?q=Decelerated+motion" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#DeceleratedMotion</a>
+                        <a href="https://images.google.com/search?q=Braking+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#BrakingPhysics</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Full-Width Immersive Storytelling Card -->
+        <section id="sec-4" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="glass-card p-10 md:p-16 rounded-3xl relative overflow-hidden text-center max-w-5xl mx-auto shadow-2xl">
+                <span class="tag-badge px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest inline-block mb-4">Phần 04 • Đại lượng vector gia tốc</span>
+                <h2 class="title-h2 font-bold mb-6">Ý Nghĩa Vật Lý Của Gia Tốc (a)</h2>
+                <p class="body-text opacity-90 max-w-3xl mx-auto mb-8 font-light">
+                    Gia tốc là đại lượng đặc trưng cho tốc độ thay đổi nhanh hay chậm của vận tốc theo thời gian. Trong hệ SI, gia tốc được đo bằng mét trên giây bình phương (m/s²).
+                </p>
+                <div class="formula-box font-bold mb-8 py-3 px-6 rounded-xl inline-block bg-cyan-500/10 border border-cyan-500/20">
+                    a = (v - v₀) / t  (m/s²)
+                </div>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <a href="https://images.google.com/search?q=Acceleration+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#AccelerationPhysics</a>
+                    <a href="https://images.google.com/search?q=Vector+quantity" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#VectorQuantity</a>
+                    <a href="https://images.google.com/search?q=SI+units+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#SIUnits</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: Minimalist Stat Callout (Big Number) -->
+        <section id="sec-5" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center">
+            <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider mb-4">Phần 05 • Hằng số trọng trường</span>
+            <div class="font-serif text-[16vw] md:text-[12vw] font-bold leading-none tracking-tight opacity-90 my-2">9.81</div>
+            <h2 class="title-h2 font-bold mt-4 mb-3">Gia Tốc Rơi Tự Do (g ≈ 9.8 m/s²)</h2>
+            <p class="body-text opacity-80 max-w-2xl">
+                Trường hợp đặc biệt của chuyển động thẳng nhanh dần đều theo phương thẳng đứng dưới tác dụng duy nhất của trọng lực.
+            </p>
+            <div class="flex flex-wrap gap-3 mt-8 justify-center">
+                <a href="https://images.google.com/search?q=Free+fall+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#FreeFall</a>
+                <a href="https://images.google.com/search?q=Gravity+constant" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#GravityConstant</a>
+                <a href="https://images.google.com/search?q=Vertical+motion" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#VerticalMotion</a>
+            </div>
+        </section>
+
+        <!-- SECTION 6: Editorial Timeline -->
+        <section id="sec-6" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 06 • Hệ thống phương trình</span>
+                <h2 class="title-h2 font-bold mt-3">Các Phương Trình Động Học Cơ Bản</h2>
+                <p class="body-text opacity-90 mt-2">Bộ ba công cụ toán học không thể thiếu để giải mọi bài toán vật lý lớp 10.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-8 rounded-3xl relative">
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-60">Công thức 1</span>
+                    <h3 class="font-serif text-2xl font-bold mt-2 mb-3">Phương Trình Vận Tốc</h3>
+                    <div class="formula-box my-4 p-3 bg-cyan-500/10 rounded-xl">v = v₀ + at</div>
+                    <p class="body-text opacity-90">Tính vận tốc tức thời tại thời điểm t bất kỳ khi biết vận tốc ban đầu và gia tốc.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Velocity+formula" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#VelocityFormula</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl relative md:-translate-y-4">
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-60">Công thức 2</span>
+                    <h3 class="font-serif text-2xl font-bold mt-2 mb-3">Phương Trình Quãng Đường</h3>
+                    <div class="formula-box my-4 p-3 bg-cyan-500/10 rounded-xl">s = v₀t + ½at²</div>
+                    <p class="body-text opacity-90">Tính quãng đường đi được trong khoảng thời gian t kể từ lúc bắt đầu khảo sát.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Distance+formula+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#DistanceFormula</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl relative">
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-60">Công thức 3</span>
+                    <h3 class="font-serif text-2xl font-bold mt-2 mb-3">Hệ Thức Độc Lập Thời Gian</h3>
+                    <div class="formula-box my-4 p-3 bg-cyan-500/10 rounded-xl">v² - v₀² = 2as</div>
+                    <p class="body-text opacity-90">Liên hệ giữa vận tốc, gia tốc và quãng đường mà không cần thông qua biến thời gian t.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Independent+time+formula" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#TimeIndependent</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 7: Side-by-Side Comparison Grid -->
+        <section id="sec-7" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 07 • Phương trình tọa độ</span>
+                <h2 class="title-h2 font-bold mt-3">Phương Trình Chuyển Động Tổng Quát</h2>
+                <p class="body-text opacity-90 mt-2">Xác định vị trí của chất điểm trên quỹ đạo thẳng tại mọi thời điểm t.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="glass-card p-10 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <span class="tag-badge px-3 py-1 rounded-md text-xs font-bold uppercase">Biểu thức toán học</span>
+                        <div class="formula-box my-4 p-4 bg-cyan-500/10 rounded-xl">x = x₀ + v₀t + ½at²</div>
+                        <p class="body-text opacity-90">Trong đó x₀ là tọa độ ban đầu tại thời điểm t = 0, v₀ là vận tốc ban đầu, a là gia tốc không đổi.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-8">
+                        <a href="https://images.google.com/search?q=Position+equation" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#PositionEquation</a>
+                        <a href="https://images.google.com/search?q=Kinematics+equations" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#KinematicsEquations</a>
+                    </div>
+                </div>
+                <div class="glass-card p-10 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <span class="tag-badge px-3 py-1 rounded-md text-xs font-bold uppercase">Quy ước dấu hệ quy chiếu</span>
+                        <ul class="space-y-3 body-text opacity-90 list-disc pl-5 mt-4">
+                            <li>Chiều dương trục Ox: chọn chiều chuyển động hoặc tùy ý bài toán.</li>
+                            <li>Tọa độ x₀ > 0 hoặc x₀ < 0 tùy vị trí ban đầu so với gốc O.</li>
+                            <li>Vận tốc v₀ > 0 nếu cùng chiều dương, ngược lại v₀ < 0.</li>
+                            <li>Gia tốc a > 0 nếu nhanh dần đều theo chiều dương (hoặc chậm dần ngược chiều).</li>
+                        </ul>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-8">
+                        <a href="https://images.google.com/search?q=Coordinate+system+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#CoordinateSystem</a>
+                        <a href="https://images.google.com/search?q=Sign+convention+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#SignConvention</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 8: Floating Quote & Kinetic Typography Highlight -->
+        <section id="sec-8" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center">
+            <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider mb-6">Phần 08 • Định luật Galileo</span>
+            <blockquote class="max-w-4xl mx-auto my-6">
+                <p class="font-serif text-3xl md:text-5xl font-bold italic leading-tight mb-6">
+                    "Quãng đường đi được trong những khoảng thời gian liên tiếp bằng nhau tỷ lệ với dãy số lẻ liên tiếp 1, 3, 5, 7..."
+                </p>
+                <cite class="not-italic text-sm font-semibold tracking-widest uppercase opacity-75">— Định lý Galileo Galilei về chuyển động đều biến đổi</cite>
+            </blockquote>
+            <div class="flex flex-wrap gap-3 mt-10 justify-center">
+                <a href="https://images.google.com/search?q=Galileo+law+of+odd+numbers" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#GalileoLaw</a>
+                <a href="https://images.google.com/search?q=History+of+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#HistoryOfPhysics</a>
+                <a href="https://images.google.com/search?q=Kinematics+discovery" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#KinematicsDiscovery</a>
+            </div>
+        </section>
+
+        <!-- SECTION 9: Floating Card Stack Layout -->
+        <section id="sec-9" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 09 • Đồ thị tọa độ theo thời gian</span>
+                <h2 class="title-h2 font-bold mt-3">Đồ Thị Tọa Độ (x - t)</h2>
+                <p class="body-text opacity-90 mt-2">Đặc điểm hình học biểu diễn phương trình bậc hai theo thời gian t.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="glass-card p-8 rounded-3xl shadow-lg">
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-60">Hình dạng đồ thị</span>
+                    <h3 class="font-serif text-2xl font-bold mt-2 mb-3">Đường Parabol</h3>
+                    <p class="body-text opacity-90">Đồ thị x(t) là một nhánh của đường parabol có bề lõm quay lên trên (nếu a > 0) hoặc quay xuống dưới (nếu a < 0).</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Position-time+graph+parabola" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#PositionTimeGraph</a>
+                        <a href="https://images.google.com/search?q=Parabolic+trajectory" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#ParabolicMotion</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl shadow-lg">
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-60">Ý nghĩa thực tiễn</span>
+                    <h3 class="font-serif text-2xl font-bold mt-2 mb-3">Độ Dốc Tiếp Tuyến</h3>
+                    <p class="body-text opacity-90">Hệ số góc của tiếp tuyến tại mỗi điểm trên đồ thị x - t đúng bằng vận tốc tức thời v tại thời điểm đó.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Tangent+slope+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#GraphSlope</a>
+                        <a href="https://images.google.com/search?q=Instantaneous+velocity" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#InstantVelocity</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 10: Bento Grid Layout II -->
+        <section id="sec-10" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 10 • Đồ thị vận tốc theo thời gian</span>
+                <h2 class="title-h2 font-bold mt-3">Đồ Thị Vận Tốc (v - t)</h2>
+                <p class="body-text opacity-90 mt-2">Công cụ trực quan phân tích gia tốc và quãng đường.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Đường Thẳng Xiên Góc</h3>
+                    <p class="body-text opacity-90">Đồ thị v(t) là một đường thẳng đi qua điểm (0, v₀) với hệ số góc chính là gia tốc a.</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Velocity-time+graph" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#VelocityTimeGraph</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Tính Gia Tốc Từ Đồ Thị</h3>
+                    <p class="body-text opacity-90">Độ dốc của đường thẳng v - t cho biết giá trị gia tốc a của chuyển động.</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Slope+equals+acceleration" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#SlopeIsAcceleration</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Tính Quãng Đường s</h3>
+                    <p class="body-text opacity-90">Diện tích hình thang giới hạn bởi đồ thị v - t và trục thời gian biểu diễn chính xác quãng đường đi được s.</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Area+under+vt+graph" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#AreaUnderGraph</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 11: Split-Screen Showcase -->
+        <section id="sec-11" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="glass-card p-10 rounded-3xl shadow-xl flex flex-col justify-center min-h-[350px]">
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-60">Đồ thị a - t</span>
+                    <div class="formula-box my-4 p-3 bg-cyan-500/10 rounded-xl text-center">a = const (Đường song song trục t)</div>
+                    <p class="body-text opacity-90">Đồ thị gia tốc theo thời gian là một đường thẳng song song với trục hoành Ot, minh chứng cho tính chất không đổi của gia tốc.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Acceleration-time+graph" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#AccelerationTimeGraph</a>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 11 • Đồ thị gia tốc</span>
+                    <h2 class="title-h2 font-bold">Đặc Điểm Đồ Thị Gia Tốc (a - t)</h2>
+                    <p class="body-text opacity-90">
+                        Diện tích hình chữ nhật dưới đồ thị a - t trong khoảng thời gian t chính là độ biến thiên vận tốc Δv của vật thể.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="https://images.google.com/search?q=Constant+acceleration+graph" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#ConstantGraph</a>
+                        <a href="https://images.google.com/search?q=Velocity+change" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#VelocityChange</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 12: Big Stat Callout -->
+        <section id="sec-12" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center">
+            <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider mb-4">Phần 12 • Hiện tượng rơi tự do</span>
+            <div class="font-serif text-[18vw] md:text-[14vw] font-bold leading-none tracking-tight opacity-90 my-2">0</div>
+            <h2 class="title-h2 font-bold mt-4 mb-3">Vận Tốc Ban Đầu Khi Thả Rơi (v₀ = 0)</h2>
+            <p class="body-text opacity-80 max-w-2xl">
+                Khi một vật được thả rơi nhẹ nhàng từ trạng thái đứng yên, vận tốc ban đầu triệt để bằng không, đơn giản hóa toàn bộ công thức tính toán.
+            </p>
+            <div class="flex flex-wrap gap-3 mt-8 justify-center">
+                <a href="https://images.google.com/search?q=Dropped+object+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#DroppedObject</a>
+                <a href="https://images.google.com/search?q=Initial+velocity+zero" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#ZeroInitialVelocity</a>
+            </div>
+        </section>
+
+        <!-- SECTION 13: Full-Width Immersive Storytelling Card -->
+        <section id="sec-13" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="glass-card p-10 md:p-16 rounded-3xl relative overflow-hidden text-center max-w-5xl mx-auto shadow-2xl">
+                <span class="tag-badge px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest inline-block mb-4">Phần 13 • Công thức rơi tự do</span>
+                <h2 class="title-h2 font-bold mb-6">Hệ Thức Rơi Tự Do Thu Gọn</h2>
+                <p class="body-text opacity-90 max-w-3xl mx-auto mb-8 font-light">
+                    Áp dụng trực tiếp vào bài toán rơi tự do không vận tốc ban đầu với gia tốc trọng trường g.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-8">
+                    <div class="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20">
+                        <span class="text-xs uppercase opacity-70">Vận tốc</span>
+                        <div class="formula-box font-bold mt-2">v = gt</div>
+                    </div>
+                    <div class="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20">
+                        <span class="text-xs uppercase opacity-70">Quãng đường</span>
+                        <div class="formula-box font-bold mt-2">s = ½gt²</div>
+                    </div>
+                    <div class="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20">
+                        <span class="text-xs uppercase opacity-70">Độc lập thời gian</span>
+                        <div class="formula-box font-bold mt-2">v = √(2gs)</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <a href="https://images.google.com/search?q=Free+fall+equations" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#FreeFallEquations</a>
+                    <a href="https://images.google.com/search?q=Gravity+formulas" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#GravityFormulas</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 14: Bento Grid Layout III -->
+        <section id="sec-14" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 14 • Chuyển động ném đứng</span>
+                <h2 class="title-h2 font-bold mt-3">Vật Ném Lên & Ném Xuống Theo Phương Thẳng Đứng</h2>
+                <p class="body-text opacity-90 mt-2">Mở rộng bài toán biến đổi đều với vận tốc ban đầu khác không.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-2xl font-bold mb-3">Ném Thẳng Đứng Lên Trên</h3>
+                    <p class="body-text opacity-90">Chuyển động chậm dần đều ở chiều đi lên (a = -g). Khi đạt độ cao cực đại, vận tốc tức thời bằng 0 (v = 0), sau đó rơi tự do xuống.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Vertical+projectile+upwards" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#ThrownUpwards</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-2xl font-bold mb-3">Ném Thẳng Đứng Xuống Dưới</h3>
+                    <p class="body-text opacity-90">Chuyển động nhanh dần đều theo chiều trọng lực (a = +g) với vận tốc ban đầu v₀ > 0, chạm đất với vận tốc lớn nhất.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Thrown+downwards+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#ThrownDownwards</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 15: Split-Screen Showcase -->
+        <section id="sec-15" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 15 • Bài toán hãm phanh</span>
+                    <h2 class="title-h2 font-bold">Tính Toán Quãng Đường Phanh An Toàn</h2>
+                    <p class="body-text opacity-90">
+                        Ứng dụng thực tế quan trọng của chuyển động chậm dần đều khi ô tô hãm phanh giảm tốc đến khi dừng hẳn (v = 0).
+                    </p>
+                    <div class="formula-box p-4 bg-cyan-500/10 rounded-xl">0 - v₀² = 2as  ⟹  s = -v₀² / (2a)</div>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="https://images.google.com/search?q=Braking+distance+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#BrakingDistance</a>
+                        <a href="https://images.google.com/search?q=Road+safety+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#RoadSafety</a>
+                    </div>
+                </div>
+                <div class="glass-card p-10 rounded-3xl shadow-xl flex flex-col justify-center min-h-[350px] text-center">
+                    <span class="font-serif italic text-2xl font-bold mb-3 opacity-90">"Thời gian phản ứng và quãng đường hãm phanh quyết định giới hạn tốc độ giao thông."</span>
+                    <p class="caption-text opacity-85">An toàn giao thông đường bộ dựa trên nguyên lý cơ học.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 16: Big Stat Callout -->
+        <section id="sec-16" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center">
+            <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider mb-4">Phần 16 • Đơn vị đo lường</span>
+            <div class="font-serif text-[18vw] md:text-[14vw] font-bold leading-none tracking-tight opacity-90 my-2">m/s²</div>
+            <h2 class="title-h2 font-bold mt-4 mb-3">Thứ Nguyên & Đơn Vị Của Gia Tốc</h2>
+            <p class="body-text opacity-80 max-w-2xl">
+                Phân tích thứ nguyên L·T⁻² giúp kiểm tra tính chính xác của mọi công thức vật lý trong các bài toán biến đổi đều.
+            </p>
+            <div class="flex flex-wrap gap-3 mt-8 justify-center">
+                <a href="https://images.google.com/search?q=Dimensional+analysis+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#DimensionalAnalysis</a>
+                <a href="https://images.google.com/search?q=Acceleration+units" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#AccelerationUnits</a>
+            </div>
+        </section>
+
+        <!-- SECTION 17: Floating Quote -->
+        <section id="sec-17" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center">
+            <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider mb-6">Phần 17 • Tư duy chuyên gia</span>
+            <blockquote class="max-w-4xl mx-auto my-6">
+                <p class="font-serif text-3xl md:text-5xl font-bold italic leading-tight mb-6">
+                    "Trong vật lý học phổ thông, việc chọn đúng hệ quy chiếu trục tọa độ và chiều dương quyết định 80% thành công của bài toán động học."
+                </p>
+                <cite class="not-italic text-sm font-semibold tracking-widest uppercase opacity-75">— Lời khuyên từ giảng viên vật lý</cite>
+            </blockquote>
+            <div class="flex flex-wrap gap-3 mt-10 justify-center">
+                <a href="https://images.google.com/search?q=Physics+problem+solving" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#ProblemSolving</a>
+                <a href="https://images.google.com/search?q=Physics+education" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#PhysicsEducation</a>
+            </div>
+        </section>
+
+        <!-- SECTION 18: Bento Grid Layout IV -->
+        <section id="sec-18" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 18 • Bài toán xe gặp nhau</span>
+                <h2 class="title-h2 font-bold mt-3">Phương Pháp Giải Bài Toán Hai Xe Gặp Nhau</h2>
+                <p class="body-text opacity-90 mt-2">Lập phương trình tọa độ cho từng vật và giải hệ phương trình thời gian.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Bước 1: Chọn Hệ Quy Chiếu</h3>
+                    <p class="body-text opacity-90">Xác định gốc tọa độ O, chiều dương trục Ox và mốc thời gian t = 0 lúc bắt đầu xuất phát.</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Reference+frame" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#ReferenceFrame</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Bước 2: Lập Phương Trình</h3>
+                    <p class="body-text opacity-90">Viết phương trình x₁(t) và x₂(t) cho từng xe theo đúng dấu của x₀, v₀ và a.</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Equation+of+motion" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#EquationOfMotion</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Bước 3: Điều Kiện Gặp Nhau</h3>
+                    <p class="body-text opacity-90">Cho hai tọa độ bằng nhau: x₁ = x₂ để suy ra thời điểm t gặp nhau và vị trí gặp.</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Meeting+point+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#MeetingPoint</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 19: Split-Screen Showcase -->
+        <section id="sec-19" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="glass-card p-10 rounded-3xl shadow-xl flex flex-col justify-center min-h-[350px]">
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-65">Công thức quãng đường giây thứ n</span>
+                    <div class="formula-box my-4 p-3 bg-cyan-500/10 rounded-xl text-center">Δs = v₀ + a(n - 0.5)</div>
+                    <p class="body-text opacity-90">Tính chính xác quãng đường vật đi được trong giây thứ n kể từ thời điểm ban đầu.</p>
+                    <div class="flex flex-wrap gap-2 pt-6">
+                        <a href="https://images.google.com/search?q=Distance+in+nth+second" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#NthSecondDistance</a>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 19 • Bài toán nâng cao</span>
+                    <h2 class="title-h2 font-bold">Quãng Đường Đi Được Trong Giây Thứ n</h2>
+                    <p class="body-text opacity-90">
+                        Dạng bài tập kinh điển trong các kỳ thi học sinh giỏi lớp 10 đòi hỏi sự hiểu biết sâu sắc về bản chất tích phân quãng đường theo thời gian.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="https://images.google.com/search?q=Advanced+kinematics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#AdvancedKinematics</a>
+                        <a href="https://images.google.com/search?q=Physics+exam+problems" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#ExamProblems</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 20: Big Stat Callout -->
+        <section id="sec-20" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center">
+            <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider mb-4">Phần 20 • Thực nghiệm vật lý</span>
+            <div class="font-serif text-[18vw] md:text-[14vw] font-bold leading-none tracking-tight opacity-90 my-2">100%</div>
+            <h2 class="title-h2 font-bold mt-4 mb-3">Tính Chính Xác Của Định Luật Động Học</h2>
+            <p class="body-text opacity-80 max-w-2xl">
+                Kiểm chứng hoàn hảo thông qua các thiết bị đo thời gian hiện đại như cổng quang điện và băng chuyền đục lỗ trong phòng thí nghiệm trường học.
+            </p>
+            <div class="flex flex-wrap gap-3 mt-8 justify-center">
+                <a href="https://images.google.com/search?q=Physics+laboratory+experiment" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#PhysicsLaboratory</a>
+                <a href="https://images.google.com/search?q=Photogate+timer+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#PhotogateTimer</a>
+            </div>
+        </section>
+
+        <!-- SECTION 21: Full-Width Immersive Storytelling Card -->
+        <section id="sec-21" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="glass-card p-10 md:p-16 rounded-3xl relative overflow-hidden text-center max-w-5xl mx-auto shadow-2xl">
+                <span class="tag-badge px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest inline-block mb-4">Phần 21 • Ứng dụng công nghệ</span>
+                <h2 class="title-h2 font-bold mb-6">Chuyển Động Biến Đổi Đều Trong Giao Thông Thông Minh</h2>
+                <p class="body-text opacity-90 max-w-3xl mx-auto mb-8 font-light">
+                    Hệ thống phanh tự động khẩn cấp (AEB) trên ô tô hiện đại tính toán liên tục gia tốc và quãng đường để ngăn ngừa va chạm trước khi tài xế kịp phản ứng.
+                </p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <a href="https://images.google.com/search?q=Autonomous+braking+system" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#AutonomousBraking</a>
+                    <a href="https://images.google.com/search?q=Smart+transportation+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#SmartTransport</a>
+                    <a href="https://images.google.com/search?q=Automotive+safety+tech" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#AutomotiveSafety</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 22: Bento Grid Layout V -->
+        <section id="sec-22" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 22 • Tổng kết kiến thức</span>
+                <h2 class="title-h2 font-bold mt-3">Bản Đồ Tư Duy Chuyển Động Thẳng Biến Đổi Đều</h2>
+                <p class="body-text opacity-90 mt-2">Hệ thống hóa toàn bộ các điểm mấu chốt cần ghi nhớ.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Đặc Điểm</h3>
+                    <p class="body-text opacity-90">Quỹ đạo thẳng, gia tốc a = const ≠ 0, vận tốc biến đổi đều theo thời gian.</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Summary+kinematics" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#KinematicsSummary</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Công Thức</h3>
+                    <p class="body-text opacity-90">v = v₀ + at, s = v₀t + ½at², v² - v₀² = 2as, x = x₀ + v₀t + ½at².</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Physics+formulas" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#PhysicsFormulas</a>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl">
+                    <h3 class="font-serif text-xl font-bold mb-3">Đồ Thị</h3>
+                    <p class="body-text opacity-90">Parabol (x - t), đường thẳng xiên góc (v - t), đường thẳng song song (a - t).</p>
+                    <div class="flex flex-wrap gap-2 pt-4">
+                        <a href="https://images.google.com/search?q=Motion+graphs" target="_blank" rel="noopener noreferrer" class="tag-badge px-3 py-1 rounded-lg text-sm">#MotionGraphs</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 23: Split-Screen Showcase -->
+        <section id="sec-23" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <span class="tag-badge px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">Phần 23 • Định hướng tư duy</span>
+                    <h2 class="title-h2 font-bold">Vận Dụng Giải Quyết Bài Toán Thực Tế</h2>
+                    <p class="body-text opacity-90">
+                        Hiểu rõ bản chất vectơ và đại số giúp học sinh dễ dàng giải quyết các bài toán vận tải, hàng không và thể thao đỉnh cao.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="https://images.google.com/search?q=Applied+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#AppliedPhysics</a>
+                        <a href="https://images.google.com/search?q=Real+world+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#RealWorldPhysics</a>
+                    </div>
+                </div>
+                <div class="glass-card p-10 rounded-3xl shadow-xl flex flex-col justify-center min-h-[350px] text-center">
+                    <span class="font-serif italic text-2xl font-bold mb-3 opacity-90">"Khoa học tự nhiên là ngôn ngữ để diễn tả vẻ đẹp trật tự của vũ trụ."</span>
+                    <p class="caption-text opacity-80">Triết lý học tập vật lý hiện đại.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 24: Conclusion & Epilogue -->
+        <section id="sec-24" class="morph-section min-h-screen w-full max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center items-center text-center">
+            <span class="tag-badge px-4 py-1.5 rounded-full text-sm font-semibold tracking-widest uppercase mb-6 shadow-sm">Phần 24 • Hoàn thành chương trình</span>
+            <h2 class="title-h2 font-bold mb-6">Nền Tảng Vững Chắc Cho Cơ Học Tương Lai</h2>
+            <p class="body-text max-w-3xl opacity-90 mb-10 font-light">
+                Chuyển động thẳng biến đổi đều là chìa khóa mở ra cánh cửa nghiên cứu động lực học, các định luật Newton và toàn bộ nền vật lý học phổ thông.
+            </p>
+            <div class="flex flex-wrap gap-3 justify-center">
+                <a href="https://images.google.com/search?q=Physics+mastery" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#PhysicsMastery</a>
+                <a href="https://images.google.com/search?q=Newtonian+mechanics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#NewtonianMechanics</a>
+                <a href="https://images.google.com/search?q=High+school+physics" target="_blank" rel="noopener noreferrer" class="tag-badge px-4 py-2 rounded-xl text-sm font-medium">#HighSchoolPhysics</a>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Theme switching logic via 'T' key
+        const themes = ['blueprint', 'space', 'cyber'];
+        let currentThemeIndex = 0;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                if (['input', 'textarea'].includes(e.target.tagName.toLowerCase())) return;
+                currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+                const newTheme = themes[currentThemeIndex];
+                document.documentElement.setAttribute('data-theme', newTheme);
+            }
+        });
+
+        // Scroll progress bar and section observer
+        const sections = document.querySelectorAll('.morph-section');
+        
+        const observerOptions = {
+            root: null,
+            threshold: 0.25
+        };
+
+        let currentActiveIndex = 0;
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    const idParts = entry.target.id.split('-');
+                    if (idParts.length === 2) {
+                        currentActiveIndex = parseInt(idParts[1]) - 1;
+                    }
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(sec => observer.observe(sec));
+
+        window.addEventListener('scroll', () => {
+            const totalScroll = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const currentScroll = window.scrollY;
+            const progress = (currentScroll / totalScroll) * 100;
+            document.getElementById('scroll-progress').style.width = progress + '%';
+        });
+
+        // Web Speech API Integration & Keyboard Controls
+        let speechSynth = window.speechSynthesis;
+        let isMuted = false;
+        let speechRate = 1.0;
+        let currentUtterance = null;
+
+        function getActiveSectionText() {
+            if (currentActiveIndex >= 0 && currentActiveIndex < sections.length) {
+                const activeSec = sections[currentActiveIndex];
+                const texts = [];
+                activeSec.querySelectorAll('h1, h2, h3, p, div.formula-box').forEach(el => {
+                    texts.push(el.innerText);
+                });
+                return texts.join('. ');
+            }
+            return "";
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['input', 'textarea'].includes(e.target.tagName.toLowerCase())) return;
+
+            // Space: Read current section
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (isMuted) return;
+                if (speechSynth.speaking) {
+                    speechSynth.cancel();
+                    return;
+                }
+                const textToRead = getActiveSectionText();
+                if (textToRead) {
+                    currentUtterance = new SpeechSynthesisUtterance(textToRead);
+                    currentUtterance.lang = 'vi-VN';
+                    currentUtterance.rate = speechRate;
+                    speechSynth.speak(currentUtterance);
+                }
+            }
+
+            // M key: Mute / Unmute
+            if (e.key === 'm' || e.key === 'M') {
+                isMuted = !isMuted;
+                if (isMuted && speechSynth.speaking) {
+                    speechSynth.cancel();
+                }
+            }
+
+            // ArrowUp / ArrowDown: Adjust speech rate (0.7x to 1.5x)
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                speechRate = Math.min(1.5, Number((speechRate + 0.1).toFixed(1)));
+                if (speechSynth.speaking) {
+                    speechSynth.cancel();
+                    const textToRead = getActiveSectionText();
+                    if (textToRead && !isMuted) {
+                        currentUtterance = new SpeechSynthesisUtterance(textToRead);
+                        currentUtterance.lang = 'vi-VN';
+                        currentUtterance.rate = speechRate;
+                        speechSynth.speak(currentUtterance);
+                    }
+                }
+            }
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                speechRate = Math.max(0.7, Number((speechRate - 0.1).toFixed(1)));
+                if (speechSynth.speaking) {
+                    speechSynth.cancel();
+                    const textToRead = getActiveSectionText();
+                    if (textToRead && !isMuted) {
+                        currentUtterance = new SpeechSynthesisUtterance(textToRead);
+                        currentUtterance.lang = 'vi-VN';
+                        currentUtterance.rate = speechRate;
+                        speechSynth.speak(currentUtterance);
+                    }
+                }
+            }
+
+            // ArrowLeft / ArrowRight: Navigate between sections
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (speechSynth.speaking) speechSynth.cancel();
+                currentActiveIndex = Math.min(sections.length - 1, currentActiveIndex + 1);
+                sections[currentActiveIndex].scrollIntoView({ behavior: 'smooth' });
+            }
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (speechSynth.speaking) speechSynth.cancel();
+                currentActiveIndex = Math.max(0, currentActiveIndex - 1);
+                sections[currentActiveIndex].scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    </script>
+</body>
+</html>
