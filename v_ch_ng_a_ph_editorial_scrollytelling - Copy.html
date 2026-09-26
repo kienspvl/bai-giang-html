@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vợ Chồng A Phủ - Tạp Chí Văn Học & Phân Tích Chuyên Sâu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #FBFBFB;
+            --surface-color: #FFFFFF;
+            --text-primary: #111111;
+            --text-secondary: #555555;
+            --accent-color: #8B261E; /* Deep crimson editorial */
+            --accent-glow: rgba(139, 38, 30, 0.12);
+            --border-color: #E5E5E5;
+            --card-bg: #FFFFFF;
+            --font-heading: 'Cinzel', 'Playfair Display', serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+            --font-serif: 'Playfair Display', serif;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0E0F12;
+            --surface-color: #16181D;
+            --text-primary: #F3F4F6;
+            --text-secondary: #9CA3AF;
+            --accent-color: #E2584D;
+            --accent-glow: rgba(226, 88, 77, 0.15);
+            --border-color: #2D3139;
+            --card-bg: #1A1D24;
+        }
+
+        [data-theme="nature"] {
+            --bg-color: #F4F6F2;
+            --surface-color: #E9EFE6;
+            --text-primary: #1E2B22;
+            --text-secondary: #4A5D50;
+            --accent-color: #3B5336; /* Highland Pine */
+            --accent-glow: rgba(59, 83, 54, 0.15);
+            --border-color: #D3E0CE;
+            --card-bg: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), 
+                        color 0.5s cubic-bezier(0.16, 1, 0.3, 1), 
+                        border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .keyboard-hud {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-size: clamp(0.75rem, 1vw, 0.85rem);
+            color: var(--text-secondary);
+            box-shadow: 0 10px 30px -5px rgba(0,0,0,0.08);
+            z-index: 1000;
+            opacity: 0.8;
+            pointer-events: none;
+            letter-spacing: 0.05em;
+            backdrop-filter: blur(10px);
+        }
+
+        .reading-badge {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: var(--accent-color);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 6px 20px var(--accent-glow);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-15px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .reading-badge.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.6; }
+            50% { transform: scale(1.4); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.6; }
+        }
+
+        .section {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 8%;
+            position: relative;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-inner {
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Smooth Morphing Animation Base */
+        .morph-element {
+            opacity: 0;
+            transform: translateY(40px) scale(0.97);
+            transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), 
+                        transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .section.visible .morph-element {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .section.visible .morph-element:nth-child(2) {
+            transition-delay: 0.15s;
+        }
+        .section.visible .morph-element:nth-child(3) {
+            transition-delay: 0.3s;
+        }
+
+        /* Responsive Typography (Magazine Scale) */
+        h1.sec-title {
+            font-family: var(--font-heading);
+            font-size: clamp(2.4rem, 5vw, 4.2rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        h2.sec-heading {
+            font-family: var(--font-heading);
+            font-size: clamp(1.7rem, 3vw, 2.8rem);
+            font-weight: 600;
+            line-height: 1.25;
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        p.sec-body, li {
+            font-family: var(--font-body);
+            font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin-bottom: 1.2rem;
+        }
+
+        .drop-cap {
+            float: left;
+            font-size: 3.8rem;
+            line-height: 0.8;
+            padding-top: 4px;
+            padding-right: 12px;
+            padding-bottom: 2px;
+            font-family: var(--font-heading);
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        .tag {
+            display: inline-block;
+            font-size: clamp(0.75rem, 1vw, 0.9rem);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--accent-color);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            background: var(--accent-glow);
+            padding: 6px 14px;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        /* Editorial Magazine Layout Components */
+        .layout-title {
+            text-align: center;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .editorial-split {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 60px;
+            align-items: center;
+        }
+        @media(max-width: 900px) {
+            .editorial-split { grid-template-columns: 1fr; gap: 35px; }
+        }
+
+        .editorial-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 2rem;
+        }
+        .editorial-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 2rem;
+        }
+        @media(max-width: 900px) {
+            .editorial-grid-3, .editorial-grid-2 { grid-template-columns: 1fr; }
+        }
+
+        .magazine-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 40px 35px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+            position: relative;
+            overflow: hidden;
+        }
+        .magazine-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--accent-color);
+            opacity: 0.7;
+        }
+
+        /* Big Number Stat Callout */
+        .stat-container {
+            display: grid;
+            grid-template-columns: 1fr 1.6fr;
+            gap: 50px;
+            align-items: center;
+        }
+        @media(max-width: 900px) {
+            .stat-container { grid-template-columns: 1fr; }
+        }
+        .big-number {
+            font-family: var(--font-heading);
+            font-size: clamp(4.5rem, 9vw, 8rem);
+            font-weight: 900;
+            color: var(--accent-color);
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        /* Timeline / Editorial Process */
+        .editorial-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            margin-top: 2rem;
+            position: relative;
+            padding-left: 28px;
+            border-left: 1px solid var(--accent-color);
+        }
+        .timeline-step {
+            position: relative;
+        }
+        .timeline-step::before {
+            content: '';
+            position: absolute;
+            left: -33.5px;
+            top: 8px;
+            width: 10px;
+            height: 10px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        /* Comparison Editorial */
+        .comparison-magazine {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 2rem;
+        }
+        @media(max-width: 900px) {
+            .comparison-magazine { grid-template-columns: 1fr; }
+        }
+        .comparison-pane {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 35px;
+            border-radius: 8px;
+        }
+
+        /* Quote & Highlight Callout */
+        .quote-box {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 50px 60px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 950px;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.03);
+        }
+        .quote-box::after {
+            content: '“';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 5rem;
+            font-family: var(--font-heading);
+            color: var(--accent-color);
+            opacity: 0.2;
+            background: var(--bg-color);
+            padding: 0 20px;
+        }
+        .quote-text {
+            font-family: var(--font-serif);
+            font-style: italic;
+            font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+            line-height: 1.6;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="keyboard-hud">
+        [T] Đổi Theme | [Space] Đọc Section | [M] Bật/Tắt Tiếng | [▲/▼] Tốc độ đọc
+    </div>
+
+    <div id="readingBadge" class="reading-badge">
+        <span class="pulse-dot"></span> Đang đọc tạp chí...
+    </div>
+
+    <main id="scroller">
+        
+        <!-- Section 1: Title & Cover -->
+        <section class="section" data-section-index="1">
+            <div class="section-inner layout-title morph-element">
+                <span class="tag">Đặc San Văn Học • Phân Tích Chuyên Sâu</span>
+                <h1 class="sec-title">Vợ Chồng A Phủ</h1>
+                <p class="sec-body" style="font-size: clamp(1.2rem, 2vw, 1.6rem); font-style: italic; font-family: var(--font-serif);">Bản trường ca hiện thực bi tráng về số phận đau thương và khát vọng hoàn lương quật cường của con người miền sơn cước Tây Bắc.</p>
+            </div>
+        </section>
+
+        <!-- Section 2: Editorial Split - Tác giả Tô Hoài -->
+        <section class="section" data-section-index="2">
+            <div class="section-inner editorial-split">
+                <div class="morph-element">
+                    <span class="tag">02. Tác Giả & Hoàn Cảnh</span>
+                    <h2 class="sec-heading">Tô Hoài và Mạch Nguồn Sâu Nặng Tây Bắc</h2>
+                    <p class="sec-body"><span class="drop-cap">C</span>huyến đi thực tế 8 tháng cùng bộ đội giải phóng quân năm 1952 đã gắn kết tâm hồn nhà văn với núi rừng, phong tục và thân phận con người nơi đây.</p>
+                </div>
+                <div class="magazine-card morph-element">
+                    <h3 class="sec-heading" style="font-size: 1.3rem; margin-bottom: 1rem;">Tác Phẩm Tiêu Biểu</h3>
+                    <p class="sec-body">• Nằm trong tập "Truyện Tây Bắc" (1953) - mốc son rực rỡ của văn xuôi cách mạng.</p>
+                    <p class="sec-body">• Kết tinh vốn sống phong phú và sự thấu cảm nhân đạo sâu sắc.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Magazine Grid - Bối cảnh Hồng Ngài -->
+        <section class="section" data-section-index="3">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">03. Không Gian Nghệ Thuật</span>
+                    <h2 class="sec-heading">Bối Cảnh Hồng Ngài U Ám & Khắc Nghiệt</h2>
+                </div>
+                <div class="editorial-grid-3">
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Thiên Nhiên Lạnh Lẽo</h3>
+                        <p class="sec-body">Sương mù mịt mờ, núi đá cao ngất, cái lạnh cắt da bao trùm quanh năm suốt tháng.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Cường Quyền Miền Núi</h3>
+                        <p class="sec-body">Sự kết hợp tàn bạo giữa thế lực phong kiến thống lý Pá Tra và thần quyền độc đoán.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Ngục Tù Tăm Tối</h3>
+                        <p class="sec-body">Nơi giam cầm thể xác và bóp nghẹt mọi khát vọng sống của những kiếp người nghèo khổ.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Big Number - Kiếp sống Mị -->
+        <section class="section" data-section-index="4">
+            <div class="section-inner stat-container">
+                <div class="morph-element">
+                    <div class="big-number">100</div>
+                    <p class="sec-body" style="font-weight: 600; margin-top: 10px;">Năm tháng đè nặng như tảng đá ngàn cân</p>
+                </div>
+                <div class="morph-element">
+                    <span class="tag">04. Nhân Vật Mị</span>
+                    <h2 class="sec-heading">Kiếp Sống "Lùi Lũi Như Con Rùa Nuôi Trong Xó Cửa"</h2>
+                    <p class="sec-body">Vì món nợ truyền kiếp của cha mẹ, Mị bị cướp đoạt thanh xuân, biến thành nô lệ gạt nợ tại nhà thống lý Pá Tra.</p>
+                    <p class="sec-body">Sống lững lờ, vô cảm, cúi mặt chấp nhận định mệnh tối tăm như một cỗ máy vô tri.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Editorial Timeline - Tiến trình bi kịch -->
+        <section class="section" data-section-index="5">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">05. Tiến Trình Giam Cầm</span>
+                    <h2 class="sec-heading">Hành Trình Bị Tước Định Mệnh</h2>
+                </div>
+                <div class="editorial-timeline">
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Làm Dâu Gạt Nợ</h3>
+                        <p class="sec-body">Bị ép buộc về nhà Pá Tra làm vợ A Sử để trả món nợ truyền kiếp.</p>
+                    </div>
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Ý Định Tự Vẫn Bị Dập Tắt</h3>
+                        <p class="sec-body">Cầm nắm lá ngón định kết thúc đời mình nhưng nghĩ tới người cha già, Mị ném nắm lá ngón đi.</p>
+                    </div>
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Sự Tê Liệt Toàn Diện</h3>
+                        <p class="sec-body">Ngày qua ngày lặp lại đơn điệu gắn liền với buồng tối và ô cửa sổ vuông vắn bằng bàn tay.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Quote Box - Đêm tình mùa xuân -->
+        <section class="section" data-section-index="6">
+            <div class="section-inner morph-element">
+                <div class="quote-box">
+                    <p class="quote-text">"Tai Mị văng vẳng tiếng sáo gọi bạn đầu làng... Mị uống rượu ực từng bát... Lòng Mị đang sống về ngày trước."</p>
+                    <span class="tag">06. Sức Sống Tiềm Tàng</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Editorial Split - Đêm tình mùa xuân & Hành động phản kháng -->
+        <section class="section" data-section-index="7">
+            <div class="section-inner editorial-split">
+                <div class="morph-element">
+                    <span class="tag">07. Sự Hồi Sinh Tâm Hồn</span>
+                    <h2 class="sec-heading">Tiếng Sáo & Hơi Men Đánh Thức Khát Vọng</h2>
+                    <p class="sec-body">Âm thanh sáo diệu kỳ cùng hũ rượu nồng nàn đánh thức những ký ức tuổi trẻ tưởng chừng đã vĩnh viễn vùi lấp.</p>
+                    <p class="sec-body">Mị thắp sáng ngọn đèn, chuẩn bị bước đi chơi xuân đầy kiêu hãnh.</p>
+                </div>
+                <div class="magazine-card morph-element">
+                    <h3 class="sec-heading" style="font-size: 1.3rem; margin-bottom: 0.8rem;">Bước Trưởng Thành Nội Tâm</h3>
+                    <p class="sec-body">• Nhận thức rõ sự tồn tại của bản thân thay vì chỉ là bóng ma vô hình.</p>
+                    <p class="sec-body">• Khát khao hạnh phúc trỗi dậy mãnh liệt bất chấp xiềng xích xung quanh.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 8: Magazine Grid - Đêm bị trói đứng -->
+        <section class="section" data-section-index="8">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">08. Bi Kịch Đỉnh Điểm</span>
+                    <h2 class="sec-heading">Bị Trói Đứng Vào Cột Nhà Đêm Thâu</h2>
+                </div>
+                <div class="editorial-grid-2">
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Hành Động Tàn Bạo</h3>
+                        <p class="sec-body">A Sử bắt gặp ý định đi chơi, trói đứng Mị bằng cả thúng sợi đay vào cột nhà suốt đêm đông lạnh giá.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Sức Sống Bất Diệt</h3>
+                        <p class="sec-body">Dù thể xác đau đớn tê dại, tâm trí Mị vẫn rập rờn bay theo tiếng sáo gọi bạn ngoài đầu núi.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 9: Big Number - A Phủ và Phiên tòa -->
+        <section class="section" data-section-index="9">
+            <div class="section-inner stat-container">
+                <div class="morph-element">
+                    <div class="big-number">1</div>
+                    <p class="sec-body" style="font-weight: 600; margin-top: 10px;">Con hổ xổng chuồng làm mất bò</p>
+                </div>
+                <div class="morph-element">
+                    <span class="tag">09. Nhân Vật A Phủ</span>
+                    <h2 class="sec-heading">Chân Dung Người Trai Núi Kiên Cường</h2>
+                    <p class="sec-body">Khỏe như trâu rừng, gan góc, từng dám đánh cả con quan lang nên bị bắt ép làm tôi tớ gạt nợ.</p>
+                    <p class="sec-body">Sự kiện để mất con bò khiến A Phủ rơi vào phiên tòa trừng phạt tàn độc của nhà thống lý.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 10: Editorial Timeline - Đêm đông giá rét -->
+        <section class="section" data-section-index="10">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">10. Cuộc Gặp Gỡ Định Mệnh</span>
+                    <h2 class="sec-heading">Đêm Đông Sưởi Lửa & Giọt Nước Mắt</h2>
+                </div>
+                <div class="editorial-timeline">
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">A Phủ Bị Trói Đứng</h3>
+                        <p class="sec-body">Chịu phạt trói đứng nhiều ngày bên cột nhà, thân thể rớm máu vì giá lạnh.</p>
+                    </div>
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Mị Ra Sưởi Lửa</h3>
+                        <p class="sec-body">Thản nhiên hơ lửa, nhìn thấy một dòng nước mắt lấp lánh bò xuống hõm má xám đen của A Phủ.</p>
+                    </div>
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Sự Đồng Cảm Giai Cấp</h3>
+                        <p class="sec-body">Mị nhận ra tội ác dã man và thấu hiểu tận cùng nỗi đau khổ của kẻ cùng cảnh ngộ.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 11: Comparison - Quyết định cứu người -->
+        <section class="section" data-section-index="11">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">11. Bước Ngoặt Nhận Thức</span>
+                    <h2 class="sec-heading">Từ Sợ Hãi Đến Lòng Trắc Dẫn Tột Cùng</h2>
+                </div>
+                <div class="comparison-magazine">
+                    <div class="comparison-pane morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.3rem; color: var(--accent-color);">Nỗi Sợ Hãi Bản Thân</h3>
+                        <p class="sec-body">Mị sợ mình sẽ bị trói thay vào đấy, sợ cái chết lạnh lẽo phủ xuống gia đình thống lý.</p>
+                    </div>
+                    <div class="comparison-pane morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.3rem; color: var(--accent-color);">Lòng Thương Người Thức Tỉnh</h3>
+                        <p class="sec-body">"Trời ơi, nó bắt trói đứng người ta đến chết..." - Lòng thương người chiến thắng nỗi sợ hãi cái chết.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 12: Editorial Split - Hành động cắt dây trói -->
+        <section class="section" data-section-index="12">
+            <div class="section-inner editorial-split">
+                <div class="morph-element">
+                    <span class="tag">12. Hành Động Giải Cứu</span>
+                    <h2 class="sec-heading">Cắt Dây Trói - Giải Thoát Linh Hồn</h2>
+                    <p class="sec-body">Lấy con dao nhỏ cắt đứt vòng dây mây đang siết chặt da thịt A Phủ.</p>
+                    <p class="sec-body">Hành động táo bạo mang ý nghĩa bước ngoặt: tự cứu lấy linh hồn mình khỏi ngục tù tăm tối.</p>
+                </div>
+                <div class="magazine-card morph-element">
+                    <h3 class="sec-heading" style="font-size: 1.3rem; margin-bottom: 0.8rem;">Lời Nói Đổi Đời</h3>
+                    <p class="sec-body">"A Phủ! Mày sống á? Chạy đi!" - Câu nói đánh thức bản năng sinh tồn mãnh liệt.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 13: Magazine Grid - Chạy trốn khỏi Hồng Ngài -->
+        <section class="section" data-section-index="13">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">13. Cuộc Đào Tẩu Lịch Sử</span>
+                    <h2 class="sec-heading">Vụt Chạy Khỏi Hồng Ngài Đêm Định Mệnh</h2>
+                </div>
+                <div class="editorial-grid-3">
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">A Phủ Vụt Chạy</h3>
+                        <p class="sec-body">Lấy hết sức quật vùng chạy vụt vào bóng đêm dày đặc của núi rừng.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Mị Quyết Định Chạy Theo</h3>
+                        <p class="sec-body">Bừng tỉnh trước câu nói "Ở đây thì chết mất", Mị đứng vụt lên chạy theo A Phủ.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Hướng Về Ánh Sáng</h3>
+                        <p class="sec-body">Bỏ lại sau lưng địa ngục Hồng Ngài để tìm kiếm chân trời tự do.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 14: Big Number - Phiề Sa -->
+        <section class="section" data-section-index="14">
+            <div class="section-inner stat-container">
+                <div class="morph-element">
+                    <div class="big-number">2</div>
+                    <p class="sec-body" style="font-weight: 600; margin-top: 10px;">Con người tìm lại cuộc đời tự do</p>
+                </div>
+                <div class="morph-element">
+                    <span class="tag">14. Chân Trời Mới</span>
+                    <h2 class="sec-heading">Dừng Chân Tại Miền Đất Phiề Sa</h2>
+                    <p class="sec-body">Vượt qua bao đèo dốc lạnh giá, hai con người khốn khổ đã đến Phiề Sa an toàn.</p>
+                    <p class="sec-body">Mở ra một chương mới: tự do lao động, làm chủ vận mệnh chính mình.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 15: Quote Box - Giá trị nhân đạo -->
+        <section class="section" data-section-index="15">
+            <div class="section-inner morph-element">
+                <div class="quote-box">
+                    <p class="quote-text">"Bản chất nhân đạo ngời sáng: Áp bức không thể dập tắt khát vọng sống, con người cùng khổ sẽ đứng lên giành lấy tự do."</p>
+                    <span class="tag">15. Giá Trị Nhân Đạo</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 16: Editorial Timeline - Giá trị hiện thực -->
+        <section class="section" data-section-index="16">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">16. Giá Trị Hiện Thực</span>
+                    <h2 class="sec-heading">Bức Tranh Chân Thực Về Xã Hội Miền Núi</h2>
+                </div>
+                <div class="editorial-timeline">
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Phơi Bày Tội Ác</h3>
+                        <p class="sec-body">Tố cáo đanh thép bản chất tàn bạo của giai cấp thống trị miền núi trước cách mạng.</p>
+                    </div>
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Thân Phận Nô Lệ</h3>
+                        <p class="sec-body">Phản ánh chân thực nỗi thống khổ của người lao động nghèo dưới ách kìm kẹp.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 17: Editorial Split - Nghệ thuật miêu tả tâm lý -->
+        <section class="section" data-section-index="17">
+            <div class="section-inner editorial-split">
+                <div class="morph-element">
+                    <span class="tag">17. Nghệ Thuật Đỉnh Cao</span>
+                    <h2 class="sec-heading">Nghệ Thuật Khắc Hoạ Tâm Lý Tinh Tế</h2>
+                    <p class="sec-body">Miêu tả sắc sảo thế giới nội tâm nhân vật qua nét mặt, nhịp sống chậm chạp ngột ngạt.</p>
+                    <p class="sec-body">Sử dụng chi tiết nghệ thuật đắt giá làm nổi bật quá trình thức tỉnh kỳ diệu của nhân vật Mị.</p>
+                </div>
+                <div class="magazine-card morph-element">
+                    <h3 class="sec-heading" style="font-size: 1.3rem; margin-bottom: 0.8rem;">Đặc Sắc Bút Pháp</h3>
+                    <p class="sec-body">• Biệt tài miêu tả phong tục tập quán độc đáo của đồng bào Tây Bắc.</p>
+                    <p class="sec-body">• Ngôn ngữ giàu chất thơ, đậm đà màu sắc địa phương.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 18: Magazine Grid - Không gian nghệ thuật -->
+        <section class="section" data-section-index="18">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">18. Không Gian Thơ Mộng</span>
+                    <h2 class="sec-heading">Sự Hòa Quyện Giữa Chất Thơ & Hiện Thực</h2>
+                </div>
+                <div class="editorial-grid-3">
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Tiếng Sáo Đêm Xuân</h3>
+                        <p class="sec-body">Biểu tượng của vẻ đẹp tâm hồn và khát vọng yêu đương mãnh liệt.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Ngọn Lửa Sưởi Ấm</h3>
+                        <p class="sec-body">Chi tiết nghệ thuật nhen nhóm sự sống và lòng trắc ẩn giữa mùa đông lạnh giá.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Cảnh Sắc Thiên Nhiên</h3>
+                        <p class="sec-body">Đồi núi, hoa đào, tiếng khèn tạo nên bức tranh phong cảnh sống động.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 19: Big Number - Tầm vóc tác phẩm -->
+        <section class="section" data-section-index="19">
+            <div class="section-inner stat-container">
+                <div class="morph-element">
+                    <div class="big-number">70+</div>
+                    <p class="sec-body" style="font-weight: 600; margin-top: 10px;">Năm sống mãi trong tâm hồn độc giả</p>
+                </div>
+                <div class="morph-element">
+                    <span class="tag">19. Sức Sống Vượt Thời Gian</span>
+                    <h2 class="sec-heading">Tầm Vóc Kinh Điển Của Văn Học Việt Nam</h2>
+                    <p class="sec-body">Trở thành biểu tượng sáng ngời của dòng văn học hiện thực xuất sắc.</p>
+                    <p class="sec-body">Được giảng dạy sâu rộng, bồi đắp lòng nhân ái và tình yêu tự do cho thế hệ trẻ.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 20: Comparison - Hai chặng đường đời của Mị -->
+        <section class="section" data-section-index="20">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">20. Sự Biến Đổi Kỳ Diệu</span>
+                    <h2 class="sec-heading">Hành Trình Từ Bóng Tối Ra Ánh Sáng</h2>
+                </div>
+                <div class="comparison-magazine">
+                    <div class="comparison-pane morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.3rem; color: var(--accent-color);">Giai Đoạn Đầu: Nhẫn Nhục</h3>
+                        <p class="sec-body">Lầm lũi, cúi mặt, vô cảm, sống kiếp nô lệ câm lặng tại nhà thống lý Pá Tra.</p>
+                    </div>
+                    <div class="comparison-pane morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.3rem; color: var(--accent-color);">Giai Đoạn Sau: Quật Cường</h3>
+                        <p class="sec-body">Chủ động cắt dây trói, dứt khoát đứng lên giải phóng cho người và cho mình.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 21: Magazine Grid - Biểu tượng nghệ thuật -->
+        <section class="section" data-section-index="21">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">21. Biểu Tượng Nghệ Thuật</span>
+                    <h2 class="sec-heading">Ý Nghĩa Sợi Dây Mây Và Con Dao</h2>
+                </div>
+                <div class="editorial-grid-2">
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Sợi Dây Mây Trói Buộc</h3>
+                        <p class="sec-body">Hình tượng cụ thể hóa xiềng xích phong kiến tàn bạo đè nặng con người.</p>
+                    </div>
+                    <div class="magazine-card morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.25rem;">Con Dao Cắt Đứt Xiềng Xích</h3>
+                        <p class="sec-body">Công cụ giải thoát, biểu tượng cho sức mạnh tự giải phóng của quần chúng.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 22: Editorial Split - Nhân cách A Phủ -->
+        <section class="section" data-section-index="22">
+            <div class="section-inner editorial-split">
+                <div class="morph-element">
+                    <span class="tag">22. Nhân Cách Sáng Ngời</span>
+                    <h2 class="sec-heading">A Phủ - Biểu Tượng Sức Sống Bền Bỉ</h2>
+                    <p class="sec-body">Không khuất phục trước đòn roi hay sự đày ải tột cùng của cường quyền.</p>
+                    <p class="sec-body">Đại diện cho sức mạnh tinh thần kiên cường, sẵn sàng vươn tới ánh sáng cách mạng sau này.</p>
+                </div>
+                <div class="magazine-card morph-element">
+                    <h3 class="sec-heading" style="font-size: 1.3rem; margin-bottom: 0.8rem;">Tâm Hồn Phóng Khoáng</h3>
+                    <p class="sec-body">Gắn liền với núi rừng tự do, không bao giờ chịu cúi đầu trước cường quyền bất công.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 23: Editorial Timeline - Di sản sáng tác -->
+        <section class="section" data-section-index="23">
+            <div class="section-inner">
+                <div class="morph-element">
+                    <span class="tag">23. Tổng Kết Di Sản</span>
+                    <h2 class="sec-heading">Dấu Ấn Sâu Đậm Của Nhà Văn Tô Hoài</h2>
+                </div>
+                <div class="editorial-timeline">
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Đỉnh Cao Sự Nghiệp</h3>
+                        <p class="sec-body">Minh chứng cho tài năng bậc thầy trong việc khắc họa tâm lý và đời sống vùng cao.</p>
+                    </div>
+                    <div class="timeline-step morph-element">
+                        <h3 class="sec-heading" style="font-size: 1.2rem;">Bài Học Lịch Sử</h3>
+                        <p class="sec-body">Khẳng định chân lý vĩnh hằng: có áp bức có đấu tranh, ánh sáng tất yếu chiến thắng bóng tối.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 24: Closing Section -->
+        <section class="section" data-section-index="24">
+            <div class="section-inner layout-title morph-element">
+                <span class="tag">24. Lời Kết</span>
+                <h1 class="sec-title">Khúc Ca Bi Tráng Về Tự Do</h1>
+                <p class="sec-body" style="font-size: clamp(1.2rem, 2vw, 1.6rem); font-style: italic; font-family: var(--font-serif);">"Vợ chồng A Phủ" khép lại nhưng âm hưởng về sức sống quật cường và lòng nhân ái sẽ mãi vang vọng trong tâm hồn người đọc muôn đời.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.25
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+        });
+
+        const themes = ['light', 'dark', 'nature'];
+        let currentThemeIndex = 0;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+                document.documentElement.setAttribute('data-theme', themes[currentThemeIndex]);
+            }
+        });
+
+        let speechRate = 1.0;
+        let isMuted = false;
+        const readingBadge = document.getElementById('readingBadge');
+        let synth = window.speechSynthesis;
+
+        function getCurrentSection() {
+            const sections = document.querySelectorAll('.section');
+            let current = sections[0];
+            let minDistance = Infinity;
+
+            sections.forEach(sec => {
+                const rect = sec.getBoundingClientRect();
+                const distance = Math.abs(rect.top);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    current = sec;
+                }
+            });
+            return current;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (isMuted) return;
+
+                if (synth.speaking) {
+                    synth.cancel();
+                    readingBadge.classList.remove('active');
+                    return;
+                }
+
+                const currentSec = getCurrentSection();
+                if (!currentSec) return;
+
+                const textElements = currentSec.querySelectorAll('h1, h2, h3, p');
+                let textToRead = '';
+                textElements.forEach(el => {
+                    textToRead += el.innerText + '. ';
+                });
+
+                if (textToRead) {
+                    const utterThis = new SpeechSynthesisUtterance(textToRead);
+                    utterThis.lang = 'vi-VN';
+                    utterThis.rate = speechRate;
+                    
+                    utterThis.onstart = () => {
+                        readingBadge.classList.add('active');
+                    };
+                    
+                    utterThis.onend = () => {
+                        readingBadge.classList.remove('active');
+                    };
+
+                    utterThis.onerror = () => {
+                        readingBadge.classList.remove('active');
+                    };
+
+                    synth.speak(utterThis);
+                }
+            }
+
+            if (e.key === 'm' || e.key === 'M') {
+                isMuted = !isMuted;
+                if (isMuted && synth.speaking) {
+                    synth.cancel();
+                    readingBadge.classList.remove('active');
+                }
+            }
+
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                speechRate = Math.min(2.0, speechRate + 0.1);
+                showNotification(`Tốc độ đọc: ${speechRate.toFixed(1)}x`);
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                speechRate = Math.max(0.5, speechRate - 0.1);
+                showNotification(`Tốc độ đọc: ${speechRate.toFixed(1)}x`);
+            }
+        });
+
+        function showNotification(msg) {
+            let notif = document.getElementById('speedNotif');
+            if (!notif) {
+                notif = document.createElement('div');
+                notif.id = 'speedNotif';
+                notif.style.cssText = `
+                    position: fixed; bottom: 70px; right: 24px;
+                    background: var(--surface-color); border: 1px solid var(--border-color);
+                    padding: 8px 16px; border-radius: 6px; font-size: 0.85rem;
+                    color: var(--text-primary); z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                `;
+                document.body.appendChild(notif);
+            }
+            notif.innerText = msg;
+            setTimeout(() => {
+                if (notif) notif.remove();
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
