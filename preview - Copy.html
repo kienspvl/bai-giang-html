@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f1eee7">
+<title>David — Michelangelo | Editorial Art Experience</title>
+
+<style>
+/* =========================================================
+   DAVID — MICHELANGELO
+   Single-file Editorial / Curated Art Experience
+   HTML + CSS + Vanilla JS
+   ========================================================= */
+
+:root{
+  --bg:#f1eee7;
+  --surface:#e7e1d6;
+  --surface-2:#faf8f3;
+  --text:#171717;
+  --muted:#66625c;
+  --accent:#8d7658;
+  --accent-2:#b7a68e;
+  --line:rgba(23,23,23,.14);
+  --shadow:0 25px 70px rgba(30,25,18,.12);
+  --glass:rgba(255,255,255,.48);
+  --radius:30px;
+  --display:"Georgia", "Times New Roman", serif;
+  --body:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+[data-theme="dark"]{
+  --bg:#11110f;
+  --surface:#1b1a17;
+  --surface-2:#24221e;
+  --text:#f0ece3;
+  --muted:#aaa397;
+  --accent:#c4a77c;
+  --accent-2:#74634b;
+  --line:rgba(240,236,227,.15);
+  --shadow:0 30px 80px rgba(0,0,0,.45);
+  --glass:rgba(255,255,255,.055);
+}
+
+[data-theme="marble"]{
+  --bg:#d9d4ca;
+  --surface:#c8c1b4;
+  --surface-2:#ece8df;
+  --text:#24221f;
+  --muted:#666058;
+  --accent:#6f756f;
+  --accent-2:#a7aaa0;
+  --line:rgba(36,34,31,.15);
+  --shadow:0 30px 80px rgba(55,50,43,.18);
+  --glass:rgba(255,255,255,.38);
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+html{
+  scroll-behavior:smooth;
+  background:var(--bg);
+}
+
+body{
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.28), transparent 25%),
+    radial-gradient(circle at 85% 70%, rgba(141,118,88,.10), transparent 30%),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  overflow-x:hidden;
+  transition:background .7s ease,color .7s ease;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:999;
+  opacity:.07;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;
+}
+
+a{
+  color:inherit;
+  text-decoration:none;
+}
+
+section{
+  position:relative;
+  min-height:100svh;
+  padding:clamp(5rem,10vw,9rem) clamp(1.2rem,6vw,7rem);
+  display:flex;
+  align-items:center;
+  overflow:hidden;
+}
+
+.container{
+  width:min(1400px,100%);
+  margin:auto;
+}
+
+.eyebrow{
+  font-size:clamp(.75rem,1vw,.95rem);
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--accent);
+  font-weight:700;
+  margin-bottom:1.2rem;
+}
+
+h1{
+  font-family:var(--display);
+  font-size:clamp(2.2rem,4.5vw,3.8rem);
+  line-height:.96;
+  font-weight:500;
+  letter-spacing:-.045em;
+}
+
+h2{
+  font-family:var(--display);
+  font-size:clamp(1.6rem,2.8vw,2.8rem);
+  line-height:1;
+  font-weight:500;
+  letter-spacing:-.035em;
+}
+
+p,
+li{
+  font-size:clamp(1.2rem,1.8vw,1.6rem);
+  line-height:1.65;
+}
+
+.caption{
+  font-size:clamp(1.2rem,1.2vw,1.4rem);
+  line-height:1.55;
+  color:var(--muted);
+}
+
+.small{
+  font-size:clamp(.85rem,1vw,1rem);
+  line-height:1.5;
+  color:var(--muted);
+}
+
+.rule{
+  height:1px;
+  background:var(--line);
+  width:100%;
+}
+
+.reveal{
+  opacity:0;
+  transform:translateY(45px) scale(.96);
+  filter:blur(7px);
+  transition:
+    opacity 1s cubic-bezier(.16,1,.3,1),
+    transform 1.2s cubic-bezier(.16,1,.3,1),
+    filter 1s ease;
+}
+
+.reveal.visible{
+  opacity:1;
+  transform:none;
+  filter:none;
+}
+
+.morph{
+  transition:
+    border-radius 1.4s cubic-bezier(.16,1,.3,1),
+    transform 1.4s cubic-bezier(.16,1,.3,1);
+}
+
+.morph.visible{
+  border-radius:clamp(20px,5vw,80px) 25px clamp(20px,5vw,80px) 25px;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero{
+  min-height:100svh;
+  text-align:center;
+  justify-content:center;
+}
+
+.hero::before{
+  content:"DAVID";
+  position:absolute;
+  left:50%;
+  top:48%;
+  transform:translate(-50%,-50%);
+  font-family:var(--display);
+  font-size:min(35vw,32rem);
+  line-height:1;
+  color:transparent;
+  -webkit-text-stroke:1px var(--line);
+  opacity:.45;
+  white-space:nowrap;
+  pointer-events:none;
+}
+
+.hero-content{
+  position:relative;
+  z-index:2;
+  max-width:1000px;
+}
+
+.hero h1{
+  font-size:clamp(5rem,17vw,15rem);
+  letter-spacing:-.09em;
+}
+
+.hero-subtitle{
+  margin:2rem auto 0;
+  max-width:680px;
+  color:var(--muted);
+}
+
+.hero-meta{
+  margin-top:4rem;
+  display:flex;
+  justify-content:center;
+  gap:3rem;
+  flex-wrap:wrap;
+}
+
+.hero-orbit{
+  position:absolute;
+  width:min(55vw,700px);
+  aspect-ratio:1;
+  border:1px solid var(--line);
+  border-radius:50%;
+  animation:orbit 18s linear infinite;
+}
+
+.hero-orbit::before,
+.hero-orbit::after{
+  content:"";
+  position:absolute;
+  width:12px;
+  height:12px;
+  background:var(--accent);
+  border-radius:50%;
+}
+
+.hero-orbit::before{top:15%;left:12%;}
+.hero-orbit::after{right:8%;bottom:20%;}
+
+@keyframes orbit{
+  to{transform:rotate(360deg);}
+}
+
+.scroll-hint{
+  position:absolute;
+  bottom:2rem;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:.72rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+/* =========================================================
+   SPLIT
+   ========================================================= */
+
+.split{
+  background:var(--surface);
+}
+
+.split-grid{
+  display:grid;
+  grid-template-columns:1fr 1.15fr;
+  gap:clamp(3rem,8vw,9rem);
+  align-items:center;
+}
+
+.split-copy ul{
+  list-style:none;
+  margin-top:2rem;
+}
+
+.split-copy li{
+  padding:1rem 0;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  gap:1rem;
+}
+
+.split-copy li::before{
+  content:"—";
+  color:var(--accent);
+}
+
+.visual{
+  min-height:620px;
+  position:relative;
+  display:grid;
+  place-items:center;
+}
+
+.marble-form{
+  width:min(75%,480px);
+  aspect-ratio:.55;
+  background:
+    linear-gradient(105deg,rgba(255,255,255,.75),transparent 20%),
+    radial-gradient(circle at 50% 20%,#eee9df,#c7c0b4 72%,#a9a196);
+  border-radius:46% 46% 25% 25% / 17% 17% 8% 8%;
+  box-shadow:
+    inset -35px -30px 60px rgba(68,60,50,.18),
+    inset 20px 20px 50px rgba(255,255,255,.45),
+    var(--shadow);
+  transform:rotate(3deg);
+  filter:contrast(.94);
+  position:relative;
+}
+
+.marble-form::before{
+  content:"";
+  position:absolute;
+  width:35%;
+  height:25%;
+  top:8%;
+  left:32%;
+  border-radius:48%;
+  background:linear-gradient(120deg,#e9e5dd,#c5bfb5);
+  box-shadow:inset 8px 10px 20px rgba(70,60,50,.15);
+}
+
+.marble-form::after{
+  content:"";
+  position:absolute;
+  bottom:5%;
+  left:10%;
+  right:10%;
+  height:8%;
+  border-radius:50%;
+  background:rgba(70,60,50,.18);
+  filter:blur(12px);
+}
+
+/* =========================================================
+   BENTO
+   ========================================================= */
+
+.bento-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:1rem;
+}
+
+.bento{
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:clamp(1.5rem,3vw,3rem);
+  min-height:240px;
+  box-shadow:var(--shadow);
+}
+
+.bento:nth-child(1){grid-column:span 7;}
+.bento:nth-child(2){grid-column:span 5;}
+.bento:nth-child(3){grid-column:span 4;}
+.bento:nth-child(4){grid-column:span 4;}
+.bento:nth-child(5){grid-column:span 4;}
+
+.bento-number{
+  font-family:var(--display);
+  font-size:clamp(3rem,7vw,7rem);
+  color:var(--accent);
+  line-height:1;
+}
+
+.bento h3{
+  font-family:var(--display);
+  font-size:clamp(1.5rem,2.5vw,2.3rem);
+  margin:1rem 0;
+  font-weight:500;
+}
+
+/* =========================================================
+   IMMERSIVE
+   ========================================================= */
+
+.immersive{
+  min-height:85svh;
+  color:#f6f1e8;
+  background:
+    linear-gradient(115deg,rgba(17,15,12,.96),rgba(17,15,12,.45)),
+    radial-gradient(circle at 70% 35%,#8d7658,transparent 34%),
+    #111;
+}
+
+.immersive::after{
+  content:"1504";
+  position:absolute;
+  right:-4vw;
+  bottom:-9vw;
+  font-family:var(--display);
+  font-size:clamp(12rem,30vw,32rem);
+  opacity:.08;
+}
+
+.immersive .container{
+  position:relative;
+  z-index:2;
+}
+
+.immersive h2{
+  font-size:clamp(3rem,8vw,8rem);
+  max-width:900px;
+}
+
+/* =========================================================
+   BIG STAT
+   ========================================================= */
+
+.stat-section{
+  text-align:center;
+}
+
+.big-stat{
+  font-family:var(--display);
+  font-size:clamp(7rem,22vw,20rem);
+  line-height:.75;
+  color:var(--accent);
+  letter-spacing:-.1em;
+}
+
+.stat-label{
+  max-width:650px;
+  margin:3rem auto 0;
+}
+
+/* =========================================================
+   TIMELINE
+   ========================================================= */
+
+.timeline{
+  position:relative;
+  margin-top:4rem;
+}
+
+.timeline::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:0;
+  bottom:0;
+  width:1px;
+  background:var(--line);
+}
+
+.timeline-item{
+  width:50%;
+  padding:2rem 4rem;
+  position:relative;
+}
+
+.timeline-item:nth-child(odd){
+  text-align:right;
+}
+
+.timeline-item:nth-child(even){
+  margin-left:50%;
+}
+
+.timeline-item::before{
+  content:"";
+  position:absolute;
+  top:2.7rem;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 0 8px var(--bg);
+}
+
+.timeline-item:nth-child(odd)::before{right:-6px;}
+.timeline-item:nth-child(even)::before{left:-6px;}
+
+.timeline-year{
+  font-family:var(--display);
+  color:var(--accent);
+  font-size:clamp(2rem,4vw,4rem);
+}
+
+/* =========================================================
+   COMPARISON
+   ========================================================= */
+
+.compare{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1px;
+  background:var(--line);
+  border:1px solid var(--line);
+}
+
+.compare-card{
+  background:var(--bg);
+  padding:clamp(2rem,5vw,5rem);
+}
+
+.compare-card:first-child{
+  background:var(--surface);
+}
+
+.compare-list{
+  margin-top:2rem;
+  list-style:none;
+}
+
+.compare-list li{
+  border-top:1px solid var(--line);
+  padding:1rem 0;
+}
+
+/* =========================================================
+   QUOTE
+   ========================================================= */
+
+.quote-section{
+  text-align:center;
+}
+
+.quote{
+  max-width:1100px;
+  margin:auto;
+  font-family:var(--display);
+  font-size:clamp(2.8rem,7vw,7.5rem);
+  line-height:.98;
+  letter-spacing:-.055em;
+}
+
+.quote-mark{
+  color:var(--accent);
+}
+
+/* =========================================================
+   CARD STACK
+   ========================================================= */
+
+.stack{
+  min-height:760px;
+  position:relative;
+  display:grid;
+  place-items:center;
+}
+
+.stack-card{
+  position:absolute;
+  width:min(700px,85vw);
+  min-height:390px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:clamp(2rem,5vw,4rem);
+  background:var(--glass);
+  backdrop-filter:blur(18px);
+  box-shadow:var(--shadow);
+  transition:transform 1.1s cubic-bezier(.16,1,.3,1);
+}
+
+.stack-card:nth-child(1){
+  transform:translate(-40px,-45px) rotate(-6deg);
+}
+
+.stack-card:nth-child(2){
+  transform:translate(35px,5px) rotate(4deg);
+}
+
+.stack-card:nth-child(3){
+  transform:translate(-5px,55px) rotate(-1deg);
+}
+
+.stack:hover .stack-card:nth-child(1){
+  transform:translate(-190px,-60px) rotate(-10deg);
+}
+
+.stack:hover .stack-card:nth-child(2){
+  transform:translate(190px,10px) rotate(9deg);
+}
+
+.stack:hover .stack-card:nth-child(3){
+  transform:translate(0,90px) rotate(0);
+}
+
+.stack-index{
+  color:var(--accent);
+  font-size:.8rem;
+  letter-spacing:.2em;
+}
+
+/* =========================================================
+   DETAILS
+   ========================================================= */
+
+.detail-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1rem;
+}
+
+.detail-card{
+  border-top:2px solid var(--accent);
+  padding:2rem 1rem;
+}
+
+.detail-card h3{
+  font-family:var(--display);
+  font-size:clamp(1.6rem,2.5vw,2.4rem);
+  margin-bottom:1rem;
+}
+
+/* =========================================================
+   FORM / ANATOMY
+   ========================================================= */
+
+.anatomy{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:clamp(3rem,8vw,8rem);
+  align-items:center;
+}
+
+.anatomy-figure{
+  min-height:620px;
+  position:relative;
+  background:
+    radial-gradient(circle at 50% 35%,rgba(255,255,255,.5),transparent 30%),
+    var(--surface);
+  border-radius:50% 50% 30% 30%;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+
+.anatomy-line{
+  position:absolute;
+  height:1px;
+  background:var(--accent);
+  width:42%;
+  right:0;
+}
+
+.anatomy-label{
+  position:absolute;
+  right:2rem;
+  font-size:.8rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--accent);
+}
+
+.anatomy-line.l1{top:24%;}
+.anatomy-label.l1{top:22%;}
+
+.anatomy-line.l2{top:47%;width:50%;}
+.anatomy-label.l2{top:45%;}
+
+.anatomy-line.l3{top:70%;width:38%;}
+.anatomy-label.l3{top:68%;}
+
+/* =========================================================
+   FULL BLEED MARBLE
+   ========================================================= */
+
+.marble-section{
+  background:
+    linear-gradient(120deg,rgba(255,255,255,.18),transparent),
+    repeating-linear-gradient(
+      105deg,
+      transparent 0 65px,
+      rgba(80,70,60,.055) 66px 68px,
+      transparent 69px 150px
+    ),
+    var(--surface);
+}
+
+.marble-content{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  align-items:center;
+  gap:5rem;
+}
+
+.marble-word{
+  font-family:var(--display);
+  font-size:clamp(6rem,18vw,18rem);
+  line-height:.7;
+  color:transparent;
+  -webkit-text-stroke:1px var(--accent);
+  transform:rotate(-7deg);
+}
+
+/* =========================================================
+   FINAL
+   ========================================================= */
+
+.final{
+  min-height:100svh;
+  text-align:center;
+  justify-content:center;
+}
+
+.final h2{
+  font-size:clamp(4rem,12vw,12rem);
+}
+
+.final-line{
+  width:100px;
+  height:2px;
+  background:var(--accent);
+  margin:3rem auto;
+}
+
+.credit{
+  color:var(--muted);
+  max-width:650px;
+  margin:auto;
+}
+
+/* =========================================================
+   NAV / HUD
+   ========================================================= */
+
+.progress{
+  position:fixed;
+  top:0;
+  left:0;
+  height:3px;
+  width:0;
+  background:var(--accent);
+  z-index:1000;
+  transition:width .15s linear;
+}
+
+.section-counter{
+  position:fixed;
+  right:1.5rem;
+  bottom:1.5rem;
+  z-index:100;
+  font-family:monospace;
+  font-size:.72rem;
+  letter-spacing:.15em;
+  color:var(--muted);
+  mix-blend-mode:difference;
+}
+
+.key-hint{
+  position:fixed;
+  left:1.5rem;
+  bottom:1.5rem;
+  z-index:100;
+  font-size:.68rem;
+  letter-spacing:.12em;
+  color:var(--muted);
+  opacity:.7;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media(max-width:900px){
+  section{
+    min-height:auto;
+    padding-top:6rem;
+    padding-bottom:6rem;
+  }
+
+  .hero{
+    min-height:100svh;
+  }
+
+  .split-grid,
+  .anatomy,
+  .marble-content{
+    grid-template-columns:1fr;
+  }
+
+  .visual{
+    min-height:480px;
+  }
+
+  .bento-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .bento:nth-child(n){
+    grid-column:span 1;
+  }
+
+  .bento:first-child{
+    grid-column:span 2;
+  }
+
+  .timeline::before{
+    left:12px;
+  }
+
+  .timeline-item,
+  .timeline-item:nth-child(even){
+    width:100%;
+    margin-left:0;
+    text-align:left;
+    padding-left:3rem;
+    padding-right:0;
+  }
+
+  .timeline-item:nth-child(odd)::before,
+  .timeline-item:nth-child(even)::before{
+    left:6px;
+    right:auto;
+  }
+
+  .compare,
+  .detail-grid{
+    grid-template-columns:1fr;
+  }
+
+  .stack{
+    min-height:700px;
+  }
+
+  .stack-card:nth-child(1){
+    transform:translate(-10px,-45px) rotate(-4deg);
+  }
+
+  .stack-card:nth-child(2){
+    transform:translate(10px,0) rotate(3deg);
+  }
+
+  .stack-card:nth-child(3){
+    transform:translate(0,45px);
+  }
+}
+
+@media(max-width:600px){
+  .hero h1{
+    font-size:clamp(4rem,24vw,8rem);
+  }
+
+  .hero-meta{
+    gap:1rem;
+  }
+
+  .bento-grid{
+    grid-template-columns:1fr;
+  }
+
+  .bento:first-child{
+    grid-column:span 1;
+  }
+
+  .visual{
+    min-height:390px;
+  }
+
+  .marble-form{
+    width:65%;
+  }
+
+  .key-hint{
+    display:none;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    transition-duration:.01ms!important;
+  }
+}
+</style>
+</head>
+
+<body data-theme="light">
+
+<div class="progress" id="progress"></div>
+
+<div class="section-counter">
+  <span id="currentSection">01</span> / 24
+</div>
+
+<div class="key-hint">
+  SPACE đọc · ← → chuyển phần · T đổi chủ đề · M âm thanh · ↑ ↓ tốc độ
+</div>
+
+<!-- =========================================================
+     01 — HERO
+     ========================================================= -->
+
+<section class="hero" id="s01">
+  <div class="hero-orbit"></div>
+
+  <div class="hero-content reveal">
+    <div class="eyebrow">Michelangelo Buonarroti · Florence · 1501–1504</div>
+    <h1>David</h1>
+    <p class="hero-subtitle">
+      Một trong những biểu tượng nổi tiếng nhất của nghệ thuật Phục hưng:
+      con người, tỷ lệ, sức mạnh tinh thần và khoảnh khắc trước hành động.
+    </p>
+
+    <div class="hero-meta">
+      <span class="caption">Điêu khắc</span>
+      <span class="caption">Đá cẩm thạch</span>
+      <span class="caption">Phục hưng Ý</span>
+    </div>
+  </div>
+
+  <div class="scroll-hint">Cuộn để bước vào tác phẩm</div>
+</section>
+
+<!-- =========================================================
+     02 — IDENTITY / SPLIT
+     ========================================================= -->
+
+<section class="split" id="s02">
+  <div class="container split-grid">
+    <div class="split-copy reveal">
+      <div class="eyebrow">01 · Nhận diện</div>
+      <h2>David là ai?</h2>
+
+      <ul>
+        <li>Một nhân vật trong Kinh Thánh Hebrew, nổi tiếng với câu chuyện đối đầu Goliath.</li>
+        <li>Michelangelo không mô tả chiến thắng sau trận đấu.</li>
+        <li>Ông chọn khoảnh khắc căng thẳng ngay trước hành động.</li>
+        <li>David trở thành hình ảnh của tuổi trẻ, ý chí và sự tập trung.</li>
+      </ul>
+    </div>
+
+    <div class="visual reveal">
+      <div class="marble-form morph"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     03 — BENTO FACTS
+     ========================================================= -->
+
+<section id="s03">
+  <div class="container">
+    <div class="eyebrow reveal">02 · Hồ sơ tác phẩm</div>
+
+    <div class="bento-grid">
+      <article class="bento reveal morph">
+        <div class="bento-number">1501</div>
+        <h3>Khởi công</h3>
+        <p class="caption">Michelangelo nhận nhiệm vụ tạo tượng David tại Florence.</p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">1504</div>
+        <h3>Hoàn thành</h3>
+        <p class="caption">Tác phẩm được hoàn tất sau khoảng ba năm lao động.</p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">5,17m</div>
+        <h3>Chiều cao</h3>
+        <p class="caption">Tượng có kích thước lớn hơn nhiều so với tỷ lệ người thật.</p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">1</div>
+        <h3>Khối đá</h3>
+        <p class="caption">Được tạo từ một khối đá cẩm thạch Carrara.</p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">1504</div>
+        <h3>Biểu tượng Florence</h3>
+        <p class="caption">Sau khi hoàn thành, David nhanh chóng trở thành biểu tượng của thành phố.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     04 — IMMERSIVE CONTEXT
+     ========================================================= -->
+
+<section class="immersive" id="s04">
+  <div class="container reveal">
+    <div class="eyebrow">03 · Bối cảnh lịch sử</div>
+    <h2>Florence đầu thế kỷ XVI:<br>thành phố nhìn vào chính mình.</h2>
+
+    <div style="height:2rem"></div>
+
+    <p style="max-width:760px;color:#d6d0c5">
+      David xuất hiện trong một Florence nơi nghệ thuật, tôn giáo, chính trị
+      và bản sắc đô thị giao thoa mạnh mẽ. Hình tượng người anh hùng trẻ tuổi
+      vì thế có thể được đọc đồng thời như một câu chuyện Kinh Thánh và một
+      biểu tượng công dân.
+    </p>
+  </div>
+</section>
+
+<!-- =========================================================
+     05 — BIG STAT
+     ========================================================= -->
+
+<section class="stat-section" id="s05">
+  <div class="container reveal">
+    <div class="eyebrow">04 · Quy mô</div>
+    <div class="big-stat">5,17</div>
+    <div class="caption stat-label">
+      mét — chiều cao xấp xỉ của David, chưa tính phần bệ.
+      Kích thước khổng lồ làm thay đổi hoàn toàn cách người xem cảm nhận
+      cơ thể con người.
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     06 — TIMELINE
+     ========================================================= -->
+
+<section id="s06">
+  <div class="container">
+    <div class="eyebrow reveal">05 · Dòng thời gian</div>
+    <h2 class="reveal">Một khối đá → một biểu tượng</h2>
+
+    <div class="timeline">
+      <div class="timeline-item reveal">
+        <div class="timeline-year">1464</div>
+        <p class="caption">Một khối cẩm thạch lớn được đưa tới Florence cho một dự án điêu khắc.</p>
+      </div>
+
+      <div class="timeline-item reveal">
+        <div class="timeline-year">1501</div>
+        <p class="caption">Michelangelo nhận nhiệm vụ tiếp tục dự án David.</p>
+      </div>
+
+      <div class="timeline-item reveal">
+        <div class="timeline-year">1501–04</div>
+        <p class="caption">Quá trình đục, gọt và hoàn thiện diễn ra trong khoảng ba năm.</p>
+      </div>
+
+      <div class="timeline-item reveal">
+        <div class="timeline-year">1504</div>
+        <p class="caption">Hội đồng quyết định đặt tượng tại vị trí nổi bật trước Palazzo Vecchio.</p>
+      </div>
+
+      <div class="timeline-item reveal">
+        <div class="timeline-year">1873</div>
+        <p class="caption">David được chuyển vào Galleria dell'Accademia để bảo vệ khỏi thời tiết.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     07 — MATERIAL
+     ========================================================= -->
+
+<section class="marble-section" id="s07">
+  <div class="container marble-content">
+    <div class="reveal">
+      <div class="eyebrow">06 · Vật liệu</div>
+      <h2>Đá cẩm thạch Carrara</h2>
+
+      <p style="margin-top:2rem">
+        Carrara nổi tiếng với đá cẩm thạch trắng có độ tinh khiết cao,
+        được các nghệ sĩ Ý sử dụng rộng rãi từ thời La Mã.
+      </p>
+
+      <p class="caption" style="margin-top:1.5rem">
+        Với Michelangelo, đá không chỉ là vật liệu. Nó trở thành môi trường
+        để cơ thể, ánh sáng và bóng tối cùng tạo hình.
+      </p>
+    </div>
+
+    <div class="marble-word reveal">MARMO</div>
+  </div>
+</section>
+
+<!-- =========================================================
+     08 — COMPARISON
+     ========================================================= -->
+
+<section id="s08">
+  <div class="container">
+    <div class="eyebrow reveal">07 · Đối chiếu</div>
+    <h2 class="reveal">David trước và sau Goliath</h2>
+
+    <div class="compare" style="margin-top:3rem">
+      <div class="compare-card reveal">
+        <div class="eyebrow">Khoảnh khắc được chọn</div>
+        <h2>Trước trận đấu</h2>
+        <ul class="compare-list">
+          <li>Không có Goliath.</li>
+          <li>Không có cảnh chiến đấu.</li>
+          <li>Không có biểu hiện ăn mừng.</li>
+          <li>Căng thẳng nằm trong ánh mắt và tư thế.</li>
+        </ul>
+      </div>
+
+      <div class="compare-card reveal">
+        <div class="eyebrow">Điều người xem phải tưởng tượng</div>
+        <h2>Hành động sắp tới</h2>
+        <ul class="compare-list">
+          <li>Đối thủ nằm ngoài khung hình.</li>
+          <li>Cơ thể dồn vào trạng thái chuẩn bị.</li>
+          <li>Bàn tay phải phóng đại nhẹ.</li>
+          <li>Câu chuyện được hoàn tất trong trí tưởng tượng.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     09 — QUOTE / KINETIC
+     ========================================================= -->
+
+<section class="quote-section" id="s09">
+  <div class="container reveal">
+    <div class="eyebrow">08 · Cách đọc tác phẩm</div>
+
+    <div class="quote">
+      <span class="quote-mark">“</span>
+      Không phải khoảnh khắc chiến thắng,
+      mà là khoảnh khắc của sự tập trung
+      ngay trước hành động.
+      <span class="quote-mark">”</span>
+    </div>
+
+    <p class="caption" style="margin-top:3rem">
+      Đây là một cách diễn giải nghệ thuật dựa trên lựa chọn tư thế,
+      ánh mắt và thời điểm tự sự của tác phẩm.
+    </p>
+  </div>
+</section>
+
+<!-- =========================================================
+     10 — CARD STACK
+     ========================================================= -->
+
+<section id="s10">
+  <div class="container">
+    <div class="eyebrow reveal">09 · Ba lớp quan sát</div>
+    <h2 class="reveal">Nhìn David từ xa → gần → rất gần</h2>
+
+    <div class="stack reveal">
+
+      <article class="stack-card">
+        <div class="stack-index">01 / TOÀN THỂ</div>
+        <h2 style="margin-top:2rem">Silhouette</h2>
+        <p style="margin-top:1rem">
+          Trước tiên, người xem nhận ra một cơ thể đứng trong trạng thái
+          bất động nhưng không tĩnh tại.
+        </p>
+      </article>
+
+      <article class="stack-card">
+        <div class="stack-index">02 / CƠ THỂ</div>
+        <h2 style="margin-top:2rem">Contrapposto</h2>
+        <p style="margin-top:1rem">
+          Trọng lượng cơ thể dồn vào một chân, tạo nên sự đối lập giữa
+          bên chịu lực và bên thư giãn.
+        </p>
+      </article>
+
+      <article class="stack-card">
+        <div class="stack-index">03 / CHI TIẾT</div>
+        <h2 style="margin-top:2rem">Ánh mắt & bàn tay</h2>
+        <p style="margin-top:1rem">
+          Những chi tiết này tăng cảm giác tập trung, cảnh giác và chuẩn bị.
+        </p>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     11 — CONTRAPPOSTO
+     ========================================================= -->
+
+<section class="split" id="s11">
+  <div class="container anatomy">
+    <div class="anatomy-figure reveal morph">
+      <div class="anatomy-line l1"></div>
+      <div class="anatomy-label l1">Vai đối lập</div>
+
+      <div class="anatomy-line l2"></div>
+      <div class="anatomy-label l2">Trục cơ thể</div>
+
+      <div class="anatomy-line l3"></div>
+      <div class="anatomy-label l3">Chân chịu lực</div>
+    </div>
+
+    <div class="reveal">
+      <div class="eyebrow">10 · Cơ thể học</div>
+      <h2>Contrapposto</h2>
+      <p style="margin-top:2rem">
+        Tư thế đặt trọng lượng lên một chân khiến hông và vai nghiêng theo
+        những hướng khác nhau. Cơ thể vì thế tạo ra nhịp điệu hình học
+        thay vì trở thành một khối đối xứng cứng nhắc.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     12 — PROPORTION
+     ========================================================= -->
+
+<section id="s12">
+  <div class="container">
+    <div class="eyebrow reveal">11 · Tỷ lệ</div>
+    <h2 class="reveal">David không hoàn toàn “chuẩn tỷ lệ” theo cách đơn giản.</h2>
+
+    <div class="detail-grid" style="margin-top:4rem">
+      <article class="detail-card reveal">
+        <h3>Bàn tay</h3>
+        <p class="caption">
+          Bàn tay phải lớn hơn tương đối so với một số tỷ lệ thông thường,
+          làm nổi bật sức mạnh và hành động.
+        </p>
+      </article>
+
+      <article class="detail-card reveal">
+        <h3>Đầu</h3>
+        <p class="caption">
+          Phần đầu và khuôn mặt được thiết kế để vẫn có sức đọc khi nhìn
+          từ khoảng cách và góc độ khác nhau.
+        </p>
+      </article>
+
+      <article class="detail-card reveal">
+        <h3>Chiều cao</h3>
+        <p class="caption">
+          Tỷ lệ khổng lồ khiến hình tượng có sức hiện diện vượt khỏi kích thước
+          thông thường của một cơ thể người.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     13 — FACE
+     ========================================================= -->
+
+<section class="immersive" id="s13">
+  <div class="container reveal">
+    <div class="eyebrow">12 · Gương mặt</div>
+
+    <h2>Ánh mắt không nhìn người xem.</h2>
+
+    <p style="max-width:800px;margin-top:3rem;color:#d6d0c5">
+      David hướng sự chú ý về phía đối thủ tưởng tượng. Cách Michelangelo
+      xử lý ánh mắt, trán, chân mày và cơ mặt tạo ra trạng thái tập trung
+      thay vì một biểu cảm đơn giản như vui, buồn hay giận dữ.
+    </p>
+
+    <div class="rule" style="margin-top:4rem;background:rgba(255,255,255,.2)"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     14 — HANDS
+     ========================================================= -->
+
+<section id="s14">
+  <div class="container">
+    <div class="eyebrow reveal">13 · Chi tiết biểu tượng</div>
+
+    <div class="split-grid">
+      <div class="reveal">
+        <h2>Bàn tay phải</h2>
+        <p style="margin-top:2rem">
+          Bàn tay phải buông xuống nhưng các ngón tay vẫn tạo cảm giác
+          sẵn sàng. Đây là một ví dụ rõ về cách điêu khắc có thể tạo
+          “chuyển động tiềm năng” trong một vật thể đứng yên.
+        </p>
+      </div>
+
+      <div class="reveal">
+        <div class="bento morph" style="min-height:440px;display:flex;align-items:flex-end">
+          <div>
+            <div class="bento-number">01</div>
+            <h3>Tiềm năng vận động</h3>
+            <p class="caption">
+              Cơ thể không chuyển động, nhưng người xem có thể dự đoán
+              hành động tiếp theo.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     15 — POLITICAL/CIVIC CONTEXT, DESCRIPTIVE
+     ========================================================= -->
+
+<section class="split" id="s15">
+  <div class="container">
+    <div class="eyebrow reveal">14 · Biểu tượng công dân</div>
+
+    <div class="compare">
+      <div class="compare-card reveal">
+        <h2>David trong Kinh Thánh</h2>
+        <ul class="compare-list">
+          <li>Một người trẻ đối đầu Goliath.</li>
+          <li>Chiến thắng bằng kỹ năng và lòng can đảm.</li>
+          <li>Câu chuyện thuộc truyền thống Kinh Thánh.</li>
+        </ul>
+      </div>
+
+      <div class="compare-card reveal">
+        <h2>David tại Florence</h2>
+        <ul class="compare-list">
+          <li>Được đọc như hình tượng của thành phố.</li>
+          <li>Được đặt tại không gian công cộng quan trọng.</li>
+          <li>Trở thành biểu tượng gắn với bản sắc Florence.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     16 — LOCATION
+     ========================================================= -->
+
+<section id="s16">
+  <div class="container">
+    <div class="eyebrow reveal">15 · Hành trình của tác phẩm</div>
+
+    <h2 class="reveal">Từ quảng trường đến bảo tàng</h2>
+
+    <div class="timeline">
+      <div class="timeline-item reveal">
+        <div class="timeline-year">1504</div>
+        <p class="caption">
+          David được đặt trước Palazzo Vecchio tại Piazza della Signoria.
+        </p>
+      </div>
+
+      <div class="timeline-item reveal">
+        <div class="timeline-year">1873</div>
+        <p class="caption">
+          Tượng được chuyển vào Galleria dell'Accademia.
+        </p>
+      </div>
+
+      <div class="timeline-item reveal">
+        <div class="timeline-year">Ngày nay</div>
+        <p class="caption">
+          Bản gốc được bảo quản trong bảo tàng; bản sao tồn tại ở nhiều
+          không gian công cộng của Florence.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     17 — ARTISTIC LANGUAGE
+     ========================================================= -->
+
+<section class="marble-section" id="s17">
+  <div class="container">
+    <div class="eyebrow reveal">16 · Ngôn ngữ Phục hưng</div>
+
+    <div class="bento-grid" style="margin-top:3rem">
+      <article class="bento reveal morph">
+        <h3>Humanism</h3>
+        <p class="caption">
+          Con người được đặt ở trung tâm của quan sát nghệ thuật và trí tuệ.
+        </p>
+      </article>
+
+      <article class="bento reveal morph">
+        <h3>Cổ điển</h3>
+        <p class="caption">
+          Tỷ lệ, giải phẫu và contrapposto gợi lại truyền thống điêu khắc
+          Hy Lạp – La Mã.
+        </p>
+      </article>
+
+      <article class="bento reveal morph">
+        <h3>Quan sát</h3>
+        <p class="caption">
+          Cơ thể được nghiên cứu với mức độ chi tiết giải phẫu rất cao.
+        </p>
+      </article>
+
+      <article class="bento reveal morph">
+        <h3>Ý niệm</h3>
+        <p class="caption">
+          Cơ thể vật chất trở thành phương tiện truyền tải ý chí và tinh thần.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     18 — MICHELANGELO
+     ========================================================= -->
+
+<section id="s18">
+  <div class="container split-grid">
+    <div class="reveal">
+      <div class="eyebrow">17 · Nghệ sĩ</div>
+      <h2>Michelangelo Buonarroti</h2>
+      <p style="margin-top:2rem">
+        Nghệ sĩ Florentine hoạt động trong nhiều lĩnh vực:
+        điêu khắc, hội họa, kiến trúc và thơ ca.
+      </p>
+    </div>
+
+    <div class="reveal">
+      <div class="bento morph" style="min-height:430px">
+        <div class="bento-number">1475</div>
+        <h3>Ra đời tại Caprese</h3>
+        <p class="caption">
+          Michelangelo sinh năm 1475 và trở thành một trong những nhân vật
+          trung tâm của nghệ thuật Ý thế kỷ XVI.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     19 — TECHNIQUE
+     ========================================================= -->
+
+<section class="stat-section" id="s19">
+  <div class="container">
+    <div class="eyebrow reveal">18 · Kỹ thuật</div>
+
+    <div class="quote reveal" style="font-size:clamp(2.6rem,6vw,6.5rem)">
+      Từ một khối đá,<br>
+      tạo ra cảm giác<br>
+      về một cơ thể đang sống.
+    </div>
+
+    <p class="caption stat-label reveal">
+      Hiệu quả thị giác đến từ sự kết hợp giữa xử lý bề mặt,
+      giải phẫu, tỷ lệ, tư thế và ánh sáng.
+    </p>
+  </div>
+</section>
+
+<!-- =========================================================
+     20 — LIGHT
+     ========================================================= -->
+
+<section class="split" id="s20">
+  <div class="container split-grid">
+    <div class="reveal">
+      <div class="eyebrow">19 · Ánh sáng</div>
+      <h2>Đá không có màu da — nhưng có ánh sáng.</h2>
+
+      <p style="margin-top:2rem">
+        Bề mặt cẩm thạch phản ứng với ánh sáng theo những mức độ khác nhau:
+        phần nhô ra nhận sáng, rãnh sâu giữ bóng, còn các chuyển tiếp mềm
+        tạo cảm giác về thể tích.
+      </p>
+    </div>
+
+    <div class="visual reveal">
+      <div class="marble-form morph" style="transform:rotate(-4deg);filter:brightness(1.05)"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     21 — MYTH / SYMBOL
+     ========================================================= -->
+
+<section id="s21">
+  <div class="container">
+    <div class="eyebrow reveal">20 · Biểu tượng</div>
+
+    <h2 class="reveal">Một nhân vật — nhiều lớp ý nghĩa</h2>
+
+    <div class="detail-grid" style="margin-top:4rem">
+      <article class="detail-card reveal">
+        <h3>Con người</h3>
+        <p class="caption">
+          Cơ thể được nghiên cứu như một cấu trúc có nhịp điệu, trọng lượng
+          và chuyển động.
+        </p>
+      </article>
+
+      <article class="detail-card reveal">
+        <h3>Người anh hùng</h3>
+        <p class="caption">
+          David đại diện cho một nhân vật trẻ tuổi đối mặt với thử thách lớn hơn mình.
+        </p>
+      </article>
+
+      <article class="detail-card reveal">
+        <h3>Florence</h3>
+        <p class="caption">
+          Việc đặt tượng trong không gian công cộng khiến hình tượng gắn
+          với lịch sử và bản sắc đô thị.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     22 — RECEPTION
+     ========================================================= -->
+
+<section class="immersive" id="s22">
+  <div class="container reveal">
+    <div class="eyebrow">21 · Tiếp nhận</div>
+
+    <h2>David vượt khỏi phạm vi một bức tượng.</h2>
+
+    <p style="max-width:800px;margin-top:3rem;color:#d6d0c5">
+      Hình ảnh David đã được tái hiện trong sách giáo khoa, bảo tàng,
+      quảng cáo, điện ảnh, thiết kế và văn hóa đại chúng.
+      Bản thân hình tượng trở thành một dạng “ngôn ngữ thị giác” quen thuộc
+      trên toàn cầu.
+    </p>
+
+    <div class="rule" style="margin-top:4rem;background:rgba(255,255,255,.2)"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     23 — WHY IT MATTERS
+     ========================================================= -->
+
+<section id="s23">
+  <div class="container">
+    <div class="eyebrow reveal">22 · Vì sao David quan trọng?</div>
+
+    <div class="bento-grid">
+      <article class="bento reveal morph">
+        <div class="bento-number">01</div>
+        <h3>Giải phẫu</h3>
+        <p class="caption">
+          Một nghiên cứu nổi bật về cơ thể người trong nghệ thuật Phục hưng.
+        </p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">02</div>
+        <h3>Không gian</h3>
+        <p class="caption">
+          Tác phẩm được thiết kế để có sức hiện diện trong không gian kiến trúc.
+        </p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">03</div>
+        <h3>Kể chuyện</h3>
+        <p class="caption">
+          Một khoảnh khắc duy nhất có thể gợi ra cả một câu chuyện.
+        </p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">04</div>
+        <h3>Biểu tượng</h3>
+        <p class="caption">
+          Từ nhân vật Kinh Thánh trở thành biểu tượng nghệ thuật và đô thị.
+        </p>
+      </article>
+
+      <article class="bento reveal morph">
+        <div class="bento-number">05</div>
+        <h3>Di sản</h3>
+        <p class="caption">
+          Ảnh hưởng của David tiếp tục hiện diện trong nghệ thuật và văn hóa thị giác.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     24 — FINAL
+     ========================================================= -->
+
+<section class="final" id="s24">
+  <div class="container reveal">
+    <div class="eyebrow">23 · Kết</div>
+
+    <h2>DAVID</h2>
+
+    <div class="final-line"></div>
+
+    <p class="credit">
+      Michelangelo, 1501–1504 · Đá cẩm thạch Carrara ·
+      Galleria dell'Accademia, Florence.
+    </p>
+
+    <p class="caption" style="margin-top:2rem">
+      Một cơ thể bằng đá có thể kể câu chuyện về con người,
+      thành phố, nghệ thuật và thời đại.
+    </p>
+
+    <div style="margin-top:4rem" class="small">
+      Space · Đọc section &nbsp;&nbsp;|&nbsp;&nbsp;
+      ← → · Điều hướng &nbsp;&nbsp;|&nbsp;&nbsp;
+      T · Đổi theme &nbsp;&nbsp;|&nbsp;&nbsp;
+      M · Âm thanh &nbsp;&nbsp;|&nbsp;&nbsp;
+      ↑ ↓ · Tốc độ đọc
+    </div>
+  </div>
+</section>
+
+<script>
+/* =========================================================
+   DAVID — INTERACTION ENGINE
+   ========================================================= */
+
+const sections = [...document.querySelectorAll("section")];
+const revealItems = [...document.querySelectorAll(".reveal")];
+
+let currentIndex = 0;
+let speechEnabled = true;
+let speechRate = 1.0;
+let voicesLoaded = false;
+
+/* ---------------------------------------------------------
+   INTERSECTION OBSERVER
+   --------------------------------------------------------- */
+
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add("visible");
+
+      const index = sections.indexOf(entry.target);
+      if(index !== -1){
+        currentIndex = index;
+        document.getElementById("currentSection").textContent =
+          String(index + 1).padStart(2,"0");
+      }
+    }
+  });
+},{
+  threshold:.18
+});
+
+revealItems.forEach(item=>observer.observe(item));
+sections.forEach(section=>observer.observe(section));
+
+/* ---------------------------------------------------------
+   SCROLL PROGRESS
+   --------------------------------------------------------- */
+
+function updateProgress(){
+  const scrollTop = window.scrollY;
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = max > 0 ? (scrollTop / max) * 100 : 0;
+  document.getElementById("progress").style.width = progress + "%";
+
+  sections.forEach((section,index)=>{
+    const rect = section.getBoundingClientRect();
+    const centerDistance =
+      Math.abs(rect.top + rect.height / 2 - window.innerHeight / 2);
+
+    if(centerDistance < window.innerHeight * .42){
+      currentIndex = index;
+      document.getElementById("currentSection").textContent =
+        String(index + 1).padStart(2,"0");
+    }
+  });
+}
+
+window.addEventListener("scroll", updateProgress, {passive:true});
+
+/* ---------------------------------------------------------
+   SCROLL-DRIVEN MORPHING
+   --------------------------------------------------------- */
+
+function morphOnScroll(){
+  const viewport = window.innerHeight;
+
+  document.querySelectorAll(".morph").forEach(el=>{
+    const rect = el.getBoundingClientRect();
+    const center = rect.top + rect.height/2;
+    const distance = (center - viewport/2) / viewport;
+
+    const rotation = Math.max(-3,Math.min(3,distance * 4));
+    const scale = 1 - Math.min(.025,Math.abs(distance)*.025);
+
+    el.style.transform =
+      `translateY(${distance * -12}px) scale(${scale}) rotate(${rotation}deg)`;
+  });
+}
+
+window.addEventListener("scroll",morphOnScroll,{passive:true});
+
+/* ---------------------------------------------------------
+   THEME CYCLING
+   T = theme
+   --------------------------------------------------------- */
+
+const themes = ["light","dark","marble"];
+let themeIndex = 0;
+
+function cycleTheme(){
+  themeIndex = (themeIndex + 1) % themes.length;
+  document.body.setAttribute("data-theme",themes[themeIndex]);
+}
+
+document.addEventListener("keydown",(event)=>{
+  if(event.key.toLowerCase() === "t"){
+    cycleTheme();
+  }
+});
+
+/* ---------------------------------------------------------
+   SECTION NAVIGATION
+   ARROW LEFT / RIGHT
+   --------------------------------------------------------- */
+
+function goToSection(index){
+  index = Math.max(0,Math.min(sections.length-1,index));
+  currentIndex = index;
+
+  sections[index].scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+
+  document.getElementById("currentSection").textContent =
+    String(index + 1).padStart(2,"0");
+}
+
+/* ---------------------------------------------------------
+   SPEECH SYNTHESIS
+   --------------------------------------------------------- */
+
+function getVietnameseVoice(){
+  const voices = speechSynthesis.getVoices();
+
+  return (
+    voices.find(v => v.lang === "vi-VN") ||
+    voices.find(v => v.lang.toLowerCase().startsWith("vi")) ||
+    voices.find(v => v.lang.toLowerCase().startsWith("en"))
+  );
+}
+
+speechSynthesis.onvoiceschanged = ()=>{
+  voicesLoaded = true;
+};
+
+function cleanText(text){
+  return text
+    .replace(/\s+/g," ")
+    .replace(/[|]/g," ")
+    .trim();
+}
+
+function speakCurrentSection(){
+  if(!speechEnabled) return;
+
+  speechSynthesis.cancel();
+
+  const section = sections[currentIndex];
+
+  if(!section) return;
+
+  const title = section.querySelector("h1,h2");
+  const content = [...section.querySelectorAll("p,li,h3,.caption,.eyebrow")];
+
+  let text = "";
+
+  if(title) text += title.innerText + ". ";
+
+  content.forEach(el=>{
+    if(el !== title){
+      text += cleanText(el.innerText) + ". ";
+    }
+  });
+
+  text = cleanText(text);
+
+  if(!text) return;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+
+  utterance.lang = "vi-VN";
+  utterance.rate = speechRate;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  const voice = getVietnameseVoice();
+
+  if(voice){
+    utterance.voice = voice;
+  }
+
+  speechSynthesis.speak(utterance);
+}
+
+/* ---------------------------------------------------------
+   KEYBOARD ACCESSIBILITY
+   --------------------------------------------------------- */
+
+document.addEventListener("keydown",(event)=>{
+
+  const tag = document.activeElement?.tagName;
+
+  if(
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT"
+  ){
+    return;
+  }
+
+  /* SPACE — đọc section */
+  if(event.code === "Space"){
+    event.preventDefault();
+    speakCurrentSection();
+  }
+
+  /* M — bật/tắt âm thanh */
+  if(event.key.toLowerCase() === "m"){
+    speechEnabled = !speechEnabled;
+
+    if(!speechEnabled){
+      speechSynthesis.cancel();
+    }
+  }
+
+  /* ARROW UP — tăng tốc */
+  if(event.key === "ArrowUp"){
+    event.preventDefault();
+    speechRate = Math.min(2.0,Math.round((speechRate + .1)*10)/10);
+  }
+
+  /* ARROW DOWN — giảm tốc */
+  if(event.key === "ArrowDown"){
+    event.preventDefault();
+    speechRate = Math.max(.5,Math.round((speechRate - .1)*10)/10);
+  }
+
+  /* ARROW RIGHT — phần kế */
+  if(event.key === "ArrowRight"){
+    event.preventDefault();
+    goToSection(currentIndex + 1);
+  }
+
+  /* ARROW LEFT — phần trước */
+  if(event.key === "ArrowLeft"){
+    event.preventDefault();
+    goToSection(currentIndex - 1);
+  }
+});
+
+/* ---------------------------------------------------------
+   MOUSE WHEEL — subtle section awareness
+   --------------------------------------------------------- */
+
+let wheelTimeout;
+
+window.addEventListener("wheel",()=>{
+  clearTimeout(wheelTimeout);
+
+  wheelTimeout = setTimeout(()=>{
+    updateProgress();
+    morphOnScroll();
+  },100);
+},{passive:true});
+
+/* ---------------------------------------------------------
+   INITIAL STATE
+   --------------------------------------------------------- */
+
+window.addEventListener("load",()=>{
+  updateProgress();
+  morphOnScroll();
+
+  /* Hiển thị hero ngay lập tức */
+  document.querySelectorAll("#s01 .reveal")
+    .forEach(el=>el.classList.add("visible"));
+
+  /* Preload voice list */
+  speechSynthesis.getVoices();
+});
+
+/* ---------------------------------------------------------
+   PARALLAX POINTER EFFECT
+   --------------------------------------------------------- */
+
+window.addEventListener("pointermove",(event)=>{
+  const x = (event.clientX / window.innerWidth - .5);
+  const y = (event.clientY / window.innerHeight - .5);
+
+  document.querySelectorAll(".hero-orbit").forEach(el=>{
+    el.style.marginLeft = `${x * 18}px`;
+    el.style.marginTop = `${y * 18}px`;
+  });
+});
+
+/* ---------------------------------------------------------
+   VISIBILITY
+   --------------------------------------------------------- */
+
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){
+    speechSynthesis.cancel();
+  }
+});
+</script>
+
+</body>
+</html>
