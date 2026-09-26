@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="celestial">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoàng Tử Bé (Le Petit Prince) — Antoine de Saint-Exupéry | Celestial Editorial Experience</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '[data-theme="midnight"]'],
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-primary: #f4f7fb;
+            --bg-secondary: #e6edf5;
+            --text-primary: #102a43;
+            --text-secondary: #486581;
+            --accent-color: #0284c7;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(2, 132, 199, 0.15);
+            --glass-blur: blur(24px);
+        }
+
+        [data-theme="midnight"] {
+            --bg-primary: #070b19;
+            --bg-secondary: #0f172a;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --border-color: rgba(56, 189, 248, 0.15);
+            --glass-blur: blur(28px);
+        }
+
+        [data-theme="desert"] {
+            --bg-primary: #fdfbf7;
+            --bg-secondary: #f4ecd8;
+            --text-primary: #3d2c1e;
+            --text-secondary: #7a624d;
+            --accent-color: #d97706;
+            --card-bg: rgba(255, 253, 249, 0.9);
+            --border-color: rgba(217, 119, 6, 0.2);
+            --glass-blur: blur(20px);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.7s cubic-bezier(0.16, 1, 0.3, 1), color 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .clamp-h1 {
+            font-size: clamp(2.4rem, 4.8vw, 4rem);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+        .clamp-h2 {
+            font-size: clamp(1.8rem, 3vw, 3rem);
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+        }
+        .clamp-body {
+            font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+            line-height: 1.8;
+        }
+        .clamp-caption {
+            font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+            line-height: 1.6;
+        }
+
+        .morph-section {
+            opacity: 0.15;
+            transform: translateY(50px) scale(0.96);
+            filter: blur(10px);
+            transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), 
+                        transform 1s cubic-bezier(0.16, 1, 0.3, 1), 
+                        filter 1s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform, filter;
+        }
+        .morph-section.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+
+        /* Glassmorphism Cards */
+        .celestial-card {
+            background-color: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 32px;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .celestial-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-secondary);
+            border-radius: 3px;
+            opacity: 0.3;
+        }
+
+        /* Floating HUD Indicator */
+        .hud-overlay {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 100;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            padding: 12px 22px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .hud-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+    </style>
+</head>
+<body class="selection:bg-sky-500 selection:text-white">
+
+    <div class="hud-overlay" id="hudOverlay">
+        <div class="hud-dot" id="hudDot"></div>
+        <span id="hudText">Theme: Celestial | Phần: 1/24 | [Space]: Đọc | [T]: Đổi Theme | [M]: Tắt/Bật Mute | [↑↓]: Tốc độ | [←→]: Điều hướng</span>
+    </div>
+
+    <main class="w-full flex flex-col items-center">
+
+        <section class="min-h-screen w-full flex flex-col justify-center items-center text-center px-6 py-20 morph-section active" data-section-index="0">
+            <span class="text-xs uppercase tracking-widest font-semibold mb-4 px-4 py-1.5 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Le Petit Prince • Antoine de Saint-Exupéry</span>
+            <h1 class="clamp-h1 font-serif font-bold max-w-4xl mb-6 text-balance">Hoàng Tử Bé</h1>
+            <p class="clamp-body text-secondary max-w-2xl font-light mb-10 text-balance" style="color: var(--text-secondary);">"Người ta chỉ thấy rõ bằng trái tim. Điều cốt yếu lại ẩn khuất trước mắt người đời." — Một hành trình chiêm nghiệm qua các vì sao.</p>
+            <div class="flex flex-col sm:flex-row gap-4 items-center text-sm font-medium" style="color: var(--text-secondary);">
+                <span>Cuộn xuống để khám phá 24 chương chuyên đề vũ trụ</span>
+                <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="1">
+            <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="flex flex-col justify-center">
+                    <span class="text-xs uppercase tracking-wider mb-3 font-semibold" style="color: var(--accent-color);">Chương 02</span>
+                    <h2 class="clamp-h2 font-serif font-bold mb-6">Bức Vẽ Con Cừu & Góc Nhìn Trẻ Thơ</h2>
+                    <ul class="space-y-4 clamp-body font-light" style="color: var(--text-secondary);">
+                        <li class="flex items-start gap-3"><span class="text-xl font-bold" style="color: var(--accent-color);">✦</span> <span>Người lớn thường đánh mất khả năng tưởng tượng thuần khiết sau những chiếc mũ phớt vô hồn.</span></li>
+                        <li class="flex items-start gap-3"><span class="text-xl font-bold" style="color: var(--accent-color);">✦</span> <span>Hộp vẽ con cừu: Minh chứng cho thấy điều kỳ diệu nằm ở bên trong trí tưởng tượng không giới hạn.</span></li>
+                        <li class="flex items-start gap-3"><span class="text-xl font-bold" style="color: var(--accent-color);">✦</span> <span>Sự cô đơn của phi công giữa sa mạc Sahara mênh mông.</span></li>
+                    </ul>
+                </div>
+                <div class="celestial-card p-10 flex flex-col justify-center min-h-[420px] relative overflow-hidden group">
+                    <div class="absolute -right-20 -bottom-20 w-72 h-72 rounded-full opacity-10 transition-transform duration-700 group-hover:scale-125" style="background: var(--accent-color);"></div>
+                    <span class="text-xs uppercase tracking-widest mb-2" style="color: var(--text-secondary);">Triết lý tạo hình</span>
+                    <p class="font-serif text-3xl italic font-normal leading-relaxed my-4">"Cốt tử là điều mắt thường không nhìn thấy được..."</p>
+                    <p class="text-sm tracking-wide uppercase mt-4 font-semibold" style="color: var(--accent-color);">— Lời răn của cáo già</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="2">
+            <div class="max-w-7xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 03</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Hành Tinh B612 & Bông Hồng Kiêu Kỳ</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="celestial-card p-8 md:col-span-2 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-semibold" style="color: var(--accent-color);">Tiểu hành tinh nhỏ bé</span>
+                            <h3 class="text-2xl font-semibold mt-2 mb-4">Ngôi Nhà Với Ba Núi Lửa & Cây Bao Báp</h3>
+                            <p class="clamp-body font-light" style="color: var(--text-secondary);">Nơi hoàng tử bé dọn sạch các mầm cây bao báp mỗi ngày để chúng không phá hủy hành tinh bé nhỏ của cậu, đồng thời tận hưởng những hoàng hôn buồn.</p>
+                        </div>
+                        <div class="mt-8 pt-6 border-t flex justify-between items-center" style="border-color: var(--border-color);">
+                            <span class="text-sm font-medium">Kỷ luật sinh tồn tinh thần</span>
+                            <span class="text-xs px-3 py-1 rounded-full" style="background: var(--bg-secondary);">B612</span>
+                        </div>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-semibold" style="color: var(--accent-color);">Đóa hồng duy nhất</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Tình Yêu & Sự Kiêu Hãnh</h3>
+                            <p class="clamp-body font-light" style="color: var(--text-secondary);">Đóa hoa với bốn chiếc gai yếu ớt nhưng đầy kiêu kỳ, thử thách và dạy hoàng tử bé cách yêu thương chân thành.</p>
+                        </div>
+                        <span class="text-xs font-semibold mt-6 uppercase tracking-wider" style="color: var(--accent-color);">Bông hồng độc nhất →</span>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-semibold" style="color: var(--accent-color);">Nỗi bất an</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Sự Rời Đi</h3>
+                            <p class="clamp-body font-light" style="color: var(--text-secondary);">Cuộc chia tay đầy nước mắt nhưng tất yếu để hoàng tử khám phá thế giới rộng lớn ngoài kia.</p>
+                        </div>
+                        <span class="text-xs font-semibold mt-6 uppercase tracking-wider" style="color: var(--accent-color);">Khởi hành →</span>
+                    </div>
+                    <div class="celestial-card p-8 md:col-span-2 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-semibold" style="color: var(--accent-color);">Chiêm nghiệm</span>
+                            <h3 class="text-2xl font-semibold mt-2 mb-4">Trách Nhiệm Với Thuộc Tính Đã Cảm Tình</h3>
+                            <p class="clamp-body font-light" style="color: var(--text-secondary);">"Bạn có trách nhiệm mãi mãi với những gì bạn đã cảm hóa." Câu nói cốt lõi định nghĩa lại toàn bộ mối quan hệ giữa con người với thế giới xung quanh.</p>
+                        </div>
+                        <div class="mt-8 pt-6 border-t flex justify-between items-center" style="border-color: var(--border-color);">
+                            <span class="text-sm font-medium">Chân lý vĩnh cửu</span>
+                            <span class="text-xs px-3 py-1 rounded-full" style="background: var(--bg-secondary);">Đạo đức</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="3">
+            <div class="max-w-6xl w-full celestial-card p-12 md:p-20 relative overflow-hidden text-center flex flex-col items-center justify-center min-h-[600px]">
+                <div class="absolute inset-0 opacity-15 pointer-events-none" style="background: radial-gradient(circle at 50% 50%, var(--accent-color) 0%, transparent 70%);"></div>
+                <span class="text-xs uppercase tracking-widest mb-4 font-semibold px-4 py-1.5 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Chương 04 — Hành Trình Các Hành Tinh</span>
+                <h2 class="clamp-h2 font-serif font-bold max-w-3xl mb-8">Thế Giới Của Những Người Lớn Kỳ Quặc</h2>
+                <p class="clamp-body font-light max-w-2xl mb-12" style="color: var(--text-secondary);">Trên đường đến Trái Đất, hoàng tử bé lần lượt ghé thăm sáu tiểu hành tinh, gặp gỡ những đại diện méo mó của xã hội loài người trưởng thành.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl text-left">
+                    <div class="p-6 rounded-2xl" style="background: var(--bg-secondary);">
+                        <h4 class="font-semibold mb-2">Ông vua quyền lực</h4>
+                        <p class="text-sm font-light" style="color: var(--text-secondary);">Khao khát cai trị vạn vật nhưng chỉ ra những mệnh lệnh hợp với quy luật tự nhiên.</p>
+                    </div>
+                    <div class="p-6 rounded-2xl" style="background: var(--bg-secondary);">
+                        <h4 class="font-semibold mb-2">Gã van xin hão huyền</h4>
+                        <p class="text-sm font-light" style="color: var(--text-secondary);">Chỉ muốn nghe những lời ca tụng và tôn kính mù quáng từ kẻ khác.</p>
+                    </div>
+                    <div class="p-6 rounded-2xl" style="background: var(--bg-secondary);">
+                        <h4 class="font-semibold mb-2">Kẻ nát rượu</h4>
+                        <p class="text-sm font-light" style="color: var(--text-secondary);">Uống rượu để quên đi sự xấu hổ vì tội uống rượu của chính mình.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="4">
+            <div class="max-w-4xl w-full text-center">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-4 block" style="color: var(--accent-color);">Chương 05 — Thống Kê Vũ Trụ</span>
+                <h2 class="clamp-h2 font-serif font-bold mb-12">Sự Cô Đơn Của Các Con Số</h2>
+                <div class="celestial-card p-12 md:p-16 mb-12">
+                    <div class="text-6xl md:text-8xl font-bold font-serif mb-4" style="color: var(--accent-color);">6+1</div>
+                    <p class="clamp-body font-medium uppercase tracking-wider mb-6">Các tiểu hành tinh từ số 325 đến 330</p>
+                    <p class="clamp-body font-light max-w-xl mx-auto" style="color: var(--text-secondary);">Người lớn bị ám ảnh bởi các con số, tuổi tác, tiền bạc và những cỗ máy vô cảm mà quên mất bản chất tươi đẹp của đời sống.</p>
+                </div>
+                <p class="text-sm tracking-wide" style="color: var(--text-secondary);">"Họ hỏi: Ngôi nhà ấy giá bao nhiêu? Thay vì hỏi: Ngôi nhà có những tiếng chim hót nào?"</p>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="5">
+            <div class="max-w-5xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 06</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Tiến Trình Gặp Gỡ Trên Trái Đất</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Giai đoạn I</span>
+                            <h3 class="text-xl font-semibold mt-4 mb-3">Sa Mạc Mênh Mông</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Hoàng tử bé hạ xuống sa mạc Phi Châu, nơi gặp con rắn vàng đầy ẩn ý triết lý.</p>
+                        </div>
+                        <span class="text-xs font-semibold mt-8" style="color: var(--text-secondary);">01. Đất khách quê người</span>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Giai đoạn II</span>
+                            <h3 class="text-xl font-semibold mt-4 mb-3">Vườn Hồng Triệu Đóa</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Nỗi buồn khi nhận ra đóa hoa của mình không phải là duy nhất trên vũ trụ này cho đến khi gặp cáo.</p>
+                        </div>
+                        <span class="text-xs font-semibold mt-8" style="color: var(--text-secondary);">02. Sự vỡ lẽ kỳ diệu</span>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Giai đoạn III</span>
+                            <h3 class="text-xl font-semibold mt-4 mb-3">Bí Mật Của Cáo</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Học được bài học về sự "cảm hóa" (apprivoiser) để tạo nên những liên kết độc nhất vô nhị.</p>
+                        </div>
+                        <span class="text-xs font-semibold mt-8" style="color: var(--text-secondary);">03. Trái tim thấu cảm</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="6">
+            <div class="max-w-6xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 07</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Đối Chiếu: Thế Giới Trẻ Thơ vs Người Lớn</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="celestial-card p-10 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-widest font-semibold" style="color: var(--accent-color);">Thế giới trẻ thơ</span>
+                            <h3 class="text-2xl font-semibold mt-2 mb-6">Trực giác, Tình yêu & Sự kỳ diệu</h3>
+                            <ul class="space-y-4 clamp-body font-light" style="color: var(--text-secondary);">
+                                <li class="flex items-center gap-3"><span class="w-2 h-2 rounded-full" style="background: var(--accent-color);"></span> Nhìn nhận bản chất bằng trái tim chân thành.</li>
+                                <li class="flex items-center gap-3"><span class="w-2 h-2 rounded-full" style="background: var(--accent-color);"></span> Trân trọng từng mối dây liên kết tình cảm.</li>
+                                <li class="flex items-center gap-3"><span class="w-2 h-2 rounded-full" style="background: var(--accent-color);"></span> Sẵn sàng hy sinh vì bông hoa của mình.</li>
+                            </ul>
+                        </div>
+                        <div class="mt-8 pt-6 border-t text-sm font-medium" style="border-color: var(--border-color);">Đại diện: Hoàng tử bé</div>
+                    </div>
+                    <div class="celestial-card p-10 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-widest font-semibold" style="color: var(--accent-color);">Thế giới người lớn</span>
+                            <h3 class="text-2xl font-semibold mt-2 mb-6">Thực dụng, Tính toán & Cô độc</h3>
+                            <ul class="space-y-4 clamp-body font-light" style="color: var(--text-secondary);">
+                                <li class="flex items-center gap-3"><span class="w-2 h-2 rounded-full" style="background: var(--accent-color);"></span> Bị cuốn vào guồng quay quyền lực và tiền tài.</li>
+                                <li class="flex items-center gap-3"><span class="w-2 h-2 rounded-full" style="background: var(--accent-color);"></span> Quên mất cách kết nối và sẻ chia sâu sắc.</li>
+                                <li class="flex items-center gap-3"><span class="w-2 h-2 rounded-full" style="background: var(--accent-color);"></span> Luôn vội vã nhưng chẳng biết mình đang tìm kiếm gì.</li>
+                            </ul>
+                        </div>
+                        <div class="mt-8 pt-6 border-t text-sm font-medium" style="border-color: var(--border-color);">Đại diện: Xã hội công nghiệp</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="7">
+            <div class="max-w-4xl w-full text-center px-4">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-6 block" style="color: var(--accent-color);">Chương 08 — Triết Lý Cốt Lõi</span>
+                <blockquote class="font-serif text-3xl md:text-5xl italic font-normal leading-tight mb-8">
+                    "Chính thời gian bạn bỏ ra cho bông hoa của bạn đã làm cho bông hoa ấy trở nên quan trọng đến thế."
+                </blockquote>
+                <p class="text-base uppercase tracking-widest font-semibold" style="color: var(--text-secondary);">— Bí mật của con cáo</p>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="8">
+            <div class="max-w-5xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 09</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Các Nhân Vật Đồng Hành Đầy Ý Nghĩa</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-semibold" style="color: var(--accent-color);">Người bạn tri kỷ</span>
+                            <h3 class="text-2xl font-semibold mt-2 mb-4">Con Cáo Thông Thái</h3>
+                            <p class="clamp-body font-light" style="color: var(--text-secondary);">Dạy cho hoàng tử bài học vĩ đại về sự cảm hóa, biến những thứ bình thường trở nên vô giá trong cuộc đời.</p>
+                        </div>
+                        <span class="text-xs font-semibold mt-6 uppercase" style="color: var(--accent-color);">Nghệ thuật yêu thương →</span>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-semibold" style="color: var(--accent-color);">Sứ giả định mệnh</span>
+                            <h3 class="text-2xl font-semibold mt-2 mb-4">Con Rắn Vàng Bí Ẩn</h3>
+                            <p class="clamp-body font-light" style="color: var(--text-secondary);">Sinh vật mang quyền năng đưa hoàng tử bé trở về ngôi sao quê hương qua một vết cắn nhẹ nhàng.</p>
+                        </div>
+                        <span class="text-xs font-semibold mt-6 uppercase" style="color: var(--accent-color);">Con đường về nhà →</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="9">
+            <div class="max-w-6xl w-full celestial-card p-12 md:p-20 relative overflow-hidden flex flex-col md:flex-row items-center gap-12">
+                <div class="w-full md:w-1/2">
+                    <span class="text-xs uppercase tracking-widest font-semibold mb-3 block" style="color: var(--accent-color);">Chương 10</span>
+                    <h2 class="clamp-h2 font-serif font-bold mb-6">Ngôn Ngữ Thơ Ca & Tính Ngụ Ngôn</h2>
+                    <p class="clamp-body font-light mb-6" style="color: var(--text-secondary);">Saint-Exupéry viết nên một câu chuyện cổ tích cho người lớn, nơi từng hình ảnh đều mang tầng sâu triết học về nhân sinh và sự tồn tại.</p>
+                    <div class="flex items-center gap-4 text-sm font-medium" style="color: var(--accent-color);">
+                        <span>Khám phá chiều sâu văn học</span>
+                        <span>→</span>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2 p-8 rounded-3xl" style="background: var(--bg-secondary);">
+                    <h3 class="text-xl font-semibold mb-4">Đặc trưng nghệ thuật</h3>
+                    <ul class="space-y-3 font-light text-sm" style="color: var(--text-secondary);">
+                        <li>• Kết hợp uyển chuyển giữa tranh minh họa màu nước và văn xuôi.</li>
+                        <li>• Giọng văn trong trẻo, giàu nhạc điệu và cảm xúc hoài niệm.</li>
+                        <li>• Tính đa nghĩa sâu sắc trong từng hội thoại ngắn gọn.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="10">
+            <div class="max-w-7xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 11</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Ý Nghĩa Của Tiếng Cười & Các Vi Sắc</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold uppercase" style="color: var(--accent-color);">Tiếng chuông bạc</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Nụ Cười Của Hoàng Tử</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Tiếng cười như hàng triệu chiếc lục lạc vang lên trên bầu trời đêm.</p>
+                        </div>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold uppercase" style="color: var(--accent-color);">Bầu trời sao</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Triệu Ngôi Sao Biết Cười</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Khi nhìn lên bầu trời đêm, mỗi ngôi sao đều mang nụ cười của người thân yêu.</p>
+                        </div>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold uppercase" style="color: var(--accent-color);">Nước nguồn</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Mạch Nước Giữa Sa Mạc</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Món quà của lòng trắc ẩn và tình bạn xoa dịu mọi khát khao.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="11">
+            <div class="max-w-4xl w-full text-center">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-4 block" style="color: var(--accent-color);">Chương 12 — Di Sản Văn Học Toàn Cầu</span>
+                <h2 class="clamp-h2 font-serif font-bold mb-12">Tác Phẩm Được Dịch Nhiều Thứ Tiếng Nhất</h2>
+                <div class="celestial-card p-12 md:p-16 mb-12">
+                    <div class="text-5xl md:text-7xl font-bold font-serif mb-4" style="color: var(--accent-color);">500+</div>
+                    <p class="clamp-body font-medium uppercase tracking-wider mb-6">Ngôn ngữ & Phương ngữ trên khắp thế giới</p>
+                    <p class="clamp-body font-light max-w-xl mx-auto" style="color: var(--text-secondary);">Đứng thứ hai sau Kinh Thánh về số lượng bản dịch toàn cầu, chạm đến trái tim của mọi thế hệ độc giả.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="12">
+            <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="celestial-card p-10 flex flex-col justify-center min-h-[400px]">
+                    <span class="text-xs uppercase tracking-widest mb-2 font-semibold" style="color: var(--accent-color);">Góc nhìn nhân sinh</span>
+                    <h3 class="text-3xl font-serif font-bold mb-4">Sự Trở Về Của Ánh Sáng</h3>
+                    <p class="clamp-body font-light" style="color: var(--text-secondary);">Cái chết của hoàng tử bé thực chất là sự giải thoát thể xác để trở về với ngôi sao của mình, để lại nỗi nhớ khôn nguôi cho người phi công.</p>
+                </div>
+                <div class="flex flex-col justify-center">
+                    <span class="text-xs uppercase tracking-wider mb-3 font-medium" style="color: var(--accent-color);">Chương 13</span>
+                    <h2 class="clamp-h2 font-serif font-bold mb-6">Bài Học Về Sự Chia Ly & Trân Trọng</h2>
+                    <p class="clamp-body font-light" style="color: var(--text-secondary);">Mỗi cuộc hội ngộ và chia tay đều làm giàu thêm cho tâm hồn, dạy chúng ta biết ơn từng khoảnh khắc hiện diện bên nhau trong đời.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="13">
+            <div class="max-w-5xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 14</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Cao Trào & Khoảnh Khắc Vĩnh Hằng</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="celestial-card p-8">
+                        <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--accent-color);">Khoảnh khắc 01</span>
+                        <h3 class="text-xl font-semibold mt-2 mb-3">Giếng Nước Trên Sa Mạc</h3>
+                        <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Tìm thấy nguồn nước ngọt ngào như món quà của giấc mơ giữa vùng đất khô cằn.</p>
+                    </div>
+                    <div class="celestial-card p-8">
+                        <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--accent-color);">Khoảnh khắc 02</span>
+                        <h3 class="text-xl font-semibold mt-2 mb-3">Bầu Trời Đầy Sao Biết Cười</h3>
+                        <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Người phi công ngước nhìn hàng triệu vì sao với một niềm hạnh phúc thầm lặng và nỗi nhớ.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="14">
+            <div class="max-w-7xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 15</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Thông Điệp Gửi Trao Các Thế Hệ</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold uppercase" style="color: var(--accent-color);">Giá trị 01</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Đứa Trẻ Bên Trong</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Luôn giữ lại sự hồn nhiên, trí tò mò và lòng trắc ẩn trong tâm hồn.</p>
+                        </div>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold uppercase" style="color: var(--accent-color);">Giá trị 02</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Sự Thấu Cảm</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Hiểu rằng mỗi sinh vật đều mang những nét đẹp và tổn thương riêng cần chở che.</p>
+                        </div>
+                    </div>
+                    <div class="celestial-card p-8 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold uppercase" style="color: var(--accent-color);">Giá trị 03</span>
+                            <h3 class="text-xl font-semibold mt-2 mb-3">Bản Sắc Độc Nhất</h3>
+                            <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Sự gắn kết tình cảm làm cho vạn vật trở nên vô giá trong cuộc đời.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="15">
+            <div class="max-w-6xl w-full celestial-card p-12 md:p-20 text-center flex flex-col items-center justify-center min-h-[500px]">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-4 px-4 py-1.5 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Chương 16 — Tác Giả & Tác Phẩm</span>
+                <h2 class="clamp-h2 font-serif font-bold max-w-3xl mb-6">Antoine de Saint-Exupéry</h2>
+                <p class="clamp-body font-light max-w-2xl mb-8" style="color: var(--text-secondary);">Người phi công dũng cảm đã biến những trải nghiệm bay lượn giữa bầu trời đầy sao và sa mạc thẳm sâu thành một áng văn bất tử cho nhân loại.</p>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="16">
+            <div class="max-w-4xl w-full text-center px-4">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-6 block" style="color: var(--accent-color);">Chương 17 — Triết Lý Sống</span>
+                <blockquote class="font-serif text-3xl md:text-5xl italic font-normal leading-tight mb-8">
+                    "Người ta chỉ nhìn thấy rõ bằng trái tim. Điều cốt yếu lại ẩn khuất trước mắt người đời."
+                </blockquote>
+                <p class="text-base uppercase tracking-widest font-semibold" style="color: var(--text-secondary);">— Châm ngôn bất hủ</p>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="17">
+            <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div>
+                    <span class="text-xs uppercase tracking-wider mb-3 font-medium" style="color: var(--accent-color);">Chương 18</span>
+                    <h2 class="clamp-h2 font-serif font-bold mb-6">Nghệ Thuật Tối Giản & Sâu Sắc</h2>
+                    <p class="clamp-body font-light" style="color: var(--text-secondary);">Sự kết hợp hoàn hảo giữa cốt truyện ngụ ngôn nhẹ nhàng và những triết lý nhân sinh thâm trầm, lưu lại dư âm sâu sắc trong tâm hồn người đọc.</p>
+                </div>
+                <div class="celestial-card p-10 flex flex-col justify-center min-h-[380px]">
+                    <h3 class="text-2xl font-semibold mb-4">Sức Sống Vượt Thời Gian</h3>
+                    <p class="clamp-body font-light" style="color: var(--text-secondary);">Dù qua bao thăng trầm của lịch sử, "Hoàng tử bé" vẫn luôn là ngọn hải đăng soi sáng cho những ai đang tìm kiếm ý nghĩa chân thực của tình yêu và sự sống.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="18">
+            <div class="max-w-7xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 19</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Tổng Kết Các Chủ Đề Lớn</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="celestial-card p-8">
+                        <h3 class="text-xl font-semibold mb-3">Tình Yêu & Trách Nhiệm</h3>
+                        <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Gắn kết tâm hồn với bông hồng duy nhất qua sự chăm sóc và hy sinh.</p>
+                    </div>
+                    <div class="celestial-card p-8">
+                        <h3 class="text-xl font-semibold mb-3">Sự Cô Lập Của Con Người</h3>
+                        <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Nỗi cô đơn trong thế giới hiện đại và cơn lốc máy móc vô hồn.</p>
+                    </div>
+                    <div class="celestial-card p-8">
+                        <h3 class="text-xl font-semibold mb-3">Vẻ Đẹp Của Trực Giác</h3>
+                        <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Nhìn đời bằng con mắt của trái tim thay vì những con số khô khan.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="19">
+            <div class="max-w-4xl w-full text-center">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-4 block" style="color: var(--accent-color);">Chương 20 — Tầm Nhìn Vũ Trụ</span>
+                <h2 class="clamp-h2 font-serif font-bold mb-12">Bầu Trời Đêm & Ngôi Sao Quê Hương</h2>
+                <div class="celestial-card p-12 md:p-16 mb-12">
+                    <div class="text-5xl md:text-7xl font-bold font-serif mb-4" style="color: var(--accent-color);">Vĩnh Hằng</div>
+                    <p class="clamp-body font-medium uppercase tracking-wider mb-6">Nơi hội tụ của những tâm hồn đồng điệu</p>
+                    <p class="clamp-body font-light max-w-xl mx-auto" style="color: var(--text-secondary);">Mỗi khi nhìn lên bầu trời sao, chúng ta biết rằng đâu đó có một nụ cười đang thì thầm cùng gió.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="20">
+            <div class="max-w-6xl w-full celestial-card p-12 md:p-20 text-center flex flex-col items-center justify-center min-h-[500px]">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-4 px-4 py-1.5 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Chương 21 — Chiều Sâu Tâm Hồn</span>
+                <h2 class="clamp-h2 font-serif font-bold max-w-3xl mb-6">Sự Tỉnh Thức Của Người Lớn</h2>
+                <p class="clamp-body font-light max-w-2xl mb-8" style="color: var(--text-secondary);">Cuốn sách nhắc nhở mỗi chúng ta hãy thỉnh thoảng quay trở về làm đứa trẻ, để thấy thế giới này tràn ngập những điều kỳ diệu chưa từng phai nhạt.</p>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="21">
+            <div class="max-w-5xl w-full">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-wider mb-2 font-medium" style="color: var(--accent-color);">Chương 22</span>
+                    <h2 class="clamp-h2 font-serif font-bold">Hành Trình Trở Về B612</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="celestial-card p-8">
+                        <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--accent-color);">Bước ngoặt</span>
+                        <h3 class="text-xl font-semibold mt-2 mb-3">Ánh Sáng Đêm Sa Mạc</h3>
+                        <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Hoàng tử bé bước đi nhẹ nhàng như một vệt sáng trong đêm tối mênh mông.</p>
+                    </div>
+                    <div class="celestial-card p-8">
+                        <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--accent-color);">Kết tinh</span>
+                        <h3 class="text-xl font-semibold mt-2 mb-3">Tiếng Lục Lạc Ngân Vang</h3>
+                        <p class="clamp-body font-light text-sm" style="color: var(--text-secondary);">Để lại cho cõi đời hàng triệu ngôi sao biết cười và bài học yêu thương sâu sắc.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex items-center justify-center px-6 py-20 morph-section" data-section-index="22">
+            <div class="max-w-4xl w-full text-center px-4">
+                <span class="text-xs uppercase tracking-widest font-semibold mb-6 block" style="color: var(--accent-color);">Chương 23 — Lời Kết Tác Phẩm</span>
+                <blockquote class="font-serif text-3xl md:text-5xl italic font-normal leading-tight mb-8">
+                    "Hãy ngước nhìn bầu trời. Hãy tự hỏi: Con cừu đã ăn bông hồng chưa? Và các bạn sẽ thấy mọi thứ thay đổi hoàn toàn..."
+                </blockquote>
+                <p class="text-base uppercase tracking-widest font-semibold" style="color: var(--text-secondary);">— Antoine de Saint-Exupéry</p>
+            </div>
+        </section>
+
+        <section class="min-h-screen w-full flex flex-col justify-center items-center text-center px-6 py-20 morph-section" data-section-index="23">
+            <span class="text-xs uppercase tracking-widest font-semibold mb-4 px-4 py-1.5 rounded-full" style="background: var(--bg-secondary); color: var(--accent-color);">Hoàn thành 24 chương chuyên đề</span>
+            <h2 class="clamp-h2 font-serif font-bold max-w-3xl mb-6">Trải Nghiệm Vũ Trụ Hoàng Tử Bé</h2>
+            <p class="clamp-body text-secondary max-w-xl font-light mb-10" style="color: var(--text-secondary);">Cảm ơn bạn đã đồng hành trong hành trình qua các vì sao. Sử dụng phím <kbd class="px-2 py-1 rounded bg-stone-200 dark:bg-stone-800 text-xs font-mono">T</kbd> để đổi theme vũ trụ hoặc phím <kbd class="px-2 py-1 rounded bg-stone-200 dark:bg-stone-800 text-xs font-mono">Space</kbd> để nghe đọc lại bất cứ lúc nào.</p>
+            <div class="text-sm font-medium tracking-wide" style="color: var(--accent-color);">Designed with Celestial Editorial Precision & Poetry</div>
+        </section>
+
+    </main>
+
+    <script>
+        const themes = ['celestial', 'midnight', 'desert'];
+        const themeNames = ['Celestial Light', 'Midnight Stars (Tối)', 'Desert Sahara (Ấm áp)'];
+        let currentThemeIndex = 0;
+
+        function setTheme(index) {
+            currentThemeIndex = index % themes.length;
+            const themeName = themes[currentThemeIndex];
+            document.documentElement.setAttribute('data-theme', themeName);
+            updateHUD();
+        }
+
+        function toggleTheme() {
+            setTheme(currentThemeIndex + 1);
+        }
+
+        const sections = document.querySelectorAll('.morph-section');
+        let currentSectionIndex = 0;
+
+        const observerOptions = {
+            root: null,
+            threshold: 0.4
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    currentSectionIndex = parseInt(entry.target.getAttribute('data-section-index'));
+                    updateHUD();
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(sec => observer.observe(sec));
+
+        // Speech synthesis setup
+        let speechSynth = window.speechSynthesis;
+        let isMuted = false;
+        let speechRate = 1.0;
+        let currentUtterance = null;
+
+        function speakCurrentSection() {
+            if (isMuted) return;
+            if (speechSynth.speaking) {
+                speechSynth.cancel();
+            }
+
+            const currentSec = sections[currentSectionIndex];
+            if (!currentSec) return;
+
+            const textContent = Array.from(currentSec.querySelectorAll('h1, h2, h3, p, li'))
+                .map(el => el.innerText)
+                .join('. ');
+
+            if (textContent) {
+                currentUtterance = new SpeechSynthesisUtterance(textContent);
+                currentUtterance.lang = 'vi-VN';
+                currentUtterance.rate = speechRate;
+                speechSynth.speak(currentUtterance);
+                updateHUD("Đang đọc...");
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (isMuted && speechSynth.speaking) {
+                speechSynth.cancel();
+            }
+            updateHUD();
+        }
+
+        function adjustSpeed(delta) {
+            speechRate = Math.min(2.0, Math.max(0.5, speechRate + delta));
+            if (speechSynth.speaking) {
+                speakCurrentSection();
+            }
+            updateHUD();
+        }
+
+        function navigateSection(direction) {
+            if (speechSynth.speaking) speechSynth.cancel();
+            currentSectionIndex = Math.min(sections.length - 1, Math.max(0, currentSectionIndex + direction));
+            sections[currentSectionIndex].scrollIntoView({ behavior: 'smooth' });
+            updateHUD();
+        }
+
+        function updateHUD(customStatus = '') {
+            const hudText = document.getElementById('hudText');
+            const themeLabel = themeNames[currentThemeIndex];
+            const statusStr = customStatus ? ` | ${customStatus}` : '';
+            const muteStr = isMuted ? ' | [Muted]' : ` | Tốc độ: ${speechRate.toFixed(1)}x`;
+            hudText.innerText = `Theme: ${themeLabel} | Phần: ${currentSectionIndex + 1}/24${muteStr}${statusStr}`;
+        }
+
+        // Global Keyboard Event Listeners (No on-screen buttons)
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'KeyT', 'KeyM', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || e.key === ' ') {
+                if (e.code === 'Space' || e.key === ' ') {
+                    e.preventDefault();
+                    speakCurrentSection();
+                } else if (e.code === 'KeyT' || e.key === 't' || e.key === 'T') {
+                    e.preventDefault();
+                    toggleTheme();
+                } else if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M') {
+                    e.preventDefault();
+                    toggleMute();
+                } else if (e.code === 'ArrowUp') {
+                    e.preventDefault();
+                    adjustSpeed(0.2);
+                } else if (e.code === 'ArrowDown') {
+                    e.preventDefault();
+                    adjustSpeed(-0.2);
+                } else if (e.code === 'ArrowLeft') {
+                    e.preventDefault();
+                    navigateSection(-1);
+                } else if (e.code === 'ArrowRight') {
+                    e.preventDefault();
+                    navigateSection(1);
+                }
+            }
+        });
+
+        window.onload = () => {
+            setTheme(0);
+        };
+    </script>
+</body>
+</html>
