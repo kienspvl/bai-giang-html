@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light" style="--font-size: 26px;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Đọc Bài Giảng Markdown &amp; Word Chuyên Nghiệp v3.6</title>
+    <!-- MarkedJS: Chuyển Markdown sang HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Mammoth.js: Đọc file .docx Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js: Chuyển HTML từ Word sang Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    
+    <!-- KaTeX: Render Toán LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- MathJax v3 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            }
+        };
+    </script>
+    <script id="MathJax-script" async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #020617;
+            --card-bg: #1e293b;
+            --text-color: #94a3b8;
+            --text-active: #f8fafc;
+            --border-color: #334155;
+            --accent-color: #38bdf8;
+            --highlight-bg: rgba(56, 189, 248, 0.12);
+            --sidebar-width: 280px;
+            --font-size: 20px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #475569;
+            --text-active: #0f172a;
+            --border-color: #cbd5e1;
+            --accent-color: #0284c7;
+            --highlight-bg: rgba(2, 132, 199, 0.12);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 8px 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .controls-group { 
+            display: flex; 
+            gap: 6px; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+
+        button, label.btn {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover, label.btn:hover { border-color: var(--accent-color); }
+        button.active { background-color: var(--accent-color); color: #fff; }
+
+        input[type="text"], input[type="number"], select {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 8px; border-radius: 6px; font-size: 13px;
+        }
+
+        .toggle-switch-wrapper { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-active); }
+        .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .toggle-switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        #selection-popup {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-width: 380px;
+        }
+        #selection-popup button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #selection-popup input[type="text"] {
+            width: 150px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 5;
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        #sidebar.open { margin-left: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; font-weight: bold; color: var(--text-active);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item {
+            padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            cursor: pointer; font-size: 14px; color: var(--text-color);
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-item:hover { background-color: var(--card-bg); color: var(--text-active); }
+        .toc-item.active-toc {
+            background-color: var(--highlight-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            border-left: 3px solid var(--accent-color);
+        }
+        .toc-item.level-1 { font-weight: bold; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; }
+        .toc-item.level-3 { padding-left: 30px; font-style: italic; }
+        .toc-item.level-4 { padding-left: 40px; opacity: 0.8; }
+
+        main {
+            flex: 1; overflow-y: auto;
+            padding: 30px 20px 150px 20px;
+            scroll-behavior: smooth;
+        }
+
+        #lecture-paper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            font-size: var(--font-size); line-height: 1.8;
+            transition: font-size 0.2s ease, background-color 0.3s;
+        }
+
+        #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4 { 
+            color: var(--accent-color); 
+            margin-top: 1.2em; margin-bottom: 0.5em; 
+            line-height: 1.4;
+        }
+        #lecture-paper p { margin: 0.8em 0; color: inherit; }
+        #lecture-paper ul, #lecture-paper ol { padding-left: 28px; margin: 0.8em 0; }
+        #lecture-paper li { margin-bottom: 6px; }
+        #lecture-paper strong { color: var(--accent-color); font-weight: 700; }
+        
+        #lecture-paper blockquote {
+            margin: 1em 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        #lecture-paper blockquote p { margin: 0.4em 0; }
+
+        #lecture-paper hr {
+            border: none;
+            border-top: 2px dashed var(--border-color);
+            margin: 2em 0;
+        }
+
+        #lecture-paper img {
+            max-width: 100%; height: auto; max-height: 400px;
+            object-fit: contain; border-radius: 8px;
+            margin: 12px auto; display: block; cursor: zoom-in;
+            border: 1px solid var(--border-color);
+        }
+
+        #lecture-paper table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        #lecture-paper th, #lecture-paper td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+        #lecture-paper th { background-color: var(--highlight-bg); }
+
+        .markdown-unit {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            border-radius: 6px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .markdown-unit.revealed {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+
+        li.markdown-unit.revealed, li.markdown-unit.active {
+            display: list-item !important;
+        }
+
+        .markdown-unit.active {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        hr.markdown-unit.active {
+            border-top-color: var(--accent-color);
+            box-shadow: none;
+            background-color: transparent;
+        }
+
+        body.mode-expand .markdown-unit {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+        body.mode-expand li.markdown-unit {
+            display: list-item !important;
+        }
+        body.mode-expand .markdown-unit.active {
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        footer {
+            background-color: var(--header-bg); 
+            padding: 10px 20px; display: flex; 
+            justify-content: center; align-items: center;
+            position: relative; border-top: 1px solid var(--border-color); 
+            font-size: 14px; color: var(--text-color); z-index: 10;
+        }
+
+        .author-info { font-weight: 600; color: var(--accent-color); text-align: center; }
+        #progress-counter { 
+            position: absolute; right: 20px; font-size: 13px; 
+            display: flex; align-items: center; gap: 4px;
+        }
+        #page-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); padding: 24px; border-radius: 12px;
+            width: 85%; max-width: 800px; display: flex; flex-direction: column; gap: 15px;
+            border: 1px solid var(--border-color); max-height: 90vh;
+        }
+
+        textarea {
+            width: 100%; height: 350px; background: var(--bg-color);
+            color: var(--text-active); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 8px; font-family: monospace; resize: vertical;
+        }
+
+        input[type="file"] { display: none; }
+
+        .history-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-color); padding: 10px 14px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .changelog-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .changelog-item:last-child { border-bottom: none; }
+        .changelog-version { font-weight: bold; color: var(--accent-color); font-size: 16px; }
+        .changelog-date { font-size: 12px; color: var(--text-color); margin-left: 8px; }
+        .changelog-list { margin: 6px 0 0 20px; padding: 0; font-size: 14px; line-height: 1.6; }
+
+        #image-lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); z-index: 200;
+            justify-content: center; align-items: center; user-select: none;
+        }
+
+        #image-lightbox img { width: 95vw; height: 95vh; object-fit: contain; border-radius: 4px; }
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15); color: #fff;
+            border: none; padding: 16px 20px; font-size: 24px; cursor: pointer;
+            border-radius: 50%; transition: background 0.2s; z-index: 210;
+        }
+        .lightbox-nav:hover { background: var(--accent-color); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-size: 14px;
+        }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast {
+            background-color: var(--card-bg); color: var(--text-active); border: 1px solid var(--accent-color);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        body.slideshow-mode header, body.slideshow-mode footer, body.slideshow-mode #sidebar { display: none !important; }
+        body.slideshow-mode main { padding: 40px 20px; }
+        #exit-slideshow-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 99;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        #exit-slideshow-btn:hover { background: var(--accent-color); color: #fff; }
+        body.slideshow-mode #exit-slideshow-btn { display: block; }
+    </style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+</style></head>
+<body class="mode-expand">
+
+    <header>
+        <div class="controls-group">
+            <button onclick="toggleSidebar()" title="Ẩn/Hiện Mục lục">☰</button>
+            <button onclick="openImportModal()">📥 Import</button>
+            <button onclick="openHistoryModal()">📜 History</button>
+            <button onclick="openSaveModal()">💾 Save as</button>
+            <button onclick="openUpdateModal()" title="Xem lịch sử cập nhật (Phím tắt U)">🚀 U</button>
+            <button onclick="toggleSlideshow()" style="background-color: var(--accent-color); color: #fff;">📺 Slide</button>
+            
+            <div class="toggle-switch-wrapper" style="margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                <span title="Chế độ Mở Rộng / Hiện tất cả">📖 Expand</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="expand-toggle" checked="" onchange="toggleExpandMode(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- CẦN GẠT AUTOPLAY DẠNG SWITCH -->
+            <div class="toggle-switch-wrapper" style="margin-left: 6px;">
+                <span title="Tự động đọc đoạn tiếp theo">▶️ Autoplay</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoplay-toggle" onchange="toggleAutoplay(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 4px;">
+                <span>🌙</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-toggle" checked="" onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+                <span>☀️</span>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button id="btn-mute" onclick="toggleMute()" title="Âm thanh">🔊</button>
+            <select id="rate-select" onchange="updateRate(this.value)">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="controls-group">
+            <input type="text" id="prompt-topic" placeholder="Chủ đề..." style="width: 110px;">
+            <button id="btn-copy-prompt" onclick="copyPrompt()">📋 Copy Prompt</button>
+        </div>
+    </header>
+
+    <!-- POPUP KHI BÔI ĐEN CHỮ -->
+    <div id="selection-popup" style="display: none;">
+        <button onclick="searchImageSelected()" title="Tìm kiếm hình ảnh">🔍 Ảnh</button>
+        <button onclick="searchGifSelected()" title="Tìm kiếm GIF">🎞️ GIF</button>
+        <button onclick="searchGoogleSelected()" title="Tìm kiếm trên Google">🌐 Google</button>
+        <input type="text" id="popup-img-url" placeholder="Nhập/Dán URL ảnh..." oninput="autoInsertImageFromPopup(this)" onchange="autoInsertImageFromPopup(this)">
+    </div>
+
+    <div class="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <span>📑 Mục Lục</span>
+                <button onclick="toggleSidebar()" style="padding: 2px 6px; font-size: 12px;">✕</button>
+            </div>
+            <div class="sidebar-content">
+                <ul id="toc-container" class="toc-list"><li class="toc-item level-1" data-unit-index="0">ONE PIECE – Episode 1: “I’m Luffy! The Man Who’s Gonna Be King of the Pirates!”</li><li class="toc-item level-1" data-unit-index="1">ONE PIECE – Tập 1: “Tôi là Luffy! Người sẽ trở thành Vua Hải Tặc!”</li><li class="toc-item level-2" data-unit-index="2">1. The Beginning of the Story – Mở đầu câu chuyện</li><li class="toc-item level-2 active-toc" data-unit-index="9">2. The Attack of Alvida’s Pirates – Cuộc tấn công của băng hải tặc Alvida</li><li class="toc-item level-2" data-unit-index="18">3. Luffy Fights Alvida – Luffy chiến đấu với Alvida</li><li class="toc-item level-2" data-unit-index="27">4. Two Different Dreams – Hai ước mơ khác nhau</li><li class="toc-item level-2" data-unit-index="38">5. Important Characters – Các nhân vật quan trọng</li><li class="toc-item level-2" data-unit-index="57">6. Important Messages – Những thông điệp quan trọng</li><li class="toc-item level-2" data-unit-index="70">7. Vocabulary – Từ vựng tiếng Anh quan trọng</li><li class="toc-item level-2" data-unit-index="72">8. Summary – Tóm tắt nội dung</li></ul>
+            </div>
+        </aside>
+
+        <button id="exit-slideshow-btn" onclick="toggleSlideshow()">✖ Thoát Slide Show (Esc)</button>
+
+        <main id="main-scroll">
+            <div id="lecture-paper">
+<div style="text-align: center; color: var(--text-color); margin-top: 50px;">
+<em>Nội dung bài giảng sẽ hiển thị tại đây.<br>Ấn <strong>Import</strong> để tải bài giảng hoặc chọn file Word (.docx).</em>
+</div>
+</div>
+        </main>
+    </div>
+
+    <footer>
+        <span class="author-info">Icarus - kienspvl@gmail.com - 097 463 8794</span>
+        <div id="progress-counter">
+            Mục: <input type="number" id="page-input" min="1" value="0" onkeydown="handlePageInputChange(event)" onblur="jumpToInputValue()" max="77"> / <span id="total-units-count">77</span>
+        </div>
+    </footer>
+
+    <div id="image-lightbox">
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image" onclick="closeLightbox()">
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div id="lightbox-counter" class="lightbox-counter">0 / 0</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="import-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập hoặc Chỉnh Sửa Bài Giảng</h3>
+            <textarea id="import-text" placeholder="Dán văn bản Markdown hoặc Import file Word vào đây..."></textarea>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <label class="btn">
+                        📄 Chọn File .txt / .md
+                        <input type="file" accept=".txt,.md" onchange="handleFileImport(event)">
+                    </label>
+                    <label class="btn" style="border-color: #22c55e;">
+                        📘 Import từ File Word (.docx)
+                        <input type="file" accept=".docx" onchange="handleWordImport(event)">
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="closeImportModal()">Hủy</button>
+                    <button onclick="processImport()" style="background-color: var(--accent-color); color: #fff;">Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SAVE AS HTML -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>💾 Lưu Bài Giảng Dưới Dạng HTML</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-color);">Nhập tên file HTML muốn lưu:</label>
+                <input type="text" id="save-filename-input" placeholder="Tên file..." onkeydown="if(event.key==='Enter') executeSaveAsHtml()">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeSaveModal()">Hủy</button>
+                <button onclick="executeSaveAsHtml()" style="background-color: var(--accent-color); color: #fff;">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Lịch Sử Bài Giảng Dưới LocalStorage</h3>
+                <button onclick="clearAllHistory()" style="background-color: #ef4444; color: #fff;">🗑️ Xóa Tất Cả</button>
+            </div>
+            <div id="history-container" class="history-list"></div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+    <div id="update-modal" class="modal">
+        <div class="modal-content">
+            <h3>🚀 Lịch Sử Cập Nhật Chương Trình (Changelog)</h3>
+            <div class="history-list" style="max-height: 400px; padding-right: 8px;">
+                <div class="changelog-item">
+                    <span class="changelog-version">v3.6</span><span class="changelog-date">(Cập nhật mới)</span>
+                    <ul class="changelog-list">
+                        <li><strong>Pagination linh hoạt:</strong> Cho phép gõ trực tiếp số câu/mục ở footer để nhảy nhanh.</li>
+                        <li><strong>Chọn câu bằng chuột:</strong> Click chuột vào bất kỳ đoạn văn bản nào để chọn trực tiếp.</li>
+                        <li><strong>Mặc định Expand &amp; Light Mode:</strong> Giao diện khởi động sáng sủa, hiển thị toàn bộ nội dung bài giảng.</li>
+                        <li><strong>Đồng bộ Mục Lục (TOC):</strong> Tự động highlight phần mục lục tương ứng với đoạn văn bản đang được chọn.</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeUpdateModal()">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <script id="embedded-data" type="application/json">"# ONE PIECE – Episode 1: “I’m Luffy! The Man Who’s Gonna Be King of the Pirates!”\n\n# ONE PIECE – Tập 1: “Tôi là Luffy! Người sẽ trở thành Vua Hải Tặc!”\n\n## 1. The Beginning of the Story – Mở đầu câu chuyện\n\nEnglish\n\nThe story begins on the vast ocean, where a young man named Monkey D. Luffy appears inside a wooden barrel floating at sea. The barrel is discovered by the crew of a passenger ship. When Luffy comes out, everyone is surprised by his unusual behavior and cheerful personality.\n\nLuffy is not an ordinary person. His body can stretch like rubber because he ate a Devil Fruit when he was a child. He dreams of becoming the King of the Pirates and finding the legendary treasure known as One Piece.\n\nTiếng Việt\n\nCâu chuyện bắt đầu trên đại dương rộng lớn, nơi một chàng trai trẻ tên là Monkey D. Luffy xuất hiện bên trong một chiếc thùng gỗ trôi nổi trên biển. Chiếc thùng được thủy thủ đoàn của một con tàu chở khách phát hiện. Khi Luffy bước ra, mọi người đều ngạc nhiên trước hành động khác thường và tính cách vui vẻ của cậu.\n\nLuffy không phải là người bình thường. Cơ thể cậu có thể co giãn như cao su vì cậu đã ăn một Trái Ác Quỷ khi còn nhỏ. Cậu mơ ước trở thành Vua Hải Tặc và tìm thấy kho báu huyền thoại mang tên One Piece.\n\n## 2. The Attack of Alvida’s Pirates – Cuộc tấn công của băng hải tặc Alvida\n\nEnglish\n\nSuddenly, the passenger ship is attacked by a group of pirates led by a cruel woman named Alvida. Her crew boards the ship to steal valuable goods and frighten the passengers.\n\nDuring the chaos, Luffy meets Koby, a timid young boy who is forced to work for Alvida. Koby is afraid of his captain and does not have the courage to stand up for himself.\n\nUnlike Koby, Luffy is fearless and refuses to let other people control his life. Through their conversation, Luffy learns that Koby dreams of joining the Navy and becoming a Marine.\n\nTiếng Việt\n\nBất ngờ, con tàu chở khách bị tấn công bởi một nhóm hải tặc do một người phụ nữ độc ác tên là Alvida cầm đầu. Băng hải tặc của cô lên tàu để cướp những món hàng có giá trị và đe dọa hành khách.\n\nTrong lúc hỗn loạn, Luffy gặp Koby, một cậu bé nhút nhát bị ép làm việc cho Alvida. Koby sợ hãi thuyền trưởng của mình và không đủ can đảm để đứng lên bảo vệ bản thân.\n\nKhông giống Koby, Luffy không hề sợ hãi và từ chối để người khác kiểm soát cuộc đời mình. Qua cuộc trò chuyện, Luffy biết rằng Koby mơ ước gia nhập Hải quân và trở thành một người lính Hải quân.\n\n## 3. Luffy Fights Alvida – Luffy chiến đấu với Alvida\n\nEnglish\n\nAlvida is a violent pirate captain who uses an enormous iron mace as her weapon. She expects everyone to obey her and becomes angry when someone challenges her authority.\n\nHowever, Luffy is not afraid of her. He decides to fight back and uses his rubber-like body to attack her with his special technique, Gum-Gum Pistol.\n\nLuffy defeats Alvida, showing that he is brave and confident even when facing a powerful enemy. His victory also gives Koby an opportunity to escape from the life he hates.\n\nTiếng Việt\n\nAlvida là một nữ thuyền trưởng hải tặc hung bạo, sử dụng một chiếc chùy sắt khổng lồ làm vũ khí. Cô ta yêu cầu mọi người phải phục tùng mình và trở nên tức giận khi có ai đó thách thức quyền lực của mình.\n\nTuy nhiên, Luffy không hề sợ cô ta. Cậu quyết định phản kháng và sử dụng cơ thể giống cao su để tấn công Alvida bằng kỹ thuật đặc biệt mang tên Gum-Gum Pistol.\n\nLuffy đánh bại Alvida, chứng minh rằng cậu rất dũng cảm và tự tin ngay cả khi đối mặt với một kẻ thù mạnh. Chiến thắng của cậu cũng mang đến cho Koby cơ hội thoát khỏi cuộc sống mà cậu căm ghét.\n\n## 4. Two Different Dreams – Hai ước mơ khác nhau\n\nEnglish\n\nAfter escaping from Alvida’s control, Luffy and Koby begin moving toward their own futures.\n\nLuffy wants to become the King of the Pirates because he believes that the Pirate King is the freest person on the sea. He wants to explore the world, meet new friends, and find the greatest treasure.\n\nKoby, on the other hand, wants to join the Navy. Although their dreams are different, both boys want to change their lives and follow their own paths.\n\nLuffy’s confidence inspires Koby to become braver and take the first step toward his dream.\n\nTiếng Việt\n\nSau khi thoát khỏi sự kiểm soát của Alvida, Luffy và Koby bắt đầu hướng tới tương lai của riêng mình.\n\nLuffy muốn trở thành Vua Hải Tặc vì cậu tin rằng Vua Hải Tặc là người tự do nhất trên biển cả. Cậu muốn khám phá thế giới, gặp gỡ những người bạn mới và tìm thấy kho báu vĩ đại nhất.\n\nMặt khác, Koby muốn gia nhập Hải quân. Mặc dù hai người có những ước mơ khác nhau, cả hai đều muốn thay đổi cuộc sống và đi theo con đường riêng của mình.\n\nSự tự tin của Luffy truyền cảm hứng cho Koby, giúp cậu trở nên can đảm hơn và thực hiện bước đầu tiên trên con đường theo đuổi ước mơ.\n\n## 5. Important Characters – Các nhân vật quan trọng\n\n[Stream One Piece Opening 1 - FUNimation dub - We Are! HD 2 by Couchie man?!? | Listen online for free on SoundCloud](https://images.openai.com/static-rsc-4/aMJq9r0wpDDgrYejrbsyIbSw07CQOI-0rgpQ_P64ZekHHM6nL7xTdjqvyZMoypZ0xDHz2u7OpUG3MoPD-uJi1pqi4b61FPuwVzYsKhIHi1ouUjsMa_FEylYdxZe8UmIYO5zziVXfijZNsXneBBXYwgK8hxipAAY_ewSyangqJiU?purpose=inline)\n\nMonkey D. Luffy\n\nEnglish\n\nLuffy is the main character of One Piece. He is cheerful, brave, adventurous, and determined to become the King of the Pirates.\n\nTiếng Việt\n\nLuffy là nhân vật chính của One Piece. Cậu vui vẻ, dũng cảm, thích phiêu lưu và quyết tâm trở thành Vua Hải Tặc.\n\n[Coby | One Piece Wiki | Fandom](https://images.openai.com/static-rsc-4/Rk5PU1FE-P9yhjgl5kt8i8ux9EGKfa3YAwJp1LaZ1Wx_i7uuWhj5BpDt1Y-pFx3wlhpq9Ewi9M-k_9JgafO_Okog46FLBICmxmkbYylrCM-iB009lwBuaotyR2uQKKtFFd_hVH3tRh5sUXjoQkP5KjFhPWYQGVAR42r0grUoHQ8?purpose=inline)\n\nKoby\n\nEnglish\n\nKoby is a shy boy who works for Alvida. He dreams of joining the Navy and learns to become more courageous after meeting Luffy.\n\nTiếng Việt\n\nKoby là một cậu bé nhút nhát làm việc cho Alvida. Cậu mơ ước gia nhập Hải quân và học cách trở nên can đảm hơn sau khi gặp Luffy.\n\n[Alvida - Stats & Skills — opbr.space](https://images.openai.com/static-rsc-4/nZDyLlTf5NkWF3lQOKssMLL423JGPgpl0NPA2sfntP89Z5OIZ8lvhwwEbJEyU7nfmfK-9M6oYOniVNreo0f0oeRQsWh0vWNOGA-RVq67zqJPCL5_Iy_8iQuMi42Ul_3DZE80sA70tyEuw2N3REtxFIxlLbon_kzpUXmorFj3VCw?purpose=inline)\n\nAlvida\n\nEnglish\n\nAlvida is a cruel pirate captain who uses fear to control her crew. She becomes Luffy’s first major opponent in the anime’s opening episode.\n\nTiếng Việt\n\nAlvida là một nữ thuyền trưởng hải tặc độc ác, sử dụng nỗi sợ để kiểm soát thủy thủ đoàn. Cô là đối thủ lớn đầu tiên của Luffy trong tập mở đầu của anime.\n\n## 6. Important Messages – Những thông điệp quan trọng\n\nEnglish\n\n- Dreams: Everyone should have a dream and the courage to pursue it.\n- Freedom: People should have the right to choose their own paths in life.\n- Courage: Being brave means standing up for yourself, even when you are afraid.\n- Friendship: A true friend can inspire you to become a better person.\n- Determination: Success requires confidence, effort, and the willingness to face challenges.\n\nTiếng Việt\n\n- Ước mơ: Mỗi người nên có một ước mơ và đủ can đảm để theo đuổi nó.\n- Tự do: Mọi người nên có quyền lựa chọn con đường riêng trong cuộc sống.\n- Lòng dũng cảm: Dũng cảm có nghĩa là đứng lên bảo vệ bản thân, ngay cả khi bạn cảm thấy sợ hãi.\n- Tình bạn: Một người bạn chân thành có thể truyền cảm hứng để bạn trở thành người tốt hơn.\n- Sự quyết tâm: Thành công đòi hỏi sự tự tin, nỗ lực và sẵn sàng đối mặt với thử thách.\n\n## 7. Vocabulary – Từ vựng tiếng Anh quan trọng\n\n| English             | Tiếng Việt       |\n| ------------------- | ---------------- |\n| Pirate              | Hải tặc          |\n| King of the Pirates | Vua Hải Tặc      |\n| Treasure            | Kho báu          |\n| Devil Fruit         | Trái Ác Quỷ      |\n| Rubber              | Cao su           |\n| Captain             | Thuyền trưởng    |\n| Crew                | Thủy thủ đoàn    |\n| Navy / Marines      | Hải quân         |\n| Dream               | Ước mơ           |\n| Freedom             | Sự tự do         |\n| Courage             | Lòng dũng cảm    |\n| Adventure           | Cuộc phiêu lưu   |\n| Defeat              | Đánh bại         |\n| Determination       | Sự quyết tâm     |\n| Follow your dream   | Theo đuổi ước mơ |\n\n## 8. Summary – Tóm tắt nội dung\n\nEnglish\n\nIn Episode 1 of One Piece, Monkey D. Luffy appears on a passenger ship after floating in a barrel at sea. He meets Koby, a frightened boy who works for the pirate captain Alvida. After learning about Koby’s dream of joining the Navy, Luffy encourages him to pursue it. Luffy then defeats Alvida and helps Koby take the first step toward a new life. The episode introduces the central themes of freedom, friendship, courage, and the pursuit of dreams.\n\nTiếng Việt\n\nTrong tập 1 của One Piece, Monkey D. Luffy xuất hiện trên một con tàu chở khách sau khi trôi dạt trên biển trong một chiếc thùng. Cậu gặp Koby, một cậu bé sợ hãi đang làm việc cho nữ thuyền trưởng hải tặc Alvida. Sau khi biết về ước mơ gia nhập Hải quân của Koby, Luffy khuyến khích cậu theo đuổi ước mơ đó. Sau đó, Luffy đánh bại Alvida và giúp Koby thực hiện bước đầu tiên hướng tới một cuộc sống mới. Tập phim giới thiệu những chủ đề cốt lõi của bộ truyện: tự do, tình bạn, lòng dũng cảm và sự theo đuổi ước mơ."</script>
+
+    <script>
+        let units = [];
+        let allImages = [];
+        let currentImageIndex = -1;
+        let isLightboxOpen = false;
+
+        let currentUnitIndex = -1;
+        let fontSize = 20;
+        let isMuted = false;
+        let speechRate = 1;
+        let synth = window.speechSynthesis;
+        let rawContent = "";
+        let lastSavedFilename = "BaiGiang_Complete.html";
+        
+        let isAutoplay = false;
+        let selectedText = "";
+        let selectedNodeParent = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const embeddedDataText = document.getElementById('embedded-data').textContent.trim();
+            if (embeddedDataText) {
+                try {
+                    rawContent = JSON.parse(embeddedDataText);
+                    if (rawContent) parseAndBuildDocument(rawContent);
+                } catch(e) {}
+            } else {
+                const lastContent = localStorage.getItem('current_lecture');
+                if (lastContent) {
+                    rawContent = lastContent;
+                    parseAndBuildDocument(lastContent);
+                }
+            }
+
+            const savedName = localStorage.getItem('last_saved_filename');
+            if (savedName) lastSavedFilename = savedName;
+
+            document.addEventListener('mouseup', handleTextSelection);
+        });
+
+        /* --- XỬ LÝ TRA CỨU & POPUP BÔI ĐEN VĂN BẢN --- */
+        function handleTextSelection(e) {
+            const popup = document.getElementById('selection-popup');
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+
+            if (popup.contains(e.target)) return;
+
+            if (text.length > 0 && document.getElementById('lecture-paper').contains(selection.anchorNode)) {
+                selectedText = text;
+                let node = selection.anchorNode;
+                while (node && node.nodeType !== 1) {
+                    node = node.parentNode;
+                }
+                selectedNodeParent = node.closest('p, li, h1, h2, h3, h4, blockquote') || node;
+
+                document.getElementById('popup-img-url').value = '';
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                popup.style.left = `${Math.max(10, rect.left + window.scrollX - 50)}px`;
+                popup.style.display = 'flex';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+
+        function searchImageSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function searchGifSelected() {
+            if (selectedText) {
+                window.open(`https://tenor.com/search/${encodeURIComponent(selectedText)}-gifs`, '_blank');
+            }
+        }
+
+        function searchGoogleSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function autoInsertImageFromPopup(inputEl) {
+            const url = inputEl.value.trim();
+            if (!url) return;
+
+            if (/^(http|https):\/\/[^ "]+$/i.test(url) || url.startsWith('data:image')) {
+                if (selectedNodeParent) {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = selectedText || "Hình ảnh bài giảng";
+                    img.onclick = () => openLightbox(img.src);
+
+                    selectedNodeParent.parentNode.insertBefore(img, selectedNodeParent.nextSibling);
+
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    rawContent = turndownService.turndown(document.getElementById('lecture-paper').innerHTML);
+                    localStorage.setItem('current_lecture', rawContent);
+
+                    reindexUnits();
+
+                    showToast("Đã chèn ảnh tự động!");
+                    inputEl.value = '';
+                    document.getElementById('selection-popup').style.display = 'none';
+                }
+            }
+        }
+
+        function toggleAutoplay(toggle) {
+            isAutoplay = toggle.checked;
+            if (isAutoplay) showToast("Đã bật Autoplay (Tự động chuyển đoạn)");
+            else showToast("Đã tắt Autoplay");
+        }
+
+        function toggleTheme(toggle) {
+            if (toggle.checked) document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+        }
+
+        function toggleExpandMode(toggle) {
+            if (toggle.checked) {
+                document.body.classList.add('mode-expand');
+                showToast("Đã bật chế độ Expand (Hiện tất cả)");
+            } else {
+                document.body.classList.remove('mode-expand');
+                showToast("Đã tắt chế độ Expand");
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function toggleSlideshow() {
+            document.body.classList.toggle('slideshow-mode');
+            const isSlideshow = document.body.classList.contains('slideshow-mode');
+            if (isSlideshow) {
+                showToast("Đã bật chế độ Slide Show (Ấn Esc để thoát)");
+            }
+        }
+
+        function openUpdateModal() { document.getElementById('update-modal').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('update-modal').style.display = 'none'; }
+
+        function openLightbox(imgSrc) {
+            allImages = Array.from(document.querySelectorAll('#lecture-paper img'));
+            currentImageIndex = allImages.findIndex(img => img.src === imgSrc);
+            if (currentImageIndex === -1 && allImages.length > 0) currentImageIndex = 0;
+
+            updateLightboxContent();
+            document.getElementById('image-lightbox').style.display = 'flex';
+            isLightboxOpen = true;
+        }
+
+        function updateLightboxContent() {
+            if (allImages.length === 0 || currentImageIndex < 0) return;
+            const img = document.getElementById('lightbox-img');
+            img.src = allImages[currentImageIndex].src;
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${allImages.length}`;
+        }
+
+        function nextImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function prevImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function closeLightbox() {
+            document.getElementById('image-lightbox').style.display = 'none';
+            isLightboxOpen = false;
+        }
+
+        function autoAddMarkdownHeaders(text) {
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+/i.test(trimmed)) {
+                    return '# ' + trimmed;
+                } else if (/^\d+\.\s+/.test(trimmed)) {
+                    return '## ' + trimmed;
+                } else if (/^([A-Z]\.|[a-z]\))\s+/.test(trimmed)) {
+                    return '### ' + trimmed;
+                }
+                return line;
+            });
+            return processedLines.join('\n');
+        }
+
+        function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                const options = {
+                    convertImage: mammoth.images.imgElement(function(image) {
+                        return image.read("base64").then(function(imageBuffer) {
+                            return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                        });
+                    })
+                };
+
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer}, options).then(function(result) {
+                    const html = result.value;
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    turndownService.addRule('keepImages', {
+                        filter: 'img',
+                        replacement: function (content, node) {
+                            return `\n\n![image](${node.getAttribute('src')})\n\n`;
+                        }
+                    });
+
+                    let markdown = turndownService.turndown(html);
+                    markdown = autoAddMarkdownHeaders(markdown);
+                    document.getElementById('import-text').value = markdown;
+                    processImport();
+                    showToast("Đã đọc xong file Word!");
+                }).catch(function(err) {
+                    showToast("Lỗi khi đọc file Word: " + err.message);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndBuildDocument(markdownText) {
+            rawContent = markdownText;
+            localStorage.setItem('current_lecture', markdownText);
+            saveToHistory(markdownText);
+
+            const container = document.getElementById('lecture-paper');
+            container.innerHTML = marked.parse(markdownText);
+
+            container.querySelectorAll('img').forEach(img => {
+                img.onclick = () => openLightbox(img.src);
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([container]).catch((err) => console.log('MathJax error:', err));
+            }
+
+            reindexUnits();
+            generateTOC();
+            updateCounter();
+        }
+
+        function reindexUnits() {
+            const container = document.getElementById('lecture-paper');
+            units = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, table, img, hr'));
+            
+            units = units.filter(el => {
+                if (el.tagName.toLowerCase() === 'img' && el.parentElement.tagName.toLowerCase() === 'p' && el.parentElement.childNodes.length === 1) {
+                    return true;
+                }
+                return !el.parentElement.closest('blockquote, table');
+            });
+
+            units.forEach((unit, idx) => {
+                unit.classList.add('markdown-unit');
+                
+                /* CHỌN CÂU BẰNG MÓC CHUỘT DIRECT CLICK */
+                unit.onclick = (e) => {
+                    if (window.getSelection().toString().trim().length > 0) return;
+                    jumpToUnit(idx);
+                };
+
+                if (idx < currentUnitIndex) {
+                    unit.classList.add('revealed');
+                } else if (idx === currentUnitIndex) {
+                    unit.classList.add('active');
+                }
+            });
+        }
+
+        function generateTOC() {
+            const tocContainer = document.getElementById('toc-container');
+            tocContainer.innerHTML = '';
+
+            const headings = units.filter(unit => ['H1', 'H2', 'H3', 'H4'].includes(unit.tagName));
+
+            if (headings.length === 0) {
+                tocContainer.innerHTML = '<li style="font-size: 13px; color: var(--text-color); padding: 8px;">Không tìm thấy mục lục tiêu đề.</li>';
+                return;
+            }
+
+            headings.forEach((heading) => {
+                const level = heading.tagName.substring(1);
+                const li = document.createElement('li');
+                li.className = `toc-item level-${level}`;
+                li.innerText = heading.innerText || heading.textContent;
+                li.dataset.unitIndex = units.indexOf(heading);
+                
+                li.onclick = () => {
+                    const targetIndex = units.indexOf(heading);
+                    if (targetIndex !== -1) {
+                        jumpToUnit(targetIndex);
+                    }
+                };
+
+                tocContainer.appendChild(li);
+            });
+        }
+
+        /* ĐỒNG BỘ MỤC LỤC TƯƠNG ỨNG VỚI ĐOẠN VĂN BẢN ĐANG CHỌN */
+        function highlightTOCForCurrentUnit() {
+            if (currentUnitIndex < 0 || units.length === 0) return;
+
+            let closestHeadingIndex = -1;
+            for (let i = currentUnitIndex; i >= 0; i--) {
+                if (['H1', 'H2', 'H3', 'H4'].includes(units[i].tagName)) {
+                    closestHeadingIndex = i;
+                    break;
+                }
+            }
+
+            const tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(item => {
+                item.classList.remove('active-toc');
+                if (closestHeadingIndex !== -1 && parseInt(item.dataset.unitIndex) === closestHeadingIndex) {
+                    item.classList.add('active-toc');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function jumpToUnit(index) {
+            if (index < 0 || index >= units.length) return;
+            
+            units.forEach((u, idx) => {
+                u.classList.remove('active');
+                if (idx < index) {
+                    u.classList.add('revealed');
+                } else {
+                    u.classList.remove('revealed');
+                }
+            });
+
+            currentUnitIndex = index;
+            const targetEl = units[currentUnitIndex];
+            targetEl.classList.add('active');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(targetEl);
+        }
+
+        /* XỬ LÝ NHẬP SỐ TRANG PAGINATION */
+        function handlePageInputChange(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        }
+
+        function jumpToInputValue() {
+            const inputEl = document.getElementById('page-input');
+            let val = parseInt(inputEl.value) - 1;
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val >= units.length) val = units.length - 1;
+            jumpToUnit(val);
+        }
+
+        function showNextSentence() {
+            if (units.length === 0) return;
+            if (currentUnitIndex < units.length - 1) {
+                if (currentUnitIndex >= 0) {
+                    units[currentUnitIndex].classList.remove('active');
+                    units[currentUnitIndex].classList.add('revealed');
+                }
+                currentUnitIndex++;
+                const activeEl = units[currentUnitIndex];
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateCounter();
+                highlightTOCForCurrentUnit();
+                speakUnit(activeEl);
+            }
+        }
+
+        function showPrevSentence() {
+            if (units.length === 0 || currentUnitIndex <= 0) return;
+            const activeEl = units[currentUnitIndex];
+            activeEl.classList.remove('active', 'revealed');
+
+            currentUnitIndex--;
+            const prevEl = units[currentUnitIndex];
+            prevEl.classList.remove('revealed');
+            prevEl.classList.add('active');
+            prevEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(prevEl);
+        }
+
+        function replayCurrentSentence() {
+            if (currentUnitIndex >= 0 && currentUnitIndex < units.length) {
+                speakUnit(units[currentUnitIndex]);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            if (isLightboxOpen) {
+                if (e.key === 'Escape') closeLightbox();
+                else if (e.key === 'ArrowRight') nextImage();
+                else if (e.key === 'ArrowLeft') prevImage();
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (document.getElementById('save-modal').style.display === 'flex') {
+                    closeSaveModal();
+                    return;
+                }
+                if (document.getElementById('update-modal').style.display === 'flex') {
+                    closeUpdateModal();
+                    return;
+                }
+                if (document.body.classList.contains('slideshow-mode')) {
+                    toggleSlideshow();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                const updateModal = document.getElementById('update-modal');
+                if (updateModal.style.display === 'flex') closeUpdateModal();
+                else openUpdateModal();
+                return;
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                replayCurrentSentence();
+            } else if (e.key === 'ArrowRight') {
+                showNextSentence();
+            } else if (e.key === 'ArrowLeft') {
+                showPrevSentence();
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(2);
+            } else if (e.key === '-') {
+                changeFontSize(-2);
+            }
+        });
+
+        function saveToHistory(text) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            if (history.length === 0 || history[0].content !== text) {
+                const title = text.slice(0, 40).replace(/[#*]/g, '').trim() + '...';
+                history.unshift({ id: Date.now(), title: title, content: text, date: new Date().toLocaleDateString('vi-VN') });
+                if (history.length > 20) history.pop();
+                localStorage.setItem('lecture_history', JSON.stringify(history));
+            }
+        }
+
+        function openHistoryModal() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px;">Lịch sử trống.</div>';
+            } else {
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size: 12px; color: var(--text-color);">${item.date}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="loadHistoryItem(${item.id})">Mở</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background:#ef4444; color:#fff;">Xóa</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+
+        function loadHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            const found = history.find(item => item.id === id);
+            if (found) {
+                parseAndBuildDocument(found.content);
+                closeHistoryModal();
+                showNextSentence();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('lecture_history', JSON.stringify(history));
+            openHistoryModal();
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem('lecture_history');
+            openHistoryModal();
+            showToast("Đã xóa toàn bộ lịch sử!");
+        }
+
+        function openImportModal() {
+            document.getElementById('import-text').value = rawContent;
+            document.getElementById('import-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('import-text').focus();
+            }, 50);
+        }
+
+        function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            if (text.trim()) {
+                parseAndBuildDocument(text);
+                closeImportModal();
+                showNextSentence();
+                showToast("Đã import thành công bài giảng!");
+            }
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById('import-text').value = e.target.result;
+                processImport();
+                showToast("Đã đọc xong file văn bản!");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('prompt-topic').value.trim() || '[TÊN CHỦ ĐỀ CỦA BẠN]';
+            const btn = document.getElementById('btn-copy-prompt');
+            const promptTemplate = `Hãy tạo một bài giảng chi tiết khoảng 1000 từ về chủ đề: "${topic}". 
+Yêu cầu:
+1. ĐÁNH SỐ VÀ PHÂN CẤP CÁC MỤC BÀI GIẢNG THEO THỨ TỰ CỤ THỂ:
+   - Cấp 1 dùng: I. II. III...
+   - Cấp 2 dùng: 1. 2. 3...
+   - Cấp 3 dùng: a) b) c)...
+2. THÊM TỪ KHÓA TIẾNG ANH TƯƠNG ỨNG CHO CÁC KHÁI NIỆM/TỪ KHÓA/NỘI DUNG QUAN TRỌNG VÀ ĐẶT TRONG DẤU NGOẶC ĐƠN ().
+3. Sử dụng định dạng Markdown đầy đủ: in đậm (**từ khóa**), in nghiêng (*chú thích*), danh sách (*).
+4. Thêm link ảnh minh họa dạng Markdown ![mô tả ảnh](https://url-anh.com) nếu phù hợp.
+5. Công thức toán học và phản ứng hóa học dùng chuẩn LaTeX bọc trong dấu $ (ví dụ $CaCO_3$) hoặc \\[...\\] / \\(...\\).
+6. Các url ảnh được cấp phía trên, đặt các url ảnh đó vào nội dung tương ứng (đặt dưới tiêu đề, nhưng trên nội dung), tất cả các url ảnh đều phải được gắn vào các nội dung phù hợp.
+7. Gửi tôi markdown nhưng dạng plain text để tôi copy.`;
+
+            navigator.clipboard.writeText(promptTemplate).then(() => {
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✅ Đã Copy!';
+                btn.classList.add('active');
+                showToast(`Đã copy Prompt AI cho chủ đề: ${topic}`);
+                
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.classList.remove('active');
+                }, 2000);
+            });
+        }
+
+        function speakUnit(element) {
+            if (!synth) return;
+            synth.cancel();
+            if (isMuted) return;
+
+            if (['img', 'hr'].includes(element.tagName.toLowerCase())) {
+                if (isAutoplay) setTimeout(showNextSentence, 1000);
+                return;
+            }
+
+            const textToSpeak = element.innerText || element.textContent;
+            if (!textToSpeak.trim()) {
+                if (isAutoplay) setTimeout(showNextSentence, 500);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechRate;
+            
+            utterance.onend = () => {
+                if (isAutoplay) {
+                    setTimeout(showNextSentence, 600);
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('btn-mute');
+            if (isMuted) {
+                btn.classList.add('active');
+                if (synth) synth.cancel();
+            } else {
+                btn.classList.remove('active');
+                replayCurrentSentence();
+            }
+        }
+
+        function updateRate(val) { speechRate = parseFloat(val); replayCurrentSentence(); }
+        function changeFontSize(delta) { fontSize = Math.max(14, Math.min(50, fontSize + delta)); document.documentElement.style.setProperty('--font-size', fontSize + 'px'); }
+        
+        function updateCounter() { 
+            const pageInput = document.getElementById('page-input');
+            const totalUnitsCount = document.getElementById('total-units-count');
+            pageInput.value = currentUnitIndex + 1;
+            pageInput.max = units.length;
+            totalUnitsCount.innerText = units.length;
+        }
+
+        function openSaveModal() {
+            if (!rawContent) return showToast("Chưa có nội dung để lưu!");
+            const saveModal = document.getElementById('save-modal');
+            const filenameInput = document.getElementById('save-filename-input');
+            
+            filenameInput.value = lastSavedFilename;
+            saveModal.style.display = 'flex';
+            
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 50);
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').style.display = 'none';
+        }
+
+        function executeSaveAsHtml() {
+            const inputEl = document.getElementById('save-filename-input');
+            let filename = inputEl.value.trim();
+            if (!filename) filename = "BaiGiang_Complete.html";
+            if (!filename.toLowerCase().endsWith('.html') && !filename.toLowerCase().endsWith('.htm')) {
+                filename += '.html';
+            }
+
+            lastSavedFilename = filename;
+            localStorage.setItem('last_saved_filename', filename);
+
+            closeSaveModal();
+
+            let cleanDocumentHTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<div id="lecture-paper">[\s\S]*?<\/div>/,
+                `<div id="lecture-paper">\n<div style="text-align: center; color: var(--text-color); margin-top: 50px;">\n<em>Nội dung bài giảng sẽ hiển thị tại đây.<br>Ấn <strong>Import</strong> để tải bài giảng hoặc chọn file Word (.docx).<\/em>\n<\/div>\n<\/div>`
+            );
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(/\s*/g, '');
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<div id="save-modal" class="modal" style="display:\s*flex;">/g,
+                '<div id="save-modal" class="modal">'
+            );
+
+            cleanDocumentHTML = cleanDocumentHTML.replace(
+                /<script id="embedded-data" type="application\/json">[\s\S]*?<\/script>/,
+                `<script id="embedded-data" type="application/json">${JSON.stringify(rawContent)}<\/script>`
+            );
+
+            const blob = new Blob([cleanDocumentHTML], { type: 'text/html;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Đã lưu file thành công: ${filename}`);
+        }
+    </script>
+
+</body></html>
