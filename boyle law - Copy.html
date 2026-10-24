@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Trắc nghiệm Thông minh</title>
+    <style>
+        :root {
+            --primary-color: #2b6cb0;
+            --primary-hover: #1a4373;
+            --sidebar-bg: #1a202c;
+            --sidebar-text: #edf2f7;
+            --bg-color: #f7fafc;
+            --card-bg: #ffffff;
+            --text-color: #2d3748;
+            --border-color: #e2e8f0;
+            --success: #48bb78;
+            --error: #f56565;
+            --warning: #ed8936;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0; padding: 0;
+            display: flex; height: 100vh;
+            overflow: hidden;
+        }
+
+        .mobile-header {
+            display: none;
+            background-color: #10141d;
+            color: #fff;
+            padding: 10px 15px;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+        }
+
+        .mobile-header h2 { margin: 0; font-size: 16px; }
+
+        .toggle-btn {
+            background: var(--primary-color);
+            color: white; border: none;
+            padding: 6px 12px; border-radius: 4px;
+            cursor: pointer; font-size: 14px;
+        }
+
+        .sidebar {
+            width: 340px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex; flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0; z-index: 90;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background-color: #10141d;
+            border-bottom: 1px solid #2d3748;
+            text-align: center;
+        }
+
+        .sidebar-header h2 { margin: 0; font-size: 18px; color: #fff; }
+        
+        .timer-box {
+            background-color: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 6px; padding: 10px;
+            margin: 15px; text-align: center;
+            font-size: 18px; font-weight: bold;
+            color: #fc8181; display: flex;
+            align-items: center; justify-content: center; gap: 10px;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .sidebar-section-title {
+            font-size: 12px; text-transform: uppercase;
+            letter-spacing: 1px; color: #a0aec0;
+            margin: 15px 0 8px 5px; font-weight: bold;
+        }
+
+        .menu-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+
+        .menu-item {
+            background: #2d3748; color: #cbd5e0; padding: 10px 12px;
+            border-radius: 6px; cursor: pointer; border: none;
+            text-align: left; font-size: 13.5px; transition: all 0.2s;
+        }
+        .menu-item:hover { background: #4a5568; color: #fff; }
+        .menu-item.active { background: var(--primary-color); color: white; }
+
+        .switch-container {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #2d3748; padding: 10px 12px; border-radius: 6px;
+            margin-bottom: 10px; border: 1px solid #4a5568;
+        }
+        .switch-label { font-size: 13.5px; font-weight: bold; color: #edf2f7; }
+        
+        .view-select {
+            width: 100%; padding: 9px; background: #2d3748; color: #fff;
+            border: 1px solid #4a5568; border-radius: 6px; font-size: 13.5px;
+            outline: none; cursor: pointer; margin-bottom: 10px;
+        }
+        .view-select:focus { border-color: var(--primary-color); }
+
+        .switch { position: relative; display: inline-block; width: 48px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #718096; transition: .3s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        input:checked + .slider-lang { background-color: #e28743; }
+        input:checked + .slider-lang:before { transform: translateX(24px); }
+
+        .pagination-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; padding: 5px; }
+
+        .page-item {
+            background: #2d3748; color: #cbd5e0; border: 1px solid #4a5568;
+            padding: 8px 0; border-radius: 4px; text-align: center;
+            font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+        .page-item:hover { background: #4a5568; color: #fff; }
+        .page-item.active { box-shadow: 0 0 0 3px #fc8181; border-color: #fc8181 !important; }
+        .page-item.answered { background-color: #4a5568; color: #fff; border-color: #cbd5e0; }
+        .page-item.correct { background-color: var(--success) !important; color: white !important; border-color: #2f855a !important; }
+        .page-item.wrong { background-color: var(--error) !important; color: white !important; border-color: #9b2c2c !important; }
+
+        .action-group {
+            display: flex; flex-direction: column; gap: 10px; padding: 15px;
+            background-color: #10141d; border-top: 1px solid #2d3748;
+        }
+
+        .btn {
+            color: white; border: none; padding: 11px 15px; font-size: 14px; font-weight: bold;
+            border-radius: 6px; cursor: pointer; transition: background 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box;
+        }
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: var(--success); }
+        .btn-success:hover { background-color: #38a169; }
+        .btn-warning { background-color: var(--warning); }
+        .btn-warning:hover { background-color: #dd6b20; }
+        .btn-secondary { background-color: #4a5568; }
+        .btn-secondary:hover { background-color: #323c4d; }
+        .btn-info { background-color: #00b4d8; }
+        .btn-info:hover { background-color: #0096c7; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; box-sizing: border-box; scroll-behavior: smooth; }
+        .container-box { max-width: 850px; margin: 0 auto; padding-bottom: 200px; }
+
+        .section-card {
+            background: var(--card-bg); border-radius: 8px; padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px;
+        }
+
+        textarea {
+            width: 100%; height: 280px; padding: 15px; border: 2px solid var(--border-color);
+            border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        textarea:focus { border-color: var(--primary-color); outline: none; }
+
+        .prompt-generator-form {
+            background: #f8fafc; border: 1px solid var(--border-color);
+            border-radius: 6px; padding: 15px; margin-bottom: 20px;
+        }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; font-weight: bold; color: #4a5568; }
+        .form-group input { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; }
+
+        .quiz-title { color: var(--primary-color); border-left: 5px solid var(--primary-color); padding-left: 15px; margin-top: 0; margin-bottom: 25px; }
+
+        .question-card {
+            background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 20px; margin-bottom: 25px; outline: none; transition: all 0.2s; cursor: pointer; position: relative;
+        }
+        .question-card.focused-card {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.25);
+            background-color: #f0f7ff;
+        }
+
+        .question-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 15px; }
+        .question-text { font-weight: 600; font-size: 16px; white-space: pre-wrap; flex: 1; }
+        .header-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+
+        .action-tool-btn {
+            background: #edf2f7; color: #4a5568; border: 1px solid var(--border-color);
+            padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 14px;
+            display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .action-tool-btn:hover { background: #cbd5e0; color: #1a202c; }
+
+        .options-group { display: flex; flex-direction: column; gap: 10px; }
+        .option-label {
+            display: flex; align-items: flex-start; padding: 12px 15px;
+            border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: background 0.2s;
+        }
+        .option-label:hover { background-color: #e2e8f0; }
+        .option-label input { margin-right: 12px; margin-top: 5px; transform: scale(1.2); }
+
+        .tf-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 15px; border: 1px solid var(--border-color);
+            border-radius: 6px; margin-bottom: 8px; background: #fff; gap: 15px;
+        }
+        .tf-row.active-tf-row { border-color: #fc8181; box-shadow: 0 0 0 2px rgba(252, 129, 129, 0.2); }
+        .tf-text { flex: 1; font-size: 14.5px; }
+        .tf-buttons { display: flex; gap: 5px; flex-shrink: 0; }
+        .tf-btn {
+            border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 4px;
+            background: #edf2f7; cursor: pointer; font-weight: bold; font-size: 13px; transition: all 0.2s;
+        }
+        .tf-btn:hover { background: #e2e8f0; }
+        .tf-btn.selected-true { background-color: #3182ce; color: white; border-color: #2b6cb0; }
+        .tf-btn.selected-false { background-color: #e53e3e; color: white; border-color: #c53030; }
+        
+        .tf-row.correct-row { background-color: #c6f6d5 !important; border-color: var(--success) !important; }
+        .tf-row.wrong-row { background-color: #fed7d7 !important; border-color: var(--error) !important; }
+
+        .sa-group { background: #f8fafc; border: 1px solid var(--border-color); padding: 15px; border-radius: 6px; margin-top: 10px; }
+        .sa-input {
+            width: 100%; max-width: 300px; padding: 10px; border: 2px solid var(--border-color);
+            border-radius: 6px; font-size: 15px; font-weight: bold; box-sizing: border-box;
+        }
+        .sa-input:focus { border-color: var(--primary-color); outline: none; }
+        .sa-result-zone { margin-top: 10px; font-size: 14.5px; font-weight: bold; }
+
+        .image-gallery { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 12px; 
+            margin: 15px 0; 
+        }
+        .quiz-image {
+            display: block; width: 220px; height: 160px; object-fit: contain;
+            border-radius: 6px; border: 1px solid var(--border-color); background: #fdfdfd;
+            transition: transform 0.2s; cursor: zoom-in;
+        }
+        .quiz-image:hover { transform: scale(1.03); }
+
+        #lightbox-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); display: flex; align-items: center; justify-content: center;
+            z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #lightbox-modal.active { opacity: 1; pointer-events: auto; }
+        
+        #lightbox-img {
+            width: 100vw; height: 100vh;
+            max-width: 100vw; max-height: 100vh;
+            object-fit: contain; display: block; padding: 40px;
+        }
+
+        .lightbox-close, .lightbox-nav {
+            position: absolute; background: rgba(255, 255, 255, 0.2); color: white;
+            border: none; border-radius: 50%; width: 50px; height: 50px;
+            font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s; z-index: 10001;
+        }
+        .lightbox-close:hover, .lightbox-nav:hover { background: rgba(255, 255, 255, 0.4); }
+        .lightbox-close { top: 20px; right: 20px; font-size: 28px; }
+        .lightbox-prev { left: 20px; top: 50%; transform: translateY(-50%); }
+        .lightbox-next { right: 20px; top: 50%; transform: translateY(-50%); }
+
+        .correct { background-color: #c6f6d5 !important; border-color: var(--success) !important; color: #22543d; font-weight: bold; }
+        .wrong { background-color: #fed7d7 !important; border-color: var(--error) !important; color: #742a2a; }
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .mobile-header { display: flex; }
+            .sidebar {
+                position: fixed; top: 45px; left: 0; bottom: 0; width: 280px;
+                transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+            }
+            .sidebar.active { transform: translateX(0); }
+            .sidebar-header { display: none; }
+            .main-content { padding: 15px; margin-top: 45px; }
+            .section-card { padding: 15px; }
+            .pagination-grid { grid-template-columns: repeat(5, 1fr); }
+            .quiz-image { width: 100%; height: auto; }
+            .tf-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .tf-buttons { width: 100%; justify-content: flex-end; }
+            .sa-input { max-width: 100%; }
+        }
+
+        #toast-container {
+            position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            background-color: #2d3748; color: #fff; padding: 12px 20px;
+            border-radius: 6px; font-size: 14px; font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex;
+            align-items: center; gap: 10px; opacity: 0;
+            transform: translateY(20px); transition: all 0.3s ease; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-success { background-color: #2f855a; border-left: 4px solid #48bb78; }
+        .toast-error { background-color: #9b2c2c; border-left: 4px solid #f56565; }
+        .toast-warning { background-color: #c05621; border-left: 4px solid #ed8936; }
+        .toast-info { background-color: #2b6cb0; border-left: 4px solid #4299e1; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-header">
+        <h2>TRẮC NGHIỆM THÔNG MINH</h2>
+        <button class="toggle-btn" onclick="toggleSidebar()">☰ Menu</button>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>HỆ THỐNG TRẮC NGHIỆM</h2>
+        </div>
+        
+        <div class="timer-box id-timer" id="quiz-timer-container">
+            ⏱️ Thời gian: <span id="timer-display">00:19</span>
+        </div>
+        
+        <div class="sidebar-content">
+            <div id="menu-section" class="">
+                <div class="sidebar-section-title">Danh sách bài học</div>
+                <div class="menu-list" id="lesson-menu"><button class="menu-item active">Dạng 1. TRẮC NGHIỆM LỰA CHỌ...</button><button class="menu-item ">Dạng 2. TRẮC NGHIỆM ĐÚNG / SAI</button><button class="menu-item ">Dạng 3. TRẢ LỜI NGẮN</button></div>
+                
+                <div class="sidebar-section-title">Cài đặt &amp; Lọc câu hỏi</div>
+                
+                <select id="view-filter-select" class="view-select" onchange="handleFilterChange()">
+                    <option value="ALL">👁️ View: Tất cả câu hỏi</option>
+                    <option value="WRONG">❌ View: Các câu làm sai</option>
+                    <option value="UNANSWERED">⭕ View: Các câu chưa làm</option>
+                </select>
+
+                <div class="switch-container">
+                    <span class="switch-label">Chấm điểm ngay</span>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-check-toggle" checked="">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="switch-container">
+                    <span class="switch-label" id="lang-label">🗣️ Giọng đọc: VN</span>
+                    <label class="switch">
+                        <input type="checkbox" id="language-speech-toggle" onchange="toggleSpeechLanguage()">
+                        <span class="slider slider-lang"></span>
+                    </label>
+                </div>
+
+                <div class="sidebar-section-title">Sơ đồ câu hỏi</div>
+                <div class="pagination-grid" id="question-pagination"><div class="page-item active">1</div><div class="page-item">2</div><div class="page-item">3</div><div class="page-item">4</div><div class="page-item">5</div><div class="page-item">6</div><div class="page-item">7</div><div class="page-item">8</div><div class="page-item">9</div><div class="page-item">10</div><div class="page-item">11</div><div class="page-item">12</div><div class="page-item">13</div><div class="page-item">14</div><div class="page-item">15</div><div class="page-item">16</div><div class="page-item">17</div><div class="page-item">18</div><div class="page-item">19</div><div class="page-item">20</div><div class="page-item">21</div><div class="page-item">22</div><div class="page-item">23</div><div class="page-item">24</div><div class="page-item">25</div><div class="page-item">26</div><div class="page-item">27</div><div class="page-item">28</div><div class="page-item">29</div><div class="page-item">30</div><div class="page-item">31</div><div class="page-item">32</div><div class="page-item">33</div><div class="page-item">34</div><div class="page-item">35</div><div class="page-item">36</div><div class="page-item">37</div><div class="page-item">38</div><div class="page-item">39</div><div class="page-item">40</div><div class="page-item">41</div><div class="page-item">42</div><div class="page-item">43</div><div class="page-item">44</div><div class="page-item">45</div><div class="page-item">46</div><div class="page-item">47</div><div class="page-item">48</div><div class="page-item">49</div><div class="page-item">50</div><div class="page-item">51</div><div class="page-item">52</div><div class="page-item">53</div><div class="page-item">54</div><div class="page-item">55</div><div class="page-item">56</div><div class="page-item">57</div><div class="page-item">58</div><div class="page-item">59</div><div class="page-item">60</div></div>
+                <p style="font-size: 11px; color:#a0aec0; text-align:left; margin:0; padding:0 5px; line-height: 1.5;">
+                    💡 <b>Phím tắt:</b> <kbd>←</kbd> <kbd>→</kbd> nhảy câu | MCQ: <kbd>A</kbd>-<kbd>D</kbd> | Đ/S: <kbd>D</kbd>/<kbd>S</kbd>
+                </p>
+            </div>
+        </div>
+
+        <div class="action-group">
+            <div id="quiz-actions" class="" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <button class="btn btn-success" onclick="gradeQuiz()">📝 Nộp &amp; Chấm toàn bộ</button>
+                <button class="btn btn-warning" onclick="saveWorkSession()">💾 Save bài làm (Lưu tiến độ)</button>
+                <button class="btn btn-secondary" onclick="saveOriginalQuizFile()">💾 Save file đề gốc</button>
+            </div>
+            <div id="import-actions" class="hidden">
+                <button class="btn btn-primary" onclick="parseAndGenerateQuiz()">⚡ Tạo bài trắc nghiệm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content" id="main-content-pane" onclick="closeSidebarOnMobile()">
+        <div class="container-box">
+            
+            <div id="import-container" class="section-card hidden">
+                <h3 style="margin-top:0; color: var(--primary-color);">🛠️ Cấu hình sinh bộ câu hỏi từ AI</h3>
+                <div class="prompt-generator-form">
+                    <div class="form-group">
+                        <label>Chủ đề nội dung mong muốn:</label>
+                        <input type="text" id="cfg-topic" placeholder="Ví dụ: Vật lý 11, Hóa học hữu cơ...">
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Số câu MCQ (Dạng 1):</label>
+                            <input type="number" id="cfg-mcq" value="60" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Số câu Đúng/Sai (Dạng 2):</label>
+                            <input type="number" id="cfg-tf" value="12" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Số câu Trả lời ngắn (Dạng 3):</label>
+                            <input type="number" id="cfg-sa" value="18" min="0">
+                        </div>
+                    </div>
+                    <button class="btn btn-info" id="btn-copy-prompt" style="margin-top: 15px;" onclick="copyGeneratedPromptToClipboard()">📋 Copy Prompt gửi AI</button>
+                </div>
+
+                <h3 style="margin-top:25px;">Dán văn bản kết quả từ AI vào đây</h3>
+                <textarea id="txt-input" placeholder="Dán toàn bộ văn bản câu hỏi vào đây (có thể đặt URL ảnh thành dòng riêng)..."></textarea>
+            </div>
+
+            <div id="quiz-container-box" class="">
+                <div id="questions-display"><h2 class="quiz-title">Dạng 1. TRẮC NGHIỆM LỰA CHỌN ĐƠN</h2><div class="question-card focused-card" id="q-card-id-1"><div class="question-header"><div class="question-text">Câu 1: Tập hợp ba thông số nào sau đây xác định trạng thái của một lượng khí xác định?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_1" value="A"><div><span><strong>A.</strong> Áp suất, thể tích, khối lượng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_1" value="B"><div><span><strong>B.</strong> Áp suất, nhiệt độ, thể tích.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_1" value="C"><div><span><strong>C.</strong> Thể tích, trọng lượng, áp suất.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_1" value="D"><div><span><strong>D.</strong> Áp suất, nhiệt độ, khối lượng.</span></div></label></div></div><div class="question-card" id="q-card-id-2"><div class="question-header"><div class="question-text">Câu 2: Trong các đại lượng sau đây, đại lượng nào không phải là thông số trạng thái của một lượng khí?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_2" value="A"><div><span><strong>A.</strong> Khối lượng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_2" value="B"><div><span><strong>B.</strong> Nhiệt độ tuyệt đối.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_2" value="C"><div><span><strong>C.</strong> Thể tích.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_2" value="D"><div><span><strong>D.</strong> Áp suất.</span></div></label></div></div><div class="question-card" id="q-card-id-3"><div class="question-header"><div class="question-text">Câu 3: Đẳng quá trình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_3" value="A"><div><span><strong>A.</strong> quá trình trong đó có ít nhất hai thông số trạng thái không đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_3" value="B"><div><span><strong>B.</strong> quá trình trong đó các thông số trạng thái đều biến đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_3" value="C"><div><span><strong>C.</strong> quá trình trong đó có một thông số trạng thái không đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_3" value="D"><div><span><strong>D.</strong> quá trình trong đó có hơn nửa số thông số trạng thái không đổi.</span></div></label></div></div><div class="question-card" id="q-card-id-4"><div class="question-header"><div class="question-text">Câu 4: Trong các hệ thức sau đây, hệ thức nào phù hợp với định luật Boyle?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_4" value="A"><div><span><strong>A.</strong> p₁V₁ = p₂V₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_4" value="B"><div><span><strong>B.</strong> p₁/V₁ = p₂V₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_4" value="C"><div><span><strong>C.</strong> p₁/p₂ = V₁/V₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_4" value="D"><div><span><strong>D.</strong> p ~ V.</span></div></label></div></div><div class="question-card" id="q-card-id-5"><div class="question-header"><div class="question-text">Câu 5: Trong các hệ thức sau đây, hệ thức nào không phù hợp với định luật Boyle?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_5" value="A"><div><span><strong>A.</strong> p₁.V₁ = p₂.V₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_5" value="B"><div><span><strong>B.</strong> V ~ 1/p.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_5" value="C"><div><span><strong>C.</strong> V ~ p.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_5" value="D"><div><span><strong>D.</strong> p ~ 1/V.</span></div></label></div></div><div class="question-card" id="q-card-id-6"><div class="question-header"><div class="question-text">Câu 6: Trong quá trình đẳng nhiệt của khối khí lí tưởng, áp suất của khối khí</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_6" value="A"><div><span><strong>A.</strong> tỉ lệ với nhiệt độ của khối khí.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_6" value="B"><div><span><strong>B.</strong> tỉ lệ nghịch với thể tích của khối khí.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_6" value="C"><div><span><strong>C.</strong> tỉ lệ nghịch với nhiệt độ của khối khí.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_6" value="D"><div><span><strong>D.</strong> tỉ lệ với thể tích của khối khí.</span></div></label></div></div><div class="question-card" id="q-card-id-7"><div class="question-header"><div class="question-text">Câu 7: Nén đẳng nhiệt một khối khí lí tưởng từ thể tích 12 l xuống còn 2 l. Áp suất của khối khí thay đổi như thế nào?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_7" value="A"><div><span><strong>A.</strong> giảm 3 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_7" value="B"><div><span><strong>B.</strong> tăng 6 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_7" value="C"><div><span><strong>C.</strong> giảm 6 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_7" value="D"><div><span><strong>D.</strong> tăng 3 lần.</span></div></label></div></div><div class="question-card" id="q-card-id-8"><div class="question-header"><div class="question-text">Câu 8: Đẩy pit-tông của một xilanh đủ chậm để nén lượng khí chứa trong xilanh sao cho thể tích của lượng khí này giảm đi 2 lần ở nhiệt độ không đổi. Khi đó áp suất của khí trong xilanh</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_8" value="A"><div><span><strong>A.</strong> giảm đi 2 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_8" value="B"><div><span><strong>B.</strong> tăng lên 2 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_8" value="C"><div><span><strong>C.</strong> tăng thêm 4 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_8" value="D"><div><span><strong>D.</strong> không thay đổi.</span></div></label></div></div><div class="question-card" id="q-card-id-9"><div class="question-header"><div class="question-text">Câu 9: Trong hệ tọa độ (p, V), đường đẳng nhiệt là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_9" value="A"><div><span><strong>A.</strong> đường thẳng vuông góc với trục V.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_9" value="B"><div><span><strong>B.</strong> đường thẳng có phương qua O.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_9" value="C"><div><span><strong>C.</strong> đường thẳng song song trục p.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_9" value="D"><div><span><strong>D.</strong> đường hyperbol.</span></div></label></div></div><div class="question-card" id="q-card-id-10"><div class="question-header"><div class="question-text">Câu 10: Trong hệ tọa độ (V, T), đường đẳng nhiệt là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_10" value="A"><div><span><strong>A.</strong> đường thẳng vuông góc với trục T.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_10" value="B"><div><span><strong>B.</strong> đường thẳng vuông góc với trục V.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_10" value="C"><div><span><strong>C.</strong> đường thẳng có phương qua O.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_10" value="D"><div><span><strong>D.</strong> đường hyperbol.</span></div></label></div></div><div class="question-card" id="q-card-id-11"><div class="question-header"><div class="question-text">Câu 11: Một khối khí thực hiện quá trình được biểu diễn trên hình vẽ. Quá trình đó là quá trình</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_11" value="A"><div><span><strong>A.</strong> đẳng nhiệt.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_11" value="B"><div><span><strong>B.</strong> đẳng tích.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_11" value="C"><div><span><strong>C.</strong> không phải đẳng quá trình.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_11" value="D"><div><span><strong>D.</strong> đẳng áp.</span></div></label></div></div><div class="question-card" id="q-card-id-12"><div class="question-header"><div class="question-text">Câu 12: Hình nào sau đây chắc chắn không phải là đồ thị biểu diễn quá trình đẳng nhiệt?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_12" value="A"><div><span><strong>A.</strong> Đồ thị p - 1/V là đường thẳng đi qua gốc tọa độ O.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_12" value="B"><div><span><strong>B.</strong> Đồ thị V - T là đường thẳng vuông góc với trục OT.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_12" value="C"><div><span><strong>C.</strong> Đồ thị p - T là đường thẳng kéo dài đi qua gốc tọa độ O.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_12" value="D"><div><span><strong>D.</strong> Đồ thị p - V là một nhánh đường hyperbol.</span></div></label></div></div><div class="question-card" id="q-card-id-13"><div class="question-header"><div class="question-text">Câu 13: Đồ thị nào sau đây biểu diễn đúng định luật Boyle?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_13" value="A"><div><span><strong>A.</strong> Đồ thị biểu diễn mối liên hệ giữa p và 1/V là đường thẳng kéo dài đi qua gốc tọa độ.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_13" value="B"><div><span><strong>B.</strong> Đồ thị biểu diễn mối liên hệ giữa p và V là đường thẳng kéo dài đi qua gốc tọa độ.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_13" value="C"><div><span><strong>C.</strong> Đồ thị biểu diễn mối liên hệ giữa p và 1/V là đường thẳng song song với trục Op.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_13" value="D"><div><span><strong>D.</strong> Đồ thị biểu diễn mối liên hệ giữa p và V là đường thẳng vuông góc với trục OV.</span></div></label></div></div><div class="question-card" id="q-card-id-14"><div class="question-header"><div class="question-text">Câu 14: Đồ thị biểu diễn hai đường đẳng nhiệt của cùng một lượng khí lí tưởng biểu diễn như hình vẽ. Mối quan hệ về nhiệt độ của hai đường đẳng nhiệt này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_14" value="A"><div><span><strong>A.</strong> T₂ &gt; T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_14" value="B"><div><span><strong>B.</strong> T₂ = T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_14" value="C"><div><span><strong>C.</strong> T₂ &lt; T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_14" value="D"><div><span><strong>D.</strong> T₂ \le T₁.</span></div></label></div></div><div class="question-card" id="q-card-id-15"><div class="question-header"><div class="question-text">Câu 15: Hình bên là đồ thị biểu diễn đường đẳng nhiệt của một lượng khí lí tưởng xác định trong hệ tọa độ pOV. Gọi SOBC và SOAD là diện tích của tam giác OBC và OAD. Phát biểu nào dưới đây là đúng?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_15" value="A"><div><span><strong>A.</strong> SOBC = SOAD.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_15" value="B"><div><span><strong>B.</strong> SOBC &lt; SOAD.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_15" value="C"><div><span><strong>C.</strong> SOBC &gt; SOAD.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_15" value="D"><div><span><strong>D.</strong> SOBC = 2.SOAD.</span></div></label></div></div><div class="question-card" id="q-card-id-16"><div class="question-header"><div class="question-text">Câu 16: Một khối khí khi đặt ở điều kiện nhiệt độ không đổi thì có sự biến thiên của thể tích theo áp suất như hình vẽ. Khi áp suất có giá trị 0,5 kN/m² thì thể tích của khối khí bằng</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_16" value="A"><div><span><strong>A.</strong> 4,8 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_16" value="B"><div><span><strong>B.</strong> 14,4 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_16" value="C"><div><span><strong>C.</strong> 3,6 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_16" value="D"><div><span><strong>D.</strong> 7,2 m³.</span></div></label></div></div><div class="question-card" id="q-card-id-17"><div class="question-header"><div class="question-text">Câu 17: Một bình có thể tích 10 lít chứa một chất khí ở áp suất 30 atm. Coi nhiệt độ của khí là không đổi và áp suất của khí quyển là 1 atm. Thể tích của chất khí khi ta mở nút bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_17" value="A"><div><span><strong>A.</strong> 350 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_17" value="B"><div><span><strong>B.</strong> 400 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_17" value="C"><div><span><strong>C.</strong> 300 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_17" value="D"><div><span><strong>D.</strong> 450 lít.</span></div></label></div></div><div class="question-card" id="q-card-id-18"><div class="question-header"><div class="question-text">Câu 18: Một khối khí lí tưởng xác định có áp suất 1 atm được làm tăng áp suất đến 4 atm ở nhiệt độ không đổi thì thể tích biến đổi một lượng 6 lít. Thể tích ban đầu của khối khí đó có giá trị là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_18" value="A"><div><span><strong>A.</strong> 4 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_18" value="B"><div><span><strong>B.</strong> 8 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_18" value="C"><div><span><strong>C.</strong> 12 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_18" value="D"><div><span><strong>D.</strong> 16 lít.</span></div></label></div></div><div class="question-card" id="q-card-id-19"><div class="question-header"><div class="question-text">Câu 19: Có 7 gam khí nitrogen ở điều kiện tiêu chuẩn. Người ta nén đẳng nhiệt khối khí này tới áp suất 133 cmHg thì thể tích của khối khí bây giờ là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_19" value="A"><div><span><strong>A.</strong> 1,00 dm³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_19" value="B"><div><span><strong>B.</strong> 6,40 dm³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_19" value="C"><div><span><strong>C.</strong> 4,26 dm³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_19" value="D"><div><span><strong>D.</strong> 3,2 dm³.</span></div></label></div></div><div class="question-card" id="q-card-id-20"><div class="question-header"><div class="question-text">Câu 20: Khối lượng riêng của oxygen ở điều kiện tiêu chuẩn là 1,43 kg/m³. Khối lượng khí oxygen ở trong bình kín thể tích 10 l, áp suất 150 atm, nhiệt độ 0^°C là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_20" value="A"><div><span><strong>A.</strong> 1,5 kg.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_20" value="B"><div><span><strong>B.</strong> 2,514 kg.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_20" value="C"><div><span><strong>C.</strong> 2,145 kg.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_20" value="D"><div><span><strong>D.</strong> 1,625 kg.</span></div></label></div></div><div class="question-card" id="q-card-id-21"><div class="question-header"><div class="question-text">Câu 21: Cho áp suất tại mặt nước là 10⁵ Pa, khối lượng riêng của nước là 1000 kg/m³, gia tốc trọng trường là 10 m/s². Coi nhiệt độ của nước ở các độ cao là như nhau. Một bong bóng khí ở độ sâu 5 m khi nổi lên mặt nước thì thể tích sẽ</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_21" value="A"><div><span><strong>A.</strong> giảm 3 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_21" value="B"><div><span><strong>B.</strong> giảm 1,5 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_21" value="C"><div><span><strong>C.</strong> tăng 3 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_21" value="D"><div><span><strong>D.</strong> tăng 1,5 lần.</span></div></label></div></div><div class="question-card" id="q-card-id-22"><div class="question-header"><div class="question-text">Câu 22: Một bọt khí nhỏ, nổi lên từ đáy hồ, khi đến mặt nước thì thể tích của nó tăng gấp 1,3 lần. Biết trọng lượng riêng của nước là d = 10⁴ N/m³, áp suất khí quyển là p₀ = 10⁵ N/m². Coi nhiệt độ của nước ở các điểm là như nhau. Độ sâu của đáy hồ là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_22" value="A"><div><span><strong>A.</strong> 1 m.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_22" value="B"><div><span><strong>B.</strong> 2 m.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_22" value="C"><div><span><strong>C.</strong> 3 m.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_22" value="D"><div><span><strong>D.</strong> 4 m.</span></div></label></div></div><div class="question-card" id="q-card-id-23"><div class="question-header"><div class="question-text">Câu 23: Một quả bóng có dung tích 2,5 lít. Người ta bơm không khí ở áp suất 10⁵ Pa vào bóng. Mỗi lần bơm được 125 cm³ không khí. Coi quả bóng trước khi bơm không có không khí và nhiệt độ trong quá trình bơm là không đổi. Áp suất của không khí trong quả bóng sau 45 lần bơm là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_23" value="A"><div><span><strong>A.</strong> 25.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_23" value="B"><div><span><strong>B.</strong> 22,5.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_23" value="C"><div><span><strong>C.</strong> 2,5.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_23" value="D"><div><span><strong>D.</strong> 2,25.10⁵ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-24"><div class="question-header"><div class="question-text">Câu 24: Để bơm đầy một khí cầu đến thể tích 100 m³ có áp suất 0,1 atm ở nhiệt độ không đổi người ta dùng các ống khí helium có thể tích 50 lít ở áp suất 100 atm. Số ống khí helium cần để bơm khí cầu bằng</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_24" value="A"><div><span><strong>A.</strong> 1.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_24" value="B"><div><span><strong>B.</strong> 2.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_24" value="C"><div><span><strong>C.</strong> 3.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_24" value="D"><div><span><strong>D.</strong> 4.</span></div></label></div></div><div class="question-card" id="q-card-id-25"><div class="question-header"><div class="question-text">Câu 25: Người ta dùng bơm có pit-tông diện tích đáy 83 cm² và khoảng chạy 25 cm bơm một quả bóng. Ban đầu quả bóng chứa không khí ở áp suất khí quyển p₀ = 10⁵ Pa và có thể tích là V₀ = 1500 cm³. Sau 10 lần bơm thì thể tích của quả bóng là 2000 cm³. Coi quá trình bơm nhiệt độ không đổi. Áp suất khí trong quả bóng sau khi bơm là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_25" value="A"><div><span><strong>A.</strong> 10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_25" value="B"><div><span><strong>B.</strong> 7,5.10⁴ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_25" value="C"><div><span><strong>C.</strong> 1,75.10⁴ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_25" value="D"><div><span><strong>D.</strong> 1,75.10⁵ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-26"><div class="question-header"><div class="question-text">Câu 26: Một xilanh chứa 150 cm³ khí ở áp suất 3.10⁵ Pa. Pit-tông nén khí trong xilanh xuống còn 50 cm³. Coi nhiệt độ không đổi. Áp suất của khí trong xilanh lúc này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_26" value="A"><div><span><strong>A.</strong> 6.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_26" value="B"><div><span><strong>B.</strong> 3.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_26" value="C"><div><span><strong>C.</strong> 9.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_26" value="D"><div><span><strong>D.</strong> 2.10⁵ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-27"><div class="question-header"><div class="question-text">Câu 27: Một lượng khí ở nhiệt độ 18^°C có thể tích 1 m³ và áp suất 1 atm. Người ta nén đẳng nhiệt khí tới áp suất 3,5 atm. Thể tích khí nén là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_27" value="A"><div><span><strong>A.</strong> 0,39 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_27" value="B"><div><span><strong>B.</strong> 0,286 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_27" value="C"><div><span><strong>C.</strong> 0,330 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_27" value="D"><div><span><strong>D.</strong> 0,567 m³.</span></div></label></div></div><div class="question-card" id="q-card-id-28"><div class="question-header"><div class="question-text">Câu 28: Một lượng khí ở điều kiện tiêu chuẩn có thể tích 2 m³. Nếu nén đẳng nhiệt lượng khí này tới áp suất 5.10⁵ Pa thì thể tích của lượng khí sẽ là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_28" value="A"><div><span><strong>A.</strong> 10 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_28" value="B"><div><span><strong>B.</strong> 1 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_28" value="C"><div><span><strong>C.</strong> 0,4 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_28" value="D"><div><span><strong>D.</strong> 4 m³.</span></div></label></div></div><div class="question-card" id="q-card-id-29"><div class="question-header"><div class="question-text">Câu 29: Nén khí đẳng nhiệt từ thể tích 10 lít đến thể tích 4 lít thì áp suất của khí tăng lên</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_29" value="A"><div><span><strong>A.</strong> 2 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_29" value="B"><div><span><strong>B.</strong> 4 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_29" value="C"><div><span><strong>C.</strong> 1,5 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_29" value="D"><div><span><strong>D.</strong> 2,5 lần.</span></div></label></div></div><div class="question-card" id="q-card-id-30"><div class="question-header"><div class="question-text">Câu 30: Khí được nén đẳng nhiệt từ thể tích 6 lít đến 4 lít. Áp suất khí tăng thêm 0,75 atm. Áp suất khí ban đầu là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_30" value="A"><div><span><strong>A.</strong> 2,5 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_30" value="B"><div><span><strong>B.</strong> 1,5 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_30" value="C"><div><span><strong>C.</strong> 1,8 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_30" value="D"><div><span><strong>D.</strong> 3,5 atm.</span></div></label></div></div><div class="question-card" id="q-card-id-31"><div class="question-header"><div class="question-text">Câu 31: Nén đẳng nhiệt khối khí xác định làm áp suất thay đổi một lượng là 0,5 atm. Biết thể tích và áp suất ban đầu lần lượt là 5 lít và 2 atm. Thể tích của khối khí lúc sau là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_31" value="A"><div><span><strong>A.</strong> 4 l.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_31" value="B"><div><span><strong>B.</strong> 3 l.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_31" value="C"><div><span><strong>C.</strong> 5 l.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_31" value="D"><div><span><strong>D.</strong> 6 l.</span></div></label></div></div><div class="question-card" id="q-card-id-32"><div class="question-header"><div class="question-text">Câu 32: Dưới áp suất 10⁵ Pa một lượng khí có thể tích 10 lít. Nếu nhiệt độ được giữ không đổi và áp suất tăng lên 25% so với ban đầu thì thể tích của lượng khí này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_32" value="A"><div><span><strong>A.</strong> V₂ = 12,5 lit.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_32" value="B"><div><span><strong>B.</strong> V₂ = 8 lit.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_32" value="C"><div><span><strong>C.</strong> V₂ = 2,5 lit.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_32" value="D"><div><span><strong>D.</strong> V₂ = 40 lit.</span></div></label></div></div><div class="question-card" id="q-card-id-33"><div class="question-header"><div class="question-text">Câu 33: Một bọt khí có thể tích 1,5 cm³ được tạo ra từ khoang tàu ngầm đang lặn ở độ sâu 100 m dưới mực nước biển. Giả sử nhiệt độ của bọt khí là không đổi, biết khối lượng riêng của nước biển là 10³ kg/m³, áp suất khí quyển là p₀ = 10⁵ Pa và g = 10 m/s². Khi bọt khí này nổi lên mặt nước thì sẽ có thể tích là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_33" value="A"><div><span><strong>A.</strong> 15 cm³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_33" value="B"><div><span><strong>B.</strong> 15,5 cm³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_33" value="C"><div><span><strong>C.</strong> 16,5 cm³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_33" value="D"><div><span><strong>D.</strong> 16 cm³.</span></div></label></div></div><div class="question-card" id="q-card-id-34"><div class="question-header"><div class="question-text">Câu 34: Một quả bóng có dung tích 2,4 lít. Người ta bơm không khí ở áp suất 10⁵ Pa vào bóng. Mỗi lần bơm được 120 cm³ không khí. Coi quả bóng trước khi bơm không có không khí và trong quá trình bơm nhiệt độ không khí không đổi. Áp suất của không khí trong quả bóng sau 50 lần bơm là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_34" value="A"><div><span><strong>A.</strong> 2,5.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_34" value="B"><div><span><strong>B.</strong> 1,5.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_34" value="C"><div><span><strong>C.</strong> 6,5.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_34" value="D"><div><span><strong>D.</strong> 4,5.10⁵ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-35"><div class="question-header"><div class="question-text">Câu 35: Một bình đựng khí có dung tích 6.10⁻³ m³ đựng khí áp suất 2,75.10⁶ Pa. Người ta dùng khí trong bình để thổi các quả bóng bay sao cho bóng có thể tích 3,3.10⁻³ m³ và khí trong bóng có áp suất 10⁵ Pa. Nếu coi nhiệt độ của khí không đổi và ban đầu trong bóng không có khí thì số lượng bóng thổi được là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_35" value="A"><div><span><strong>A.</strong> 50 quả bóng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_35" value="B"><div><span><strong>B.</strong> 48 quả bóng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_35" value="C"><div><span><strong>C.</strong> 52 quả bóng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_35" value="D"><div><span><strong>D.</strong> 49 quả bóng.</span></div></label></div></div><div class="question-card" id="q-card-id-36"><div class="question-header"><div class="question-text">Câu 36: Người ta dùng một bơm tay có ống bơm dạng hình trụ dài 50 cm và bán kính trong 4 cm để bơm không khí vào một túi cao su sao cho túi phồng lên, có thể tích là 6,28 lít và áp suất không khí trong túi là 4 atm. Biết áp suất khí quyển là 1 atm và coi nhiệt độ của không khí được bơm vào túi không đổi, ban đầu trong túi không có không khí. Số lần đẩy bơm là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_36" value="A"><div><span><strong>A.</strong> 126 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_36" value="B"><div><span><strong>B.</strong> 160 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_36" value="C"><div><span><strong>C.</strong> 40 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_36" value="D"><div><span><strong>D.</strong> 10 lần.</span></div></label></div></div><div class="question-card" id="q-card-id-37"><div class="question-header"><div class="question-text">Câu 37: Dùng ống bơm bơm một quả bóng đang bị xẹp, mỗi lần bơm đẩy được 50 cm³ không khí ở áp suất 1 atm vào quả bóng. Sau 60 lần bơm quả bóng có dung tích 2 lít, coi quá trình bơm nhiệt độ không đổi, áp suất khí trong quả bóng sau khi bơm là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_37" value="A"><div><span><strong>A.</strong> 1,25 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_37" value="B"><div><span><strong>B.</strong> 1,5 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_37" value="C"><div><span><strong>C.</strong> 2,5 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_37" value="D"><div><span><strong>D.</strong> 2 atm.</span></div></label></div></div><div class="question-card" id="q-card-id-38"><div class="question-header"><div class="question-text">Câu 38: Một lượng không khí có thể tích 240 cm³ bị giam trong một xilanh đặt nằm ngang có pit-tông đóng kín, diện tích của pit-tông là 24 cm². Áp suất khí trong xilanh bằng áp suất ngoài là 100 kPa. Cần một lực bằng bao nhiêu để di chuyển pit-tông một đoạn 2 cm theo chiều nén khí? Bỏ qua ma sát giữa pit-tông và thành xilanh. Coi quá trình xảy ra là đẳng nhiệt.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_38" value="A"><div><span><strong>A.</strong> 60 N.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_38" value="B"><div><span><strong>B.</strong> 40 N.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_38" value="C"><div><span><strong>C.</strong> 20 N.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_38" value="D"><div><span><strong>D.</strong> 80 N.</span></div></label></div></div><div class="question-card" id="q-card-id-39"><div class="question-header"><div class="question-text">Câu 39: Ống thủy tinh một đầu kín dài 80 cm, chứa không khí ở áp suất bằng áp suất khí quyển p₀ = 75 cmHg. Ấn ống thủy tinh vào một chậu đựng thủy ngân theo phương thẳng đứng, miệng ống ở dưới (thấp hơn) mặt thủy ngân 45 cm. Coi nhiệt độ không thay đổi trong toàn bộ quá trình. Độ cao cột thủy ngân đi vào ống là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_39" value="A"><div><span><strong>A.</strong> 20 cm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_39" value="B"><div><span><strong>B.</strong> 30 cm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_39" value="C"><div><span><strong>C.</strong> 40 cm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_39" value="D"><div><span><strong>D.</strong> 50 cm.</span></div></label></div></div><div class="question-card" id="q-card-id-40"><div class="question-header"><div class="question-text">Câu 40: Ấn một ống hình trụ dài 40 cm một đầu hở xuống nước theo phương thẳng đứng. Biết khối lượng riêng của nước là 10³ kg/m³, lấy g = 10 m/s², áp suất khí trong ống khi ở trên mặt nước là 10⁵ Pa, nhiệt độ không thay đổi trong toàn bộ quá trình. Chiều cao cột nước dâng lên trong ống là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_40" value="A"><div><span><strong>A.</strong> 0,015 m.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_40" value="B"><div><span><strong>B.</strong> 0,003 m.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_40" value="C"><div><span><strong>C.</strong> 0,023 m.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_40" value="D"><div><span><strong>D.</strong> 0,011 m.</span></div></label></div></div><div class="question-card" id="q-card-id-41"><div class="question-header"><div class="question-text">Câu 41: Hệ thức phù hợp với định luật Boyle là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_41" value="A"><div><span><strong>A.</strong> p₁V₁ = p₂V₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_41" value="B"><div><span><strong>B.</strong> p₁/V₁ = p₂/V₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_41" value="C"><div><span><strong>C.</strong> p ~ V.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_41" value="D"><div><span><strong>D.</strong> p₁/p₂ = V₁/V₂.</span></div></label></div></div><div class="question-card" id="q-card-id-42"><div class="question-header"><div class="question-text">Câu 42: Khi giãn nở khí đẳng nhiệt thì</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_42" value="A"><div><span><strong>A.</strong> áp suất khí tăng lên.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_42" value="B"><div><span><strong>B.</strong> số phân tử khí trong một đơn vị thể tích tăng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_42" value="C"><div><span><strong>C.</strong> số phân tử khí trong một đơn vị thể tích giảm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_42" value="D"><div><span><strong>D.</strong> khối lượng riêng của khí tăng lên.</span></div></label></div></div><div class="question-card" id="q-card-id-43"><div class="question-header"><div class="question-text">Câu 43: Nén khí đẳng nhiệt từ thể tích 9 lít đến thể tích 6 lít thì áp suất tăng một lượng Δ p = 50 kPa. Áp suất ban đầu của khí đó là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_43" value="A"><div><span><strong>A.</strong> 40 kPa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_43" value="B"><div><span><strong>B.</strong> 60 kPa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_43" value="C"><div><span><strong>C.</strong> 100 kPa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_43" value="D"><div><span><strong>D.</strong> 80 kPa.</span></div></label></div></div><div class="question-card" id="q-card-id-44"><div class="question-header"><div class="question-text">Câu 44: Một khối cầu bằng kim loại rỗng, có thể tích 2 lít, ban đầu không chứa không khí. Dùng ống bơm mỗi lần đẩy được 40 cm³ không khí ở áp suất 1 atm vào quả cầu. Coi nhiệt độ không đổi trong quá trình bơm. Sau 40 lần bơm, áp suất khí trong quả cầu là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_44" value="A"><div><span><strong>A.</strong> 0,8 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_44" value="B"><div><span><strong>B.</strong> 8 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_44" value="C"><div><span><strong>C.</strong> 0,6 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_44" value="D"><div><span><strong>D.</strong> 6 atm.</span></div></label></div></div><div class="question-card" id="q-card-id-45"><div class="question-header"><div class="question-text">Câu 45: Trong hệ tọa độ (p, V), đường đẳng nhiệt là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_45" value="A"><div><span><strong>A.</strong> đường thẳng vuông góc với trục OV.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_45" value="B"><div><span><strong>B.</strong> đường thẳng vuông góc với trục Op.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_45" value="C"><div><span><strong>C.</strong> đường hyperbol.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_45" value="D"><div><span><strong>D.</strong> đường thẳng kéo dài đi qua O.</span></div></label></div></div><div class="question-card" id="q-card-id-46"><div class="question-header"><div class="question-text">Câu 46: Một khối cầu bằng kim loại rỗng, có thể tích 2 l, ban đầu không chứa không khí. Dùng ống bơm mỗi lần đẩy được 40 cm³ không khí ở áp suất 1 atm vào quả cầu. Coi nhiệt độ không đổi trong quá trình bơm. Sau 40 lần bơm, áp suất khí trong quả cầu là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_46" value="A"><div><span><strong>A.</strong> 0,8 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_46" value="B"><div><span><strong>B.</strong> 8 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_46" value="C"><div><span><strong>C.</strong> 0,6 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_46" value="D"><div><span><strong>D.</strong> 6 atm.</span></div></label></div></div><div class="question-card" id="q-card-id-47"><div class="question-header"><div class="question-text">Câu 47: Khi giãn nở khí đẳng nhiệt thì</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_47" value="A"><div><span><strong>A.</strong> áp suất khí tăng lên.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_47" value="B"><div><span><strong>B.</strong> số phân tử khí trong một đơn vị thể tích tăng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_47" value="C"><div><span><strong>C.</strong> số phân tử khí trong một đơn vị thể tích giảm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_47" value="D"><div><span><strong>D.</strong> khối lượng riêng của khí tăng lên.</span></div></label></div></div><div class="question-card" id="q-card-id-48"><div class="question-header"><div class="question-text">Câu 48: Khi ấn từ từ pit-tông xuống để nén khí trong xilanh thì</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_48" value="A"><div><span><strong>A.</strong> nhiệt độ khí thay đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_48" value="B"><div><span><strong>B.</strong> áp suất khí tăng, thể tích khí tăng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_48" value="C"><div><span><strong>C.</strong> áp suất tỉ lệ thuận với thể tích.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_48" value="D"><div><span><strong>D.</strong> áp suất khí tăng, thể tích khí giảm.</span></div></label></div></div><div class="question-card" id="q-card-id-49"><div class="question-header"><div class="question-text">Câu 49: Dùng ống bơm bơm một quả bóng đang bị xẹp, mỗi lần bơm đẩy được 50 cm³ không khí ở áp suất 1 atm vào quả bóng. Sau 60 lần bơm quả bóng có dung tích 2 lít, coi quá trình bơm nhiệt độ không đổi, áp suất khí trong quả bóng sau khi bơm là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_49" value="A"><div><span><strong>A.</strong> 1,5 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_49" value="B"><div><span><strong>B.</strong> 2,75 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_49" value="C"><div><span><strong>C.</strong> 1,25 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_49" value="D"><div><span><strong>D.</strong> 2,5 atm.</span></div></label></div></div><div class="question-card" id="q-card-id-50"><div class="question-header"><div class="question-text">Câu 50: Khi giãn nở khí đẳng nhiệt thì</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_50" value="A"><div><span><strong>A.</strong> áp suất khí tăng lên.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_50" value="B"><div><span><strong>B.</strong> số phân tử khí trong một đơn vị thể tích tăng.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_50" value="C"><div><span><strong>C.</strong> số phân tử khí trong một đơn vị thể tích giảm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_50" value="D"><div><span><strong>D.</strong> khối lượng riêng của khí tăng lên.</span></div></label></div></div><div class="question-card" id="q-card-id-51"><div class="question-header"><div class="question-text">Câu 51: Nén khí đẳng nhiệt từ thể tích 9 lít đến thể tích 6 lít thì áp suất tăng một lượng Δ p = 50 kPa. Áp suất ban đầu của khí đó là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_51" value="A"><div><span><strong>A.</strong> 100 kPa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_51" value="B"><div><span><strong>B.</strong> 60 kPa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_51" value="C"><div><span><strong>C.</strong> 80 kPa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_51" value="D"><div><span><strong>D.</strong> 40 kPa.</span></div></label></div></div><div class="question-card" id="q-card-id-52"><div class="question-header"><div class="question-text">Câu 52: Đặc điểm không phải của quá trình đẳng nhiệt?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_52" value="A"><div><span><strong>A.</strong> Nhiệt độ của khối khí không đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_52" value="B"><div><span><strong>B.</strong> Khi áp suất tăng thì thể tích khối khí giảm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_52" value="C"><div><span><strong>C.</strong> Khi thể tích khối khí tăng thì áp suất giảm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_52" value="D"><div><span><strong>D.</strong> Áp suất tăng thì nhiệt độ tăng.</span></div></label></div></div><div class="question-card" id="q-card-id-53"><div class="question-header"><div class="question-text">Câu 53: Đồ thị biểu diễn hai đường đẳng nhiệt của cùng một lượng khí lí tưởng biểu diễn như hình vẽ. Mối quan hệ về nhiệt độ của hai đường đẳng nhiệt này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_53" value="A"><div><span><strong>A.</strong> T₂ &gt; T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_53" value="B"><div><span><strong>B.</strong> T₂ = T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_53" value="C"><div><span><strong>C.</strong> T₂ &lt; T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_53" value="D"><div><span><strong>D.</strong> T₂ \le T₁.</span></div></label></div></div><div class="question-card" id="q-card-id-54"><div class="question-header"><div class="question-text">Câu 54: Định luật Boyle cho biết sự biến đổi trạng thái của một lượng khí xác định khi thông số</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_54" value="A"><div><span><strong>A.</strong> áp suất của khí không đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_54" value="B"><div><span><strong>B.</strong> khối lượng riêng khí không đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_54" value="C"><div><span><strong>C.</strong> nhiệt độ của khí không đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_54" value="D"><div><span><strong>D.</strong> thể tích của khí không đổi.</span></div></label></div></div><div class="question-card" id="q-card-id-55"><div class="question-header"><div class="question-text">Câu 55: Nén một lượng khí lí tưởng không đổi thì thể tích thay đổi như trên đồ thị. Sau khi nén thì áp suất của khối khí này?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_55" value="A"><div><span><strong>A.</strong> giảm đi 3 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_55" value="B"><div><span><strong>B.</strong> tăng lên 3 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_55" value="C"><div><span><strong>C.</strong> tăng lên 2 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_55" value="D"><div><span><strong>D.</strong> giảm đi 2 lần.</span></div></label></div></div><div class="question-card" id="q-card-id-56"><div class="question-header"><div class="question-text">Câu 56: Nếu áp suất của một lượng khí lí tưởng xác định tăng 2.10⁵ Pa thì thể tích giảm 3 lít. Nếu áp suất của lượng khí đó tăng 5.10⁵ Pa thì thể tích giảm 5 lít. Biết nhiệt độ không đổi. Áp suất và thể tích ban đầu của khí là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_56" value="A"><div><span><strong>A.</strong> 4.10⁵ Pa; 12 l.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_56" value="B"><div><span><strong>B.</strong> 2.10⁵ Pa; 8 l.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_56" value="C"><div><span><strong>C.</strong> 4.10⁵ Pa; 9 l.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_56" value="D"><div><span><strong>D.</strong> 2.10⁵ Pa; 12 l.</span></div></label></div></div><div class="question-card" id="q-card-id-57"><div class="question-header"><div class="question-text">Câu 57: Xilanh của một ống bơm hình trụ có diện tích 10 cm², chiều cao 30 cm, dùng để nén không khí vào quả bóng có thể tích 2,5 lít. Coi rằng quả bóng trước khi bơm không có không khí và nhiệt độ không khí không đổi khi bơm. Phải bơm bao nhiêu lần để áp suất của quả bóng gấp 3 lần áp suất khí quyển?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_57" value="A"><div><span><strong>A.</strong> 25.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_57" value="B"><div><span><strong>B.</strong> 29.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_57" value="C"><div><span><strong>C.</strong> 34.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_57" value="D"><div><span><strong>D.</strong> 50.</span></div></label></div></div><div class="question-card" id="q-card-id-58"><div class="question-header"><div class="question-text">Câu 58: Người ta điều chế khí hydrogen và chứa vào một bình lớn với áp suất 1 atm ở nhiệt độ 20^°C. Tính thể tích khí phải lấy từ bình lớn ra để nạp vào bình nhỏ có thể tích 20 lít ở áp suất 25 atm. Coi quá trình này là đẳng nhiệt và ban đầu trong bình nhỏ không chứa khí.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_58" value="A"><div><span><strong>A.</strong> 600 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_58" value="B"><div><span><strong>B.</strong> 500 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_58" value="C"><div><span><strong>C.</strong> 300 lít.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_58" value="D"><div><span><strong>D.</strong> 120 lít.</span></div></label></div></div><div class="question-card" id="q-card-id-59"><div class="question-header"><div class="question-text">Câu 59: Đồ thị biểu diễn hai đường đẳng nhiệt của cùng một lượng khí lí tưởng biểu diễn như hình vẽ. Mối quan hệ về nhiệt độ của hai đường đẳng nhiệt này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_59" value="A"><div><span><strong>A.</strong> T₂ &lt; T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_59" value="B"><div><span><strong>B.</strong> T₂ &gt; T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_59" value="C"><div><span><strong>C.</strong> T₂ \le T₁.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_59" value="D"><div><span><strong>D.</strong> T₂ = T₁.</span></div></label></div></div><div class="question-card" id="q-card-id-60"><div class="question-header"><div class="question-text">Câu 60: Đồ thị nào sau đây biểu diễn đúng định luật Boyle?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_60" value="A"><div><span><strong>A.</strong> Đồ thị p - 1/V là đường thẳng đi qua gốc tọa độ.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_60" value="B"><div><span><strong>B.</strong> Đồ thị p - 1/V là đường thẳng không đi qua gốc tọa độ.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_60" value="C"><div><span><strong>C.</strong> Đồ thị p - 1/V là đường thẳng song song với trục hoành.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_60" value="D"><div><span><strong>D.</strong> Đồ thị p - 1/V là đường hyperbol.</span></div></label></div></div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- LIGHTBOX MODAL FULL SCREEN -->
+    <div id="lightbox-modal">
+        <button class="lightbox-close" onclick="closeLightbox()">×</button>
+        <button class="lightbox-nav lightbox-prev" onclick="changeLightboxImage(-1)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image">
+        <button class="lightbox-nav lightbox-next" onclick="changeLightboxImage(1)">❯</button>
+    </div>
+
+    <div id="toast-container"></div>
+
+<script>
+    const PRE_LOADED_RAW_DATA = `Dạng 1. TRẮC NGHIỆM LỰA CHỌN ĐƠN
+
+Câu 1. Tập hợp ba thông số nào sau đây xác định trạng thái của một lượng khí xác định?
+A. Áp suất, thể tích, khối lượng.
+*B. Áp suất, nhiệt độ, thể tích.
+C. Thể tích, trọng lượng, áp suất.
+D. Áp suất, nhiệt độ, khối lượng.
+
+Câu 2. Trong các đại lượng sau đây, đại lượng nào không phải là thông số trạng thái của một lượng khí?
+*A. Khối lượng.
+B. Nhiệt độ tuyệt đối.
+C. Thể tích.
+D. Áp suất.
+
+Câu 3. Đẳng quá trình là
+A. quá trình trong đó có ít nhất hai thông số trạng thái không đổi.
+B. quá trình trong đó các thông số trạng thái đều biến đổi.
+*C. quá trình trong đó có một thông số trạng thái không đổi.
+D. quá trình trong đó có hơn nửa số thông số trạng thái không đổi.
+
+Câu 4. Trong các hệ thức sau đây, hệ thức nào phù hợp với định luật Boyle?
+*A. p₁V₁ = p₂V₂.
+B. p₁/V₁ = p₂V₂.
+C. p₁/p₂ = V₁/V₂.
+D. p ~ V.
+
+Câu 5. Trong các hệ thức sau đây, hệ thức nào không phù hợp với định luật Boyle?
+A. p₁.V₁ = p₂.V₂.
+B. V ~ 1/p.
+*C. V ~ p.
+D. p ~ 1/V.
+
+Câu 6. Trong quá trình đẳng nhiệt của khối khí lí tưởng, áp suất của khối khí
+A. tỉ lệ với nhiệt độ của khối khí.
+*B. tỉ lệ nghịch với thể tích của khối khí.
+C. tỉ lệ nghịch với nhiệt độ của khối khí.
+D. tỉ lệ với thể tích của khối khí.
+
+Câu 7. Nén đẳng nhiệt một khối khí lí tưởng từ thể tích 12 l xuống còn 2 l. Áp suất của khối khí thay đổi như thế nào?
+A. giảm 3 lần.
+*B. tăng 6 lần.
+C. giảm 6 lần.
+D. tăng 3 lần.
+
+Câu 8. Đẩy pit-tông của một xilanh đủ chậm để nén lượng khí chứa trong xilanh sao cho thể tích của lượng khí này giảm đi 2 lần ở nhiệt độ không đổi. Khi đó áp suất của khí trong xilanh
+A. giảm đi 2 lần.
+*B. tăng lên 2 lần.
+C. tăng thêm 4 lần.
+D. không thay đổi.
+
+Câu 9. Trong hệ tọa độ (p, V), đường đẳng nhiệt là
+A. đường thẳng vuông góc với trục V.
+B. đường thẳng có phương qua O.
+C. đường thẳng song song trục p.
+*D. đường hyperbol.
+
+Câu 10. Trong hệ tọa độ (V, T), đường đẳng nhiệt là
+*A. đường thẳng vuông góc với trục T.
+B. đường thẳng vuông góc với trục V.
+C. đường thẳng có phương qua O.
+D. đường hyperbol.
+
+Câu 11. Một khối khí thực hiện quá trình được biểu diễn trên hình vẽ. Quá trình đó là quá trình
+*A. đẳng nhiệt.
+B. đẳng tích.
+C. không phải đẳng quá trình.
+D. đẳng áp.
+
+Câu 12. Hình nào sau đây chắc chắn không phải là đồ thị biểu diễn quá trình đẳng nhiệt?
+A. Đồ thị p - 1/V là đường thẳng đi qua gốc tọa độ O.
+B. Đồ thị V - T là đường thẳng vuông góc với trục OT.
+*C. Đồ thị p - T là đường thẳng kéo dài đi qua gốc tọa độ O.
+D. Đồ thị p - V là một nhánh đường hyperbol.
+
+Câu 13. Đồ thị nào sau đây biểu diễn đúng định luật Boyle?
+*A. Đồ thị biểu diễn mối liên hệ giữa p và 1/V là đường thẳng kéo dài đi qua gốc tọa độ.
+B. Đồ thị biểu diễn mối liên hệ giữa p và V là đường thẳng kéo dài đi qua gốc tọa độ.
+C. Đồ thị biểu diễn mối liên hệ giữa p và 1/V là đường thẳng song song với trục Op.
+D. Đồ thị biểu diễn mối liên hệ giữa p và V là đường thẳng vuông góc với trục OV.
+
+Câu 14. Đồ thị biểu diễn hai đường đẳng nhiệt của cùng một lượng khí lí tưởng biểu diễn như hình vẽ. Mối quan hệ về nhiệt độ của hai đường đẳng nhiệt này là
+*A. T₂ > T₁.
+B. T₂ = T₁.
+C. T₂ < T₁.
+D. T₂ \le T₁.
+
+Câu 15. Hình bên là đồ thị biểu diễn đường đẳng nhiệt của một lượng khí lí tưởng xác định trong hệ tọa độ pOV. Gọi SOBC và SOAD là diện tích của tam giác OBC và OAD. Phát biểu nào dưới đây là đúng?
+*A. SOBC = SOAD.
+B. SOBC < SOAD.
+C. SOBC > SOAD.
+D. SOBC = 2.SOAD.
+
+Câu 16. Một khối khí khi đặt ở điều kiện nhiệt độ không đổi thì có sự biến thiên của thể tích theo áp suất như hình vẽ. Khi áp suất có giá trị 0,5 kN/m² thì thể tích của khối khí bằng
+*A. 4,8 m³.
+B. 14,4 m³.
+C. 3,6 m³.
+D. 7,2 m³.
+
+Câu 17. Một bình có thể tích 10 lít chứa một chất khí ở áp suất 30 atm. Coi nhiệt độ của khí là không đổi và áp suất của khí quyển là 1 atm. Thể tích của chất khí khi ta mở nút bình là
+A. 350 lít.
+B. 400 lít.
+*C. 300 lít.
+D. 450 lít.
+
+Câu 18. Một khối khí lí tưởng xác định có áp suất 1 atm được làm tăng áp suất đến 4 atm ở nhiệt độ không đổi thì thể tích biến đổi một lượng 6 lít. Thể tích ban đầu của khối khí đó có giá trị là
+A. 4 lít.
+*B. 8 lít.
+C. 12 lít.
+D. 16 lít.
+
+Câu 19. Có 7 gam khí nitrogen ở điều kiện tiêu chuẩn. Người ta nén đẳng nhiệt khối khí này tới áp suất 133 cmHg thì thể tích của khối khí bây giờ là
+A. 1,00 dm³.
+B. 6,40 dm³.
+*C. 4,26 dm³.
+D. 3,2 dm³.
+
+Câu 20. Khối lượng riêng của oxygen ở điều kiện tiêu chuẩn là 1,43 kg/m³. Khối lượng khí oxygen ở trong bình kín thể tích 10 l, áp suất 150 atm, nhiệt độ 0^°C là
+A. 1,5 kg.
+B. 2,514 kg.
+*C. 2,145 kg.
+D. 1,625 kg.
+
+Câu 21. Cho áp suất tại mặt nước là 10⁵ Pa, khối lượng riêng của nước là 1000 kg/m³, gia tốc trọng trường là 10 m/s². Coi nhiệt độ của nước ở các độ cao là như nhau. Một bong bóng khí ở độ sâu 5 m khi nổi lên mặt nước thì thể tích sẽ
+A. giảm 3 lần.
+B. giảm 1,5 lần.
+C. tăng 3 lần.
+*D. tăng 1,5 lần.
+
+Câu 22. Một bọt khí nhỏ, nổi lên từ đáy hồ, khi đến mặt nước thì thể tích của nó tăng gấp 1,3 lần. Biết trọng lượng riêng của nước là d = 10⁴ N/m³, áp suất khí quyển là p₀ = 10⁵ N/m². Coi nhiệt độ của nước ở các điểm là như nhau. Độ sâu của đáy hồ là
+A. 1 m.
+B. 2 m.
+*C. 3 m.
+D. 4 m.
+
+Câu 23. Một quả bóng có dung tích 2,5 lít. Người ta bơm không khí ở áp suất 10⁵ Pa vào bóng. Mỗi lần bơm được 125 cm³ không khí. Coi quả bóng trước khi bơm không có không khí và nhiệt độ trong quá trình bơm là không đổi. Áp suất của không khí trong quả bóng sau 45 lần bơm là
+A. 25.10⁵ Pa.
+*B. 22,5.10⁵ Pa.
+C. 2,5.10⁵ Pa.
+D. 2,25.10⁵ Pa.
+
+Câu 24. Để bơm đầy một khí cầu đến thể tích 100 m³ có áp suất 0,1 atm ở nhiệt độ không đổi người ta dùng các ống khí helium có thể tích 50 lít ở áp suất 100 atm. Số ống khí helium cần để bơm khí cầu bằng
+A. 1.
+*B. 2.
+C. 3.
+D. 4.
+
+Câu 25. Người ta dùng bơm có pit-tông diện tích đáy 83 cm² và khoảng chạy 25 cm bơm một quả bóng. Ban đầu quả bóng chứa không khí ở áp suất khí quyển p₀ = 10⁵ Pa và có thể tích là V₀ = 1500 cm³. Sau 10 lần bơm thì thể tích của quả bóng là 2000 cm³. Coi quá trình bơm nhiệt độ không đổi. Áp suất khí trong quả bóng sau khi bơm là
+A. 10⁵ Pa.
+B. 7,5.10⁴ Pa.
+C. 1,75.10⁴ Pa.
+*D. 1,75.10⁵ Pa.
+
+Câu 26. Một xilanh chứa 150 cm³ khí ở áp suất 3.10⁵ Pa. Pit-tông nén khí trong xilanh xuống còn 50 cm³. Coi nhiệt độ không đổi. Áp suất của khí trong xilanh lúc này là
+A. 6.10⁵ Pa.
+B. 3.10⁵ Pa.
+*C. 9.10⁵ Pa.
+D. 2.10⁵ Pa.
+
+Câu 27. Một lượng khí ở nhiệt độ 18^°C có thể tích 1 m³ và áp suất 1 atm. Người ta nén đẳng nhiệt khí tới áp suất 3,5 atm. Thể tích khí nén là
+A. 0,39 m³.
+*B. 0,286 m³.
+C. 0,330 m³.
+D. 0,567 m³.
+
+Câu 28. Một lượng khí ở điều kiện tiêu chuẩn có thể tích 2 m³. Nếu nén đẳng nhiệt lượng khí này tới áp suất 5.10⁵ Pa thì thể tích của lượng khí sẽ là
+A. 10 m³.
+B. 1 m³.
+*C. 0,4 m³.
+D. 4 m³.
+
+Câu 29. Nén khí đẳng nhiệt từ thể tích 10 lít đến thể tích 4 lít thì áp suất của khí tăng lên
+A. 2 lần.
+B. 4 lần.
+C. 1,5 lần.
+*D. 2,5 lần.
+
+Câu 30. Khí được nén đẳng nhiệt từ thể tích 6 lít đến 4 lít. Áp suất khí tăng thêm 0,75 atm. Áp suất khí ban đầu là
+A. 2,5 atm.
+*B. 1,5 atm.
+C. 1,8 atm.
+D. 3,5 atm.
+
+Câu 31. Nén đẳng nhiệt khối khí xác định làm áp suất thay đổi một lượng là 0,5 atm. Biết thể tích và áp suất ban đầu lần lượt là 5 lít và 2 atm. Thể tích của khối khí lúc sau là
+*A. 4 l.
+B. 3 l.
+C. 5 l.
+D. 6 l.
+
+Câu 32. Dưới áp suất 10⁵ Pa một lượng khí có thể tích 10 lít. Nếu nhiệt độ được giữ không đổi và áp suất tăng lên 25% so với ban đầu thì thể tích của lượng khí này là
+A. V₂ = 12,5 lit.
+*B. V₂ = 8 lit.
+C. V₂ = 2,5 lit.
+D. V₂ = 40 lit.
+
+Câu 33. Một bọt khí có thể tích 1,5 cm³ được tạo ra từ khoang tàu ngầm đang lặn ở độ sâu 100 m dưới mực nước biển. Giả sử nhiệt độ của bọt khí là không đổi, biết khối lượng riêng của nước biển là 10³ kg/m³, áp suất khí quyển là p₀ = 10⁵ Pa và g = 10 m/s². Khi bọt khí này nổi lên mặt nước thì sẽ có thể tích là
+A. 15 cm³.
+B. 15,5 cm³.
+*C. 16,5 cm³.
+D. 16 cm³.
+
+Câu 34. Một quả bóng có dung tích 2,4 lít. Người ta bơm không khí ở áp suất 10⁵ Pa vào bóng. Mỗi lần bơm được 120 cm³ không khí. Coi quả bóng trước khi bơm không có không khí và trong quá trình bơm nhiệt độ không khí không đổi. Áp suất của không khí trong quả bóng sau 50 lần bơm là
+*A. 2,5.10⁵ Pa.
+B. 1,5.10⁵ Pa.
+C. 6,5.10⁵ Pa.
+D. 4,5.10⁵ Pa.
+
+Câu 35. Một bình đựng khí có dung tích 6.10⁻³ m³ đựng khí áp suất 2,75.10⁶ Pa. Người ta dùng khí trong bình để thổi các quả bóng bay sao cho bóng có thể tích 3,3.10⁻³ m³ và khí trong bóng có áp suất 10⁵ Pa. Nếu coi nhiệt độ của khí không đổi và ban đầu trong bóng không có khí thì số lượng bóng thổi được là
+A. 50 quả bóng.
+*B. 48 quả bóng.
+C. 52 quả bóng.
+D. 49 quả bóng.
+
+Câu 36. Người ta dùng một bơm tay có ống bơm dạng hình trụ dài 50 cm và bán kính trong 4 cm để bơm không khí vào một túi cao su sao cho túi phồng lên, có thể tích là 6,28 lít và áp suất không khí trong túi là 4 atm. Biết áp suất khí quyển là 1 atm và coi nhiệt độ của không khí được bơm vào túi không đổi, ban đầu trong túi không có không khí. Số lần đẩy bơm là
+A. 126 lần.
+*B. 160 lần.
+C. 40 lần.
+D. 10 lần.
+
+Câu 37. Dùng ống bơm bơm một quả bóng đang bị xẹp, mỗi lần bơm đẩy được 50 cm³ không khí ở áp suất 1 atm vào quả bóng. Sau 60 lần bơm quả bóng có dung tích 2 lít, coi quá trình bơm nhiệt độ không đổi, áp suất khí trong quả bóng sau khi bơm là
+A. 1,25 atm.
+*B. 1,5 atm.
+C. 2,5 atm.
+D. 2 atm.
+
+Câu 38. Một lượng không khí có thể tích 240 cm³ bị giam trong một xilanh đặt nằm ngang có pit-tông đóng kín, diện tích của pit-tông là 24 cm². Áp suất khí trong xilanh bằng áp suất ngoài là 100 kPa. Cần một lực bằng bao nhiêu để di chuyển pit-tông một đoạn 2 cm theo chiều nén khí? Bỏ qua ma sát giữa pit-tông và thành xilanh. Coi quá trình xảy ra là đẳng nhiệt.
+*A. 60 N.
+B. 40 N.
+C. 20 N.
+D. 80 N.
+
+Câu 39. Ống thủy tinh một đầu kín dài 80 cm, chứa không khí ở áp suất bằng áp suất khí quyển p₀ = 75 cmHg. Ấn ống thủy tinh vào một chậu đựng thủy ngân theo phương thẳng đứng, miệng ống ở dưới (thấp hơn) mặt thủy ngân 45 cm. Coi nhiệt độ không thay đổi trong toàn bộ quá trình. Độ cao cột thủy ngân đi vào ống là
+*A. 20 cm.
+B. 30 cm.
+C. 40 cm.
+D. 50 cm.
+
+Câu 40. Ấn một ống hình trụ dài 40 cm một đầu hở xuống nước theo phương thẳng đứng. Biết khối lượng riêng của nước là 10³ kg/m³, lấy g = 10 m/s², áp suất khí trong ống khi ở trên mặt nước là 10⁵ Pa, nhiệt độ không thay đổi trong toàn bộ quá trình. Chiều cao cột nước dâng lên trong ống là
+A. 0,015 m.
+B. 0,003 m.
+C. 0,023 m.
+*D. 0,011 m.
+
+Câu 41. Hệ thức phù hợp với định luật Boyle là
+*A. p₁V₁ = p₂V₂.
+B. p₁/V₁ = p₂/V₂.
+C. p ~ V.
+D. p₁/p₂ = V₁/V₂.
+
+Câu 42. Khi giãn nở khí đẳng nhiệt thì
+A. áp suất khí tăng lên.
+B. số phân tử khí trong một đơn vị thể tích tăng.
+*C. số phân tử khí trong một đơn vị thể tích giảm.
+D. khối lượng riêng của khí tăng lên.
+
+Câu 43. Nén khí đẳng nhiệt từ thể tích 9 lít đến thể tích 6 lít thì áp suất tăng một lượng Δ p = 50 kPa. Áp suất ban đầu của khí đó là
+A. 40 kPa.
+B. 60 kPa.
+*C. 100 kPa.
+D. 80 kPa.
+
+Câu 44. Một khối cầu bằng kim loại rỗng, có thể tích 2 lít, ban đầu không chứa không khí. Dùng ống bơm mỗi lần đẩy được 40 cm³ không khí ở áp suất 1 atm vào quả cầu. Coi nhiệt độ không đổi trong quá trình bơm. Sau 40 lần bơm, áp suất khí trong quả cầu là
+*A. 0,8 atm.
+B. 8 atm.
+C. 0,6 atm.
+D. 6 atm.
+
+Câu 45. Trong hệ tọa độ (p, V), đường đẳng nhiệt là
+A. đường thẳng vuông góc với trục OV.
+B. đường thẳng vuông góc với trục Op.
+*C. đường hyperbol.
+D. đường thẳng kéo dài đi qua O.
+
+Câu 46. Một khối cầu bằng kim loại rỗng, có thể tích 2 l, ban đầu không chứa không khí. Dùng ống bơm mỗi lần đẩy được 40 cm³ không khí ở áp suất 1 atm vào quả cầu. Coi nhiệt độ không đổi trong quá trình bơm. Sau 40 lần bơm, áp suất khí trong quả cầu là
+*A. 0,8 atm.
+B. 8 atm.
+C. 0,6 atm.
+D. 6 atm.
+
+Câu 47. Khi giãn nở khí đẳng nhiệt thì
+A. áp suất khí tăng lên.
+B. số phân tử khí trong một đơn vị thể tích tăng.
+*C. số phân tử khí trong một đơn vị thể tích giảm.
+D. khối lượng riêng của khí tăng lên.
+
+Câu 48. Khi ấn từ từ pit-tông xuống để nén khí trong xilanh thì
+A. nhiệt độ khí thay đổi.
+B. áp suất khí tăng, thể tích khí tăng.
+C. áp suất tỉ lệ thuận với thể tích.
+*D. áp suất khí tăng, thể tích khí giảm.
+
+Câu 49. Dùng ống bơm bơm một quả bóng đang bị xẹp, mỗi lần bơm đẩy được 50 cm³ không khí ở áp suất 1 atm vào quả bóng. Sau 60 lần bơm quả bóng có dung tích 2 lít, coi quá trình bơm nhiệt độ không đổi, áp suất khí trong quả bóng sau khi bơm là
+*A. 1,5 atm.
+B. 2,75 atm.
+C. 1,25 atm.
+D. 2,5 atm.
+
+Câu 50. Khi giãn nở khí đẳng nhiệt thì
+A. áp suất khí tăng lên.
+B. số phân tử khí trong một đơn vị thể tích tăng.
+*C. số phân tử khí trong một đơn vị thể tích giảm.
+D. khối lượng riêng của khí tăng lên.
+
+Câu 51. Nén khí đẳng nhiệt từ thể tích 9 lít đến thể tích 6 lít thì áp suất tăng một lượng Δ p = 50 kPa. Áp suất ban đầu của khí đó là
+*A. 100 kPa.
+B. 60 kPa.
+C. 80 kPa.
+D. 40 kPa.
+
+Câu 52. Đặc điểm không phải của quá trình đẳng nhiệt?
+A. Nhiệt độ của khối khí không đổi.
+B. Khi áp suất tăng thì thể tích khối khí giảm.
+C. Khi thể tích khối khí tăng thì áp suất giảm.
+*D. Áp suất tăng thì nhiệt độ tăng.
+
+Câu 53. Đồ thị biểu diễn hai đường đẳng nhiệt của cùng một lượng khí lí tưởng biểu diễn như hình vẽ. Mối quan hệ về nhiệt độ của hai đường đẳng nhiệt này là
+*A. T₂ > T₁.
+B. T₂ = T₁.
+C. T₂ < T₁.
+D. T₂ \le T₁.
+
+Câu 54. Định luật Boyle cho biết sự biến đổi trạng thái của một lượng khí xác định khi thông số
+A. áp suất của khí không đổi.
+B. khối lượng riêng khí không đổi.
+*C. nhiệt độ của khí không đổi.
+D. thể tích của khí không đổi.
+
+Câu 55. Nén một lượng khí lí tưởng không đổi thì thể tích thay đổi như trên đồ thị. Sau khi nén thì áp suất của khối khí này?
+A. giảm đi 3 lần.
+*B. tăng lên 3 lần.
+C. tăng lên 2 lần.
+D. giảm đi 2 lần.
+
+Câu 56. Nếu áp suất của một lượng khí lí tưởng xác định tăng 2.10⁵ Pa thì thể tích giảm 3 lít. Nếu áp suất của lượng khí đó tăng 5.10⁵ Pa thì thể tích giảm 5 lít. Biết nhiệt độ không đổi. Áp suất và thể tích ban đầu của khí là
+*A. 4.10⁵ Pa; 12 l.
+B. 2.10⁵ Pa; 8 l.
+C. 4.10⁵ Pa; 9 l.
+D. 2.10⁵ Pa; 12 l.
+
+Câu 57. Xilanh của một ống bơm hình trụ có diện tích 10 cm², chiều cao 30 cm, dùng để nén không khí vào quả bóng có thể tích 2,5 lít. Coi rằng quả bóng trước khi bơm không có không khí và nhiệt độ không khí không đổi khi bơm. Phải bơm bao nhiêu lần để áp suất của quả bóng gấp 3 lần áp suất khí quyển?
+*A. 25.
+B. 29.
+C. 34.
+D. 50.
+
+Câu 58. Người ta điều chế khí hydrogen và chứa vào một bình lớn với áp suất 1 atm ở nhiệt độ 20^°C. Tính thể tích khí phải lấy từ bình lớn ra để nạp vào bình nhỏ có thể tích 20 lít ở áp suất 25 atm. Coi quá trình này là đẳng nhiệt và ban đầu trong bình nhỏ không chứa khí.
+A. 600 lít.
+*B. 500 lít.
+C. 300 lít.
+D. 120 lít.
+
+Câu 59. Đồ thị biểu diễn hai đường đẳng nhiệt của cùng một lượng khí lí tưởng biểu diễn như hình vẽ. Mối quan hệ về nhiệt độ của hai đường đẳng nhiệt này là
+A. T₂ < T₁.
+*B. T₂ > T₁.
+C. T₂ \le T₁.
+D. T₂ = T₁.
+
+Câu 60. Đồ thị nào sau đây biểu diễn đúng định luật Boyle?
+*A. Đồ thị p - 1/V là đường thẳng đi qua gốc tọa độ.
+B. Đồ thị p - 1/V là đường thẳng không đi qua gốc tọa độ.
+C. Đồ thị p - 1/V là đường thẳng song song với trục hoành.
+D. Đồ thị p - 1/V là đường hyperbol.
+
+Dạng 2. TRẮC NGHIỆM ĐÚNG / SAI
+
+Câu 61. Khi nghiên cứu về khí lí tưởng và quá trình đẳng nhiệt.
+*a) Một lượng khí xác định nghĩa là số lượng các phân tử khí không đổi.
+b) Đường đẳng nhiệt trong hệ toạ độ (p-T) là đường hypebol.
+c) Định luật Boyle cho biết mối liên hệ tỉ lệ thuận giữa áp suất và thể tích của một lượng khí xác định khi nhiệt độ không đổi.
+*d) Định luật Boyle cho biết mối liên hệ tỉ lệ nghịch giữa áp suất và thể tích của một lượng khí xác định khi nhiệt độ không đổi.
+
+Câu 62. Trên hình vẽ, đường cong (1) và (2) là các đường đẳng nhiệt biểu diễn liên hệ giữa áp suất p và thể tích V của một lượng khí lí tưởng xác định ở nhiệt độ T₁ và T₂ tương ứng.
+*a) Đường cong trên có dạng hyperbol.
+b) Khi nhiệt độ không đổi, liên hệ giữa áp suất và thể tích tuân theo định luật Charles.
+*c) p₁V₁ < p₂V₂.
+d) Nhiệt độ của khí được giữ không đổi là T₁, đang có áp suất p₁. Ta tăng áp suất thêm một lượng 5p₁ thì thể tích của khí V₁ = 6 lít.
+
+Câu 63. Cho các phát biểu về đường đẳng nhiệt của một khối khí lí tưởng xác định.
+*a) Đường đẳng nhiệt trong hệ tọa độ (p,V) là một cung hypebol.
+b) Đường đẳng nhiệt trong hệ tọa độ (V,T) là một đoạn thẳng song song với trục OT.
+*c) Đường đẳng nhiệt trong hệ tọa độ (p,T) là một đoạn thẳng vuông góc với trục OT.
+d) Ứng với các nhiệt độ khác nhau của cùng một lượng khí có cùng một đường đẳng nhiệt.
+
+Câu 64. Khảo sát quá trình biến đổi trạng thái của một lượng khí xác định trong hai trường hợp khác nhau, ta vẽ được đồ thị biểu diễn quá trình biến đổi trạng thái trong hệ tọa độ (p, V) trong hai trường hợp như hình vẽ, trong đó (1), (2) là các đường dạng hypebol.
+*a) Đồ thị (1) và (2) là các đường đẳng nhiệt.
+*b) Ở cùng một áp suất, thể tích khí đường (1) luôn gấp đôi thể tích khí ở đường (2).
+*c) Ở đường (2) khi áp suất khí bằng 7,5.10⁴ N/m² thì thể tích khí bằng 20 lít.
+d) Nhiệt độ khí ở đường (1) nhỏ hơn nhiệt độ khí ở đường (2).
+
+Câu 65. Một khối khí khi đặt ở điều kiện tiêu chuẩn (trạng thái A). Nén khí và giữ nhiệt độ không đổi đến trạng thái B. Đồ thị áp suất theo thể tích được biểu diễn như hình vẽ. Biết p₁ = 2p₀.
+a) Số mol của khối khí ở điều kiện tiêu chuẩn là 0,1 mol.
+*b) Thể tích khí ở trạng thái B là 1,12 lít.
+*c) Đường biểu diễn quá trình nén đẳng nhiệt là một cung hyperbol AB.
+d) Khi thể tích của khối khí là 1,4 lít thì áp suất là 1,5 atm.
+
+Câu 66. Người ta dùng một bơm tay hình trụ có khoảng chạy dài 50 cm và đường kính trong 4 cm để bơm không khí vào một túi cao su. Sau 40 lần bơm thì không khí trong túi có thể tích là 6,28 lít. Biết ban đầu trong túi không có khí, áp suất khí quyển là 1 atm và coi nhiệt độ của không khí được bơm vào túi không đổi. Lấy π = 3,14.
+a) Mỗi lần bơm ta đưa vào quả bóng 0,628 lít khí.
+*b) Sau 40 lần bơm ta đưa vào quả bóng 50,24 lít khí.
+*c) Sau 40 lần bơm lượng khí đưa vào quả bóng được nén còn 6,28 lít.
+*d) Áp suất khí trong quả bóng sau 40 lần bơm là 4 atm.
+
+Câu 67. Một lượng khí có thể tích 240 cm³ chứa trong một xilanh có pit-tông đóng kín, diện tích của đáy pit-tông là 24 cm². Áp suất khí trong xilanh bằng áp suất ngoài và bằng 100 kPa. Bỏ qua ma sát giữa pit-tông và thành xilanh. Coi các quá trình xảy ra là đẳng nhiệt.
+a) Khi pit-tông dịch chuyển sang trái 2 cm thì thể tích khí lúc này là 288 cm³.
+*b) Khi pit-tông dịch chuyển sang phải 2 cm thể tích khí lúc này là 192 cm³.
+c) Để dịch chuyển pit-tông sang trái 2 cm cần một lực 60 N.
+*d) Để dịch chuyển pit-tông sang phải 2 cm cần một lực 40 N.
+
+Câu 68. Một quả bóng cao su, không co dãn có dung tích 2,5 lít khi được bơm căng (không tăng thêm khi đã căng). Người ta bơm không khí ở áp suất 10⁵ Pa vào bóng. Mỗi lần bơm được 125 cm³ không khí. Coi quả bóng trước khi bơm không có không khí và trong khi bơm nhiệt độ của không khí không thay đổi.
+*a) Sau 20 lần bơm thì áp suất khí trong quả bóng là 10⁵ Pa.
+*b) Sau 45 lần bơm thể tích không khí người ta đưa vào quả bóng là 5265 cm³.
+*c) Áp suất trong quả bóng tỉ lệ với số lần bơm khí vào bóng.
+d) Sau 45 lần bơm áp suất cuối cùng của khối khí là 2.10⁵ Pa.
+
+Câu 69. Xét một lượng khí lí tưởng xác định.
+a) Một lượng khí được xác định bởi số các phân tử khí.
+b) Đường đẳng nhiệt trong hệ toạ độ (p-T) là đường hypebol.
+c) Định luật Boyle cho biết mối liên hệ tỉ lệ thuận giữa áp suất và thể tích của một lượng khí xác định khi nhiệt độ không đổi.
+*d) Định luật Boyle cho biết mối liên hệ tỉ lệ nghịch giữa áp suất và thể tích của một lượng khí xác định khi nhiệt độ không đổi.
+
+Câu 70. Cho các phát biểu về đường đẳng nhiệt:
+*a) Đường đẳng nhiệt trong hệ tọa độ (p, V) là một cung hypebol.
+b) Đường đẳng nhiệt trong hệ tọa độ (V,T) là một đoạn thẳng song song với trục OT.
+*c) Đường đẳng nhiệt trong hệ tọa độ (p, T) là một đoạn thẳng vuông góc với trục OT.
+d) Ứng với các nhiệt độ khác nhau của cùng một lượng khí có cùng một đường đẳng nhiệt.
+
+Câu 71. Bình xịt cồn khử khuẩn là thiết bị sử dụng để phun dung dịch cồn dưới dạng hạt nhỏ nhằm khử trùng bề mặt. Khi nhấn vòi xịt, áp suất tăng đẩy cồn từ bình chứa qua đầu xịt, phân tán đều thành sương mịn. Điều này cho phép cồn nhanh chóng bay hơi, tiêu diệt vi khuẩn và virus hiệu quả. Bình xịt thường nhỏ gọn, dễ mang theo và sử dụng.
+*a) Khi người dùng nhấn vòi xịt, thể tích bên trong buồng bơm giảm đi.
+b) Theo định luật Boyle, khi thể tích V giảm, áp suất p bên trong buồng bơm giảm đi.
+*c) Nhờ sự thay đổi thể tích và áp suất theo định luật Boyle, bình xịt cồn có thể tạo ra áp lực cần thiết để phun dung dịch cồn ra ngoài hiệu quả.
+d) Dung dịch cồn được phun ra là nhờ có sự chênh lệch nhiệt độ.
+
+Câu 72. Hình bên cho thấy một người đang bơm xe đạp, mỗi động tác đẩy pit-tông xuống ứng với một lượng không khí đang được đưa vào trong săm xe. Trong quá trình bơm, tất cả các thông số trạng thái: thể tích, áp suất, nhiệt độ và cả lượng không khí trong săm xe thay đổi.
+*a) Khi pit-tông được đẩy xuống, thể tích của khí trong bơm giảm, dẫn đến áp suất khí tăng theo định luật Boyle.
+b) Trong quá trình bơm xe, nếu thể tích không đổi mà nhiệt độ của khí tăng, áp suất của khí sẽ giảm.
+*c) Mỗi khi đẩy pit-tông xuống, lượng không khí trong săm xe tăng lên, làm cho tổng khối lượng không khí trong săm tăng.
+*d) Phương trình trạng thái khí lí tưởng pV = nRT không thể áp dụng để mô tả sự thay đổi các thông số trạng thái của không khí trong quá trình bơm xe đạp.
+
+Dạng 3. TRẢ LỜI NGẮN
+
+Câu 73. Sử dụng một cái bơm để bơm không khí vào quả bóng đá có bán kính khi bơm căng là 11 cm. Mỗi lần bơm đưa được 0,32 l khí ở điều kiện 1 atm vào bóng. Giả thiết rằng quả bóng trước khi bơm không có không khí và nhiệt độ không đổi trong quá trình bơm. Sau 35 lần bơm thì bóng căng. Áp suất khí trong bóng khi đó là bao nhiêu atm (làm tròn kết quả chữ số hàng đơn vị)?
+Đáp số: 2
+
+Câu 74. Nén đẳng nhiệt một khối khí từ thể tích ban đầu 9 lít xuống còn 4 lít. Áp suất của khối khí sau khi nén tăng hay giảm bao nhiêu lần?
+Đáp số: Tăng 2,25 lần
+
+Câu 75. Một khối khí xác định dãn nở đẳng nhiệt từ thể tích ban đầu 5 lít đến 12 lít thì áp suất khối khí đã giảm một lượng 80 kPa. Áp suất ban đầu của khối khí bằng bao nhiêu kPa (làm tròn kết quả đến chữ số hàng đơn vị)?
+Đáp số: 137
+
+Câu 76. Một bọt khí nổi từ đáy giếng sâu 6 m lên mặt nước. Coi áp suất khí quyển là 1,013.10⁵ Pa, khối lượng riêng của nước giếng là 1003 kg/m³, lấy g = 10 m/s² và nhiệt độ của nước giếng không thay đổi theo độ sâu. Khi lên tới mặt nước, thể tích của bọt khí tăng lên bao nhiêu lần?
+Đáp số: 1,59
+
+Câu 77. Buồng chứa sản phẩm điều chế là khí hydrogen được giữ ở 20,0^°C và áp suất 1,00 atm. Coi quá trình nạp khí được giữ cho nhiệt độ không đổi. Cần lấy bao nhiêu m³ khí hydrogen từ buồng này để nạp đầy bình có thể tích 0,0500 m³ và áp suất 25,0 atm?
+Đáp số: 1,25
+
+Câu 78. Một lượng không khí có thể tích 240 cm³ bị giam trong một xilanh có pit-tông đóng kín như hình vẽ, diện tích của pit-tông là 20 cm², áp suất khí trong xilanh bằng áp suất ngoài là 100 kPa. Bỏ qua mọi ma sát, coi quá trình trên là đẳng nhiệt. Để pit-tông dịch chuyển sang trái 4 cm thì cần tác dụng lên pit-tông một lực có độ lớn bằng bao nhiêu niutơn?
+Đáp số: 50
+
+Câu 79. Một bơm xe đạp hình trụ có đường kính trong là 3 cm. Người ta dùng ngón tay bịt kín đầu vòi bơm và ấn pit-tông từ từ để nén không khí trong bơm sao cho nhiệt độ không thay đổi. Lấy áp suất khí quyển là p₀ = 10⁵ Pa. Khi thể tích của không khí trong bơm giảm đi 4 lần thì lực tác dụng lên pit-tông bằng bao nhiêu niutơn (làm tròn kết quả đến chữ số hàng đơn vị)?
+Đáp số: 212
+
+Câu 80. Một ống thủy tinh cao 60 cm, đầu kín ở dưới, đầu hở ở trên. Bên trong có một cột khí lí tưởng dài 20 cm, bị chặn phía trên bởi một cột thủy ngân dài 40 cm. Biết áp suất khí quyển là p₀ = 80 cmHg, nhiệt độ không đổi. Khi lật ngược ống, độ cao cột thủy ngân còn lại trong ống là bao nhiêu cm?
+Đáp số: 20
+
+Câu 81. Một bình hình trụ kín hai đầu, có h = 40 cm được đặt nằm ngang, bên trong có một pit-tông có thể chuyển động không ma sát trong bình và cả hai đều làm bằng vật liệu cách nhiệt. Lúc đầu pit-tông được giữ cố định ở chính giữa bình. Hai bên pit-tông đều có khí cùng loại, có khối lượng bằng nhau và ở cùng nhiệt độ nhưng áp suất khí bên phải lớn gấp 3 lần áp suất khí bên trái (xem nhiệt độ của hệ không đổi). Nếu bây giờ ta để pit-tông tự do thì pit-tông dịch chuyển một đoạn bằng bao nhiêu cm thì dừng lại?
+Đáp số: 10
+
+Câu 82. Một ống thủy tinh úp vào trong chậu thủy ngân như hình vẽ. Cột không khí bị nhốt ở phần đáy trên có chiều dài l = 56 mm, cột thủy ngân dâng lên h = 748 mm, áp suất khí quyển khi đó là 768 mmHg. Thay đổi áp suất khí quyển làm cột thủy ngân tụt xuống, coi nhiệt độ không đổi. Áp suất khí quyển là bao nhiêu mmHg khi cột thủy ngân chỉ dâng lên h' = 734 mm?
+Đáp số: 766
+
+Câu 83. Một ống thủy tinh tiết diện đều S, một đầu kín một đầu hở, chứa một cột thủy ngân dài h = 14 cm. Khi đặt ống thẳng đứng, đầu hở ở trên thì chiều dài của cột không khí là l₁ = 10 cm, áp suất khí quyển bằng p₀ = 76 cmHg. Coi nhiệt độ khí trong ống thủy tinh không thay đổi. Biết ống đủ dài để toàn bộ cột thủy ngân vẫn ở trong ống. Khi đặt ống thủy tinh thẳng đứng đầu hở ở dưới thì cột không khí trong ống có chiều dài l₂ bằng bao nhiêu cm (làm tròn kết quả đến chữ số hàng phần mười)?
+Đáp số: 14,5
+
+Câu 84. Ống thủy tinh đặt thẳng đứng đầu hở ở trên, đầu kín ở dưới. Một cột không khí cao 20 cm bị giam trong ống bởi một cột thủy ngân cao 40 cm. Biết áp suất khí quyển là 80 cmHg, lật ngược ống lại để đầu kín ở trên, đầu hở ở dưới, coi nhiệt độ không đổi, nếu muốn lượng thủy ngân ban đầu không chảy ra ngoài thì chiều dài tối thiểu của ống phải là bao nhiêu cm?
+Đáp số: 100
+
+Câu 85. Một ống thủy tinh tiết diện đều S, một đầu kín một đầu hở, chứa một cột thủy ngân dài h = 16 cm. Khi đặt ống thẳng đứng, đầu hở ở trên thì chiều dài của cột không khí là l₁ = 15 cm, áp suất khí quyển bằng p₀ = 76 cmHg. Khi đặt ống thủy tinh nghiêng một góc α = 30^° so với phương thẳng đứng, đầu hở ở trên thì chiều dài của cột không khí trong ống bằng bao nhiêu cm (làm tròn kết quả đến chữ số hàng phần mười)?
+Đáp số: 15,3
+
+Câu 86. Ở chính giữa một ống thuỷ tinh nằm ngang, tiết diện nhỏ, chiều dài L = 100 cm, hai đầu bịt kín có một cột thuỷ ngân dài h = 20 cm. Trong ống có không khí. Khi đặt ống thẳng đứng, cột thuỷ ngân dịch chuyển xuống dưới một đoạn l = 10 cm. Coi nhiệt độ của không khí trong ống không đổi. Áp suất của không khí trong ống khi ống đặt nằm ngang bằng bao nhiêu cmHg?
+Đáp số: 37,5
+
+Câu 87. Người ta điều chế khí hydrogen và chứa vào một bình lớn dưới áp suất 1 atm, ở nhiệt độ 20^°C. Coi nhiệt độ không đổi. Thể tích khí phải lấy từ bình lớn ra để nạp vào một bình nhỏ (chưa có khí) thể tích 20 lít để nó đạt áp suất 25 atm là bao nhiêu lít?
+Đáp số: 500
+
+Câu 88. Trong giờ thực hành, học sinh tiến hành thí nghiệm khảo sát định luật Boyle cho một khối khí trong ống pipette có thể tích ban đầu 0,85 ml, ở áp suất khí quyển 760 mmHg. Học sinh vặn pit-tông vào trong để thể tích khí đạt giá trị V₂ ml thì áp suất khối khí trong ống lúc này là 850 mmHg. Biết khối khí trong ống pipette có nhiệt độ không đổi. Hãy xác định giá trị V₂.
+Đáp số: 0,76
+
+Câu 89. Ở chính giữa một ống thuỷ tinh nằm ngang, tiết diện nhỏ, chiều dài L = 100 cm, hai đầu bịt kín có một cột thuỷ ngân dài h = 20 cm. Trong ống có không khí. Khi đặt ống thẳng đứng, cột thuỷ ngân dịch chuyển xuống dưới một đoạn l = 10 cm. Coi nhiệt độ của không khí trong ống không đổi. Áp suất của không khí trong ống khi ống đặt nằm ngang bằng bao nhiêu cmHg?
+Đáp số: 37,5
+
+Câu 90. Một ống thủy tinh được cắm lộn ngược vào một chậu chứa thủy ngân, bên trong ống chứa 40 cm³ không khí và cột thủy ngân cao 8 cm so với mực thủy ngân trong chậu (Hình a). Người ta ấn sâu ống thủy tinh vào thủy ngân cho tới khi mực thủy ngân ở bên trong và bên ngoài ống bằng nhau (Hình b). Biết áp suất khí quyển là 75 cmHg và nhiệt độ không thay đổi trong quá trình làm thí nghiệm. Thể tích của không khí còn lại bên trong ống thủy tinh bằng bao nhiêu cm³ (làm tròn kết quả đến chữ số hàng phần mười)?
+Đáp số: 35,7
+`;
+    const PRE_LOADED_SAVED_SESSION = null;
+
+    let listLessons = []; 
+    let currentLessonIndex = 0;
+    let hasGraded = {}; 
+    let singleCheckedQuestions = {}; 
+    let activeQuestionNumber = "1"; 
+    let timerInterval = null;
+    let totalSeconds = 0;
+    let currentTFSubLabelIndex = 0; 
+    let currentSpeechLanguage = 'vi-VN';
+    let currentFilterMode = 'ALL'; 
+
+    let allGlobalImageUrls = [];
+    let currentLightboxIndex = 0;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if(PRE_LOADED_SAVED_SESSION && PRE_LOADED_SAVED_SESSION.listLessons && PRE_LOADED_SAVED_SESSION.listLessons.length > 0) {
+            restoreSavedSession(PRE_LOADED_SAVED_SESSION);
+        } else if(PRE_LOADED_RAW_DATA && PRE_LOADED_RAW_DATA.trim().length > 0) {
+            document.getElementById('txt-input').value = PRE_LOADED_RAW_DATA.trim();
+            parseAndGenerateQuiz();
+        }
+        window.addEventListener('keydown', handleGlobalKeydowns);
+    });
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+    function closeSidebarOnMobile() { if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active'); }
+
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        let icon = 'ℹ️';
+        if (type === 'success') icon = '✓';
+        else if (type === 'error') icon = '✕';
+        else if (type === 'warning') icon = '⚠️';
+
+        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    function toggleSpeechLanguage() {
+        const toggle = document.getElementById('language-speech-toggle');
+        const label = document.getElementById('lang-label');
+        if(toggle.checked) {
+            currentSpeechLanguage = 'en-US';
+            label.innerText = "🗣️ Giọng đọc: EN";
+            showToast('Đã đổi giọng đọc sang Tiếng Anh', 'info');
+        } else {
+            currentSpeechLanguage = 'vi-VN';
+            label.innerText = "🗣️ Giọng đọc: VN";
+            showToast('Đã đổi giọng đọc sang Tiếng Việt', 'info');
+        }
+    }
+
+    function copyGeneratedPromptToClipboard() {
+        const topic = document.getElementById('cfg-topic').value.trim() || "[Chủ đề bạn muốn biên soạn]";
+        const mcqCount = document.getElementById('cfg-mcq').value || "60";
+        const tfCount = document.getElementById('cfg-tf').value || "12";
+        const saCount = document.getElementById('cfg-sa').value || "18";
+        
+        const fullPrompt = `Bạn là một chuyên gia biên soạn đề thi. Hãy giúp tôi soạn thảo bộ câu hỏi trắc nghiệm theo đúng cấu trúc cú pháp của hệ thống phân tích dữ liệu tự động. Hãy tuân thủ nghiêm ngặt các quy tắc định dạng dưới đây:
+
+### 1. CẤU TRÚC PHÂN LOẠI & DẠNG BÀI:
+Phân loại nội dung theo từng dạng/mục. Mỗi tiêu đề mục/dạng bài phải đặt trên một dòng riêng, viết hoa và bắt đầu bằng ký tự La Mã (I., II., III...) hoặc từ "Dạng" (Ví dụ: Dạng 1., Dạng 2...).
+
+### 2. QUY TẮC ĐỊNH DẠNG 3 DẠNG CÂU HỎI:
+Mỗi câu hỏi phải bắt đầu bằng chữ "Câu X:" hoặc "Câu X." (với X là số).
+
+#### Dạng 1: Trắc nghiệm lựa chọn đơn (MCQ - 4 đáp án A, B, C, D)
+- Bắt đầu bằng Câu X.
+- Các đáp án bắt đầu bằng A., B., C., D. (phải có dấu chấm và dấu cách sau chữ cái phương án).
+- Đáp án ĐÚNG phải có thêm dấu ký tự hoa thị (*) đứng ngay trước chữ cái phương án (Ví dụ: *A. hoặc *B.).
+Ví dụ:
+Câu 1. Thủ đô của Việt Nam là gì?
+*A. Hà Nội
+B. TP. Hồ Chí Minh
+C. Đà Nẵng
+D. Hải Phòng
+
+#### Dạng 2: Trắc nghiệm Đúng / Sai (TF)
+- Mỗi câu gồm nhiều ý nhỏ, bắt đầu bằng chữ cái thường và dấu đóng ngoặc đơn: a), b), c), d).
+- Mệnh đề ĐÚNG: Thêm dấu hoa thị (*) vào đầu dòng trước chữ cái phương án (Ví dụ: *a)... hoặc *c)...).
+- Mệnh đề SAI: Không thêm dấu hoa thị (*) ở đầu dòng (Ví dụ: b)... hoặc d)...).
+- KHÔNG thêm chữ "Đúng:" hoặc "Sai:" trong câu.
+Ví dụ:
+Câu 2. Xét các mệnh đề sau về địa lý thế giới:
+*a) Trái Đất quay quanh Mặt Trời.
+b) Mặt Trăng tự phát ra ánh sáng.
+*c) Châu Á là châu lục có diện tích lớn nhất.
+d) Sông Nile chảy qua châu Âu.
+
+#### Dạng 3: Trả lời ngắn (SA)
+- Cuối câu hỏi, bắt buộc phải có một dòng ghi rõ chữ "Đáp số:" kèm theo câu trả lời ngắn (chữ hoặc số).
+Ví dụ:
+Câu 3. Kết quả của phép tính 15 + 25 bằng bao nhiêu?
+Đáp số: 40
+
+### 3. YÊU CẦU BỔ SUNG (NẾU CÓ CHÈN ẢNH):
+Hệ thống có tính năng tự động trích xuất link hình ảnh trong nội dung câu hỏi. Nếu câu hỏi nào cần hình ảnh minh họa, hãy chèn link URL trực tiếp của ảnh (đuôi .jpg, .png, .webp,...) vào bất kỳ vị trí nào trong phần text của câu hỏi đó.
+
+---
+BÂY GIỜ, hãy soạn cho tôi một bộ câu hỏi về chủ đề: ${topic}
+- Số lượng câu hỏi mong muốn: ${mcqCount} câu MCQ, ${tfCount} câu Đúng/Sai, ${saCount} câu Trả lời ngắn
+- Đảm bảo không thêm bất kỳ văn bản giải thích, lời mở đầu hay ký tự Markdown thụt lề nào ngoài cấu trúc quy định trên.
+- Sắp xếp và phân loại các câu hỏi theo từng dạng (Dạng 1..., Dạng 2...).
+- Chú ý, đặc biệt lưu ý, rằng trích dẫn nguyên văn đề, không giản lược hay rút gọn câu dẫn, nội dung đề.
+- Yêu cầu lấy câu MCQ thì lấy nội dung từ câu MCQ, yêu cầu lấy câu TF thì lấy từ câu TF, yêu cầu lấy câu SA thì lấy từ câu SA.
+- Yêu cầu trích dẫn giùm tôi là câu này lấy từ câu nào của đề gốc, trích rõ giùm. Theo form kiểu Câu X. (Câu Y - Trang z), hoặc Câu X. (Ví dụ Y - Trang z), Y là câu gốc trong tài liệu.`;
+
+        navigator.clipboard.writeText(fullPrompt).then(() => {
+            showToast('Đã sao chép Prompt đầy đủ vào bộ nhớ tạm!', 'success');
+        });
+    }
+
+    function handleGlobalKeydowns(e) {
+        const lightboxModal = document.getElementById('lightbox-modal');
+        if (lightboxModal.classList.contains('active')) {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                changeLightboxImage(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                changeLightboxImage(1);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeLightbox();
+            }
+            return;
+        }
+
+        if (e.target.tagName === 'TEXTAREA') return;
+        if (e.target.tagName === 'INPUT' && e.key !== 'Enter') return;
+        const lesson = listLessons[currentLessonIndex];
+        if (!lesson || lesson.questions.length === 0) return;
+        const visibleQuestions = getFilteredQuestions(lesson);
+        const currentIdx = visibleQuestions.findIndex(q => q.numberStr === activeQuestionNumber);
+        if (currentIdx === -1) return;
+        const activeQ = visibleQuestions[currentIdx];
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (currentIdx > 0) focusAndScrollToQuestion(visibleQuestions[currentIdx - 1].numberStr);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (currentIdx < visibleQuestions.length - 1) focusAndScrollToQuestion(visibleQuestions[currentIdx + 1].numberStr);
+        }
+
+        if (activeQ.type === 'MCQ') {
+            const keyUpper = e.key.toUpperCase();
+            if (['A', 'B', 'C', 'D'].includes(keyUpper) && activeQ.options[keyUpper]) {
+                e.preventDefault();
+                const radio = document.querySelector(`input[name="q_ans_${currentLessonIndex}_${activeQ.numberStr}"][value="${keyUpper}"]`);
+                if (radio && !radio.disabled) { radio.checked = true; handleSelectMCQ(activeQ.numberStr, keyUpper); }
+            }
+        }
+        if (activeQ.type === 'TF') {
+            const keyLower = e.key.toLowerCase();
+            if (keyLower === 'd' || keyLower === 's') {
+                e.preventDefault();
+                const subQuestions = activeQ.subQuestions;
+                if (currentTFSubLabelIndex < subQuestions.length) {
+                    const targetSub = subQuestions[currentTFSubLabelIndex];
+                    const choiceValue = (keyLower === 'd');
+                    const isLock = hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${activeQ.numberStr}`];
+                    if (!isLock) handleSelectTF(activeQ.numberStr, targetSub.label, choiceValue);
+                }
+            }
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        document.getElementById('quiz-timer-container').classList.remove('hidden');
+        timerInterval = setInterval(() => {
+            totalSeconds++;
+            const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const secs = String(totalSeconds % 60).padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+        }, 1000);
+    }
+    function stopTimer() { clearInterval(timerInterval); }
+
+    function extractAllImageUrls(text) {
+        if (!text) return [];
+        const imgRegex = /(https?:\/\/[^\s]+)/gi;
+        const matches = text.match(imgRegex);
+        return matches ? Array.from(new Set(matches)) : [];
+    }
+
+    function updateGlobalImageRegistry() {
+        allGlobalImageUrls = [];
+        listLessons.forEach(lesson => {
+            lesson.questions.forEach(q => {
+                let cleanQText = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:\s]/i, '').trim();
+                let imgUrls = extractAllImageUrls(cleanQText);
+                imgUrls.forEach(url => {
+                    if (!allGlobalImageUrls.includes(url)) {
+                        allGlobalImageUrls.push(url);
+                    }
+                });
+            });
+        });
+    }
+
+    function openLightbox(url) {
+        const modal = document.getElementById('lightbox-modal');
+        const imgEl = document.getElementById('lightbox-img');
+        currentLightboxIndex = allGlobalImageUrls.indexOf(url);
+        if (currentLightboxIndex === -1) currentLightboxIndex = 0;
+        imgEl.src = url;
+        modal.classList.add('active');
+    }
+
+    function closeLightbox() {
+        document.getElementById('lightbox-modal').classList.remove('active');
+    }
+
+    function changeLightboxImage(direction) {
+        if (allGlobalImageUrls.length === 0) return;
+        currentLightboxIndex = (currentLightboxIndex + direction + allGlobalImageUrls.length) % allGlobalImageUrls.length;
+        document.getElementById('lightbox-img').src = allGlobalImageUrls[currentLightboxIndex];
+    }
+
+    function parseAndGenerateQuiz() {
+        const rawText = document.getElementById('txt-input').value.trim();
+        if (!rawText) { showToast('Vui lòng nhập nội dung văn bản trắc nghiệm!', 'warning'); return; }
+
+        const parts = rawText.split(/(?=^[I|II|III|IV|V|VI|VII|VIII|IX|X]+\.\s+|^Dạng\s+\d+[\.:\s]|^[B-Z]\.\s+BÀI TẬP)/mi);
+        listLessons = []; hasGraded = {}; singleCheckedQuestions = {}; totalSeconds = 0;
+        let globalIndex = 1;
+
+        parts.forEach((part) => {
+            if (!part.trim()) return;
+            let title = `Mục trắc nghiệm ${globalIndex}`;
+            const firstLine = part.trim().split('\n')[0];
+            if (firstLine.length < 100) title = firstLine.replace(/_+/g, '').trim();
+
+            const rawQuestions = part.split(/(?=^Câu\s+\d+(?:\.\d+)?[\.:\s])/m);
+            let questions = [];
+
+            rawQuestions.forEach(qBlock => {
+                const cleanBlock = qBlock.trim();
+                if (!cleanBlock || !cleanBlock.match(/^Câu\s+\d+(?:\.\d+)?[\.:]/i)) return;
+
+                const numMatch = cleanBlock.match(/^Câu\s+(\d+(?:\.\d+)?)/i);
+                const qNumberStr = numMatch ? numMatch[1] : String(questions.length + 1);
+                const lines = cleanBlock.split('\n').map(l => l.trim()).filter(l => l);
+                
+                let questionLines = [];
+                let options = {}; let mcqCorrect = null;
+                let tfSubQuestions = []; let isTFType = false;
+                let shortAnswerCorrect = null; let isShortAnswerType = false;
+
+                lines.forEach(line => {
+                    const saMatch = line.match(/(?:^|\.)\s*Đáp\s+số\s*:\s*(.*)$/i);
+                    if(saMatch) { isShortAnswerType = true; shortAnswerCorrect = saMatch[1].trim(); return; }
+
+                    const tfMatch = line.match(/^(\*?)([a-d])\)\s*(.*)$/i);
+                    if (tfMatch) {
+                        isTFType = true;
+                        const isCorrect = (tfMatch[1] === '*');
+                        let contentText = tfMatch[3].trim().replace(/^(Đúng|Sai)\s*[\.:]\s*/i, '');
+                        tfSubQuestions.push({ label: tfMatch[2].toLowerCase(), text: contentText, correctValue: isCorrect });
+                        return;
+                    }
+
+                    const mcqMatch = line.match(/^(\*?)([A-D])\.\s*(.*)$/i);
+                    if (mcqMatch) {
+                        const optLetter = mcqMatch[2].toUpperCase();
+                        options[optLetter] = mcqMatch[3].trim();
+                        if (mcqMatch[1] === '*') mcqCorrect = optLetter;
+                        return;
+                    }
+
+                    if (line.match(/^https?:\/\/[^\s]+$/i)) {
+                        questionLines.push(line);
+                        return;
+                    }
+
+                    questionLines.push(line);
+                });
+
+                if(isShortAnswerType) {
+                    questions.push({ numberStr: qNumberStr, type: 'SA', text: questionLines.join('\n'), correctAnswer: shortAnswerCorrect, rawBlock: cleanBlock });
+                } else if(isTFType) {
+                    questions.push({ numberStr: qNumberStr, type: 'TF', text: questionLines.join('\n'), subQuestions: tfSubQuestions, rawBlock: cleanBlock });
+                } else if (Object.keys(options).length > 0) {
+                    questions.push({ numberStr: qNumberStr, type: 'MCQ', text: questionLines.join('\n'), options: options, correctAnswer: mcqCorrect, rawBlock: cleanBlock });
+                }
+            });
+
+            if (questions.length > 0) {
+                listLessons.push({ title: title, questions: questions, userAnswers: {} });
+                globalIndex++;
+            }
+        });
+
+        if (listLessons.length === 0) { showToast('Không tìm thấy câu hỏi đúng cú pháp!', 'error'); return; }
+
+        updateGlobalImageRegistry();
+
+        document.getElementById('import-container').classList.add('hidden');
+        document.getElementById('import-actions').classList.add('hidden');
+        document.getElementById('menu-section').classList.remove('hidden');
+        document.getElementById('quiz-actions').classList.remove('hidden');
+        document.getElementById('quiz-container-box').classList.remove('hidden');
+
+        showToast(`Tạo thành công ${listLessons.length} mục bài tập!`, 'success');
+        renderSidebarMenu(); startTimer(); switchLesson(0);
+    }
+
+    function switchLesson(idx) {
+        currentLessonIndex = idx;
+        const lesson = listLessons[currentLessonIndex];
+        if (lesson && lesson.questions.length > 0) activeQuestionNumber = lesson.questions[0].numberStr;
+        currentTFSubLabelIndex = 0;
+        renderSidebarMenu(); renderQuestions();
+    }
+
+    function renderSidebarMenu() {
+        const menuContainer = document.getElementById('lesson-menu'); menuContainer.innerHTML = '';
+        listLessons.forEach((lesson, index) => {
+            const btn = document.createElement('button');
+            btn.className = `menu-item ${index === currentLessonIndex ? 'active' : ''}`;
+            let displayTitle = lesson.title;
+            if(displayTitle.length > 30) displayTitle = displayTitle.substring(0, 27) + '...';
+            btn.innerText = displayTitle; 
+            btn.onclick = () => { switchLesson(index); closeSidebarOnMobile(); };
+            menuContainer.appendChild(btn);
+        });
+    }
+
+    function handleFilterChange() {
+        currentFilterMode = document.getElementById('view-filter-select').value;
+        const lesson = listLessons[currentLessonIndex];
+        const filtered = getFilteredQuestions(lesson);
+        if (filtered.length > 0) activeQuestionNumber = filtered[0].numberStr;
+        renderQuestions();
+    }
+
+    function isQuestionAnswered(q, uAns) {
+        if (!uAns) return false;
+        if (q.type === 'MCQ') return !!uAns;
+        if (q.type === 'SA') return typeof uAns === 'string' && uAns.trim().length > 0;
+        if (q.type === 'TF') return Object.keys(uAns).length === q.subQuestions.length;
+        return false;
+    }
+
+    function isQuestionCorrect(q, uAns) {
+        if (!uAns) return false;
+        if (q.type === 'MCQ') return uAns === q.correctAnswer;
+        if (q.type === 'SA') return uAns.trim().replace(',', '.') === q.correctAnswer.trim().replace(',', '.');
+        if (q.type === 'TF') {
+            let ok = true;
+            q.subQuestions.forEach(sub => { if (uAns[sub.label] !== sub.correctValue) ok = false; });
+            return ok;
+        }
+        return false;
+    }
+
+    function getFilteredQuestions(lesson) {
+        if (!lesson) return [];
+        return lesson.questions.filter(q => {
+            const uAns = lesson.userAnswers[q.numberStr];
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`];
+            const isChecked = hasGraded[currentLessonIndex] || isSingleChecked;
+
+            if (currentFilterMode === 'WRONG') return isChecked && !isQuestionCorrect(q, uAns);
+            else if (currentFilterMode === 'UNANSWERED') return !isQuestionAnswered(q, uAns);
+            return true; 
+        });
+    }
+
+    function renderPagination() {
+        const pagContainer = document.getElementById('question-pagination'); pagContainer.innerHTML = '';
+        const lesson = listLessons[currentLessonIndex];
+        const filteredQuestions = getFilteredQuestions(lesson);
+
+        if (filteredQuestions.length === 0) {
+            pagContainer.innerHTML = `<span style="grid-column: span 5; font-size: 12px; color: #a0aec0;">Không có câu hỏi thỏa điều kiện.</span>`;
+            return;
+        }
+        
+        filteredQuestions.forEach(q => {
+            const item = document.createElement('div');
+            item.className = 'page-item'; item.innerText = q.numberStr;
+            if(q.numberStr === activeQuestionNumber) item.classList.add('active');
+
+            const uAns = lesson.userAnswers[q.numberStr];
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`];
+
+            if (hasGraded[currentLessonIndex] || isSingleChecked) {
+                const isCorrect = isQuestionCorrect(q, uAns);
+                item.classList.add(isCorrect ? 'correct' : 'wrong');
+            } else if (isQuestionAnswered(q, uAns)) {
+                item.classList.add('answered');
+            }
+
+            item.onclick = (e) => { e.stopPropagation(); focusAndScrollToQuestion(q.numberStr); closeSidebarOnMobile(); };
+            pagContainer.appendChild(item);
+        });
+    }
+
+    function renderQuestions() {
+        const displayZone = document.getElementById('questions-display'); displayZone.innerHTML = '';
+        const lesson = listLessons[currentLessonIndex];
+        const isAllGraded = hasGraded[currentLessonIndex] || false;
+        const filteredQuestions = getFilteredQuestions(lesson);
+
+        const h2 = document.createElement('h2'); h2.className = 'quiz-title'; h2.innerText = lesson.title;
+        displayZone.appendChild(h2);
+
+        if (filteredQuestions.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.style.padding = '30px'; emptyMsg.style.textAlign = 'center';
+            emptyMsg.style.background = '#fff'; emptyMsg.style.borderRadius = '8px';
+            emptyMsg.innerHTML = '🎉 Không có câu hỏi nào trong danh mục lọc này!';
+            displayZone.appendChild(emptyMsg);
+            renderPagination();
+            return;
+        }
+
+        filteredQuestions.forEach(q => {
+            const card = document.createElement('div');
+            card.className = 'question-card'; card.id = `q-card-id-${q.numberStr}`;
+            card.addEventListener('click', () => { if (activeQuestionNumber !== q.numberStr) focusAndScrollToQuestion(q.numberStr); });
+
+            let cleanQText = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:\s]/i, '').trim();
+            let imgUrls = extractAllImageUrls(cleanQText);
+            imgUrls.forEach(url => { cleanQText = cleanQText.replace(url, ''); });
+
+            const qHeader = document.createElement('div'); qHeader.className = 'question-header';
+            const qText = document.createElement('div'); qText.className = 'question-text'; qText.innerText = `Câu ${q.numberStr}: ${cleanQText.trim()}`;
+            qHeader.appendChild(qText);
+
+            const headerBtns = document.createElement('div'); headerBtns.className = 'header-buttons';
+            const speakBtn = document.createElement('button'); speakBtn.className = 'action-tool-btn'; speakBtn.innerHTML = '🔊';
+            speakBtn.onclick = (e) => { e.stopPropagation(); speakQuestion(q); };
+            const searchBtn = document.createElement('button'); searchBtn.className = 'action-tool-btn'; searchBtn.innerHTML = '🔍';
+            searchBtn.onclick = (e) => { e.stopPropagation(); searchQuestionOnGoogle(q); };
+            
+            headerBtns.appendChild(speakBtn); headerBtns.appendChild(searchBtn);
+            qHeader.appendChild(headerBtns); card.appendChild(qHeader);
+
+            if (imgUrls.length > 0) {
+                const gallery = document.createElement('div'); gallery.className = 'image-gallery';
+                imgUrls.forEach(url => {
+                    const img = document.createElement('img'); 
+                    img.src = url.trim(); 
+                    img.className = 'quiz-image';
+                    img.onclick = (e) => {
+                        e.stopPropagation();
+                        openLightbox(url.trim());
+                    };
+                    gallery.appendChild(img);
+                });
+                card.appendChild(gallery);
+            }
+
+            const savedAnswer = lesson.userAnswers[q.numberStr] || null;
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`] || false;
+            const lockOptions = isAllGraded || isSingleChecked;
+
+            if (q.type === 'MCQ') {
+                const optGroup = document.createElement('div'); optGroup.className = 'options-group';
+                ['A', 'B', 'C', 'D'].forEach(letter => {
+                    if (!q.options[letter]) return;
+                    const label = document.createElement('label'); label.className = 'option-label';
+                    label.innerHTML = `<input type="radio" name="q_ans_${currentLessonIndex}_${q.numberStr}" value="${letter}" ${savedAnswer === letter ? 'checked' : ''} ${lockOptions ? 'disabled' : ''}><div><span><strong>${letter}.</strong> ${q.options[letter]}</span></div>`;
+                    if (lockOptions) {
+                        if (letter === q.correctAnswer) label.classList.add('correct');
+                        if (savedAnswer === letter && letter !== q.correctAnswer) label.classList.add('wrong');
+                    }
+                    label.querySelector('input').addEventListener('change', (e) => handleSelectMCQ(q.numberStr, e.target.value));
+                    optGroup.appendChild(label);
+                });
+                card.appendChild(optGroup);
+            } else if (q.type === 'TF') {
+                const tfGroup = document.createElement('div'); tfGroup.style.display = 'flex'; tfGroup.style.flexDirection = 'column';
+                q.subQuestions.forEach((sub, sIdx) => {
+                    const row = document.createElement('div'); row.className = `tf-row tf-row-item-${q.numberStr}-${sub.label}`;
+                    if (q.numberStr === activeQuestionNumber && sIdx === currentTFSubLabelIndex && !lockOptions) row.classList.add('active-tf-row');
+
+                    const txtDiv = document.createElement('div'); txtDiv.className = 'tf-text'; txtDiv.innerHTML = `<strong>${sub.label})</strong> ${sub.text}`;
+                    row.appendChild(txtDiv);
+
+                    const btnGroup = document.createElement('div'); btnGroup.className = 'tf-buttons';
+                    const bT = document.createElement('button'); bT.className = `tf-btn tf-btn-true-${q.numberStr}-${sub.label} ${savedAnswer?.[sub.label] === true ? 'selected-true' : ''}`; bT.innerText = 'Đúng';
+                    const bF = document.createElement('button'); bF.className = `tf-btn tf-btn-false-${q.numberStr}-${sub.label} ${savedAnswer?.[sub.label] === false ? 'selected-false' : ''}`; bF.innerText = 'Sai';
+
+                    if(lockOptions) {
+                        bT.disabled = true; bF.disabled = true;
+                        row.classList.add(savedAnswer?.[sub.label] === sub.correctValue ? 'correct-row' : 'wrong-row');
+                    } else {
+                        bT.onclick = () => handleSelectTF(q.numberStr, sub.label, true);
+                        bF.onclick = () => handleSelectTF(q.numberStr, sub.label, false);
+                    }
+                    btnGroup.appendChild(bT); btnGroup.appendChild(bF); row.appendChild(btnGroup); tfGroup.appendChild(row);
+                });
+                card.appendChild(tfGroup);
+            } else if (q.type === 'SA') {
+                const saGroup = document.createElement('div'); saGroup.className = 'sa-group';
+                const inputEl = document.createElement('input'); inputEl.type = 'text';
+                inputEl.className = 'sa-input sa-input-field-selector';
+                inputEl.id = `sa-input-id-${q.numberStr}`;
+                inputEl.placeholder = 'Nhập đáp số...'; inputEl.value = savedAnswer || ''; inputEl.disabled = lockOptions;
+
+                inputEl.addEventListener('change', (e) => handleSelectSA(q.numberStr, e.target.value));
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSelectSA(q.numberStr, inputEl.value);
+                        jumpToNextSAQuestion(q.numberStr);
+                    }
+                });
+
+                saGroup.appendChild(inputEl);
+                const resultZone = document.createElement('div'); resultZone.className = 'sa-result-zone';
+                if(lockOptions) {
+                    const isOk = (savedAnswer && savedAnswer.trim().replace(',', '.') === q.correctAnswer.trim().replace(',', '.'));
+                    resultZone.innerHTML = isOk ? `<span style="color:var(--success);">✓ Đúng. Gốc: ${q.correctAnswer}</span>` : `<span style="color:var(--error);">✗ Sai. Gốc: ${q.correctAnswer}</span>`;
+                    inputEl.classList.add(isOk ? 'correct' : 'wrong');
+                }
+                saGroup.appendChild(resultZone); card.appendChild(saGroup);
+            }
+            displayZone.appendChild(card);
+        });
+        highlightFocusedCard(); renderPagination();
+    }
+
+    function searchQuestionOnGoogle(q) {
+        let textOnly = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:]/i, '').trim();
+        extractAllImageUrls(textOnly).forEach(url => { textOnly = textOnly.replace(url, ''); });
+        let fullQuery = textOnly.trim();
+        if (q.type === 'MCQ') {
+            ['A', 'B', 'C', 'D'].forEach(l => { if(q.options[l]) fullQuery += ` ${l}. ${q.options[l]}`; });
+        } else if (q.type === 'TF') {
+            q.subQuestions.forEach(sub => { fullQuery += ` ${sub.label}) ${sub.text}`; });
+        }
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(fullQuery)}`, '_blank');
+    }
+
+    function speakQuestion(q) {
+        window.speechSynthesis.cancel();
+        let textToSpeak = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:]/i, '').trim();
+        extractAllImageUrls(textToSpeak).forEach(url => { textToSpeak = textToSpeak.replace(url, ''); });
+        let content = currentSpeechLanguage === 'vi-VN' ? `Câu ${q.numberStr}. ${textToSpeak}. ` : `Question ${q.numberStr}. ${textToSpeak}. `;
+        const utterance = new SpeechSynthesisUtterance(content);
+        utterance.lang = currentSpeechLanguage;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function jumpToNextSAQuestion(currentNumStr) {
+        const lesson = listLessons[currentLessonIndex];
+        const visibleQuestions = getFilteredQuestions(lesson);
+        const currentIdx = visibleQuestions.findIndex(q => q.numberStr === currentNumStr);
+        if (currentIdx === -1) return;
+
+        for (let i = currentIdx + 1; i < visibleQuestions.length; i++) {
+            if (visibleQuestions[i].type === 'SA') {
+                const nextQ = visibleQuestions[i];
+                focusAndScrollToQuestion(nextQ.numberStr);
+                setTimeout(() => {
+                    const nextInput = document.getElementById(`sa-input-id-${nextQ.numberStr}`);
+                    if (nextInput && !nextInput.disabled) { nextInput.focus(); nextInput.select(); }
+                }, 300);
+                return;
+            }
+        }
+        jumpToNextQuestion(currentNumStr);
+    }
+
+    function handleSelectMCQ(qNumStr, letter) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        lesson.userAnswers[qNumStr] = letter;
+        if (document.getElementById('auto-check-toggle').checked) {
+            singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+            renderQuestions(); setTimeout(() => { jumpToNextQuestion(qNumStr); }, 400);
+        } else { renderPagination(); }
+    }
+
+    function handleSelectTF(qNumStr, subLabel, value) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        if (!lesson.userAnswers[qNumStr]) lesson.userAnswers[qNumStr] = {};
+        lesson.userAnswers[qNumStr][subLabel] = value;
+        const qData = lesson.questions.find(q => q.numberStr === qNumStr);
+        currentTFSubLabelIndex++;
+
+        if (Object.keys(lesson.userAnswers[qNumStr]).length === qData.subQuestions.length) {
+            if (document.getElementById('auto-check-toggle').checked) {
+                singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+                renderQuestions(); setTimeout(() => { jumpToNextQuestion(qNumStr); }, 400);
+            } else { renderQuestions(); }
+        } else { renderQuestions(); }
+    }
+
+    function handleSelectSA(qNumStr, value) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        lesson.userAnswers[qNumStr] = value;
+        if (document.getElementById('auto-check-toggle').checked && value.trim().length > 0) {
+            singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+            renderQuestions();
+        } else { renderPagination(); }
+    }
+
+    function jumpToNextQuestion(currentNumStr) {
+        const lesson = listLessons[currentLessonIndex];
+        const visibleQuestions = getFilteredQuestions(lesson);
+        const idx = visibleQuestions.findIndex(q => q.numberStr === currentNumStr);
+        if (idx !== -1 && idx < visibleQuestions.length - 1) {
+            focusAndScrollToQuestion(visibleQuestions[idx + 1].numberStr);
+        }
+    }
+
+    function focusAndScrollToQuestion(qNumStr) {
+        activeQuestionNumber = qNumStr; currentTFSubLabelIndex = 0;
+        highlightFocusedCard(); renderQuestions();
+        const targetCard = document.getElementById(`q-card-id-${qNumStr}`);
+        if (targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function highlightFocusedCard() {
+        document.querySelectorAll('.question-card').forEach(card => card.classList.remove('focused-card'));
+        const currentCard = document.getElementById(`q-card-id-${activeQuestionNumber}`);
+        if(currentCard) currentCard.classList.add('focused-card');
+    }
+
+    function gradeQuiz() {
+        stopTimer(); const lesson = listLessons[currentLessonIndex];
+        let correctCount = 0;
+        lesson.questions.forEach(q => {
+            const uAns = lesson.userAnswers[q.numberStr];
+            if (isQuestionCorrect(q, uAns)) correctCount++;
+        });
+        hasGraded[currentLessonIndex] = true; renderQuestions();
+        showToast(`Bạn làm đúng ${correctCount}/${lesson.questions.length} câu. Thời gian: ${document.getElementById('timer-display').innerText}`, 'success', 5000);
+    }
+
+    function saveWorkSession() {
+        let rawData = document.getElementById('txt-input').value;
+        if (!rawData.trim() && listLessons.length > 0) {
+            let reconstructed = "";
+            listLessons.forEach(l => {
+                reconstructed += `\n${l.title}\n`;
+                l.questions.forEach(q => {
+                    reconstructed += `${q.rawBlock}\n\n`;
+                });
+            });
+            rawData = reconstructed.trim();
+        }
+
+        if(!rawData.trim()) {
+            showToast('Không có dữ liệu đề để save!', 'warning');
+            return;
+        }
+
+        const sessionState = {
+            listLessons: listLessons,
+            currentLessonIndex: currentLessonIndex,
+            hasGraded: hasGraded,
+            singleCheckedQuestions: singleCheckedQuestions,
+            activeQuestionNumber: activeQuestionNumber,
+            totalSeconds: totalSeconds,
+            currentFilterMode: currentFilterMode
+        };
+
+        let htmlContent = document.documentElement.outerHTML;
+
+        htmlContent = htmlContent.replace(
+            /const\s+PRE_LOADED_RAW_DATA\s*=\s*`[\s\S]*?`;/, 
+            `const PRE_LOADED_RAW_DATA = \`${rawData.replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`;`
+        );
+
+        const sessionAssignment = `const PRE_LOADED_SAVED_SESSION = ${JSON.stringify(sessionState)};`;
+        if (htmlContent.includes('const PRE_LOADED_SAVED_SESSION')) {
+            htmlContent = htmlContent.replace(/const\s+PRE_LOADED_SAVED_SESSION\s*=\s*[\s\S]*?;/, sessionAssignment);
+        } else {
+            htmlContent = htmlContent.replace('const PRE_LOADED_RAW_DATA =', sessionAssignment + '\n    const PRE_LOADED_SAVED_SESSION =');
+        }
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const timeLabel = `${year}-${month}-${day}_${hours}-${minutes}`;
+
+        const blob = new Blob(["<!DOCTYPE html>\n" + htmlContent], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = `trac_nghiem_save_${timeLabel}.html`; 
+        a.click();
+
+        showToast(`Đã save bài làm lúc ${hours}:${minutes} (${day}/${month}/${year})!`, 'success', 4000);
+    }
+
+    function saveOriginalQuizFile() {
+        let rawData = document.getElementById('txt-input').value;
+        if (!rawData.trim() && listLessons.length > 0) {
+            let reconstructed = "";
+            listLessons.forEach(l => {
+                reconstructed += `\n${l.title}\n`;
+                l.questions.forEach(q => {
+                    reconstructed += `${q.rawBlock}\n\n`;
+                });
+            });
+            rawData = reconstructed.trim();
+        }
+
+        if(!rawData.trim()) {
+            showToast('Không có dữ liệu đề để save!', 'warning');
+            return;
+        }
+
+        let htmlContent = document.documentElement.outerHTML;
+
+        htmlContent = htmlContent.replace(
+            /const\s+PRE_LOADED_RAW_DATA\s*=\s*`[\s\S]*?`;/, 
+            `const PRE_LOADED_RAW_DATA = \`${rawData.replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`;`
+        );
+
+        if (htmlContent.includes('const PRE_LOADED_SAVED_SESSION')) {
+            htmlContent = htmlContent.replace(/const\s+PRE_LOADED_SAVED_SESSION\s*=\s*[\s\S]*?;/, `const PRE_LOADED_SAVED_SESSION = null;`);
+        }
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const timeLabel = `${year}-${month}-${day}_${hours}-${minutes}`;
+
+        const blob = new Blob(["<!DOCTYPE html>\n" + htmlContent], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = `de_goc_${timeLabel}.html`; 
+        a.click();
+
+        showToast(`Đã xuất file đề gốc thành công lúc ${hours}:${minutes}!`, 'success', 4000);
+    }
+
+    function restoreSavedSession(session) {
+        listLessons = session.listLessons || [];
+        currentLessonIndex = session.currentLessonIndex || 0;
+        hasGraded = session.hasGraded || {};
+        singleCheckedQuestions = session.singleCheckedQuestions || {};
+        activeQuestionNumber = session.activeQuestionNumber || "1";
+        totalSeconds = session.totalSeconds || 0;
+        currentFilterMode = session.currentFilterMode || 'ALL';
+
+        document.getElementById('view-filter-select').value = currentFilterMode;
+
+        updateGlobalImageRegistry();
+
+        let reconstructed = "";
+        listLessons.forEach(l => {
+            reconstructed += `\n${l.title}\n`;
+            l.questions.forEach(q => {
+                reconstructed += `${q.rawBlock}\n\n`;
+            });
+        });
+        document.getElementById('txt-input').value = reconstructed.trim();
+
+        document.getElementById('import-container').classList.add('hidden');
+        document.getElementById('import-actions').classList.add('hidden');
+        document.getElementById('menu-section').classList.remove('hidden');
+        document.getElementById('quiz-actions').classList.remove('hidden');
+        document.getElementById('quiz-container-box').classList.remove('hidden');
+
+        renderSidebarMenu(); 
+        startTimer(); 
+        switchLesson(currentLessonIndex);
+        
+        showToast('Đã khôi phục thành công phiên làm việc từ file đã save!', 'info', 4000);
+    }
+</script>
+
+</body></html>
