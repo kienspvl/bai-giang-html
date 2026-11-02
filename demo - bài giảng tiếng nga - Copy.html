@@ -1,0 +1,3379 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Đọc Bài Giảng Markdown &amp; Word Chuyên Nghiệp v3.11</title>
+    <!-- MarkedJS: Chuyển Markdown sang HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Mammoth.js: Đọc file .docx Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js: Chuyển HTML từ Word sang Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    
+    <!-- KaTeX: Render Toán LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- MathJax v3 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['[', ']']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            },
+            startup: {
+                pageReady: function () {
+                    return MathJax.startup.defaultPageReady().then(function () {
+                        // Đảm bảo sau khi MathJax render xong, các khối toán học hiển thị chuẩn căn giữa
+                    });
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #020617;
+            --card-bg: #1e293b;
+            --text-color: #94a3b8;
+            --text-active: #f8fafc;
+            --border-color: #334155;
+            --accent-color: #38bdf8;
+            --highlight-bg: rgba(56, 189, 248, 0.12);
+            --sidebar-width: 280px;
+            --font-size: 20px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #475569;
+            --text-active: #0f172a;
+            --border-color: #cbd5e1;
+            --accent-color: #0284c7;
+            --highlight-bg: rgba(2, 132, 199, 0.12);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 8px 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .controls-group { 
+            display: flex; 
+            gap: 6px; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+
+        button, label.btn {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover, label.btn:hover { border-color: var(--accent-color); }
+        button.active { background-color: var(--accent-color); color: #fff; }
+
+        input[type="text"], input[type="number"], select {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 8px; border-radius: 6px; font-size: 13px;
+        }
+
+        .toggle-switch-wrapper { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-active); }
+        .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .toggle-switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* Ép hiển thị công thức MathJax chuẩn giữa màn hình */
+        mjx-container[jax="CHTML"][display="true"] {
+            display: block !important;
+            text-align: center !important;
+            margin: 1em 0 !important;
+        }
+
+        #selection-popup {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-width: 380px;
+        }
+        #selection-popup button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #selection-popup input[type="text"] {
+            width: 150px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 5;
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        #sidebar.open { margin-left: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; font-weight: bold; color: var(--text-active);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item {
+            padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            cursor: pointer; font-size: 14px; color: var(--text-color);
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-item:hover { background-color: var(--card-bg); color: var(--text-active); }
+        .toc-item.active-toc {
+            background-color: var(--highlight-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            border-left: 3px solid var(--accent-color);
+        }
+        .toc-item.level-1 { font-weight: bold; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; }
+        .toc-item.level-3 { padding-left: 30px; font-style: italic; }
+        .toc-item.level-4 { padding-left: 40px; opacity: 0.8; }
+
+        main {
+            flex: 1; overflow-y: auto;
+            padding: 30px 20px 150px 20px;
+            scroll-behavior: smooth;
+        }
+
+        #lecture-paper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            font-size: var(--font-size); line-height: 1.8;
+            transition: font-size 0.2s ease, background-color 0.3s;
+        }
+
+        #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4 { 
+            color: var(--accent-color); 
+            margin-top: 1.2em; margin-bottom: 0.5em; 
+            line-height: 1.4;
+        }
+        #lecture-paper p { margin: 0.8em 0; color: inherit; }
+        #lecture-paper ul, #lecture-paper ol { padding-left: 28px; margin: 0.8em 0; }
+        #lecture-paper li { margin-bottom: 6px; }
+        #lecture-paper strong { color: var(--accent-color); font-weight: 700; }
+        
+        #lecture-paper blockquote {
+            margin: 1em 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        #lecture-paper blockquote p { margin: 0.4em 0; }
+
+        #lecture-paper hr {
+            border: none;
+            border-top: 2px dashed var(--border-color);
+            margin: 2em 0;
+        }
+
+        /* KHUNG CHỨA HÌNH ẢNH TRONG BÀI GIẢNG (CĂN GIỮA & HOVER XÓA) */
+        .image-wrapper {
+            position: relative;
+            display: block;
+            margin: 16px auto;
+            width: fit-content;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        #lecture-paper img {
+            max-width: 100%; height: auto; max-height: 400px;
+            object-fit: contain; border-radius: 8px;
+            margin: 0 auto; display: block; cursor: zoom-in;
+            border: 1px solid var(--border-color);
+        }
+
+        .img-delete-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .image-wrapper:hover .img-delete-btn {
+            opacity: 1;
+        }
+
+        .img-delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        #lecture-paper table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        #lecture-paper th, #lecture-paper td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+        #lecture-paper th { background-color: var(--highlight-bg); }
+
+        .markdown-unit {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            border-radius: 6px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .markdown-unit.revealed {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+
+        li.markdown-unit.revealed, li.markdown-unit.active {
+            display: list-item !important;
+        }
+
+        .markdown-unit.active {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        hr.markdown-unit.active {
+            border-top-color: var(--accent-color);
+            box-shadow: none;
+            background-color: transparent;
+        }
+
+        body.mode-expand .markdown-unit {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+        body.mode-expand li.markdown-unit {
+            display: list-item !important;
+        }
+        body.mode-expand .markdown-unit.active {
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        footer {
+            background-color: var(--header-bg); 
+            padding: 10px 20px; display: flex; 
+            justify-content: center; align-items: center;
+            position: relative; border-top: 1px solid var(--border-color); 
+            font-size: 14px; color: var(--text-color); z-index: 10;
+        }
+
+        .author-info { font-weight: 600; color: var(--accent-color); text-align: center; }
+        #progress-counter { 
+            position: absolute; right: 20px; font-size: 13px; 
+            display: flex; align-items: center; gap: 4px;
+        }
+        #page-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); padding: 24px; border-radius: 12px;
+            width: 85%; max-width: 800px; display: flex; flex-direction: column; gap: 15px;
+            border: 1px solid var(--border-color); max-height: 90vh;
+        }
+
+        textarea {
+            width: 100%; height: 350px; background: var(--bg-color);
+            color: var(--text-active); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 8px; font-family: monospace; resize: vertical;
+        }
+
+        input[type="file"] { display: none; }
+
+        .history-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-color); padding: 10px 14px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .changelog-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .changelog-item:last-child { border-bottom: none; }
+        .changelog-version { font-weight: bold; color: var(--accent-color); font-size: 16px; }
+        .changelog-date { font-size: 12px; color: var(--text-color); margin-left: 8px; }
+        .changelog-list { margin: 6px 0 0 20px; padding: 0; font-size: 14px; line-height: 1.6; }
+
+        /* LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG */
+        #image-lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); z-index: 200;
+            justify-content: center; align-items: center; user-select: none;
+            cursor: pointer;
+        }
+
+        #image-lightbox img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            cursor: default;
+        }
+
+        .lightbox-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 220;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .lightbox-close-btn:hover {
+            background: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15); color: #fff;
+            border: none; padding: 16px 20px; font-size: 24px; cursor: pointer;
+            border-radius: 50%; transition: background 0.2s; z-index: 210;
+        }
+        .lightbox-nav:hover { background: var(--accent-color); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-size: 14px;
+            pointer-events: none;
+        }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast {
+            background-color: var(--card-bg); color: var(--text-active); border: 1px solid var(--accent-color);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        body.slideshow-mode header, body.slideshow-mode footer, body.slideshow-mode #sidebar { display: none !important; }
+        body.slideshow-mode main { padding: 40px 20px; }
+        #exit-slideshow-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 99;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        #exit-slideshow-btn:hover { background: var(--accent-color); color: #fff; }
+        body.slideshow-mode #exit-slideshow-btn { display: block; }
+
+        /* CẤU HÌNH IN (PRINT STYLES) - CHỈ IN NỘI DUNG BÀI GIẢNG */
+        @media print {
+            header, footer, #sidebar, .modal, #selection-popup, #image-lightbox, #toast-container, #exit-slideshow-btn, .img-delete-btn {
+                display: none !important;
+            }
+            body, .app-container, main {
+                background: #fff !important;
+                color: #000 !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #lecture-paper {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #000 !important;
+                background: #fff !important;
+            }
+            .markdown-unit {
+                display: block !important;
+                opacity: 1 !important;
+                color: #000 !important;
+                background: none !important;
+                box-shadow: none !important;
+            }
+            li.markdown-unit {
+                display: list-item !important;
+            }
+            #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4, #lecture-paper strong {
+                color: #000 !important;
+            }
+            #lecture-paper img {
+                max-height: 500px !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-math {
+  display: inline-block;
+  text-align: left;
+  line-height: 0;
+  text-indent: 0;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 100%;
+  font-size-adjust: none;
+  letter-spacing: normal;
+  border-collapse: collapse;
+  word-wrap: normal;
+  word-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  padding: 1px 0;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="CHTML"][display="true"][width="full"] {
+  display: flex;
+}
+
+mjx-container[jax="CHTML"][display="true"] mjx-math {
+  padding: 0;
+}
+
+mjx-container[jax="CHTML"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="CHTML"][justify="right"] {
+  text-align: right;
+}
+
+mjx-semantics {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mrow {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-msubsup {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-script {
+  display: inline-block;
+  padding-right: .05em;
+  padding-left: .033em;
+}
+
+mjx-script > mjx-spacer {
+  display: block;
+}
+
+mjx-mi {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c {
+  display: inline-block;
+}
+
+mjx-utext {
+  display: inline-block;
+  padding: .75em 0 .2em 0;
+}
+
+mjx-mo {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-stretchy-h {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-stretchy-h > * {
+  display: table-cell;
+  width: 0;
+}
+
+mjx-stretchy-h > * > mjx-c {
+  display: inline-block;
+  transform: scalex(1.0000001);
+}
+
+mjx-stretchy-h > * > mjx-c::before {
+  display: inline-block;
+  width: initial;
+}
+
+mjx-stretchy-h > mjx-ext {
+  /* IE */ overflow: hidden;
+  /* others */ overflow: clip visible;
+  width: 100%;
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c::before {
+  transform: scalex(500);
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c {
+  width: 0;
+}
+
+mjx-stretchy-h > mjx-beg > mjx-c {
+  margin-right: -.1em;
+}
+
+mjx-stretchy-h > mjx-end > mjx-c {
+  margin-left: -.1em;
+}
+
+mjx-stretchy-v {
+  display: inline-block;
+}
+
+mjx-stretchy-v > * {
+  display: block;
+}
+
+mjx-stretchy-v > mjx-beg {
+  height: 0;
+}
+
+mjx-stretchy-v > mjx-end > mjx-c {
+  display: block;
+}
+
+mjx-stretchy-v > * > mjx-c {
+  transform: scaley(1.0000001);
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+mjx-stretchy-v > mjx-ext {
+  display: block;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0px solid transparent;
+  /* IE */ overflow: hidden;
+  /* others */ overflow: visible clip;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c::before {
+  width: initial;
+  box-sizing: border-box;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c {
+  transform: scaleY(500) translateY(.075em);
+  overflow: visible;
+}
+
+mjx-mark {
+  display: inline-block;
+  height: 0px;
+}
+
+mjx-mn {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-msup {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mfrac {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-frac {
+  display: inline-block;
+  vertical-align: 0.17em;
+  padding: 0 .22em;
+}
+
+mjx-frac[type="d"] {
+  vertical-align: .04em;
+}
+
+mjx-frac[delims] {
+  padding: 0 .1em;
+}
+
+mjx-frac[atop] {
+  padding: 0 .12em;
+}
+
+mjx-frac[atop][delims] {
+  padding: 0;
+}
+
+mjx-dtable {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-dtable > * {
+  font-size: 2000%;
+}
+
+mjx-dbox {
+  display: block;
+  font-size: 5%;
+}
+
+mjx-num {
+  display: block;
+  text-align: center;
+}
+
+mjx-den {
+  display: block;
+  text-align: center;
+}
+
+mjx-mfrac[bevelled] > mjx-num {
+  display: inline-block;
+}
+
+mjx-mfrac[bevelled] > mjx-den {
+  display: inline-block;
+}
+
+mjx-den[align="right"], mjx-num[align="right"] {
+  text-align: right;
+}
+
+mjx-den[align="left"], mjx-num[align="left"] {
+  text-align: left;
+}
+
+mjx-nstrut {
+  display: inline-block;
+  height: .054em;
+  width: 0;
+  vertical-align: -.054em;
+}
+
+mjx-nstrut[type="d"] {
+  height: .217em;
+  vertical-align: -.217em;
+}
+
+mjx-dstrut {
+  display: inline-block;
+  height: .505em;
+  width: 0;
+}
+
+mjx-dstrut[type="d"] {
+  height: .726em;
+}
+
+mjx-line {
+  display: block;
+  box-sizing: border-box;
+  min-height: 1px;
+  height: .06em;
+  border-top: .06em solid;
+  margin: .06em -.1em;
+  overflow: hidden;
+}
+
+mjx-line[type="d"] {
+  margin: .18em -.1em;
+}
+
+mjx-msqrt {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-root {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+mjx-surd {
+  display: inline-block;
+  vertical-align: top;
+}
+
+mjx-sqrt {
+  display: inline-block;
+  padding-top: .07em;
+}
+
+mjx-sqrt > mjx-box {
+  border-top: .07em solid;
+}
+
+mjx-sqrt.mjx-tall > mjx-box {
+  padding-left: .3em;
+  margin-left: -.3em;
+}
+
+mjx-mover {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mover:not([limits="false"]) {
+  padding-top: .1em;
+}
+
+mjx-mover:not([limits="false"]) > * {
+  display: block;
+  text-align: left;
+}
+
+mjx-msub {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mspace {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+
+.mjx-stretched mjx-c.mjx-cAF::before {
+  content: "\AF";
+}
+
+mjx-stretchy-h.mjx-cAF mjx-ext mjx-c::before {
+  content: "\AF";
+  padding: 0.59em 0 0 0;
+}
+
+mjx-c.mjx-c1D44C.TEX-I::before {
+  padding: 0.683em 0.763em 0 0;
+  content: "Y";
+}
+
+mjx-c.mjx-c1D45A.TEX-I::before {
+  padding: 0.442em 0.878em 0.011em 0;
+  content: "m";
+}
+
+mjx-c.mjx-c1D459.TEX-I::before {
+  padding: 0.694em 0.298em 0.011em 0;
+  content: "l";
+}
+
+mjx-c.mjx-c28::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c1D703.TEX-I::before {
+  padding: 0.705em 0.469em 0.01em 0;
+  content: "\3B8";
+}
+
+mjx-c.mjx-c2C::before {
+  padding: 0.121em 0.278em 0.194em 0;
+  content: ",";
+}
+
+mjx-c.mjx-c1D719.TEX-I::before {
+  padding: 0.694em 0.596em 0.205em 0;
+  content: "\3D5";
+}
+
+mjx-c.mjx-c29::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c3D::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "=";
+}
+
+mjx-c.mjx-c30::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "0";
+}
+
+mjx-c.mjx-c31::before {
+  padding: 0.666em 0.5em 0 0;
+  content: "1";
+}
+
+mjx-c.mjx-c32::before {
+  padding: 0.666em 0.5em 0 0;
+  content: "2";
+}
+
+mjx-c.mjx-c2026::before {
+  padding: 0.12em 1.172em 0 0;
+  content: "\2026";
+}
+
+mjx-c.mjx-c2223::before {
+  padding: 0.75em 0.278em 0.249em 0;
+  content: "\2223";
+}
+
+mjx-c.mjx-c2264::before {
+  padding: 0.636em 0.778em 0.138em 0;
+  content: "\2264";
+}
+
+mjx-c.mjx-c2212::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "\2212";
+}
+
+mjx-c.mjx-c1D452.TEX-I::before {
+  padding: 0.442em 0.466em 0.011em 0;
+  content: "e";
+}
+
+mjx-c.mjx-c1D456.TEX-I::before {
+  padding: 0.661em 0.345em 0.011em 0;
+  content: "i";
+}
+
+mjx-c.mjx-c1D438.TEX-I::before {
+  padding: 0.68em 0.764em 0 0;
+  content: "E";
+}
+
+mjx-c.mjx-c1D461.TEX-I::before {
+  padding: 0.626em 0.361em 0.011em 0;
+  content: "t";
+}
+
+mjx-c.mjx-c2F::before {
+  padding: 0.75em 0.5em 0.25em 0;
+  content: "/";
+}
+
+mjx-c.mjx-c210F.TEX-A::before {
+  padding: 0.695em 0.562em 0.013em 0;
+  content: "\210F";
+}
+
+mjx-c.mjx-c73::before {
+  padding: 0.448em 0.394em 0.011em 0;
+  content: "s";
+}
+
+mjx-c.mjx-c69::before {
+  padding: 0.669em 0.278em 0 0;
+  content: "i";
+}
+
+mjx-c.mjx-c6E::before {
+  padding: 0.442em 0.556em 0 0;
+  content: "n";
+}
+
+mjx-c.mjx-c2061::before {
+  padding: 0 0 0 0;
+  content: "";
+}
+
+mjx-c.mjx-c63::before {
+  padding: 0.448em 0.444em 0.011em 0;
+  content: "c";
+}
+
+mjx-c.mjx-c6F::before {
+  padding: 0.448em 0.5em 0.01em 0;
+  content: "o";
+}
+
+mjx-c.mjx-c22C5::before {
+  padding: 0.31em 0.278em 0 0;
+  content: "\22C5";
+}
+
+mjx-c.mjx-c221A::before {
+  padding: 0.8em 0.853em 0.2em 0;
+  content: "\221A";
+}
+
+mjx-c.mjx-c1D70B.TEX-I::before {
+  padding: 0.431em 0.57em 0.011em 0;
+  content: "\3C0";
+}
+
+mjx-c.mjx-c43::before {
+  padding: 0.705em 0.722em 0.021em 0;
+  content: "C";
+}
+
+mjx-c.mjx-c74::before {
+  padding: 0.615em 0.389em 0.01em 0;
+  content: "t";
+}
+
+mjx-c.mjx-c61::before {
+  padding: 0.448em 0.5em 0.011em 0;
+  content: "a";
+}
+
+mjx-c.mjx-c1D443.TEX-I::before {
+  padding: 0.683em 0.751em 0 0;
+  content: "P";
+}
+
+mjx-c.mjx-c222B.TEX-S2::before {
+  padding: 1.36em 0.944em 0.862em 0;
+  content: "\222B";
+}
+
+mjx-c.mjx-c2032::before {
+  padding: 0.56em 0.275em 0 0;
+  content: "\2032";
+}
+
+mjx-c.mjx-c1D451.TEX-I::before {
+  padding: 0.694em 0.52em 0.01em 0;
+  content: "d";
+}
+
+mjx-c.mjx-c1D6FF.TEX-I::before {
+  padding: 0.717em 0.444em 0.01em 0;
+  content: "\3B4";
+}
+
+mjx-c.mjx-c1D436.TEX-I::before {
+  padding: 0.705em 0.76em 0.022em 0;
+  content: "C";
+}
+
+mjx-c.mjx-c1D445.TEX-I::before {
+  padding: 0.683em 0.759em 0.021em 0;
+  content: "R";
+}
+
+mjx-c.mjx-c1D45B.TEX-I::before {
+  padding: 0.442em 0.6em 0.011em 0;
+  content: "n";
+}
+
+mjx-c.mjx-c1D45F.TEX-I::before {
+  padding: 0.442em 0.451em 0.011em 0;
+  content: "r";
+}
+
+mjx-c.mjx-c1D44E.TEX-I::before {
+  padding: 0.441em 0.529em 0.01em 0;
+  content: "a";
+}
+
+mjx-c.mjx-c34::before {
+  padding: 0.677em 0.5em 0 0;
+  content: "4";
+}
+
+mjx-c.mjx-c1D700.TEX-I::before {
+  padding: 0.452em 0.466em 0.022em 0;
+  content: "\3B5";
+}
+
+mjx-c.mjx-c1D707.TEX-I::before {
+  padding: 0.442em 0.603em 0.216em 0;
+  content: "\3BC";
+}
+
+mjx-c.mjx-c2E::before {
+  padding: 0.12em 0.278em 0 0;
+  content: ".";
+}
+
+mjx-c.mjx-c3E::before {
+  padding: 0.54em 0.778em 0.04em 0;
+  content: ">";
+}
+
+mjx-c.mjx-c2192::before {
+  padding: 0.511em 1em 0.011em 0;
+  content: "\2192";
+}
+
+mjx-c.mjx-c221E::before {
+  padding: 0.442em 1em 0.011em 0;
+  content: "\221E";
+}
+
+mjx-c.mjx-c33::before {
+  padding: 0.665em 0.5em 0.022em 0;
+  content: "3";
+}
+
+mjx-c.mjx-c36::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "6";
+}
+
+mjx-c.mjx-c1D713.TEX-I::before {
+  padding: 0.694em 0.651em 0.205em 0;
+  content: "\3C8";
+}
+
+mjx-c.mjx-c38::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "8";
+}
+
+mjx-c.mjx-c210E.TEX-I::before {
+  padding: 0.694em 0.576em 0.011em 0;
+  content: "h";
+}
+
+mjx-c.mjx-c1D708.TEX-I::before {
+  padding: 0.442em 0.53em 0 0;
+  content: "\3BD";
+}
+
+mjx-c.mjx-c394::before {
+  padding: 0.716em 0.833em 0 0;
+  content: "\394";
+}
+
+mjx-c.mjx-c1D453.TEX-I::before {
+  padding: 0.705em 0.55em 0.205em 0;
+  content: "f";
+}
+
+mjx-c.mjx-c1D454.TEX-I::before {
+  padding: 0.442em 0.477em 0.205em 0;
+  content: "g";
+}
+
+mjx-c.mjx-c27F9::before {
+  padding: 0.525em 1.638em 0.024em 0;
+  content: "\27F9";
+}
+
+mjx-c.mjx-c2B::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "+";
+}
+
+mjx-c.mjx-c1D434.TEX-I::before {
+  padding: 0.716em 0.75em 0 0;
+  content: "A";
+}
+
+mjx-c.mjx-c1D435.TEX-I::before {
+  padding: 0.683em 0.759em 0 0;
+  content: "B";
+}
+
+mjx-c.mjx-c1D709.TEX-I::before {
+  padding: 0.704em 0.438em 0.205em 0;
+  content: "\3BE";
+}
+
+mjx-c.mjx-c221A.TEX-S1::before {
+  padding: 0.85em 1.02em 0.35em 0;
+  content: "\221A";
+}
+
+mjx-c.mjx-cA0::before {
+  padding: 0 0.25em 0 0;
+  content: "\A0";
+}
+
+mjx-c.mjx-c6C::before {
+  padding: 0.694em 0.278em 0 0;
+  content: "l";
+}
+
+mjx-c.mjx-c2CB::before {
+  padding: 0.699em 0.5em 0 0;
+  content: "\2CB";
+}
+
+mjx-c.mjx-c2CA::before {
+  padding: 0.699em 0.5em 0 0;
+  content: "\2CA";
+}
+
+mjx-c.mjx-c2C6::before {
+  padding: 0.694em 0.5em 0 0;
+  content: "\2C6";
+}
+
+mjx-c.mjx-c67::before {
+  padding: 0.453em 0.5em 0.206em 0;
+  content: "g";
+}
+
+mjx-c.mjx-c75::before {
+  padding: 0.442em 0.556em 0.011em 0;
+  content: "u";
+}
+
+mjx-c.mjx-c79::before {
+  padding: 0.431em 0.528em 0.204em 0;
+  content: "y";
+}
+
+mjx-c.mjx-c65::before {
+  padding: 0.448em 0.444em 0.011em 0;
+  content: "e";
+}
+
+mjx-c.mjx-c6B::before {
+  padding: 0.694em 0.528em 0 0;
+  content: "k";
+}
+
+mjx-c.mjx-c68::before {
+  padding: 0.694em 0.556em 0 0;
+  content: "h";
+}
+
+mjx-c.mjx-c6D::before {
+  padding: 0.442em 0.833em 0 0;
+  content: "m";
+}
+
+mjx-c.mjx-c1D45C.TEX-I::before {
+  padding: 0.441em 0.485em 0.011em 0;
+  content: "o";
+}
+
+mjx-c.mjx-c1D43F.TEX-I::before {
+  padding: 0.683em 0.681em 0 0;
+  content: "L";
+}
+
+mjx-c.mjx-c221A.TEX-S2::before {
+  padding: 1.15em 1.02em 0.65em 0;
+  content: "\221A";
+}
+
+mjx-c.mjx-c1D70C.TEX-I::before {
+  padding: 0.442em 0.517em 0.216em 0;
+  content: "\3C1";
+}
+
+mjx-c.mjx-c221A.TEX-S3::before {
+  padding: 1.45em 1.02em 0.95em 0;
+  content: "\221A";
+}
+
+mjx-c.mjx-c3C::before {
+  padding: 0.54em 0.778em 0.04em 0;
+  content: "<";
+}
+
+mjx-c.mjx-c223C::before {
+  padding: 0.367em 0.778em 0 0;
+  content: "\223C";
+}
+</style></head>
+<body class="mode-expand">
+
+    <header>
+        <div class="controls-group">
+            <button onclick="toggleSidebar()" title="Ẩn/Hiện Mục lục">☰</button>
+            <button onclick="openImportModal()">📥 Import</button>
+            <button onclick="printLecture()" title="In chỉ nội dung bài giảng">🖨️ In</button>
+            <button onclick="openHistoryModal()">📜 History</button>
+            <button onclick="openSaveModal()">💾 Save as</button>
+            <button onclick="openUpdateModal()" title="Xem lịch sử cập nhật (Phím tắt U)">🚀 U</button>
+            <button onclick="toggleSlideshow()" style="background-color: var(--accent-color); color: #fff;">📺 Slide</button>
+            
+            <div class="toggle-switch-wrapper" style="margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                <span title="Chế độ Mở Rộng / Hiện tất cả">📖 Expand</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="expand-toggle" checked="" onchange="toggleExpandMode(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 6px;">
+                <span title="Tự động đọc đoạn tiếp theo">▶️ Autoplay</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoplay-toggle" onchange="toggleAutoplay(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 4px;">
+                <span>🌙</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-toggle" checked="" onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+                <span>☀️</span>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button id="btn-mute" onclick="toggleMute()" title="Âm thanh">🔊</button>
+            <select id="rate-select" onchange="updateRate(this.value)">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="controls-group">
+            <input type="text" id="prompt-topic" placeholder="Chủ đề..." style="width: 110px;">
+            <button id="btn-copy-prompt" onclick="copyPrompt()">📋 Copy Prompt</button>
+        </div>
+    </header>
+
+    <!-- POPUP KHI BÔI ĐEN CHỮ -->
+    <div id="selection-popup" style="display: none;">
+        <button onclick="searchImageSelected()" title="Tìm kiếm hình ảnh">🔍 Ảnh</button>
+        <button onclick="searchGifSelected()" title="Tìm kiếm GIF">🎞️ GIF</button>
+        <button onclick="searchGoogleSelected()" title="Tìm kiếm trên Google">🌐 Google</button>
+        <input type="text" id="popup-img-url" placeholder="Nhập/Dán URL ảnh..." oninput="autoInsertImageFromPopup(this)" onchange="autoInsertImageFromPopup(this)">
+    </div>
+
+    <div class="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <span>📑 Mục Lục</span>
+                <button onclick="toggleSidebar()" style="padding: 2px 6px; font-size: 12px;">✕</button>
+            </div>
+            <div class="sidebar-content">
+                <ul id="toc-container" class="toc-list"><li class="toc-item level-1" data-unit-index="0">УРОК РУССКОГО ЯЗЫКА</li><li class="toc-item level-2 active-toc" data-unit-index="1">Тема: МОЙ РАСПОРЯДОК ДНЯ (Ежедневные занятия и повседневная деятельность)</li><li class="toc-item level-1" data-unit-index="3">I. ОСНОВНЫЕ СЛОВА И ВЫРАЖЕНИЯ (Основная лексика)</li><li class="toc-item level-2" data-unit-index="4">1. Ежедневные действия</li><li class="toc-item level-2" data-unit-index="6">2. Части дня</li><li class="toc-item level-2" data-unit-index="13">3. Время и частота действий</li><li class="toc-item level-1" data-unit-index="15">II. ГРАММАТИКА: ГЛАГОЛЫ ПОВСЕДНЕВНЫХ ДЕЙСТВИЙ</li><li class="toc-item level-2" data-unit-index="16">1. Настоящее время (Настоящее время глагола)</li><li class="toc-item level-2" data-unit-index="24">2. Спряжение глаголов</li><li class="toc-item level-2" data-unit-index="35">3. Возвратные глаголы</li><li class="toc-item level-1" data-unit-index="38">III. КАК ГОВОРИТЬ О ВРЕМЕНИ</li><li class="toc-item level-2" data-unit-index="39">1. Спрашиваем о времени</li><li class="toc-item level-2" data-unit-index="46">2. Выражение времени</li><li class="toc-item level-2" data-unit-index="48">3. Предлог «в» с указанием времени</li><li class="toc-item level-1" data-unit-index="56">IV. ТЕКСТ ДЛЯ ЧТЕНИЯ: МОЙ РАСПОРЯДОК ДНЯ</li><li class="toc-item level-2" data-unit-index="57">1. Мой обычный день</li><li class="toc-item level-2" data-unit-index="65">2. Вопросы к тексту</li><li class="toc-item level-1" data-unit-index="76">V. ДИАЛОГ: МОЙ ОБЫЧНЫЙ ДЕНЬ</li><li class="toc-item level-1" data-unit-index="90">VI. ПОЛЕЗНЫЕ ГРАММАТИЧЕСКИЕ КОНСТРУКЦИИ</li><li class="toc-item level-2" data-unit-index="91">1. Конструкция «Я люблю + инфинитив»</li><li class="toc-item level-2" data-unit-index="99">2. Конструкция «Я хочу + инфинитив»</li><li class="toc-item level-2" data-unit-index="106">3. Конструкция «Я должен / должна + инфинитив»</li><li class="toc-item level-2" data-unit-index="113">4. Конструкция «После + существительное»</li><li class="toc-item level-1" data-unit-index="119">VII. ПРАКТИЧЕСКИЕ УПРАЖНЕНИЯ</li><li class="toc-item level-2" data-unit-index="120">Упражнение 1. Вставьте подходящие глаголы</li><li class="toc-item level-2" data-unit-index="130">Упражнение 2. Поставьте глаголы в правильную форму</li><li class="toc-item level-2" data-unit-index="138">Упражнение 3. Составьте предложения</li><li class="toc-item level-2" data-unit-index="146">Упражнение 4. Ответьте на вопросы</li><li class="toc-item level-2" data-unit-index="155">Упражнение 5. Переведите предложения на русский язык</li><li class="toc-item level-1" data-unit-index="164">VIII. УСТНАЯ РЕЧЬ: РАССКАЖИТЕ О СВОЁМ РАСПОРЯДКЕ ДНЯ</li><li class="toc-item level-1" data-unit-index="178">IX. ЗАКРЕПЛЕНИЕ ЛЕКСИКИ</li><li class="toc-item level-2" data-unit-index="179">1. Основные глаголы, которые нужно запомнить</li><li class="toc-item level-2" data-unit-index="181">2. Десять ключевых предложений</li><li class="toc-item level-1" data-unit-index="192">X. ИТОГ УРОКА</li></ul>
+            </div>
+        </aside>
+
+        <button id="exit-slideshow-btn" onclick="toggleSlideshow()">✖ Thoát Slide Show (Esc)</button>
+
+        <main id="main-scroll">
+            <div id="lecture-paper"><h1 class="markdown-unit revealed">УРОК РУССКОГО ЯЗЫКА</h1>
+<h2 class="markdown-unit revealed">Тема: МОЙ РАСПОРЯДОК ДНЯ (Ежедневные занятия и повседневная деятельность)</h2>
+<p class="markdown-unit active">Уровень: Начальный – A1–A2<br>Тема: Повседневная жизнь (Повседневные дела)<br>Цель урока: Научиться рассказывать о своём распорядке дня, описывать ежедневные занятия, время и привычки.</p>
+<h1 class="markdown-unit">I. ОСНОВНЫЕ СЛОВА И ВЫРАЖЕНИЯ (Основная лексика)</h1>
+<h2 class="markdown-unit">1. Ежедневные действия</h2>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Русский язык</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>просыпаться</td>
+<td>просыпаться ото сна</td>
+</tr>
+<tr>
+<td>вставать</td>
+<td>подниматься с кровати</td>
+</tr>
+<tr>
+<td>умываться</td>
+<td>мыть лицо</td>
+</tr>
+<tr>
+<td>чистить зубы</td>
+<td>ухаживать за зубами</td>
+</tr>
+<tr>
+<td>принимать душ</td>
+<td>мыться под душем</td>
+</tr>
+<tr>
+<td>одеваться</td>
+<td>надевать одежду</td>
+</tr>
+<tr>
+<td>завтракать</td>
+<td>есть утром</td>
+</tr>
+<tr>
+<td>обедать</td>
+<td>есть днём</td>
+</tr>
+<tr>
+<td>ужинать</td>
+<td>есть вечером</td>
+</tr>
+<tr>
+<td>готовить</td>
+<td>приготовлять еду</td>
+</tr>
+<tr>
+<td>пить кофе</td>
+<td>употреблять кофе</td>
+</tr>
+<tr>
+<td>идти на работу</td>
+<td>направляться на работу</td>
+</tr>
+<tr>
+<td>идти в школу</td>
+<td>направляться в школу</td>
+</tr>
+<tr>
+<td>учиться</td>
+<td>получать знания</td>
+</tr>
+<tr>
+<td>работать</td>
+<td>заниматься профессиональной деятельностью</td>
+</tr>
+<tr>
+<td>возвращаться домой</td>
+<td>приходить обратно домой</td>
+</tr>
+<tr>
+<td>отдыхать</td>
+<td>проводить время без работы</td>
+</tr>
+<tr>
+<td>читать книги</td>
+<td>заниматься чтением</td>
+</tr>
+<tr>
+<td>смотреть телевизор</td>
+<td>смотреть телепередачи</td>
+</tr>
+<tr>
+<td>слушать музыку</td>
+<td>воспринимать музыку</td>
+</tr>
+<tr>
+<td>заниматься спортом</td>
+<td>выполнять физические упражнения</td>
+</tr>
+<tr>
+<td>гулять</td>
+<td>ходить на прогулку</td>
+</tr>
+<tr>
+<td>встречаться с друзьями</td>
+<td>проводить время с друзьями</td>
+</tr>
+<tr>
+<td>делать домашнее задание</td>
+<td>выполнять учебные задания</td>
+</tr>
+<tr>
+<td>готовиться к экзамену</td>
+<td>заниматься подготовкой к экзамену</td>
+</tr>
+<tr>
+<td>ложиться спать</td>
+<td>идти в постель</td>
+</tr>
+</tbody></table>
+<h2 class="markdown-unit">2. Части дня</h2>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Слово</th>
+<th>Выражение</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>утро</td>
+<td>утром</td>
+</tr>
+<tr>
+<td>день</td>
+<td>днём</td>
+</tr>
+<tr>
+<td>вечер</td>
+<td>вечером</td>
+</tr>
+<tr>
+<td>ночь</td>
+<td>ночью</td>
+</tr>
+<tr>
+<td>полночь</td>
+<td>в полночь</td>
+</tr>
+<tr>
+<td>рассвет</td>
+<td>на рассвете</td>
+</tr>
+<tr>
+<td>полдень</td>
+<td>в полдень</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">Утром я завтракаю.</li>
+<li class="markdown-unit">Днём я работаю.</li>
+<li class="markdown-unit">Вечером я читаю книги.</li>
+<li class="markdown-unit">Ночью я сплю.</li>
+</ul>
+<h2 class="markdown-unit">3. Время и частота действий</h2>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Русский язык</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>всегда</td>
+<td>каждый раз</td>
+</tr>
+<tr>
+<td>обычно</td>
+<td>как правило</td>
+</tr>
+<tr>
+<td>часто</td>
+<td>много раз</td>
+</tr>
+<tr>
+<td>иногда</td>
+<td>время от времени</td>
+</tr>
+<tr>
+<td>редко</td>
+<td>нечасто</td>
+</tr>
+<tr>
+<td>никогда</td>
+<td>ни разу</td>
+</tr>
+<tr>
+<td>каждый день</td>
+<td>ежедневно</td>
+</tr>
+<tr>
+<td>по утрам</td>
+<td>каждое утро</td>
+</tr>
+<tr>
+<td>по вечерам</td>
+<td>каждый вечер</td>
+</tr>
+<tr>
+<td>сначала</td>
+<td>в первую очередь</td>
+</tr>
+<tr>
+<td>потом</td>
+<td>после этого</td>
+</tr>
+<tr>
+<td>затем</td>
+<td>далее</td>
+</tr>
+<tr>
+<td>после этого</td>
+<td>вслед за этим</td>
+</tr>
+<tr>
+<td>наконец</td>
+<td>в конце</td>
+</tr>
+</tbody></table>
+<h1 class="markdown-unit">II. ГРАММАТИКА: ГЛАГОЛЫ ПОВСЕДНЕВНЫХ ДЕЙСТВИЙ</h1>
+<h2 class="markdown-unit">1. Настоящее время (Настоящее время глагола)</h2>
+<p class="markdown-unit">В русском языке мы используем настоящее время, чтобы рассказывать о действиях, которые происходят сейчас или регулярно повторяются.</p>
+<p class="markdown-unit">Например:</p>
+<ul>
+<li class="markdown-unit">Я работаю каждый день.</li>
+<li class="markdown-unit">Ты учишься в университете.</li>
+<li class="markdown-unit">Он читает книгу.</li>
+<li class="markdown-unit">Мы завтракаем дома.</li>
+<li class="markdown-unit">Они занимаются спортом.</li>
+</ul>
+<h2 class="markdown-unit">2. Спряжение глаголов</h2>
+<p class="markdown-unit">Рассмотрим глагол «работать».</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Лицо</th>
+<th>Форма глагола</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Я</td>
+<td>работаю</td>
+</tr>
+<tr>
+<td>Ты</td>
+<td>работаешь</td>
+</tr>
+<tr>
+<td>Он / Она</td>
+<td>работает</td>
+</tr>
+<tr>
+<td>Мы</td>
+<td>работаем</td>
+</tr>
+<tr>
+<td>Вы</td>
+<td>работаете</td>
+</tr>
+<tr>
+<td>Они</td>
+<td>работают</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Рассмотрим глагол «учиться».</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Лицо</th>
+<th>Форма глагола</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Я</td>
+<td>учусь</td>
+</tr>
+<tr>
+<td>Ты</td>
+<td>учишься</td>
+</tr>
+<tr>
+<td>Он / Она</td>
+<td>учится</td>
+</tr>
+<tr>
+<td>Мы</td>
+<td>учимся</td>
+</tr>
+<tr>
+<td>Вы</td>
+<td>учитесь</td>
+</tr>
+<tr>
+<td>Они</td>
+<td>учатся</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Обратите внимание: глаголы с частицей «-ся» называются возвратными глаголами.</p>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">Я просыпаюсь в семь часов.</li>
+<li class="markdown-unit">Я умываюсь утром.</li>
+<li class="markdown-unit">Он одевается быстро.</li>
+<li class="markdown-unit">Мы готовимся к уроку.</li>
+</ul>
+<h2 class="markdown-unit">3. Возвратные глаголы</h2>
+<p class="markdown-unit">Некоторые повседневные действия часто выражаются возвратными глаголами.</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Инфинитив</th>
+<th>Я</th>
+<th>Ты</th>
+<th>Он / Она</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>просыпаться</td>
+<td>просыпаюсь</td>
+<td>просыпаешься</td>
+<td>просыпается</td>
+</tr>
+<tr>
+<td>умываться</td>
+<td>умываюсь</td>
+<td>умываешься</td>
+<td>умывается</td>
+</tr>
+<tr>
+<td>одеваться</td>
+<td>одеваюсь</td>
+<td>одеваешься</td>
+<td>одевается</td>
+</tr>
+<tr>
+<td>заниматься</td>
+<td>занимаюсь</td>
+<td>занимаешься</td>
+<td>занимается</td>
+</tr>
+<tr>
+<td>возвращаться</td>
+<td>возвращаюсь</td>
+<td>возвращаешься</td>
+<td>возвращается</td>
+</tr>
+<tr>
+<td>готовиться</td>
+<td>готовлюсь</td>
+<td>готовишься</td>
+<td>готовится</td>
+</tr>
+<tr>
+<td>отдыхать</td>
+<td>отдыхаю</td>
+<td>отдыхаешь</td>
+<td>отдыхает</td>
+</tr>
+</tbody></table>
+<h1 class="markdown-unit">III. КАК ГОВОРИТЬ О ВРЕМЕНИ</h1>
+<h2 class="markdown-unit">1. Спрашиваем о времени</h2>
+<p class="markdown-unit">Основной вопрос:</p>
+<p class="markdown-unit">Который час?</p>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">Который час? — Сейчас семь часов.</li>
+<li class="markdown-unit">Когда ты просыпаешься? — Я просыпаюсь в шесть часов.</li>
+<li class="markdown-unit">Во сколько ты завтракаешь? — Я завтракаю в семь часов.</li>
+</ul>
+<h2 class="markdown-unit">2. Выражение времени</h2>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Время</th>
+<th>По-русски</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>06:00</td>
+<td>шесть часов</td>
+</tr>
+<tr>
+<td>06:15</td>
+<td>шесть часов пятнадцать минут</td>
+</tr>
+<tr>
+<td>06:30</td>
+<td>шесть часов тридцать минут</td>
+</tr>
+<tr>
+<td>07:00</td>
+<td>семь часов</td>
+</tr>
+<tr>
+<td>08:00</td>
+<td>восемь часов</td>
+</tr>
+<tr>
+<td>12:00</td>
+<td>двенадцать часов</td>
+</tr>
+<tr>
+<td>15:00</td>
+<td>три часа дня</td>
+</tr>
+<tr>
+<td>18:00</td>
+<td>шесть часов вечера</td>
+</tr>
+<tr>
+<td>20:00</td>
+<td>восемь часов вечера</td>
+</tr>
+<tr>
+<td>22:00</td>
+<td>десять часов вечера</td>
+</tr>
+</tbody></table>
+<h2 class="markdown-unit">3. Предлог «в» с указанием времени</h2>
+<p class="markdown-unit">Для обозначения времени, когда происходит действие, используется предлог «в».</p>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">Я просыпаюсь в шесть часов.</li>
+<li class="markdown-unit">Я завтракаю в семь часов.</li>
+<li class="markdown-unit">Я начинаю работать в восемь часов.</li>
+<li class="markdown-unit">Я обедаю в двенадцать часов.</li>
+<li class="markdown-unit">Я ложусь спать в одиннадцать часов.</li>
+</ul>
+<h1 class="markdown-unit">IV. ТЕКСТ ДЛЯ ЧТЕНИЯ: МОЙ РАСПОРЯДОК ДНЯ</h1>
+<h2 class="markdown-unit">1. Мой обычный день</h2>
+<p class="markdown-unit">Каждый день я просыпаюсь в шесть часов утра. Сначала я встаю с кровати и иду в ванную комнату. Я умываюсь, чищу зубы и принимаю душ.</p>
+<p class="markdown-unit">Потом я одеваюсь и завтракаю. Обычно на завтрак я ем хлеб, яйца и фрукты. Я также пью чашку кофе или чая.</p>
+<p class="markdown-unit">В семь часов тридцать минут я выхожу из дома и еду на работу. Я работаю с восьми часов утра до пяти часов вечера. В обед я обычно ем в кафе вместе с коллегами.</p>
+<p class="markdown-unit">После работы я возвращаюсь домой. Иногда я иду в магазин, чтобы купить продукты. Дома я готовлю ужин и немного отдыхаю.</p>
+<p class="markdown-unit">Вечером я люблю читать книги, слушать музыку и смотреть фильмы. Иногда я занимаюсь спортом или гуляю в парке.</p>
+<p class="markdown-unit">Перед сном я принимаю душ, чищу зубы и готовлюсь ко сну. Обычно я ложусь спать в одиннадцать часов вечера.</p>
+<p class="markdown-unit">Мне нравится мой распорядок дня, потому что он помогает мне правильно организовать своё время.</p>
+<h2 class="markdown-unit">2. Вопросы к тексту</h2>
+<ol>
+<li class="markdown-unit">Во сколько человек просыпается?</li>
+<li class="markdown-unit">Что он делает после пробуждения?</li>
+<li class="markdown-unit">Что он обычно ест на завтрак?</li>
+<li class="markdown-unit">Во сколько он выходит из дома?</li>
+<li class="markdown-unit">Где он обедает?</li>
+<li class="markdown-unit">Когда он возвращается домой?</li>
+<li class="markdown-unit">Что он делает вечером?</li>
+<li class="markdown-unit">Чем он занимается перед сном?</li>
+<li class="markdown-unit">Во сколько он ложится спать?</li>
+<li class="markdown-unit">Почему ему нравится его распорядок дня?</li>
+</ol>
+<h1 class="markdown-unit">V. ДИАЛОГ: МОЙ ОБЫЧНЫЙ ДЕНЬ</h1>
+<p class="markdown-unit">Анна: Привет, Максим! Как проходит твой обычный день?</p>
+<p class="markdown-unit">Максим: Привет, Анна! Обычно я просыпаюсь в семь часов утра.</p>
+<p class="markdown-unit">Анна: Что ты делаешь после пробуждения?</p>
+<p class="markdown-unit">Максим: Сначала я умываюсь, чищу зубы и принимаю душ. Потом я завтракаю.</p>
+<p class="markdown-unit">Анна: Во сколько ты идёшь на работу?</p>
+<p class="markdown-unit">Максим: Я выхожу из дома в восемь часов.</p>
+<p class="markdown-unit">Анна: А что ты делаешь после работы?</p>
+<p class="markdown-unit">Максим: После работы я возвращаюсь домой, готовлю ужин и отдыхаю.</p>
+<p class="markdown-unit">Анна: Чем ты занимаешься вечером?</p>
+<p class="markdown-unit">Максим: Я читаю книги, слушаю музыку и иногда смотрю телевизор.</p>
+<p class="markdown-unit">Анна: Во сколько ты ложишься спать?</p>
+<p class="markdown-unit">Максим: Обычно в одиннадцать часов вечера. А ты?</p>
+<p class="markdown-unit">Анна: Я обычно ложусь спать в десять часов тридцать минут.</p>
+<h1 class="markdown-unit">VI. ПОЛЕЗНЫЕ ГРАММАТИЧЕСКИЕ КОНСТРУКЦИИ</h1>
+<h2 class="markdown-unit">1. Конструкция «Я люблю + инфинитив»</h2>
+<p class="markdown-unit">Используется для выражения предпочтений.</p>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">Я люблю читать книги.</li>
+<li class="markdown-unit">Я люблю слушать музыку.</li>
+<li class="markdown-unit">Я люблю готовить.</li>
+<li class="markdown-unit">Я люблю гулять в парке.</li>
+<li class="markdown-unit">Я люблю заниматься спортом.</li>
+</ul>
+<h2 class="markdown-unit">2. Конструкция «Я хочу + инфинитив»</h2>
+<p class="markdown-unit">Используется для выражения желания.</p>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">Я хочу отдохнуть.</li>
+<li class="markdown-unit">Я хочу посмотреть фильм.</li>
+<li class="markdown-unit">Я хочу приготовить ужин.</li>
+<li class="markdown-unit">Я хочу выучить русский язык.</li>
+</ul>
+<h2 class="markdown-unit">3. Конструкция «Я должен / должна + инфинитив»</h2>
+<p class="markdown-unit">Используется для выражения необходимости или обязанности.</p>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">Я должен работать каждый день. (Мужской род)</li>
+<li class="markdown-unit">Я должна учиться. (Женский род)</li>
+<li class="markdown-unit">Я должен делать домашнее задание.</li>
+<li class="markdown-unit">Я должна готовиться к экзамену.</li>
+</ul>
+<h2 class="markdown-unit">4. Конструкция «После + существительное»</h2>
+<p class="markdown-unit">Примеры:</p>
+<ul>
+<li class="markdown-unit">После завтрака я иду на работу.</li>
+<li class="markdown-unit">После работы я возвращаюсь домой.</li>
+<li class="markdown-unit">После обеда я отдыхаю.</li>
+<li class="markdown-unit">После уроков ученики идут домой.</li>
+</ul>
+<h1 class="markdown-unit">VII. ПРАКТИЧЕСКИЕ УПРАЖНЕНИЯ</h1>
+<h2 class="markdown-unit">Упражнение 1. Вставьте подходящие глаголы</h2>
+<p class="markdown-unit">Используйте следующие слова:</p>
+<p class="markdown-unit">просыпаюсь, завтракаю, работаю, обедаю, возвращаюсь, отдыхаю, ложусь.</p>
+<ol>
+<li class="markdown-unit">Каждый день я __________ в семь часов утра.</li>
+<li class="markdown-unit">Утром я __________ дома.</li>
+<li class="markdown-unit">С восьми часов я __________ в офисе.</li>
+<li class="markdown-unit">В двенадцать часов я __________.</li>
+<li class="markdown-unit">В пять часов вечера я __________ домой.</li>
+<li class="markdown-unit">После работы я немного __________.</li>
+<li class="markdown-unit">В одиннадцать часов я __________ спать.</li>
+</ol>
+<h2 class="markdown-unit">Упражнение 2. Поставьте глаголы в правильную форму</h2>
+<ol>
+<li class="markdown-unit">Я (работать) каждый день.</li>
+<li class="markdown-unit">Ты (учиться) в университете.</li>
+<li class="markdown-unit">Он (просыпаться) рано.</li>
+<li class="markdown-unit">Мы (завтракать) вместе.</li>
+<li class="markdown-unit">Вы (заниматься) спортом?</li>
+<li class="markdown-unit">Они (возвращаться) домой вечером.</li>
+<li class="markdown-unit">Она (готовить) ужин.</li>
+</ol>
+<h2 class="markdown-unit">Упражнение 3. Составьте предложения</h2>
+<p class="markdown-unit">Используйте предложенные слова.</p>
+<ol>
+<li class="markdown-unit">я / утром / просыпаться / в семь часов</li>
+<li class="markdown-unit">завтракать / я / каждый день / дома</li>
+<li class="markdown-unit">вечером / музыку / слушать / я</li>
+<li class="markdown-unit">после работы / домой / возвращаться / он</li>
+<li class="markdown-unit">по выходным / гулять / мы / в парке</li>
+<li class="markdown-unit">одиннадцать часов / ложиться спать / я / в</li>
+</ol>
+<h2 class="markdown-unit">Упражнение 4. Ответьте на вопросы</h2>
+<ol>
+<li class="markdown-unit">Во сколько вы обычно просыпаетесь?</li>
+<li class="markdown-unit">Что вы делаете утром?</li>
+<li class="markdown-unit">Что вы обычно едите на завтрак?</li>
+<li class="markdown-unit">Где вы работаете или учитесь?</li>
+<li class="markdown-unit">Во сколько вы обедаете?</li>
+<li class="markdown-unit">Что вы делаете после работы или учёбы?</li>
+<li class="markdown-unit">Чем вы любите заниматься вечером?</li>
+<li class="markdown-unit">Во сколько вы ложитесь спать?</li>
+</ol>
+<h2 class="markdown-unit">Упражнение 5. Переведите предложения на русский язык</h2>
+<ol>
+<li class="markdown-unit">Я просыпаюсь в шесть часов утра.</li>
+<li class="markdown-unit">Утром я принимаю душ и завтракаю.</li>
+<li class="markdown-unit">Мой брат работает в университете.</li>
+<li class="markdown-unit">После работы я возвращаюсь домой.</li>
+<li class="markdown-unit">Вечером мы смотрим фильмы.</li>
+<li class="markdown-unit">По выходным я гуляю с друзьями.</li>
+<li class="markdown-unit">Я люблю читать книги перед сном.</li>
+<li class="markdown-unit">Обычно я ложусь спать в одиннадцать часов.</li>
+</ol>
+<h1 class="markdown-unit">VIII. УСТНАЯ РЕЧЬ: РАССКАЖИТЕ О СВОЁМ РАСПОРЯДКЕ ДНЯ</h1>
+<p class="markdown-unit">Используйте следующий план для составления собственного рассказа.</p>
+<ol>
+<li class="markdown-unit">Во сколько вы просыпаетесь?</li>
+<li class="markdown-unit">Что вы делаете утром?</li>
+<li class="markdown-unit">Что вы едите на завтрак?</li>
+<li class="markdown-unit">Куда вы идёте утром?</li>
+<li class="markdown-unit">Чем вы занимаетесь днём?</li>
+<li class="markdown-unit">Когда вы обедаете?</li>
+<li class="markdown-unit">Что вы делаете после работы или учёбы?</li>
+<li class="markdown-unit">Как вы проводите вечер?</li>
+<li class="markdown-unit">Что вы делаете перед сном?</li>
+<li class="markdown-unit">Во сколько вы ложитесь спать?</li>
+</ol>
+<p class="markdown-unit">Образец рассказа:</p>
+<p class="markdown-unit">«Мой обычный день начинается в семь часов утра. Сначала я просыпаюсь, встаю с кровати и умываюсь. Потом я чищу зубы, принимаю душ и завтракаю. После завтрака я иду на работу. Днём я работаю и обедаю. Вечером я возвращаюсь домой, готовлю ужин и отдыхаю. Иногда я читаю книги или смотрю фильмы. Перед сном я чищу зубы и готовлюсь ко сну. Обычно я ложусь спать в одиннадцать часов вечера».</p>
+<h1 class="markdown-unit">IX. ЗАКРЕПЛЕНИЕ ЛЕКСИКИ</h1>
+<h2 class="markdown-unit">1. Основные глаголы, которые нужно запомнить</h2>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Русский язык</th>
+<th>Русский синоним или пояснение</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>просыпаться</td>
+<td>пробуждаться</td>
+</tr>
+<tr>
+<td>вставать</td>
+<td>подниматься</td>
+</tr>
+<tr>
+<td>умываться</td>
+<td>мыть лицо</td>
+</tr>
+<tr>
+<td>завтракать</td>
+<td>есть утром</td>
+</tr>
+<tr>
+<td>обедать</td>
+<td>есть днём</td>
+</tr>
+<tr>
+<td>ужинать</td>
+<td>есть вечером</td>
+</tr>
+<tr>
+<td>работать</td>
+<td>трудиться</td>
+</tr>
+<tr>
+<td>отдыхать</td>
+<td>расслабляться</td>
+</tr>
+<tr>
+<td>гулять</td>
+<td>ходить на прогулку</td>
+</tr>
+<tr>
+<td>заниматься</td>
+<td>практиковаться</td>
+</tr>
+<tr>
+<td>возвращаться</td>
+<td>приходить обратно</td>
+</tr>
+<tr>
+<td>ложиться спать</td>
+<td>отправляться спать</td>
+</tr>
+</tbody></table>
+<h2 class="markdown-unit">2. Десять ключевых предложений</h2>
+<ol>
+<li class="markdown-unit">Я просыпаюсь рано утром.</li>
+<li class="markdown-unit">Я встаю в семь часов.</li>
+<li class="markdown-unit">Я умываюсь и чищу зубы.</li>
+<li class="markdown-unit">Я принимаю душ.</li>
+<li class="markdown-unit">Я завтракаю дома.</li>
+<li class="markdown-unit">Я иду на работу.</li>
+<li class="markdown-unit">Я обедаю в кафе.</li>
+<li class="markdown-unit">После работы я возвращаюсь домой.</li>
+<li class="markdown-unit">Вечером я отдыхаю и читаю книги.</li>
+<li class="markdown-unit">Я ложусь спать в одиннадцать часов.</li>
+</ol>
+<h1 class="markdown-unit">X. ИТОГ УРОКА</h1>
+<p class="markdown-unit">После изучения этой темы учащиеся должны уметь:</p>
+<ul>
+<li class="markdown-unit">Называть основные повседневные действия.</li>
+<li class="markdown-unit">Рассказывать о своём распорядке дня.</li>
+<li class="markdown-unit">Правильно употреблять глаголы в настоящем времени.</li>
+<li class="markdown-unit">Использовать возвратные глаголы.</li>
+<li class="markdown-unit">Спрашивать и отвечать о времени.</li>
+<li class="markdown-unit">Описывать последовательность ежедневных действий.</li>
+<li class="markdown-unit">Составлять диалоги на тему «Мой обычный день».</li>
+</ul>
+<p class="markdown-unit">Главное задание: составить рассказ из 12–15 предложений на тему «Мой распорядок дня», используя не менее 15 изученных глаголов и выражений времени.</p>
+</div>
+        </main>
+    </div>
+
+    <footer>
+        <span class="author-info">Icarus - kienspvl@gmail.com - 097 463 8794</span>
+        <div id="progress-counter">
+            Mục: <input type="number" id="page-input" min="1" value="0" onkeydown="handlePageInputChange(event)" onblur="jumpToInputValue()" max="202"> / <span id="total-units-count">202</span>
+        </div>
+    </footer>
+
+    <!-- LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG -->
+    <div id="image-lightbox" onclick="closeLightboxOnBg(event)" style="display: none;">
+        <button class="lightbox-close-btn" onclick="closeLightbox(event)" title="Thoát Lightbox (Esc)">✕</button>
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image" onclick="event.stopPropagation()">
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div id="lightbox-counter" class="lightbox-counter">0 / 0</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="import-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập hoặc Chỉnh Sửa Bài Giảng</h3>
+            <textarea id="import-text" placeholder="Dán văn bản Markdown hoặc Import file Word vào đây..."></textarea>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <label class="btn">
+                        📄 Chọn File .txt / .md
+                        <input type="file" accept=".txt,.md" onchange="handleFileImport(event)">
+                    </label>
+                    <label class="btn" style="border-color: #22c55e;">
+                        📘 Import từ File Word (.docx)
+                        <input type="file" accept=".docx" onchange="handleWordImport(event)">
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="closeImportModal()">Hủy</button>
+                    <button onclick="processImport()" style="background-color: var(--accent-color); color: #fff;">Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SAVE AS HTML -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>💾 Lưu Bài Giảng Dưới Dạng HTML</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-color);">Nhập tên file HTML muốn lưu:</label>
+                <input type="text" id="save-filename-input" placeholder="Tên file..." onkeydown="if(event.key==='Enter') executeSaveAsHtml()">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeSaveModal()">Hủy</button>
+                <button onclick="executeSaveAsHtml()" style="background-color: var(--accent-color); color: #fff;">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Lịch Sử Bài Giảng Dưới LocalStorage</h3>
+                <button onclick="clearAllHistory()" style="background-color: #ef4444; color: #fff;">🗑️ Xóa Tất Cả</button>
+            </div>
+            <div id="history-container" class="history-list"></div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+    <div id="update-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🚀 Lịch Sử Cập Nhật Chương Trình (Changelog v3.11)</h3>
+            <div class="history-list" style="max-height: 400px; padding-right: 8px;">
+                <div class="changelog-item">
+                    <span class="changelog-version">v3.11</span><span class="changelog-date">(Cập nhật mới)</span>
+                    <ul class="changelog-list">
+                        <li><strong>Tải dữ liệu đang ngậm khi Import:</strong> Khi bấm nút Import, nếu file đang chứa sẵn dữ liệu (ngậm dữ liệu), nội dung sẽ tự động xuất hiện trong ô nhập liệu để xem hoặc copy.</li>
+                        <li><strong>Thêm nút In (Print):</strong> Nút "In" hỗ trợ xuất/in nhanh riêng phần bài giảng, tự động ẩn giao diện, thanh điều khiển và mục lục khi in.</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeUpdateModal()">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ô NGẬM DỮ LIỆU MARKDOWN GỐC -->
+    <script id="embedded-data" type="application/json">"# УРОК РУССКОГО ЯЗЫКА\n\n## Тема: МОЙ РАСПОРЯДОК ДНЯ (Ежедневные занятия и повседневная деятельность)\n\nУровень: Начальный – A1–A2\\\nТема: Повседневная жизнь (Повседневные дела)\\\nЦель урока: Научиться рассказывать о своём распорядке дня, описывать ежедневные занятия, время и привычки.\n\n# I. ОСНОВНЫЕ СЛОВА И ВЫРАЖЕНИЯ (Основная лексика)\n\n## 1. Ежедневные действия\n\n| Русский язык            | Значение                                  |\n| ----------------------- | ----------------------------------------- |\n| просыпаться             | просыпаться ото сна                       |\n| вставать                | подниматься с кровати                     |\n| умываться               | мыть лицо                                 |\n| чистить зубы            | ухаживать за зубами                       |\n| принимать душ           | мыться под душем                          |\n| одеваться               | надевать одежду                           |\n| завтракать              | есть утром                                |\n| обедать                 | есть днём                                 |\n| ужинать                 | есть вечером                              |\n| готовить                | приготовлять еду                          |\n| пить кофе               | употреблять кофе                          |\n| идти на работу          | направляться на работу                    |\n| идти в школу            | направляться в школу                      |\n| учиться                 | получать знания                           |\n| работать                | заниматься профессиональной деятельностью |\n| возвращаться домой      | приходить обратно домой                   |\n| отдыхать                | проводить время без работы                |\n| читать книги            | заниматься чтением                        |\n| смотреть телевизор      | смотреть телепередачи                     |\n| слушать музыку          | воспринимать музыку                       |\n| заниматься спортом      | выполнять физические упражнения           |\n| гулять                  | ходить на прогулку                        |\n| встречаться с друзьями  | проводить время с друзьями                |\n| делать домашнее задание | выполнять учебные задания                 |\n| готовиться к экзамену   | заниматься подготовкой к экзамену         |\n| ложиться спать          | идти в постель                            |\n\n## 2. Части дня\n\n| Слово   | Выражение   |\n| ------- | ----------- |\n| утро    | утром       |\n| день    | днём        |\n| вечер   | вечером     |\n| ночь    | ночью       |\n| полночь | в полночь   |\n| рассвет | на рассвете |\n| полдень | в полдень   |\n\nПримеры:\n\n- Утром я завтракаю.\n- Днём я работаю.\n- Вечером я читаю книги.\n- Ночью я сплю.\n\n## 3. Время и частота действий\n\n| Русский язык | Значение         |\n| ------------ | ---------------- |\n| всегда       | каждый раз       |\n| обычно       | как правило      |\n| часто        | много раз        |\n| иногда       | время от времени |\n| редко        | нечасто          |\n| никогда      | ни разу          |\n| каждый день  | ежедневно        |\n| по утрам     | каждое утро      |\n| по вечерам   | каждый вечер     |\n| сначала      | в первую очередь |\n| потом        | после этого      |\n| затем        | далее            |\n| после этого  | вслед за этим    |\n| наконец      | в конце          |\n\n# II. ГРАММАТИКА: ГЛАГОЛЫ ПОВСЕДНЕВНЫХ ДЕЙСТВИЙ\n\n## 1. Настоящее время (Настоящее время глагола)\n\nВ русском языке мы используем настоящее время, чтобы рассказывать о действиях, которые происходят сейчас или регулярно повторяются.\n\nНапример:\n\n- Я работаю каждый день.\n- Ты учишься в университете.\n- Он читает книгу.\n- Мы завтракаем дома.\n- Они занимаются спортом.\n\n## 2. Спряжение глаголов\n\nРассмотрим глагол «работать».\n\n| Лицо     | Форма глагола |\n| -------- | ------------- |\n| Я        | работаю       |\n| Ты       | работаешь     |\n| Он / Она | работает      |\n| Мы       | работаем      |\n| Вы       | работаете     |\n| Они      | работают      |\n\nРассмотрим глагол «учиться».\n\n| Лицо     | Форма глагола |\n| -------- | ------------- |\n| Я        | учусь         |\n| Ты       | учишься       |\n| Он / Она | учится        |\n| Мы       | учимся        |\n| Вы       | учитесь       |\n| Они      | учатся        |\n\nОбратите внимание: глаголы с частицей «-ся» называются возвратными глаголами.\n\nПримеры:\n\n- Я просыпаюсь в семь часов.\n- Я умываюсь утром.\n- Он одевается быстро.\n- Мы готовимся к уроку.\n\n## 3. Возвратные глаголы\n\nНекоторые повседневные действия часто выражаются возвратными глаголами.\n\n| Инфинитив    | Я           | Ты            | Он / Она     |\n| ------------ | ----------- | ------------- | ------------ |\n| просыпаться  | просыпаюсь  | просыпаешься  | просыпается  |\n| умываться    | умываюсь    | умываешься    | умывается    |\n| одеваться    | одеваюсь    | одеваешься    | одевается    |\n| заниматься   | занимаюсь   | занимаешься   | занимается   |\n| возвращаться | возвращаюсь | возвращаешься | возвращается |\n| готовиться   | готовлюсь   | готовишься    | готовится    |\n| отдыхать     | отдыхаю     | отдыхаешь     | отдыхает     |\n\n# III. КАК ГОВОРИТЬ О ВРЕМЕНИ\n\n## 1. Спрашиваем о времени\n\nОсновной вопрос:\n\nКоторый час?\n\nПримеры:\n\n- Который час? — Сейчас семь часов.\n- Когда ты просыпаешься? — Я просыпаюсь в шесть часов.\n- Во сколько ты завтракаешь? — Я завтракаю в семь часов.\n\n## 2. Выражение времени\n\n| Время | По-русски                    |\n| ----- | ---------------------------- |\n| 06:00 | шесть часов                  |\n| 06:15 | шесть часов пятнадцать минут |\n| 06:30 | шесть часов тридцать минут   |\n| 07:00 | семь часов                   |\n| 08:00 | восемь часов                 |\n| 12:00 | двенадцать часов             |\n| 15:00 | три часа дня                 |\n| 18:00 | шесть часов вечера           |\n| 20:00 | восемь часов вечера          |\n| 22:00 | десять часов вечера          |\n\n## 3. Предлог «в» с указанием времени\n\nДля обозначения времени, когда происходит действие, используется предлог «в».\n\nПримеры:\n\n- Я просыпаюсь в шесть часов.\n- Я завтракаю в семь часов.\n- Я начинаю работать в восемь часов.\n- Я обедаю в двенадцать часов.\n- Я ложусь спать в одиннадцать часов.\n\n# IV. ТЕКСТ ДЛЯ ЧТЕНИЯ: МОЙ РАСПОРЯДОК ДНЯ\n\n## 1. Мой обычный день\n\nКаждый день я просыпаюсь в шесть часов утра. Сначала я встаю с кровати и иду в ванную комнату. Я умываюсь, чищу зубы и принимаю душ.\n\nПотом я одеваюсь и завтракаю. Обычно на завтрак я ем хлеб, яйца и фрукты. Я также пью чашку кофе или чая.\n\nВ семь часов тридцать минут я выхожу из дома и еду на работу. Я работаю с восьми часов утра до пяти часов вечера. В обед я обычно ем в кафе вместе с коллегами.\n\nПосле работы я возвращаюсь домой. Иногда я иду в магазин, чтобы купить продукты. Дома я готовлю ужин и немного отдыхаю.\n\nВечером я люблю читать книги, слушать музыку и смотреть фильмы. Иногда я занимаюсь спортом или гуляю в парке.\n\nПеред сном я принимаю душ, чищу зубы и готовлюсь ко сну. Обычно я ложусь спать в одиннадцать часов вечера.\n\nМне нравится мой распорядок дня, потому что он помогает мне правильно организовать своё время.\n\n## 2. Вопросы к тексту\n\n1. Во сколько человек просыпается?\n2. Что он делает после пробуждения?\n3. Что он обычно ест на завтрак?\n4. Во сколько он выходит из дома?\n5. Где он обедает?\n6. Когда он возвращается домой?\n7. Что он делает вечером?\n8. Чем он занимается перед сном?\n9. Во сколько он ложится спать?\n10. Почему ему нравится его распорядок дня?\n\n# V. ДИАЛОГ: МОЙ ОБЫЧНЫЙ ДЕНЬ\n\nАнна: Привет, Максим! Как проходит твой обычный день?\n\nМаксим: Привет, Анна! Обычно я просыпаюсь в семь часов утра.\n\nАнна: Что ты делаешь после пробуждения?\n\nМаксим: Сначала я умываюсь, чищу зубы и принимаю душ. Потом я завтракаю.\n\nАнна: Во сколько ты идёшь на работу?\n\nМаксим: Я выхожу из дома в восемь часов.\n\nАнна: А что ты делаешь после работы?\n\nМаксим: После работы я возвращаюсь домой, готовлю ужин и отдыхаю.\n\nАнна: Чем ты занимаешься вечером?\n\nМаксим: Я читаю книги, слушаю музыку и иногда смотрю телевизор.\n\nАнна: Во сколько ты ложишься спать?\n\nМаксим: Обычно в одиннадцать часов вечера. А ты?\n\nАнна: Я обычно ложусь спать в десять часов тридцать минут.\n\n# VI. ПОЛЕЗНЫЕ ГРАММАТИЧЕСКИЕ КОНСТРУКЦИИ\n\n## 1. Конструкция «Я люблю + инфинитив»\n\nИспользуется для выражения предпочтений.\n\nПримеры:\n\n- Я люблю читать книги.\n- Я люблю слушать музыку.\n- Я люблю готовить.\n- Я люблю гулять в парке.\n- Я люблю заниматься спортом.\n\n## 2. Конструкция «Я хочу + инфинитив»\n\nИспользуется для выражения желания.\n\nПримеры:\n\n- Я хочу отдохнуть.\n- Я хочу посмотреть фильм.\n- Я хочу приготовить ужин.\n- Я хочу выучить русский язык.\n\n## 3. Конструкция «Я должен / должна + инфинитив»\n\nИспользуется для выражения необходимости или обязанности.\n\nПримеры:\n\n- Я должен работать каждый день. (Мужской род)\n- Я должна учиться. (Женский род)\n- Я должен делать домашнее задание.\n- Я должна готовиться к экзамену.\n\n## 4. Конструкция «После + существительное»\n\nПримеры:\n\n- После завтрака я иду на работу.\n- После работы я возвращаюсь домой.\n- После обеда я отдыхаю.\n- После уроков ученики идут домой.\n\n# VII. ПРАКТИЧЕСКИЕ УПРАЖНЕНИЯ\n\n## Упражнение 1. Вставьте подходящие глаголы\n\nИспользуйте следующие слова:\n\nпросыпаюсь, завтракаю, работаю, обедаю, возвращаюсь, отдыхаю, ложусь.\n\n1. Каждый день я \\_\\_\\_\\_\\_\\_\\_\\_\\_\\_ в семь часов утра.\n2. Утром я \\_\\_\\_\\_\\_\\_\\_\\_\\_\\_ дома.\n3. С восьми часов я \\_\\_\\_\\_\\_\\_\\_\\_\\_\\_ в офисе.\n4. В двенадцать часов я \\_\\_\\_\\_\\_\\_\\_\\_\\_\\_.\n5. В пять часов вечера я \\_\\_\\_\\_\\_\\_\\_\\_\\_\\_ домой.\n6. После работы я немного \\_\\_\\_\\_\\_\\_\\_\\_\\_\\_.\n7. В одиннадцать часов я \\_\\_\\_\\_\\_\\_\\_\\_\\_\\_ спать.\n\n## Упражнение 2. Поставьте глаголы в правильную форму\n\n1. Я (работать) каждый день.\n2. Ты (учиться) в университете.\n3. Он (просыпаться) рано.\n4. Мы (завтракать) вместе.\n5. Вы (заниматься) спортом?\n6. Они (возвращаться) домой вечером.\n7. Она (готовить) ужин.\n\n## Упражнение 3. Составьте предложения\n\nИспользуйте предложенные слова.\n\n1. я / утром / просыпаться / в семь часов\n2. завтракать / я / каждый день / дома\n3. вечером / музыку / слушать / я\n4. после работы / домой / возвращаться / он\n5. по выходным / гулять / мы / в парке\n6. одиннадцать часов / ложиться спать / я / в\n\n## Упражнение 4. Ответьте на вопросы\n\n1. Во сколько вы обычно просыпаетесь?\n2. Что вы делаете утром?\n3. Что вы обычно едите на завтрак?\n4. Где вы работаете или учитесь?\n5. Во сколько вы обедаете?\n6. Что вы делаете после работы или учёбы?\n7. Чем вы любите заниматься вечером?\n8. Во сколько вы ложитесь спать?\n\n## Упражнение 5. Переведите предложения на русский язык\n\n1. Я просыпаюсь в шесть часов утра.\n2. Утром я принимаю душ и завтракаю.\n3. Мой брат работает в университете.\n4. После работы я возвращаюсь домой.\n5. Вечером мы смотрим фильмы.\n6. По выходным я гуляю с друзьями.\n7. Я люблю читать книги перед сном.\n8. Обычно я ложусь спать в одиннадцать часов.\n\n# VIII. УСТНАЯ РЕЧЬ: РАССКАЖИТЕ О СВОЁМ РАСПОРЯДКЕ ДНЯ\n\nИспользуйте следующий план для составления собственного рассказа.\n\n1. Во сколько вы просыпаетесь?\n2. Что вы делаете утром?\n3. Что вы едите на завтрак?\n4. Куда вы идёте утром?\n5. Чем вы занимаетесь днём?\n6. Когда вы обедаете?\n7. Что вы делаете после работы или учёбы?\n8. Как вы проводите вечер?\n9. Что вы делаете перед сном?\n10. Во сколько вы ложитесь спать?\n\nОбразец рассказа:\n\n«Мой обычный день начинается в семь часов утра. Сначала я просыпаюсь, встаю с кровати и умываюсь. Потом я чищу зубы, принимаю душ и завтракаю. После завтрака я иду на работу. Днём я работаю и обедаю. Вечером я возвращаюсь домой, готовлю ужин и отдыхаю. Иногда я читаю книги или смотрю фильмы. Перед сном я чищу зубы и готовлюсь ко сну. Обычно я ложусь спать в одиннадцать часов вечера».\n\n# IX. ЗАКРЕПЛЕНИЕ ЛЕКСИКИ\n\n## 1. Основные глаголы, которые нужно запомнить\n\n| Русский язык   | Русский синоним или пояснение |\n| -------------- | ----------------------------- |\n| просыпаться    | пробуждаться                  |\n| вставать       | подниматься                   |\n| умываться      | мыть лицо                     |\n| завтракать     | есть утром                    |\n| обедать        | есть днём                     |\n| ужинать        | есть вечером                  |\n| работать       | трудиться                     |\n| отдыхать       | расслабляться                 |\n| гулять         | ходить на прогулку            |\n| заниматься     | практиковаться                |\n| возвращаться   | приходить обратно             |\n| ложиться спать | отправляться спать            |\n\n## 2. Десять ключевых предложений\n\n1. Я просыпаюсь рано утром.\n2. Я встаю в семь часов.\n3. Я умываюсь и чищу зубы.\n4. Я принимаю душ.\n5. Я завтракаю дома.\n6. Я иду на работу.\n7. Я обедаю в кафе.\n8. После работы я возвращаюсь домой.\n9. Вечером я отдыхаю и читаю книги.\n10. Я ложусь спать в одиннадцать часов.\n\n# X. ИТОГ УРОКА\n\nПосле изучения этой темы учащиеся должны уметь:\n\n- Называть основные повседневные действия.\n- Рассказывать о своём распорядке дня.\n- Правильно употреблять глаголы в настоящем времени.\n- Использовать возвратные глаголы.\n- Спрашивать и отвечать о времени.\n- Описывать последовательность ежедневных действий.\n- Составлять диалоги на тему «Мой обычный день».\n\nГлавное задание: составить рассказ из 12–15 предложений на тему «Мой распорядок дня», используя не менее 15 изученных глаголов и выражений времени."</script>
+
+    <script>
+        let units = [];
+        let allImages = [];
+        let currentImageIndex = -1;
+        let isLightboxOpen = false;
+        
+        let imageUndoStack = [];
+        let imageRedoStack = [];
+
+        let currentUnitIndex = -1;
+        let fontSize = 20;
+        let isMuted = false;
+        let speechRate = 1;
+        let synth = window.speechSynthesis;
+        let rawContent = "";
+        let lastSavedFilename = "BaiGiang_Complete.html";
+        
+        let isAutoplay = false;
+        let selectedText = "";
+        let selectedNodeParent = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            let loadedMarkdown = "";
+            const embeddedDataElem = document.getElementById('embedded-data');
+            
+            if (embeddedDataElem) {
+                try {
+                    const parsed = JSON.parse(embeddedDataElem.textContent.trim());
+                    if (parsed && typeof parsed === 'string' && parsed.length > 0) {
+                        loadedMarkdown = parsed;
+                    }
+                } catch(e) {}
+            }
+
+            if (!loadedMarkdown) {
+                const lastContent = localStorage.getItem('current_lecture');
+                if (lastContent) {
+                    loadedMarkdown = lastContent;
+                }
+            }
+
+            if (loadedMarkdown) {
+                parseAndBuildDocument(loadedMarkdown);
+            }
+
+            const savedName = localStorage.getItem('last_saved_filename');
+            if (savedName) lastSavedFilename = savedName;
+
+            document.addEventListener('mouseup', handleTextSelection);
+        });
+
+        function saveStateForUndo() {
+            imageUndoStack.push(rawContent);
+            imageRedoStack = [];
+        }
+
+        function handleUndo() {
+            if (imageUndoStack.length > 0) {
+                imageRedoStack.push(rawContent);
+                rawContent = imageUndoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã hoàn tác (Ctrl+Z)!");
+            } else {
+                showToast("Không còn thao tác để hoàn tác!");
+            }
+        }
+
+        function handleRedo() {
+            if (imageRedoStack.length > 0) {
+                imageUndoStack.push(rawContent);
+                rawContent = imageRedoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã làm lại (Ctrl+Y)!");
+            } else {
+                showToast("Không còn thao tác để làm lại!");
+            }
+        }
+
+        function handleTextSelection(e) {
+            const popup = document.getElementById('selection-popup');
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+
+            if (popup.contains(e.target)) return;
+
+            if (text.length > 0 && document.getElementById('lecture-paper').contains(selection.anchorNode)) {
+                selectedText = text;
+                let node = selection.anchorNode;
+                while (node && node.nodeType !== 1) {
+                    node = node.parentNode;
+                }
+                selectedNodeParent = node.closest('p, li, h1, h2, h3, h4, blockquote') || node;
+
+                document.getElementById('popup-img-url').value = '';
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                popup.style.left = `${Math.max(10, rect.left + window.scrollX - 50)}px`;
+                popup.style.display = 'flex';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+
+        function searchImageSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function searchGifSelected() {
+            if (selectedText) {
+                window.open(`https://tenor.com/search/${encodeURIComponent(selectedText)}-gifs`, '_blank');
+            }
+        }
+
+        function searchGoogleSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function autoInsertImageFromPopup(inputEl) {
+            const url = inputEl.value.trim();
+            if (!url) return;
+
+            if (/^(http|https):\/\/[^ "]+$/i.test(url) || url.startsWith('data:image')) {
+                saveStateForUndo();
+                const imageMarkdown = `\n\n![${selectedText || 'Hình ảnh'}](${url})\n\n`;
+
+                if (selectedText && rawContent.includes(selectedText)) {
+                    const index = rawContent.indexOf(selectedText);
+                    const endOfLine = rawContent.indexOf('\n', index);
+                    const insertPos = endOfLine !== -1 ? endOfLine : index + selectedText.length;
+                    rawContent = rawContent.slice(0, insertPos) + imageMarkdown + rawContent.slice(insertPos);
+                } else {
+                    rawContent += imageMarkdown;
+                }
+
+                parseAndBuildDocument(rawContent);
+                showToast("Đã chèn ảnh tự động! (Ctrl+Z để hoàn tác, Ctrl+Y để làm lại)");
+                inputEl.value = '';
+                document.getElementById('selection-popup').style.display = 'none';
+            }
+        }
+
+        function toggleAutoplay(toggle) {
+            isAutoplay = toggle.checked;
+            if (isAutoplay) showToast("Đã bật Autoplay (Tự động chuyển đoạn)");
+            else showToast("Đã tắt Autoplay");
+        }
+
+        function toggleTheme(toggle) {
+            if (toggle.checked) document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+        }
+
+        function toggleExpandMode(toggle) {
+            if (toggle.checked) {
+                document.body.classList.add('mode-expand');
+                showToast("Đã bật chế độ Expand (Hiện tất cả)");
+            } else {
+                document.body.classList.remove('mode-expand');
+                showToast("Đã tắt chế độ Expand");
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function toggleSlideshow() {
+            document.body.classList.toggle('slideshow-mode');
+            const isSlideshow = document.body.classList.contains('slideshow-mode');
+            if (isSlideshow) {
+                showToast("Đã bật chế độ Slide Show (Ấn Esc để thoát)");
+            }
+        }
+
+        function printLecture() {
+            window.print();
+        }
+
+        function openUpdateModal() { document.getElementById('update-modal').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('update-modal').style.display = 'none'; }
+
+        function openLightbox(imgSrc) {
+            allImages = Array.from(document.querySelectorAll('#lecture-paper img'));
+            currentImageIndex = allImages.findIndex(img => img.src === imgSrc);
+            if (currentImageIndex === -1 && allImages.length > 0) currentImageIndex = 0;
+
+            updateLightboxContent();
+            document.getElementById('image-lightbox').style.display = 'flex';
+            isLightboxOpen = true;
+        }
+
+        function updateLightboxContent() {
+            if (allImages.length === 0 || currentImageIndex < 0) return;
+            const img = document.getElementById('lightbox-img');
+            img.src = allImages[currentImageIndex].src;
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${allImages.length}`;
+        }
+
+        function nextImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function prevImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function closeLightbox(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('image-lightbox').style.display = 'none';
+            isLightboxOpen = false;
+        }
+
+        function closeLightboxOnBg(event) {
+            if (event.target.id === 'image-lightbox') {
+                closeLightbox();
+            }
+        }
+
+        function deleteImageBySrc(src) {
+            saveStateForUndo();
+
+            const escapedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const markdownImgRegex = new RegExp(`!\\[[^\\]]*\\]\\(${escapedSrc}\\)`, 'g');
+            const htmlImgRegex = new RegExp(`<img[^>]*src=["']${escapedSrc}["'][^>]*>`, 'gi');
+
+            let newContent = rawContent.replace(markdownImgRegex, '').replace(htmlImgRegex, '');
+
+            if (newContent !== rawContent) {
+                rawContent = newContent;
+                parseAndBuildDocument(rawContent);
+                showToast("Đã xóa ảnh thành công! (Ctrl+Z để hoàn tác)");
+            } else {
+                const allImgs = Array.from(document.querySelectorAll('#lecture-paper img'));
+                const targetImg = allImgs.find(i => i.src === src);
+                if (targetImg) {
+                    const altText = targetImg.alt || '';
+                    const fallbackRegex = new RegExp(`!\\[${altText}\\]\\([^\\)]+\\)`, 'g');
+                    rawContent = rawContent.replace(fallbackRegex, '');
+                    parseAndBuildDocument(rawContent);
+                    showToast("Đã xóa ảnh thành công!");
+                }
+            }
+        }
+
+        function autoAddMarkdownHeaders(text) {
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+/i.test(trimmed)) {
+                    return '# ' + trimmed;
+                } else if (/^\d+\.\s+/.test(trimmed)) {
+                    return '## ' + trimmed;
+                } else if (/^([A-Z]\.|[a-z]\))\s+/.test(trimmed)) {
+                    return '### ' + trimmed;
+                }
+                return line;
+            });
+            return processedLines.join('\n');
+        }
+
+        function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                const options = {
+                    convertImage: mammoth.images.imgElement(function(image) {
+                        return image.read("base64").then(function(imageBuffer) {
+                            return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                        });
+                    })
+                };
+
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer}, options).then(function(result) {
+                    const html = result.value;
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    turndownService.addRule('keepImages', {
+                        filter: 'img',
+                        replacement: function (content, node) {
+                            return `\n\n![image](${node.getAttribute('src')})\n\n`;
+                        }
+                    });
+
+                    let markdown = turndownService.turndown(html);
+                    markdown = autoAddMarkdownHeaders(markdown);
+                    document.getElementById('import-text').value = markdown;
+                    processImport();
+                    showToast("Đã đọc xong file Word!");
+                }).catch(function(err) {
+                    showToast("Lỗi khi đọc file Word: " + err.message);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndBuildDocument(markdownText) {
+            rawContent = markdownText;
+            localStorage.setItem('current_lecture', markdownText);
+            saveToHistory(markdownText);
+
+            const container = document.getElementById('lecture-paper');
+            container.innerHTML = marked.parse(markdownText);
+
+            container.querySelectorAll('img').forEach(img => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'image-wrapper';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'img-delete-btn';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = 'Xóa ảnh này khỏi bài giảng';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteImageBySrc(img.src);
+                };
+
+                img.parentNode.insertBefore(wrapper, img);
+                wrapper.appendChild(img);
+                wrapper.appendChild(deleteBtn);
+
+                img.onclick = (e) => {
+                    e.stopPropagation();
+                    openLightbox(img.src);
+                };
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([container]).catch((err) => console.log('MathJax error:', err));
+            }
+
+            reindexUnits();
+            generateTOC();
+            updateCounter();
+        }
+
+        function reindexUnits() {
+            const container = document.getElementById('lecture-paper');
+            units = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, table, .image-wrapper, hr'));
+            
+            units = units.filter(el => {
+                if (el.classList.contains('image-wrapper')) {
+                    return true;
+                }
+                return !el.parentElement.closest('blockquote, table');
+            });
+
+            units.forEach((unit, idx) => {
+                unit.classList.add('markdown-unit');
+                
+                if (!unit.classList.contains('image-wrapper')) {
+                    unit.onclick = (e) => {
+                        if (window.getSelection().toString().trim().length > 0) return;
+                        jumpToUnit(idx);
+                    };
+                }
+
+                if (idx < currentUnitIndex) {
+                    unit.classList.add('revealed');
+                } else if (idx === currentUnitIndex) {
+                    unit.classList.add('active');
+                }
+            });
+        }
+
+        function generateTOC() {
+            const tocContainer = document.getElementById('toc-container');
+            tocContainer.innerHTML = '';
+
+            const headings = units.filter(unit => ['H1', 'H2', 'H3', 'H4'].includes(unit.tagName));
+
+            if (headings.length === 0) {
+                tocContainer.innerHTML = '<li style="font-size: 13px; color: var(--text-color); padding: 8px;">Không tìm thấy mục lục tiêu đề.</li>';
+                return;
+            }
+
+            headings.forEach((heading) => {
+                const level = heading.tagName.substring(1);
+                const li = document.createElement('li');
+                li.className = `toc-item level-${level}`;
+                li.innerText = heading.innerText || heading.textContent;
+                li.dataset.unitIndex = units.indexOf(heading);
+                
+                li.onclick = () => {
+                    const targetIndex = units.indexOf(heading);
+                    if (targetIndex !== -1) {
+                        jumpToUnit(targetIndex);
+                    }
+                };
+
+                tocContainer.appendChild(li);
+            });
+        }
+
+        function highlightTOCForCurrentUnit() {
+            if (currentUnitIndex < 0 || units.length === 0) return;
+
+            let closestHeadingIndex = -1;
+            for (let i = currentUnitIndex; i >= 0; i--) {
+                if (['H1', 'H2', 'H3', 'H4'].includes(units[i].tagName)) {
+                    closestHeadingIndex = i;
+                    break;
+                }
+            }
+
+            const tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(item => {
+                item.classList.remove('active-toc');
+                if (closestHeadingIndex !== -1 && parseInt(item.dataset.unitIndex) === closestHeadingIndex) {
+                    item.classList.add('active-toc');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function jumpToUnit(index) {
+            if (index < 0 || index >= units.length) return;
+            
+            units.forEach((u, idx) => {
+                u.classList.remove('active');
+                if (idx < index) {
+                    u.classList.add('revealed');
+                } else {
+                    u.classList.remove('revealed');
+                }
+            });
+
+            currentUnitIndex = index;
+            const targetEl = units[currentUnitIndex];
+            targetEl.classList.add('active');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(targetEl);
+        }
+
+        function handlePageInputChange(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        }
+
+        function jumpToInputValue() {
+            const inputEl = document.getElementById('page-input');
+            let val = parseInt(inputEl.value) - 1;
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val >= units.length) val = units.length - 1;
+            jumpToUnit(val);
+        }
+
+        function showNextSentence() {
+            if (units.length === 0) return;
+            if (currentUnitIndex < units.length - 1) {
+                if (currentUnitIndex >= 0) {
+                    units[currentUnitIndex].classList.remove('active');
+                    units[currentUnitIndex].classList.add('revealed');
+                }
+                currentUnitIndex++;
+                const activeEl = units[currentUnitIndex];
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateCounter();
+                highlightTOCForCurrentUnit();
+                speakUnit(activeEl);
+            }
+        }
+
+        function showPrevSentence() {
+            if (units.length === 0 || currentUnitIndex <= 0) return;
+            const activeEl = units[currentUnitIndex];
+            activeEl.classList.remove('active', 'revealed');
+
+            currentUnitIndex--;
+            const prevEl = units[currentUnitIndex];
+            prevEl.classList.remove('revealed');
+            prevEl.classList.add('active');
+            prevEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(prevEl);
+        }
+
+        function replayCurrentSentence() {
+            if (currentUnitIndex >= 0 && currentUnitIndex < units.length) {
+                speakUnit(units[currentUnitIndex]);
+            }
+        }
+
+        /* PHÍM TẮT ĐIỀU HƯỚNG, SPACE (BẬT/TẮT LIGHTBOX) & UNDO/REDO */
+        document.addEventListener('keydown', (e) => {
+            const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+
+            if ((e.ctrlKey || e.metaKey) && !isInputActive) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    handleUndo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    handleRedo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'p') {
+                    e.preventDefault();
+                    printLecture();
+                    return;
+                }
+            }
+
+            if (isInputActive) return;
+
+            if (isLightboxOpen) {
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    closeLightbox();
+                } else if (e.key === 'ArrowRight') {
+                    nextImage();
+                } else if (e.key === 'ArrowLeft') {
+                    prevImage();
+                }
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (document.getElementById('save-modal').style.display === 'flex') {
+                    closeSaveModal();
+                    return;
+                }
+                if (document.getElementById('update-modal').style.display === 'flex') {
+                    closeUpdateModal();
+                    return;
+                }
+                if (document.body.classList.contains('slideshow-mode')) {
+                    toggleSlideshow();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                const updateModal = document.getElementById('update-modal');
+                if (updateModal.style.display === 'flex') closeUpdateModal();
+                else openUpdateModal();
+                return;
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                const activeEl = units[currentUnitIndex];
+                if (activeEl && activeEl.classList.contains('image-wrapper')) {
+                    const img = activeEl.querySelector('img');
+                    if (img) {
+                        openLightbox(img.src);
+                    }
+                } else {
+                    replayCurrentSentence();
+                }
+            } else if (e.key === 'ArrowRight') {
+                showNextSentence();
+            } else if (e.key === 'ArrowLeft') {
+                showPrevSentence();
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(2);
+            } else if (e.key === '-') {
+                changeFontSize(-2);
+            }
+        });
+
+        function saveToHistory(text) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            if (history.length === 0 || history[0].content !== text) {
+                const title = text.slice(0, 40).replace(/[#*]/g, '').trim() + '...';
+                history.unshift({ id: Date.now(), title: title, content: text, date: new Date().toLocaleDateString('vi-VN') });
+                if (history.length > 20) history.pop();
+                localStorage.setItem('lecture_history', JSON.stringify(history));
+            }
+        }
+
+        function openHistoryModal() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px;">Lịch sử trống.</div>';
+            } else {
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size: 12px; color: var(--text-color);">${item.date}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="loadHistoryItem(${item.id})">Mở</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background:#ef4444; color:#fff;">Xóa</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+
+        function loadHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            const found = history.find(item => item.id === id);
+            if (found) {
+                parseAndBuildDocument(found.content);
+                closeHistoryModal();
+                showNextSentence();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('lecture_history', JSON.stringify(history));
+            openHistoryModal();
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem('lecture_history');
+            openHistoryModal();
+            showToast("Đã xóa toàn bộ lịch sử!");
+        }
+
+        function openImportModal() {
+            let contentToLoad = rawContent;
+            if (!contentToLoad) {
+                const embeddedElem = document.getElementById('embedded-data');
+                if (embeddedElem) {
+                    try {
+                        contentToLoad = JSON.parse(embeddedElem.textContent.trim());
+                    } catch(e) {}
+                }
+            }
+            document.getElementById('import-text').value = contentToLoad || "";
+            document.getElementById('import-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('import-text').focus();
+            }, 50);
+        }
+
+        function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            if (text.trim()) {
+                parseAndBuildDocument(text);
+                closeImportModal();
+                showNextSentence();
+                showToast("Đã import thành công bài giảng!");
+            }
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById('import-text').value = e.target.result;
+                processImport();
+                showToast("Đã đọc xong file văn bản!");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('prompt-topic').value.trim() || '[TÊN CHỦ ĐỀ CỦA BẠN]';
+            const btn = document.getElementById('btn-copy-prompt');
+            const promptTemplate = `Hãy tạo một bài giảng chi tiết khoảng 1000 từ về chủ đề: "${topic}". 
+Yêu cầu:
+1. ĐÁNH SỐ VÀ PHÂN CẤP CÁC MỤC BÀI GIẢNG THEO THỨ TỰ CỤ THỂ:
+   - Cấp 1 dùng: I. II. III...
+   - Cấp 2 dùng: 1. 2. 3...
+   - Cấp 3 dùng: a) b) c)...
+2. THÊM TỪ KHÓA TIẾNG ANH TƯƠNG ỨNG CHO CÁC KHÁI NIỆM/TỪ KHÓA/NỘI DUNG QUAN TRỌNG VÀ ĐẶT TRONG DẤU NGOẠC ĐƠN ().
+3. Sử dụng định dạng Markdown đầy đủ: in đậm (**từ khóa**), in nghiêng (*chú thích*), danh sách (*).
+4. Thêm link ảnh minh họa dạng Markdown ![mô tả ảnh](https://url-anh.com) nếu phù hợp.
+5. Công thức toán học và phản ứng hóa học dùng chuẩn LaTeX bọc trong dấu $ (ví dụ $CaCO_3$) hoặc \\[...\\] / \\(...\\).
+6. Các url ảnh được cấp phía trên, đặt các url ảnh đó vào nội dung tương ứng (đặt dưới tiêu đề, nhưng trên nội dung), tất cả các url ảnh đều phải được gắn vào các nội dung phù hợp.
+7. Gửi tôi markdown nhưng dạng plain text để tôi copy.`;
+
+            navigator.clipboard.writeText(promptTemplate).then(() => {
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✅ Đã Copy!';
+                btn.classList.add('active');
+                showToast(`Đã copy Prompt AI cho chủ đề: ${topic}`);
+                
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.classList.remove('active');
+                }, 2000);
+            });
+        }
+
+        function speakUnit(element) {
+            if (!synth) return;
+            synth.cancel();
+            if (isMuted) return;
+
+            if (element.classList.contains('image-wrapper') || element.tagName.toLowerCase() === 'hr') {
+                if (isAutoplay) setTimeout(showNextSentence, 1000);
+                return;
+            }
+
+            const textToSpeak = element.innerText || element.textContent;
+            if (!textToSpeak.trim()) {
+                if (isAutoplay) setTimeout(showNextSentence, 500);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechRate;
+            
+            utterance.onend = () => {
+                if (isAutoplay) {
+                    setTimeout(showNextSentence, 600);
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('btn-mute');
+            if (isMuted) {
+                btn.classList.add('active');
+                if (synth) synth.cancel();
+            } else {
+                btn.classList.remove('active');
+                replayCurrentSentence();
+            }
+        }
+
+        function updateRate(val) { speechRate = parseFloat(val); replayCurrentSentence(); }
+        function changeFontSize(delta) { fontSize = Math.max(14, Math.min(50, fontSize + delta)); document.documentElement.style.setProperty('--font-size', fontSize + 'px'); }
+        
+        function updateCounter() { 
+            const pageInput = document.getElementById('page-input');
+            const totalUnitsCount = document.getElementById('total-units-count');
+            pageInput.value = currentUnitIndex + 1;
+            pageInput.max = units.length;
+            totalUnitsCount.innerText = units.length;
+        }
+
+        function openSaveModal() {
+            if (!rawContent) return showToast("Chưa có nội dung để lưu!");
+            const saveModal = document.getElementById('save-modal');
+            const filenameInput = document.getElementById('save-filename-input');
+            
+            filenameInput.value = lastSavedFilename;
+            saveModal.style.display = 'flex';
+            
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 50);
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').style.display = 'none';
+        }
+
+        function executeSaveAsHtml() {
+            const inputEl = document.getElementById('save-filename-input');
+            let filename = inputEl.value.trim();
+            if (!filename) filename = "BaiGiang_Complete.html";
+            if (!filename.toLowerCase().endsWith('.html') && !filename.toLowerCase().endsWith('.htm')) {
+                filename += '.html';
+            }
+
+            lastSavedFilename = filename;
+            localStorage.setItem('last_saved_filename', filename);
+            closeSaveModal();
+
+            let clonedDoc = document.documentElement.cloneNode(true);
+
+            let embeddedScript = clonedDoc.querySelector('#embedded-data');
+            if (embeddedScript) {
+                embeddedScript.textContent = JSON.stringify(rawContent);
+            }
+
+            let saveModalClone = clonedDoc.querySelector('#save-modal');
+            if (saveModalClone) saveModalClone.style.display = 'none';
+
+            let updateModalClone = clonedDoc.querySelector('#update-modal');
+            if (updateModalClone) updateModalClone.style.display = 'none';
+
+            let importModalClone = clonedDoc.querySelector('#import-modal');
+            if (importModalClone) importModalClone.style.display = 'none';
+
+            let historyModalClone = clonedDoc.querySelector('#history-modal');
+            if (historyModalClone) historyModalClone.style.display = 'none';
+
+            let popupClone = clonedDoc.querySelector('#selection-popup');
+            if (popupClone) popupClone.style.display = 'none';
+
+            let lightboxClone = clonedDoc.querySelector('#image-lightbox');
+            if (lightboxClone) lightboxClone.style.display = 'none';
+
+            clonedDoc.classList.remove('slideshow-mode');
+
+            const fullHtmlContent = "<!DOCTYPE html>\n" + clonedDoc.outerHTML;
+            const blob = new Blob([fullHtmlContent], { type: 'text/html;charset=utf-8' });
+            const link = document.appendLink ? document.appendLink : document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Đã lưu file thành công: ${filename}`);
+        }
+    </script>
+
+</body></html>
