@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Render Markdown & KaTeX Tức Thì</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- KaTeX CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        .markdown-body h1 { font-size: 1.75rem; font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .markdown-body h2 { font-size: 1.5rem; font-weight: bold; margin-top: 0.875rem; margin-bottom: 0.5rem; }
+        .markdown-body h3 { font-size: 1.25rem; font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.375rem; }
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body code { background-color: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; }
+        .markdown-body pre { background-color: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 0.75rem; }
+        .markdown-body pre code { background-color: transparent; color: inherit; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; color: #4b5563; font-style: italic; margin-bottom: 0.75rem; }
+        
+        .katex {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        
+        <!-- HEADER: TIÊU ĐỀ & KHUNG TẠO PROMPT AI -->
+        <header class="mb-8 bg-white rounded-xl shadow-md p-6">
+            <div class="text-center mb-4">
+                <h1 class="text-3xl font-bold text-blue-600">Trình Render Văn Bản AI & Công Thức Toán (KaTeX)</h1>
+                <p class="text-gray-600 mt-1 text-sm">Tạo prompt cho AI, nhận kết quả và render tức thì công thức toán học giữ nguyên định dạng sang Word.</p>
+            </div>
+
+            <!-- Khu vực nhập chủ đề & nút copy prompt -->
+            <div class="border-t pt-4 border-gray-100">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2">
+                    <label for="user-request" class="font-semibold text-gray-700 text-sm flex items-center gap-2">
+                        <span>💡 Nhập chủ đề/yêu cầu để tạo Prompt gửi AI:</span>
+                    </label>
+                    <button onclick="copyGeneratedPrompt()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm shrink-0">
+                        📋 Copy Prompt Gửi AI
+                    </button>
+                </div>
+                <textarea id="user-request" 
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm h-20 resize-none" 
+                    placeholder="Ví dụ: Giải thích định lý Pitago và cho 3 ví dụ bài tập kèm lời giải chi tiết..."></textarea>
+            </div>
+        </header>
+
+        <!-- KHU VỰC CHÍNH: 2 CỘT (INPUT & PREVIEW) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Cột 1: Nhập liệu (Văn bản AI trả về) -->
+            <div class="flex flex-col bg-white rounded-xl shadow-md p-4 h-[65vh]">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="input-text" class="font-semibold text-gray-700 text-sm">Dán văn bản AI trả về vào đây:</label>
+                    <button onclick="clearInput()" class="text-xs bg-red-100 text-red-600 px-2.5 py-1 rounded hover:bg-red-200 transition">Xóa nội dung</button>
+                </div>
+                <textarea id="input-text" 
+                    class="w-full flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm resize-none" 
+                    placeholder="Dán nội dung Markdown + KaTeX từ AI phản hồi vào đây..."></textarea>
+            </div>
+
+            <!-- Cột 2: Hiển thị kết quả -->
+            <div class="flex flex-col bg-white rounded-xl shadow-md p-4 h-[65vh]">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-semibold text-gray-700 text-sm">Kết quả Render & Tùy chỉnh:</span>
+                    <div class="flex flex-wrap gap-1.5 items-center">
+                        <button onclick="addSpacingToKatex()" title="Chèn khoảng trắng thủ công đệm trước và sau mỗi công thức để tránh dính chữ khi sang Word" class="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg transition font-medium shadow-sm">
+                            ➕ Thêm Space Chống Dính
+                        </button>
+                        <button onclick="copyResultFormatted()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition font-medium shadow-sm">
+                            📋 Copy sang Word
+                        </button>
+                        <button onclick="copyHTML()" class="text-xs bg-blue-100 text-blue-700 px-2.5 py-1.5 rounded hover:bg-blue-200 transition font-medium">💻 Copy HTML</button>
+                    </div>
+                </div>
+                <div id="output-preview" 
+                    class="w-full flex-grow p-4 border border-gray-200 rounded-lg overflow-y-auto markdown-body bg-gray-50 select-all" 
+                    tabindex="0">
+                    <span class="text-gray-400 italic">Kết quả hiển thị sẽ xuất hiện ở đây...</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script xử lý sự kiện -->
+    <script>
+        const inputTextArea = document.getElementById('input-text');
+        const outputPreview = document.getElementById('output-preview');
+        const userRequestArea = document.getElementById('user-request');
+
+        function processContent() {
+            const rawText = inputTextArea.value;
+
+            if (!rawText.trim()) {
+                outputPreview.innerHTML = '<span class="text-gray-400 italic">Kết quả hiển thị sẽ xuất hiện ở đây...</span>';
+                return;
+            }
+
+            // 1. Chuyển Markdown thành HTML bằng Marked.js
+            let parsedHTML = marked.parse(rawText);
+            outputPreview.innerHTML = parsedHTML;
+
+            // 2. Render công thức toán học bằng KaTeX Auto-render
+            renderMathInElement(outputPreview, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},   
+                    {left: '$', right: '$', display: false},     
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: false 
+            });
+
+            // 3. Tự động chèn &nbsp; chống dính chữ thông minh ngay sau khi render xong
+            injectNonBreakingSpaces();
+        }
+
+        // Hàm chèn khoảng trắng không ngắt cứng (&nbsp;) chỉ khi giáp ranh với ký tự chữ/số thường
+        function injectNonBreakingSpaces() {
+            const katexElements = outputPreview.querySelectorAll('.katex:not(.katex-display)');
+            katexElements.forEach(el => {
+                // Kiểm tra phía trước KaTeX
+                let prev = el.previousSibling;
+                let needSpaceBefore = false;
+                if (!prev) {
+                    needSpaceBefore = true;
+                } else if (prev.nodeType === Node.TEXT_NODE) {
+                    let text = prev.textContent;
+                    // Nếu text kết thúc bằng chữ cái hoặc số (chứ không phải dấu câu mở, khoảng trắng, v.v.)
+                    if (/[a-zA-Z0-9À-ỹ]$/.test(text)) {
+                        needSpaceBefore = true;
+                    }
+                }
+
+                if (needSpaceBefore) {
+                    const spaceBefore = document.createElement('span');
+                    spaceBefore.innerHTML = '&nbsp;';
+                    el.parentNode.insertBefore(spaceBefore, el);
+                }
+
+                // Kiểm tra phía sau KaTeX
+                let next = el.nextSibling;
+                let needSpaceAfter = false;
+                if (!next) {
+                    needSpaceAfter = true;
+                } else if (next.nodeType === Node.TEXT_NODE) {
+                    let text = next.textContent;
+                    // Nếu text bắt đầu bằng chữ cái hoặc số (chứ không phải dấu ngoặc đóng, dấu phẩy, dấu chấm, v.v.)
+                    if (/^[a-zA-Z0-9À-ỹ]/.test(text)) {
+                        needSpaceAfter = true;
+                    }
+                }
+
+                if (needSpaceAfter) {
+                    const spaceAfter = document.createElement('span');
+                    spaceAfter.innerHTML = '&nbsp;';
+                    el.parentNode.insertBefore(spaceAfter, el.nextSibling);
+                }
+            });
+        }
+
+        // Nút chèn thủ công (phòng hờ)
+        function addSpacingToKatex() {
+            injectNonBreakingSpaces();
+            alert('Đã chèn các khoảng trắng cứng chống dính chữ thông minh!');
+        }
+
+        // Lắng nghe sự kiện nhập liệu thời gian thực
+        inputTextArea.addEventListener('input', processContent);
+
+        // Nút xóa nội dung nguồn
+        function clearInput() {
+            inputTextArea.value = '';
+            processContent();
+        }
+
+        // Nút copy Prompt chuẩn KaTeX/Markdown
+        function copyGeneratedPrompt() {
+            const userContent = userRequestArea.value.trim();
+            if (!userContent) {
+                alert('Vui lòng nhập chủ đề hoặc yêu cầu vào ô phía trước trước!');
+                userRequestArea.focus();
+                return;
+            }
+
+            const fullPrompt = `Hãy trả lời yêu cầu sau bằng định dạng Markdown hoàn chỉnh. 
+QUAN TRỌNG VỀ CÔNG THỨC TOÁN HỌC: 
+- Sử dụng cú pháp KaTeX/LaTeX chuẩn cho toàn bộ công thức toán học.
+- Công thức nội tuyến dùng dấu đô-la đơn: $công_thức$ (Ví dụ: $ax^2+bx+c=0$).
+- Công thức nằm độc lập một dòng (block) dùng dấu đô-la kép: $$công_thức$$ (Ví dụ: $$\\int f(x)dx$$).
+- Lưu ý kỹ: Luôn cách khoảng trắng rõ ràng giữa từ ngữ và công thức toán học (ví dụ: gõ "$A$ là công" tuyệt đối không gõ liền "$A$là công").
+- Tuyệt đối không dùng các định dạng toán học khác ngoài KaTeX chuẩn.
+
+Yêu cầu cụ thể của tôi là:
+${userContent}`;
+
+            navigator.clipboard.writeText(fullPrompt).then(() => {
+                alert('Đã copy Prompt chuẩn KaTeX! Bạn hãy dán vào khung chat của AI.');
+            }).catch(err => {
+                console.error('Không thể copy: ', err);
+            });
+        }
+
+        // Nút copy Result sang Word kèm cơ chế bảo vệ chống dính chữ tuyệt đối
+        function copyResultFormatted() {
+            if (!outputPreview.innerText.trim() || outputPreview.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                alert('Không có nội dung kết quả để copy!');
+                return;
+            }
+
+            // Chạy ép buộc chèn khoảng trắng cứng trước khi bôi đen copy
+            injectNonBreakingSpaces();
+
+            const range = document.createRange();
+            range.selectNode(outputPreview);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    alert('Đã sao chép toàn bộ kết quả! Bạn có thể dán (Ctrl+V) thẳng vào Microsoft Word mà không bao giờ bị dính chữ hay thừa khoảng cách ở ngoặc đơn.');
+                } else {
+                    alert('Trình duyệt không hỗ trợ lệnh sao chép tự động này.');
+                }
+            } catch (err) {
+                console.error('Lỗi khi copy sang Word: ', err);
+                alert('Có lỗi xảy ra khi sao chép.');
+            }
+
+            selection.removeAllRanges();
+        }
+
+        // Nút sao chép mã HTML sau khi render
+        function copyHTML() {
+            const htmlContent = outputPreview.innerHTML;
+            if (!outputPreview.innerText.trim() || outputPreview.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                alert('Không có kết quả render để copy HTML!');
+                return;
+            }
+            navigator.clipboard.writeText(htmlContent).then(() => {
+                alert('Đã sao chép mã HTML vào bộ nhớ tạm!');
+            }).catch(err => {
+                console.error('Không thể sao chép: ', err);
+            });
+        }
+
+        // Dữ liệu mẫu khởi tạo ban đầu
+        window.addEventListener('DOMContentLoaded', () => {
+            userRequestArea.value = "Giải thích định nghĩa công cơ học và công thức tính.";
+            inputTextArea.value = `# Công cơ học
+
+Khi lực $F$ tác dụng vào một vật làm vật dịch chuyển một quãng đường $s$ theo hướng của lực thì công cơ học do lực đó sinh ra được tính bằng biểu thức:
+$$A = F \\cdot s$$
+
+Trong đó:
+- $A$ là công sinh ra (đơn vị Jun, J).
+- $F$ là lực tác dụng (đơn vị Niu-tơn, N).
+- $s$ là quãng đường vật dịch chuyển (đơn vị mét, m).`;
+            processContent();
+        });
+    </script>
+</body>
+</html>
