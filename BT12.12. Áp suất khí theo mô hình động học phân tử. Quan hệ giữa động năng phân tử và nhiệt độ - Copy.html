@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Trắc nghiệm Thông minh</title>
+    <style>
+        :root {
+            --primary-color: #2b6cb0;
+            --primary-hover: #1a4373;
+            --sidebar-bg: #1a202c;
+            --sidebar-text: #edf2f7;
+            --bg-color: #f7fafc;
+            --card-bg: #ffffff;
+            --text-color: #2d3748;
+            --border-color: #e2e8f0;
+            --success: #48bb78;
+            --error: #f56565;
+            --warning: #ed8936;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0; padding: 0;
+            display: flex; height: 100vh;
+            overflow: hidden;
+        }
+
+        .mobile-header {
+            display: none;
+            background-color: #10141d;
+            color: #fff;
+            padding: 10px 15px;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+        }
+
+        .mobile-header h2 { margin: 0; font-size: 16px; }
+
+        .toggle-btn {
+            background: var(--primary-color);
+            color: white; border: none;
+            padding: 6px 12px; border-radius: 4px;
+            cursor: pointer; font-size: 14px;
+        }
+
+        .sidebar {
+            width: 340px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex; flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0; z-index: 90;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background-color: #10141d;
+            border-bottom: 1px solid #2d3748;
+            text-align: center;
+        }
+
+        .sidebar-header h2 { margin: 0; font-size: 18px; color: #fff; }
+        
+        .timer-box {
+            background-color: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 6px; padding: 10px;
+            margin: 15px; text-align: center;
+            font-size: 18px; font-weight: bold;
+            color: #fc8181; display: flex;
+            align-items: center; justify-content: center; gap: 10px;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .sidebar-section-title {
+            font-size: 12px; text-transform: uppercase;
+            letter-spacing: 1px; color: #a0aec0;
+            margin: 15px 0 8px 5px; font-weight: bold;
+        }
+
+        .menu-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+
+        .menu-item {
+            background: #2d3748; color: #cbd5e0; padding: 10px 12px;
+            border-radius: 6px; cursor: pointer; border: none;
+            text-align: left; font-size: 13.5px; transition: all 0.2s;
+        }
+        .menu-item:hover { background: #4a5568; color: #fff; }
+        .menu-item.active { background: var(--primary-color); color: white; }
+
+        .switch-container {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #2d3748; padding: 10px 12px; border-radius: 6px;
+            margin-bottom: 10px; border: 1px solid #4a5568;
+        }
+        .switch-label { font-size: 13.5px; font-weight: bold; color: #edf2f7; }
+        
+        .view-select {
+            width: 100%; padding: 9px; background: #2d3748; color: #fff;
+            border: 1px solid #4a5568; border-radius: 6px; font-size: 13.5px;
+            outline: none; cursor: pointer; margin-bottom: 10px;
+        }
+        .view-select:focus { border-color: var(--primary-color); }
+
+        .switch { position: relative; display: inline-block; width: 48px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #718096; transition: .3s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        input:checked + .slider-lang { background-color: #e28743; }
+        input:checked + .slider-lang:before { transform: translateX(24px); }
+
+        .pagination-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; padding: 5px; }
+
+        .page-item {
+            background: #2d3748; color: #cbd5e0; border: 1px solid #4a5568;
+            padding: 8px 0; border-radius: 4px; text-align: center;
+            font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+        .page-item:hover { background: #4a5568; color: #fff; }
+        .page-item.active { box-shadow: 0 0 0 3px #fc8181; border-color: #fc8181 !important; }
+        .page-item.answered { background-color: #4a5568; color: #fff; border-color: #cbd5e0; }
+        .page-item.correct { background-color: var(--success) !important; color: white !important; border-color: #2f855a !important; }
+        .page-item.wrong { background-color: var(--error) !important; color: white !important; border-color: #9b2c2c !important; }
+
+        .action-group {
+            display: flex; flex-direction: column; gap: 10px; padding: 15px;
+            background-color: #10141d; border-top: 1px solid #2d3748;
+        }
+
+        .btn {
+            color: white; border: none; padding: 11px 15px; font-size: 14px; font-weight: bold;
+            border-radius: 6px; cursor: pointer; transition: background 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box;
+        }
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: var(--success); }
+        .btn-success:hover { background-color: #38a169; }
+        .btn-warning { background-color: var(--warning); }
+        .btn-warning:hover { background-color: #dd6b20; }
+        .btn-secondary { background-color: #4a5568; }
+        .btn-secondary:hover { background-color: #323c4d; }
+        .btn-info { background-color: #00b4d8; }
+        .btn-info:hover { background-color: #0096c7; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; box-sizing: border-box; scroll-behavior: smooth; }
+        .container-box { max-width: 850px; margin: 0 auto; padding-bottom: 200px; }
+
+        .section-card {
+            background: var(--card-bg); border-radius: 8px; padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px;
+        }
+
+        textarea {
+            width: 100%; height: 280px; padding: 15px; border: 2px solid var(--border-color);
+            border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        textarea:focus { border-color: var(--primary-color); outline: none; }
+
+        .prompt-generator-form {
+            background: #f8fafc; border: 1px solid var(--border-color);
+            border-radius: 6px; padding: 15px; margin-bottom: 20px;
+        }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; font-weight: bold; color: #4a5568; }
+        .form-group input { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; }
+
+        .quiz-title { color: var(--primary-color); border-left: 5px solid var(--primary-color); padding-left: 15px; margin-top: 0; margin-bottom: 25px; }
+
+        .question-card {
+            background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 20px; margin-bottom: 25px; outline: none; transition: all 0.2s; cursor: pointer; position: relative;
+        }
+        .question-card.focused-card {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.25);
+            background-color: #f0f7ff;
+        }
+
+        .question-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 15px; }
+        .question-text { font-weight: 600; font-size: 16px; white-space: pre-wrap; flex: 1; }
+        .header-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+
+        .action-tool-btn {
+            background: #edf2f7; color: #4a5568; border: 1px solid var(--border-color);
+            padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 14px;
+            display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .action-tool-btn:hover { background: #cbd5e0; color: #1a202c; }
+
+        .options-group { display: flex; flex-direction: column; gap: 10px; }
+        .option-label {
+            display: flex; align-items: flex-start; padding: 12px 15px;
+            border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: background 0.2s;
+        }
+        .option-label:hover { background-color: #e2e8f0; }
+        .option-label input { margin-right: 12px; margin-top: 5px; transform: scale(1.2); }
+
+        .tf-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 15px; border: 1px solid var(--border-color);
+            border-radius: 6px; margin-bottom: 8px; background: #fff; gap: 15px;
+        }
+        .tf-row.active-tf-row { border-color: #fc8181; box-shadow: 0 0 0 2px rgba(252, 129, 129, 0.2); }
+        .tf-text { flex: 1; font-size: 14.5px; }
+        .tf-buttons { display: flex; gap: 5px; flex-shrink: 0; }
+        .tf-btn {
+            border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 4px;
+            background: #edf2f7; cursor: pointer; font-weight: bold; font-size: 13px; transition: all 0.2s;
+        }
+        .tf-btn:hover { background: #e2e8f0; }
+        .tf-btn.selected-true { background-color: #3182ce; color: white; border-color: #2b6cb0; }
+        .tf-btn.selected-false { background-color: #e53e3e; color: white; border-color: #c53030; }
+        
+        .tf-row.correct-row { background-color: #c6f6d5 !important; border-color: var(--success) !important; }
+        .tf-row.wrong-row { background-color: #fed7d7 !important; border-color: var(--error) !important; }
+
+        .sa-group { background: #f8fafc; border: 1px solid var(--border-color); padding: 15px; border-radius: 6px; margin-top: 10px; }
+        .sa-input {
+            width: 100%; max-width: 300px; padding: 10px; border: 2px solid var(--border-color);
+            border-radius: 6px; font-size: 15px; font-weight: bold; box-sizing: border-box;
+        }
+        .sa-input:focus { border-color: var(--primary-color); outline: none; }
+        .sa-result-zone { margin-top: 10px; font-size: 14.5px; font-weight: bold; }
+
+        .image-gallery { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 12px; 
+            margin: 15px 0; 
+        }
+        .quiz-image {
+            display: block; width: 220px; height: 160px; object-fit: contain;
+            border-radius: 6px; border: 1px solid var(--border-color); background: #fdfdfd;
+            transition: transform 0.2s; cursor: zoom-in;
+        }
+        .quiz-image:hover { transform: scale(1.03); }
+
+        #lightbox-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); display: flex; align-items: center; justify-content: center;
+            z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #lightbox-modal.active { opacity: 1; pointer-events: auto; }
+        
+        #lightbox-img {
+            width: 100vw; height: 100vh;
+            max-width: 100vw; max-height: 100vh;
+            object-fit: contain; display: block; padding: 40px;
+        }
+
+        .lightbox-close, .lightbox-nav {
+            position: absolute; background: rgba(255, 255, 255, 0.2); color: white;
+            border: none; border-radius: 50%; width: 50px; height: 50px;
+            font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s; z-index: 10001;
+        }
+        .lightbox-close:hover, .lightbox-nav:hover { background: rgba(255, 255, 255, 0.4); }
+        .lightbox-close { top: 20px; right: 20px; font-size: 28px; }
+        .lightbox-prev { left: 20px; top: 50%; transform: translateY(-50%); }
+        .lightbox-next { right: 20px; top: 50%; transform: translateY(-50%); }
+
+        .correct { background-color: #c6f6d5 !important; border-color: var(--success) !important; color: #22543d; font-weight: bold; }
+        .wrong { background-color: #fed7d7 !important; border-color: var(--error) !important; color: #742a2a; }
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .mobile-header { display: flex; }
+            .sidebar {
+                position: fixed; top: 45px; left: 0; bottom: 0; width: 280px;
+                transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+            }
+            .sidebar.active { transform: translateX(0); }
+            .sidebar-header { display: none; }
+            .main-content { padding: 15px; margin-top: 45px; }
+            .section-card { padding: 15px; }
+            .pagination-grid { grid-template-columns: repeat(5, 1fr); }
+            .quiz-image { width: 100%; height: auto; }
+            .tf-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .tf-buttons { width: 100%; justify-content: flex-end; }
+            .sa-input { max-width: 100%; }
+        }
+
+        #toast-container {
+            position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            background-color: #2d3748; color: #fff; padding: 12px 20px;
+            border-radius: 6px; font-size: 14px; font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex;
+            align-items: center; gap: 10px; opacity: 0;
+            transform: translateY(20px); transition: all 0.3s ease; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-success { background-color: #2f855a; border-left: 4px solid #48bb78; }
+        .toast-error { background-color: #9b2c2c; border-left: 4px solid #f56565; }
+        .toast-warning { background-color: #c05621; border-left: 4px solid #ed8936; }
+        .toast-info { background-color: #2b6cb0; border-left: 4px solid #4299e1; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-header">
+        <h2>TRẮC NGHIỆM THÔNG MINH</h2>
+        <button class="toggle-btn" onclick="toggleSidebar()">☰ Menu</button>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>HỆ THỐNG TRẮC NGHIỆM</h2>
+        </div>
+        
+        <div class="timer-box id-timer" id="quiz-timer-container">
+            ⏱️ Thời gian: <span id="timer-display">00:05</span>
+        </div>
+        
+        <div class="sidebar-content">
+            <div id="menu-section" class="">
+                <div class="sidebar-section-title">Danh sách bài học</div>
+                <div class="menu-list" id="lesson-menu"><button class="menu-item active">Bài 12. Dạng 1. TRẮC NGHIỆM...</button><button class="menu-item ">Dạng 2. TRẮC NGHIỆM ĐÚNG / SAI</button><button class="menu-item ">Dạng 3. TRẢ LỜI NGẮN</button></div>
+                
+                <div class="sidebar-section-title">Cài đặt &amp; Lọc câu hỏi</div>
+                
+                <select id="view-filter-select" class="view-select" onchange="handleFilterChange()">
+                    <option value="ALL">👁️ View: Tất cả câu hỏi</option>
+                    <option value="WRONG">❌ View: Các câu làm sai</option>
+                    <option value="UNANSWERED">⭕ View: Các câu chưa làm</option>
+                </select>
+
+                <div class="switch-container">
+                    <span class="switch-label">Chấm điểm ngay</span>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-check-toggle" checked="">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="switch-container">
+                    <span class="switch-label" id="lang-label">🗣️ Giọng đọc: VN</span>
+                    <label class="switch">
+                        <input type="checkbox" id="language-speech-toggle" onchange="toggleSpeechLanguage()">
+                        <span class="slider slider-lang"></span>
+                    </label>
+                </div>
+
+                <div class="sidebar-section-title">Sơ đồ câu hỏi</div>
+                <div class="pagination-grid" id="question-pagination"><div class="page-item active">1</div><div class="page-item">2</div><div class="page-item">3</div><div class="page-item">4</div><div class="page-item">5</div><div class="page-item">6</div><div class="page-item">7</div><div class="page-item">8</div><div class="page-item">9</div><div class="page-item">10</div><div class="page-item">11</div><div class="page-item">12</div><div class="page-item">13</div><div class="page-item">14</div><div class="page-item">15</div><div class="page-item">16</div><div class="page-item">17</div><div class="page-item">18</div><div class="page-item">19</div><div class="page-item">20</div><div class="page-item">21</div><div class="page-item">22</div><div class="page-item">23</div><div class="page-item">24</div><div class="page-item">25</div><div class="page-item">26</div><div class="page-item">27</div><div class="page-item">28</div><div class="page-item">29</div><div class="page-item">30</div><div class="page-item">31</div><div class="page-item">32</div><div class="page-item">33</div><div class="page-item">34</div><div class="page-item">35</div><div class="page-item">36</div><div class="page-item">37</div><div class="page-item">38</div><div class="page-item">39</div><div class="page-item">40</div><div class="page-item">41</div><div class="page-item">42</div><div class="page-item">43</div><div class="page-item">44</div><div class="page-item">45</div><div class="page-item">46</div><div class="page-item">47</div><div class="page-item">48</div><div class="page-item">49</div><div class="page-item">50</div><div class="page-item">51</div><div class="page-item">52</div><div class="page-item">53</div><div class="page-item">54</div><div class="page-item">55</div><div class="page-item">56</div><div class="page-item">57</div><div class="page-item">58</div><div class="page-item">59</div><div class="page-item">60</div></div>
+                <p style="font-size: 11px; color:#a0aec0; text-align:left; margin:0; padding:0 5px; line-height: 1.5;">
+                    💡 <b>Phím tắt:</b> <kbd>←</kbd> <kbd>→</kbd> nhảy câu | MCQ: <kbd>A</kbd>-<kbd>D</kbd> | Đ/S: <kbd>D</kbd>/<kbd>S</kbd>
+                </p>
+            </div>
+        </div>
+
+        <div class="action-group">
+            <div id="quiz-actions" class="" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <button class="btn btn-success" onclick="gradeQuiz()">📝 Nộp &amp; Chấm toàn bộ</button>
+                <button class="btn btn-warning" onclick="saveWorkSession()">💾 Save bài làm (Lưu tiến độ)</button>
+                <button class="btn btn-secondary" onclick="saveOriginalQuizFile()">💾 Save file đề gốc</button>
+            </div>
+            <div id="import-actions" class="hidden">
+                <button class="btn btn-primary" onclick="parseAndGenerateQuiz()">⚡ Tạo bài trắc nghiệm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content" id="main-content-pane" onclick="closeSidebarOnMobile()">
+        <div class="container-box">
+            
+            <div id="import-container" class="section-card hidden">
+                <h3 style="margin-top:0; color: var(--primary-color);">🛠️ Cấu hình sinh bộ câu hỏi từ AI</h3>
+                <div class="prompt-generator-form">
+                    <div class="form-group">
+                        <label>Chủ đề nội dung mong muốn:</label>
+                        <input type="text" id="cfg-topic" placeholder="Ví dụ: Vật lý 11, Hóa học hữu cơ...">
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Số câu MCQ (Dạng 1):</label>
+                            <input type="number" id="cfg-mcq" value="60" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Số câu Đúng/Sai (Dạng 2):</label>
+                            <input type="number" id="cfg-tf" value="12" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Số câu Trả lời ngắn (Dạng 3):</label>
+                            <input type="number" id="cfg-sa" value="18" min="0">
+                        </div>
+                    </div>
+                    <button class="btn btn-info" id="btn-copy-prompt" style="margin-top: 15px;" onclick="copyGeneratedPromptToClipboard()">📋 Copy Prompt gửi AI</button>
+                </div>
+
+                <h3 style="margin-top:25px;">Dán văn bản kết quả từ AI vào đây</h3>
+                <textarea id="txt-input" placeholder="Dán toàn bộ văn bản câu hỏi vào đây (có thể đặt URL ảnh thành dòng riêng)..."></textarea>
+            </div>
+
+            <div id="quiz-container-box" class="">
+                <div id="questions-display"><h2 class="quiz-title">Bài 12. Dạng 1. TRẮC NGHIỆM LỰA CHỌN ĐƠN</h2><div class="question-card focused-card" id="q-card-id-1"><div class="question-header"><div class="question-text">Câu 1: (Câu 1 - Trang 79) Gọi N là tổng số phân tử của khí trong bình. Nếu coi chuyển động hoàn toàn hỗn loạn của các phân tử khí tương đương với chuyển động theo 3 phương vuông góc với nhau thì số phân tử chuyển động trên một phương xác định so với tất cả các phân tử khí trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_1" value="A"><div><span><strong>A.</strong> N/2.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_1" value="B"><div><span><strong>B.</strong> N/3.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_1" value="C"><div><span><strong>C.</strong> N/4.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_1" value="D"><div><span><strong>D.</strong> N/6.</span></div></label></div></div><div class="question-card" id="q-card-id-2"><div class="question-header"><div class="question-text">Câu 2: (Câu 2 - Trang 79) Đối với một chất khí lí tưởng thì vận tốc của phân tử trước và sau khi va chạm đàn hồi với thành bình</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_2" value="A"><div><span><strong>A.</strong> có cùng hướng và cùng độ lớn.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_2" value="B"><div><span><strong>B.</strong> có cùng hướng và khác độ lớn.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_2" value="C"><div><span><strong>C.</strong> ngược hướng và cùng độ lớn.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_2" value="D"><div><span><strong>D.</strong> ngược hướng và khác độ lớn.</span></div></label></div></div><div class="question-card" id="q-card-id-3"><div class="question-header"><div class="question-text">Câu 3: (Câu 3 - Trang 79) Công thức nào sau đây là công thức tính áp suất chất khí theo mô hình động học phân tử chất khí? Trong đó: p là áp suất chất khí, V là thể tích khí, N là số phân tử khí, m là khối lượng phân tử khí, ρ là khối lượng riêng của chất khí, \overlinev² là giá trị trung bình của bình phương tốc độ phân tử khí.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_3" value="A"><div><span><strong>A.</strong> p = 1/3Nm\overlinev².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_3" value="B"><div><span><strong>B.</strong> pV = 1/3μ m\overlinev².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_3" value="C"><div><span><strong>C.</strong> p = 1/3\fracNm\overlinev²V.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_3" value="D"><div><span><strong>D.</strong> p = 1/3\fracρ\overlinev²V.</span></div></label></div></div><div class="question-card" id="q-card-id-4"><div class="question-header"><div class="question-text">Câu 4: (Câu 4 - Trang 79) Hai bình kín có thể tích bằng nhau đều chứa khí lí tưởng ở cùng một nhiệt độ. Khối lượng khí trong hai bình bằng nhau nhưng khối lượng một phân tử khí của bình 1 lớn gấp hai lần khối lượng một phân tử khí ở bình 2. Áp suất khí ở bình 1</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_4" value="A"><div><span><strong>A.</strong> bằng áp suất khí ở bình 2.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_4" value="B"><div><span><strong>B.</strong> gấp bốn lần áp suất khí ở bình 2.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_4" value="C"><div><span><strong>C.</strong> gấp hai lần áp suất khí ở bình 2.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_4" value="D"><div><span><strong>D.</strong> bằng một nửa áp suất khí ở bình 2.</span></div></label></div></div><div class="question-card" id="q-card-id-5"><div class="question-header"><div class="question-text">Câu 5: (Câu 5 - Trang 79) Trong hệ SI, hằng số Boltzmann có giá trị</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_5" value="A"><div><span><strong>A.</strong> k = R/NA = \frac8,31 J.mol⁻¹.K⁻¹6,02.10²³ mol⁻¹ = 1,38.10⁻²³ J/K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_5" value="B"><div><span><strong>B.</strong> k = NA/R = 1,38 J⁻¹.K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_5" value="C"><div><span><strong>C.</strong> k = NA/R = 0,72.10²³ J⁻¹.K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_5" value="D"><div><span><strong>D.</strong> không tính được nếu không biết cấu tạo của phân tử khí.</span></div></label></div></div><div class="question-card" id="q-card-id-6"><div class="question-header"><div class="question-text">Câu 6: (Câu 6 - Trang 79) Động năng trung bình của phân tử nước \overlineEd₁ bằng động năng của hạt phấn hoa \overlineEd₂. So sánh tốc độ trung bình của các phân tử nước \overlinevd₁ và tốc độ trung bình của hạt phấn hoa \overlinevd₂.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_6" value="A"><div><span><strong>A.</strong> \overlinevd₁ &gt; \overlinevd₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_6" value="B"><div><span><strong>B.</strong> \overlinevd₁ &lt; \overlinevd₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_6" value="C"><div><span><strong>C.</strong> \overlinevd₁ = \overlinevd₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_6" value="D"><div><span><strong>D.</strong> Không so sánh được.</span></div></label></div></div><div class="question-card" id="q-card-id-7"><div class="question-header"><div class="question-text">Câu 7: (Câu 7 - Trang 80) Khi tăng nhiệt độ của một lượng khí lí tưởng từ 300 K đến 600 K thì giá trị trung bình của bình phương tốc độ của các phân tử khí</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_7" value="A"><div><span><strong>A.</strong> tăng gấp đôi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_7" value="B"><div><span><strong>B.</strong> tăng gấp bốn.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_7" value="C"><div><span><strong>C.</strong> giảm gấp đôi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_7" value="D"><div><span><strong>D.</strong> không thay đổi.</span></div></label></div></div><div class="question-card" id="q-card-id-8"><div class="question-header"><div class="question-text">Câu 8: (Câu 8 - Trang 80) Không khí là hỗn hợp của một vài loại khí chính như nitrogen, oxygen, carbon dioxide. Gọi giá trị trung bình của bình phương tốc độ của các phân tử nitrogen, oxygen, carbon dioxide lần lượt là \overlinev²₁; \overlinev²₂; \overlinev²₃. So sánh giá trị \overlinev² của phân tử các chất khí này trong không khí?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_8" value="A"><div><span><strong>A.</strong> \overlinev²₁ &gt; \overlinev²₂ &gt; \overlinev²₃.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_8" value="B"><div><span><strong>B.</strong> \overlinev²₁ &gt; \overlinev²₃ &gt; \overlinev²₂.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_8" value="C"><div><span><strong>C.</strong> \overlinev²₂ &gt; \overlinev²₁ &gt; \overlinev²₃.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_8" value="D"><div><span><strong>D.</strong> \overlinev²₃ &gt; \overlinev²₂ &gt; \overlinev²₁.</span></div></label></div></div><div class="question-card" id="q-card-id-9"><div class="question-header"><div class="question-text">Câu 9: (Câu 9a - Trang 80) Khi nhiệt độ của không khí tăng lên thì giá trị trung bình của bình phương tốc độ \overlinev² của các phân tử không khí</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_9" value="A"><div><span><strong>A.</strong> \overlinev² tăng lên.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_9" value="B"><div><span><strong>B.</strong> \overlinev² giảm xuống.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_9" value="C"><div><span><strong>C.</strong> \overlinev² không đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_9" value="D"><div><span><strong>D.</strong> \overlinev² tăng hoặc giảm tùy thuộc vào áp suất.</span></div></label></div></div><div class="question-card" id="q-card-id-10"><div class="question-header"><div class="question-text">Câu 10: (Câu 9b - Trang 80) Khi xét hai vị trí chênh lệch độ cao nhưng nhiệt độ không đổi thì giá trị trung bình của bình phương tốc độ \overlinev² của các phân tử không khí</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_10" value="A"><div><span><strong>A.</strong> \overlinev² không thay đổi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_10" value="B"><div><span><strong>B.</strong> \overlinev² tăng lên.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_10" value="C"><div><span><strong>C.</strong> \overlinev² giảm xuống.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_10" value="D"><div><span><strong>D.</strong> \overlinev² phụ thuộc vào độ cao.</span></div></label></div></div><div class="question-card" id="q-card-id-11"><div class="question-header"><div class="question-text">Câu 11: (Ví dụ 2a - Trang 81) Một bình có thể tích 0,1 m³ chứa khí hydrogen (\H₂\) ở nhiệt độ 25°C. Bình có áp suất 6.10⁵ Pa. Cho R = 8,31 J.mol⁻¹K⁻¹; NA = 6,02.10²³ mol⁻¹. Số phân tử khí hydrogen chứa trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_11" value="A"><div><span><strong>A.</strong> N = 1,456.10²⁵ phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_11" value="B"><div><span><strong>B.</strong> N = 1,200.10²⁵ phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_11" value="C"><div><span><strong>C.</strong> N = 1,600.10²⁵ phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_11" value="D"><div><span><strong>D.</strong> N = 1,000.10²⁵ phân tử.</span></div></label></div></div><div class="question-card" id="q-card-id-12"><div class="question-header"><div class="question-text">Câu 12: (Ví dụ 2b - Trang 81) Biết khối lượng phân tử khí hydrogen là m = 0,33.10⁻²⁶ kg. Giá trị điển hình cho tốc độ của các phân tử khí hydrogen trong bình (được lấy bằng cách tính √\overlinev²) là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_12" value="A"><div><span><strong>A.</strong> √\overlinev² = 1936 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_12" value="B"><div><span><strong>B.</strong> √\overlinev² = 1800 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_12" value="C"><div><span><strong>C.</strong> √\overlinev² = 2000 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_12" value="D"><div><span><strong>D.</strong> √\overlinev² = 2100 m/s.</span></div></label></div></div><div class="question-card" id="q-card-id-13"><div class="question-header"><div class="question-text">Câu 13: (Ví dụ 3a - Trang 82) Một bình chứa 500 g helium ở áp suất 5.10⁵ Pa và nhiệt độ 27°C. Cho rằng khí He trong bình là một khí lí tưởng. Khối lượng mol He là 4 g/mol. Cho R = 8,31 J.mol⁻¹K⁻¹; NA = 6,02.10²³ mol⁻¹. Số nguyên tử He trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_13" value="A"><div><span><strong>A.</strong> N = 7,5.10²⁵ nguyên tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_13" value="B"><div><span><strong>B.</strong> N = 6,0.10²⁵ nguyên tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_13" value="C"><div><span><strong>C.</strong> N = 8,2.10²⁵ nguyên tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_13" value="D"><div><span><strong>D.</strong> N = 5,0.10²⁵ nguyên tử.</span></div></label></div></div><div class="question-card" id="q-card-id-14"><div class="question-header"><div class="question-text">Câu 14: (Ví dụ 3b - Trang 82) Thể tích của bình chứa 500 g helium ở ví dụ trên là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_14" value="A"><div><span><strong>A.</strong> V = 0,623 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_14" value="B"><div><span><strong>B.</strong> V = 0,700 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_14" value="C"><div><span><strong>C.</strong> V = 0,500 m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_14" value="D"><div><span><strong>D.</strong> V = 0,800 m³.</span></div></label></div></div><div class="question-card" id="q-card-id-15"><div class="question-header"><div class="question-text">Câu 15: (Ví dụ 4a - Trang 82) Một bình có thể tích 0,2 m³ chứa một loại khí ở nhiệt độ 27°C, khí trong bình có áp suất 3.10⁵ Pa. Cho R = 8,31 J.mol⁻¹K⁻¹; NA = 6,02.10²³ mol⁻¹; k = 1,38.10⁻²³ J/K. Số phân tử khí chứa trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_15" value="A"><div><span><strong>A.</strong> 1,45.10²⁵ phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_15" value="B"><div><span><strong>B.</strong> 1,30.10²⁵ phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_15" value="C"><div><span><strong>C.</strong> 1,60.10²⁵ phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_15" value="D"><div><span><strong>D.</strong> 1,10.10²⁵ phân tử.</span></div></label></div></div><div class="question-card" id="q-card-id-16"><div class="question-header"><div class="question-text">Câu 16: (Ví dụ 4b - Trang 83) Động năng tịnh tiến trung bình của phân tử khí trong bình ở ví dụ trên là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_16" value="A"><div><span><strong>A.</strong> \overlineEd = 6,21.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_16" value="B"><div><span><strong>B.</strong> \overlineEd = 5,00.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_16" value="C"><div><span><strong>C.</strong> \overlineEd = 7,50.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_16" value="D"><div><span><strong>D.</strong> \overlineEd = 4,80.10⁻²¹ J.</span></div></label></div></div><div class="question-card" id="q-card-id-17"><div class="question-header"><div class="question-text">Câu 17: (Ví dụ 5a - Trang 83) Một chiếc xe tải vượt qua sa mạc Sahara. Chuyến đi bắt đầu vào sáng sớm khi nhiệt độ là 3°C. Thể tích khí chứa trong mỗi lốp xe là 1,5 m³ và áp suất trong các lốp xe là 3,42.10⁵ Pa. Coi khí trong lốp xe có nhiệt độ như ngoài trời. Cho R = 8,31 J.mol⁻¹K⁻¹. Số mol khí trong mỗi lốp xe là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_17" value="A"><div><span><strong>A.</strong> 223,7 mol.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_17" value="B"><div><span><strong>B.</strong> 200,0 mol.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_17" value="C"><div><span><strong>C.</strong> 250,0 mol.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_17" value="D"><div><span><strong>D.</strong> 180,0 mol.</span></div></label></div></div><div class="question-card" id="q-card-id-18"><div class="question-header"><div class="question-text">Câu 18: (Ví dụ 5b - Trang 83) Đến giữa trưa, nhiệt độ tăng lên đến 42°C. Tính áp suất trong lốp ở nhiệt độ mới này. Cho rằng khí trong lốp không thoát ra ngoài và thể tích lốp không thay đổi.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_18" value="A"><div><span><strong>A.</strong> 3,9.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_18" value="B"><div><span><strong>B.</strong> 3,5.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_18" value="C"><div><span><strong>C.</strong> 4,2.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_18" value="D"><div><span><strong>D.</strong> 3,0.10⁵ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-19"><div class="question-header"><div class="question-text">Câu 19: (Ví dụ 5c - Trang 84) Tính độ tăng động năng tịnh tiến trung bình của một phân tử không khí do sự gia tăng nhiệt độ từ 3°C lên 42°C ở ví dụ trên.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_19" value="A"><div><span><strong>A.</strong> 0,81.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_19" value="B"><div><span><strong>B.</strong> 0,70.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_19" value="C"><div><span><strong>C.</strong> 0,93.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_19" value="D"><div><span><strong>D.</strong> 0,54.10⁻²¹ J.</span></div></label></div></div><div class="question-card" id="q-card-id-20"><div class="question-header"><div class="question-text">Câu 20: (Ví dụ 6 - Trang 84) Tính nhiệt độ của một khối khí để động năng tịnh tiến trung bình của các phân tử khí đó bằng 1 eV. Lấy 1 eV = 1,6.10⁻¹⁹ J, k = 1,38.10⁻²³ J/K.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_20" value="A"><div><span><strong>A.</strong> 7729 K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_20" value="B"><div><span><strong>B.</strong> 7729°C.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_20" value="C"><div><span><strong>C.</strong> 729 K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_20" value="D"><div><span><strong>D.</strong> 729°C.</span></div></label></div></div><div class="question-card" id="q-card-id-21"><div class="question-header"><div class="question-text">Câu 21: (Ví dụ 7 - Trang 84) Tính trung bình của bình phương tốc độ trong chuyển động nhiệt của phân tử khí helium có khối lượng mol là 4 g/mol ở nhiệt độ 320 K. Coi các phân tử khí là giống nhau. Cho NA = 6,02.10²³ mol⁻¹, k = 1,38.10⁻²³ J/K.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_21" value="A"><div><span><strong>A.</strong> 1993824 m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_21" value="B"><div><span><strong>B.</strong> 19938 m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_21" value="C"><div><span><strong>C.</strong> 1993 m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_21" value="D"><div><span><strong>D.</strong> 199 m²/s².</span></div></label></div></div><div class="question-card" id="q-card-id-22"><div class="question-header"><div class="question-text">Câu 22: (Ví dụ 8a - Trang 85) Ở nhiệt độ 20°C và áp suất 1 atm, không khí có khối lượng riêng là 1,29 kg/m³. Giá trị trung bình của bình phương tốc độ phân tử khí ở điều kiện này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_22" value="A"><div><span><strong>A.</strong> \overlinev² ≈ 2,35.10⁵ m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_22" value="B"><div><span><strong>B.</strong> \overlinev² ≈ 1,80.10⁵ m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_22" value="C"><div><span><strong>C.</strong> \overlinev² ≈ 3,00.10⁵ m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_22" value="D"><div><span><strong>D.</strong> \overlinev² ≈ 2,00.10⁵ m²/s².</span></div></label></div></div><div class="question-card" id="q-card-id-23"><div class="question-header"><div class="question-text">Câu 23: (Ví dụ 8b - Trang 85) Tìm một giá trị điển hình cho tốc độ của một phân tử khí ở ví dụ trên bằng cách tính √\overlinev².</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_23" value="A"><div><span><strong>A.</strong> √\overlinev² ≈ 485 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_23" value="B"><div><span><strong>B.</strong> √\overlinev² ≈ 450 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_23" value="C"><div><span><strong>C.</strong> √\overlinev² ≈ 600 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_23" value="D"><div><span><strong>D.</strong> √\overlinev² ≈ 330 m/s.</span></div></label></div></div><div class="question-card" id="q-card-id-24"><div class="question-header"><div class="question-text">Câu 24: (Ví dụ 9 - Trang 85) Xét khối khí chứa trong một bình kín, biết mật độ động năng phân tử (tổng động năng tịnh tiến trung bình của các phân tử khí trong 1 m³ thể tích khí) có giá trị là 10⁻⁴ J/m³. Áp suất của khí trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_24" value="A"><div><span><strong>A.</strong> 6,67.10⁻⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_24" value="B"><div><span><strong>B.</strong> 5,00.10⁻⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_24" value="C"><div><span><strong>C.</strong> 7,50.10⁻⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_24" value="D"><div><span><strong>D.</strong> 4,80.10⁻⁵ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-25"><div class="question-header"><div class="question-text">Câu 25: (Câu 1a - Trang 86) Một bình có thể tích 22,4.10⁻³ m³ chứa 1 mol khí hydrogen ở điều kiện tiêu chuẩn (nhiệt độ 0°C và áp suất 1 atm). Người ta bơm thêm 1 mol khí helium cũng ở điều kiện tiêu chuẩn vào bình này. Cho khối lượng riêng ở điều kiện tiêu chuẩn của khí hydrogen và khí helium lần lượt là 9.10⁻² kg/m³ và 18.10⁻² kg/m³. Khối lượng riêng của hỗn hợp khí trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_25" value="A"><div><span><strong>A.</strong> 0,27 kg/m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_25" value="B"><div><span><strong>B.</strong> 0,20 kg/m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_25" value="C"><div><span><strong>C.</strong> 0,35 kg/m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_25" value="D"><div><span><strong>D.</strong> 0,30 kg/m³.</span></div></label></div></div><div class="question-card" id="q-card-id-26"><div class="question-header"><div class="question-text">Câu 26: (Câu 1b - Trang 86) Áp suất của hỗn hợp khí lên thành bình ở bài tập trên là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_26" value="A"><div><span><strong>A.</strong> 2,00 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_26" value="B"><div><span><strong>B.</strong> 1,50 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_26" value="C"><div><span><strong>C.</strong> 2,50 atm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_26" value="D"><div><span><strong>D.</strong> 1,75 atm.</span></div></label></div></div><div class="question-card" id="q-card-id-27"><div class="question-header"><div class="question-text">Câu 27: (Câu 1c - Trang 86) Giá trị trung bình của bình phương tốc độ phân tử khí trong bình ở bài tập trên là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_27" value="A"><div><span><strong>A.</strong> \overlinev² ≈ 2,25.10⁶ m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_27" value="B"><div><span><strong>B.</strong> \overlinev² ≈ 4,50.10⁴ m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_27" value="C"><div><span><strong>C.</strong> \overlinev² ≈ 3,00.10⁴ m²/s².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_27" value="D"><div><span><strong>D.</strong> \overlinev² ≈ 5,00.10⁴ m²/s².</span></div></label></div></div><div class="question-card" id="q-card-id-28"><div class="question-header"><div class="question-text">Câu 28: (Câu 2 - Trang 86) Cho k = 1,38.10⁻²³ J/K. Động năng tịnh tiến trung bình của phân tử khí lí tưởng ở 25°C có giá trị</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_28" value="A"><div><span><strong>A.</strong> 5,2.10⁻²² J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_28" value="B"><div><span><strong>B.</strong> 6,17.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_28" value="C"><div><span><strong>C.</strong> 6,2.10²³ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_28" value="D"><div><span><strong>D.</strong> 3,2.10²⁵ J.</span></div></label></div></div><div class="question-card" id="q-card-id-29"><div class="question-header"><div class="question-text">Câu 29: (Câu 3 - Trang 86) Cho k = 1,38.10⁻²³ J/K. Các phân tử của một chất khí lí tưởng có động năng tịnh tiến trung bình bằng 5,0.10⁻²¹ J. Tính nhiệt độ của khí theo K và °C.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_29" value="A"><div><span><strong>A.</strong> T ≈ 241,5 K, t°C ≈ -31,5°C.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_29" value="B"><div><span><strong>B.</strong> T ≈ 300,0 K, t°C ≈ 27,0°C.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_29" value="C"><div><span><strong>C.</strong> T ≈ 200,0 K, t°C ≈ -73,0°C.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_29" value="D"><div><span><strong>D.</strong> T ≈ 273,0 K, t°C ≈ 0,0°C.</span></div></label></div></div><div class="question-card" id="q-card-id-30"><div class="question-header"><div class="question-text">Câu 30: (Câu 4a - Trang 86) Cho k = 1,38.10⁻²³ J/K. Động năng tịnh tiến trung bình của các nguyên tử Ne ở 27°C và 243°C lần lượt là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_30" value="A"><div><span><strong>A.</strong> \overlineEd₁ ≈ 6,21.10⁻²¹ J, \overlineEd₂ ≈ 1,07.10⁻²⁰ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_30" value="B"><div><span><strong>B.</strong> \overlineEd₁ ≈ 5,00.10⁻²¹ J, \overlineEd₂ ≈ 9,50.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_30" value="C"><div><span><strong>C.</strong> \overlineEd₁ ≈ 7,00.10⁻²¹ J, \overlineEd₂ ≈ 1,20.10⁻²⁰ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_30" value="D"><div><span><strong>D.</strong> \overlineEd₁ ≈ 6,00.10⁻²¹ J, \overlineEd₂ ≈ 1,00.10⁻²⁰ J.</span></div></label></div></div><div class="question-card" id="q-card-id-31"><div class="question-header"><div class="question-text">Câu 31: (Câu 4b - Trang 86) So sánh áp suất gây ra bởi các phân tử Ne trong xilanh có thể tích không đổi ở hai nhiệt độ 27°C và 243°C.</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_31" value="A"><div><span><strong>A.</strong> p₂/p₁ ≈ 1,723.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_31" value="B"><div><span><strong>B.</strong> p₂/p₁ ≈ 2,000.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_31" value="C"><div><span><strong>C.</strong> p₂/p₁ ≈ 1,500.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_31" value="D"><div><span><strong>D.</strong> p₂/p₁ ≈ 1,600.</span></div></label></div></div><div class="question-card" id="q-card-id-32"><div class="question-header"><div class="question-text">Câu 32: (Câu 11 - Trang 87 - Đề số 1) Nhiệt độ không tuyệt đối (0 K) là nhiệt độ mà tại đó các phân tử có</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_32" value="A"><div><span><strong>A.</strong> động năng chuyển động nhiệt bằng không và thế năng tương tác giữa chúng là cực đại.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_32" value="B"><div><span><strong>B.</strong> động năng chuyển động nhiệt cực đại và thế năng tương tác giữa chúng là cực đại.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_32" value="C"><div><span><strong>C.</strong> động năng chuyển động nhiệt bằng không và thế năng tương tác giữa chúng là tối thiểu.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_32" value="D"><div><span><strong>D.</strong> động năng chuyển động nhiệt cực đại và thế năng tương tác giữa chúng là bằng không.</span></div></label></div></div><div class="question-card" id="q-card-id-33"><div class="question-header"><div class="question-text">Câu 33: (Câu 8 - Trang 93 - Đề số 2) Áp suất của khí lên thành bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_33" value="A"><div><span><strong>A.</strong> lực tác dụng lên một đơn vị diện tích thành bình.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_33" value="B"><div><span><strong>B.</strong> lực tác dụng vuông góc lên một đơn vị diện tích thành bình.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_33" value="C"><div><span><strong>C.</strong> lực tác dụng lên thành bình.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_33" value="D"><div><span><strong>D.</strong> lực tác dụng vuông góc lên toàn bộ diện tích thành bình.</span></div></label></div></div><div class="question-card" id="q-card-id-34"><div class="question-header"><div class="question-text">Câu 34: (Câu 12 - Trang 99 - Đề số 3) Động năng trung bình của các phân tử chất khí</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_34" value="A"><div><span><strong>A.</strong> chỉ phụ thuộc vào khối lượng phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_34" value="B"><div><span><strong>B.</strong> chỉ phụ thuộc vào nhiệt độ.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_34" value="C"><div><span><strong>C.</strong> chỉ phụ thuộc vào áp suất.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_34" value="D"><div><span><strong>D.</strong> phụ thuộc vào nhiệt độ và khối lượng phân tử chất khí.</span></div></label></div></div><div class="question-card" id="q-card-id-35"><div class="question-header"><div class="question-text">Câu 35: (Câu 15 - Trang 99 - Đề số 3) Một chất khí mà các phân tử có tốc độ căn quân phương là 1760 m/s ở 0°C. Tốc độ căn quân phương của các phân tử khí này ở nhiệt độ 1000°C là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_35" value="A"><div><span><strong>A.</strong> 3000 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_35" value="B"><div><span><strong>B.</strong> 3800 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_35" value="C"><div><span><strong>C.</strong> 1800 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_35" value="D"><div><span><strong>D.</strong> 2000 m/s.</span></div></label></div></div><div class="question-card" id="q-card-id-36"><div class="question-header"><div class="question-text">Câu 36: (Câu 16 - Trang 99 - Đề số 3) Một bình chứa khí nitrogen có khối lượng riêng ρ = 1,25 kg/m³ và giá trị trung bình của bình phương tốc độ của các phân tử khí là \overlinev² = 3.10⁵ m²/s². Áp suất của khí trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_36" value="A"><div><span><strong>A.</strong> 1,25.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_36" value="B"><div><span><strong>B.</strong> 1,25.10⁻⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_36" value="C"><div><span><strong>C.</strong> 2,15.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_36" value="D"><div><span><strong>D.</strong> 3,75.10⁵ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-37"><div class="question-header"><div class="question-text">Câu 37: (Câu 17 - Trang 99 - Đề số 3) Một bình chứa 1 mol khí neon, xảy ra quá trình biến đổi trạng thái. Động năng trung bình ở trạng thái (3) có áp suất p = 3.10⁵ Pa và thể tích V = 8.10⁻³ m³ của các phân tử khí neon là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_37" value="A"><div><span><strong>A.</strong> 2,99.10⁻²⁰ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_37" value="B"><div><span><strong>B.</strong> 1,28.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_37" value="C"><div><span><strong>C.</strong> 2,99.10⁻¹⁸ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_37" value="D"><div><span><strong>D.</strong> 3,35.10⁻²⁰ J.</span></div></label></div></div><div class="question-card" id="q-card-id-38"><div class="question-header"><div class="question-text">Câu 38: (Câu 10 - Trang 104 - Đề số 4) Công thức liên hệ giữa áp suất chất khí p và động năng tịnh tiến trung bình của chất khí Ed, số hạt phân tử N của một khối khí có thể tích V là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_38" value="A"><div><span><strong>A.</strong> p = Ed/(3V²).</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_38" value="B"><div><span><strong>B.</strong> p = 2N.Ed/3V.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_38" value="C"><div><span><strong>C.</strong> p = 3N.Ed/2V.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_38" value="D"><div><span><strong>D.</strong> p = 3Ed/(V²).</span></div></label></div></div><div class="question-card" id="q-card-id-39"><div class="question-header"><div class="question-text">Câu 39: (Câu 11 - Trang 104 - Đề số 4) Các phân tử khí lí tưởng có các tính chất nào sau đây?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_39" value="A"><div><span><strong>A.</strong> Được coi như chất điểm và luôn đứng yên.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_39" value="B"><div><span><strong>B.</strong> Được coi như chất điểm và có tương tác hút hoặc đẩy với nhau.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_39" value="C"><div><span><strong>C.</strong> Đứng yên tại chỗ và tương tác hút hoặc đẩy với nhau.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_39" value="D"><div><span><strong>D.</strong> Được coi như chất điểm, chuyển động không ngừng và chỉ tương tác với nhau khi va chạm.</span></div></label></div></div><div class="question-card" id="q-card-id-40"><div class="question-header"><div class="question-text">Câu 40: (Câu 8 - Trang 110 - Đề số 5) Áp suất của chất khí tác dụng lên thành bình chứa không liên quan trực tiếp đến</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_40" value="A"><div><span><strong>A.</strong> mật độ phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_40" value="B"><div><span><strong>B.</strong> khối lượng phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_40" value="C"><div><span><strong>C.</strong> vị trí của phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_40" value="D"><div><span><strong>D.</strong> nhiệt độ của khí.</span></div></label></div></div><div class="question-card" id="q-card-id-41"><div class="question-header"><div class="question-text">Câu 41: (Câu 17 - Trang 111 - Đề số 5) Một bình chứa khí helium có thể tích V = 400 lít chứa 8.10²⁴ phân tử. Biết rằng khối lượng của mỗi nguyên tử helium là m = 6,64.10⁻²⁷ kg và trung bình của bình phương tốc độ của các nguyên tử là \overlinev² = 5.10⁴ m²/s². Áp suất của khí trong bình là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_41" value="A"><div><span><strong>A.</strong> 2,21.10³ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_41" value="B"><div><span><strong>B.</strong> 1,15.10³ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_41" value="C"><div><span><strong>C.</strong> 3,45.10³ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_41" value="D"><div><span><strong>D.</strong> 3,21 Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-42"><div class="question-header"><div class="question-text">Câu 42: (Câu 12 - Trang 116 - Đề số 6) Đối với khối khí lí tưởng xác định, khi tăng nhiệt độ tuyệt đối của khối khí lên 2 lần thì động năng tịnh tiến trung bình của phân tử</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_42" value="A"><div><span><strong>A.</strong> giảm 2 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_42" value="B"><div><span><strong>B.</strong> tăng rồi giảm.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_42" value="C"><div><span><strong>C.</strong> tăng 2 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_42" value="D"><div><span><strong>D.</strong> giảm rồi tăng.</span></div></label></div></div><div class="question-card" id="q-card-id-43"><div class="question-header"><div class="question-text">Câu 43: (Câu 13 - Trang 116 - Đề số 6) Áp suất của một khối khí tác dụng lên thành bình không phụ thuộc vào</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_43" value="A"><div><span><strong>A.</strong> khối lượng phân tử khí.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_43" value="B"><div><span><strong>B.</strong> hình dạng của bình.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_43" value="C"><div><span><strong>C.</strong> mật độ phân tử khí.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_43" value="D"><div><span><strong>D.</strong> nhiệt độ của khối khí.</span></div></label></div></div><div class="question-card" id="q-card-id-44"><div class="question-header"><div class="question-text">Câu 44: (Câu 17 - Trang 116 - Đề số 6) Khối lượng của phân tử khí hydrogen là 3,3.10⁻²⁴ g. Biết rằng trong 1 giây, có 10²³ phân tử khí hydrogen chuyển động với vận tốc 1000 m/s đập vào 1 cm² thành bình theo phương nghiêng một góc 30° so với thành bình. Áp suất khí lên thành bình là bao nhiêu?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_44" value="A"><div><span><strong>A.</strong> 3,3.10⁵ Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_44" value="B"><div><span><strong>B.</strong> 33 kPa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_44" value="C"><div><span><strong>C.</strong> 3,3 Pa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_44" value="D"><div><span><strong>D.</strong> 3,3.10³ Pa.</span></div></label></div></div><div class="question-card" id="q-card-id-45"><div class="question-header"><div class="question-text">Câu 45: (Câu 10 - Trang 123 - Đề số 7) Với k là hằng số Boltzmann, một lượng khí có nhiệt độ tuyệt đối T (K), động năng tịnh tiến trung bình của phân tử khí là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_45" value="A"><div><span><strong>A.</strong> \overlineEd = 3/2kT.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_45" value="B"><div><span><strong>B.</strong> \overlineEd = 2/3kT.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_45" value="C"><div><span><strong>C.</strong> \overlineEd = 3kT.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_45" value="D"><div><span><strong>D.</strong> \overlineEd = 1/2kT.</span></div></label></div></div><div class="question-card" id="q-card-id-46"><div class="question-header"><div class="question-text">Câu 46: (Câu 13 - Trang 124 - Đề số 7) Xét khối khí chứa trong một bình kín, gồm N phân tử, chuyển động hỗn loạn với các tốc độ là v₁, v₂, ..., vN. Trung bình của các bình phương tốc độ phân tử được xác định theo công thức</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_46" value="A"><div><span><strong>A.</strong> \overlinev² = (v₁ + v₂ + ... + vN)/N.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_46" value="B"><div><span><strong>B.</strong> \overlinev² = (v₁² + v₂² + ... + vN²)/N.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_46" value="C"><div><span><strong>C.</strong> \overlinev² = √(v₁² + v₂² + ... + vN²)/N.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_46" value="D"><div><span><strong>D.</strong> \overlinev² = √v₁² + v₂² + ... + vN².</span></div></label></div></div><div class="question-card" id="q-card-id-47"><div class="question-header"><div class="question-text">Câu 47: (Câu 12 - Trang 130 - Đề số 8) Biết p là áp suất chất khí, μ là mật độ phân tử khí, m là khối lượng phân tử khí, \overlinev² là giá trị trung bình của bình phương tốc độ phân tử khí. Hệ thức đúng của áp suất chất khí theo mô hình động học phân tử là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_47" value="A"><div><span><strong>A.</strong> p = μ m \overlinev².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_47" value="B"><div><span><strong>B.</strong> p = 2/3μ m \overlinev².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_47" value="C"><div><span><strong>C.</strong> p = 3/2μ m \overlinev².</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_47" value="D"><div><span><strong>D.</strong> p = 1/3μ m \overlinev².</span></div></label></div></div><div class="question-card" id="q-card-id-48"><div class="question-header"><div class="question-text">Câu 48: (Câu 14 - Trang 131 - Đề số 8) Nếu nhiệt độ của một lượng khí lí tưởng đơn nguyên tử tăng từ 27°C lên 87°C thì động năng trung bình của các phân tử khí</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_48" value="A"><div><span><strong>A.</strong> bằng 1,2 lần động năng ban đầu.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_48" value="B"><div><span><strong>B.</strong> bằng 1,44 lần động năng ban đầu.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_48" value="C"><div><span><strong>C.</strong> gần bằng 3,2 lần động năng ban đầu.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_48" value="D"><div><span><strong>D.</strong> gần bằng 1,24 lần động năng ban đầu.</span></div></label></div></div><div class="question-card" id="q-card-id-49"><div class="question-header"><div class="question-text">Câu 49: (Câu 18 - Trang 131 - Đề số 8) Một máy hút chân không làm giảm áp suất khí nitrogen trong một bình kín tới 3,6.10⁻¹⁰ Pa ở nhiệt độ 27,0°C. Số phân tử khí nitrogen trong thể tích 1,5 cm³ gần đúng bằng bao nhiêu?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_49" value="A"><div><span><strong>A.</strong> 1,3.10⁵.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_49" value="B"><div><span><strong>B.</strong> 3,6.10⁵.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_49" value="C"><div><span><strong>C.</strong> 8,3.10⁵.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_49" value="D"><div><span><strong>D.</strong> 2,6.10⁵.</span></div></label></div></div><div class="question-card" id="q-card-id-50"><div class="question-header"><div class="question-text">Câu 50: (Câu 14 - Trang 138 - Đề số 9) Với hằng số Boltzmann k = 1,38.10⁻²³ J/K. Công thức liên hệ giữa động năng tịnh tiến trung bình của phân tử \overlineEd và nhiệt độ tuyệt đối T là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_50" value="A"><div><span><strong>A.</strong> \overlineEd = 2/3kT.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_50" value="B"><div><span><strong>B.</strong> \overlineEd = 1/2kT.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_50" value="C"><div><span><strong>C.</strong> \overlineEd = 2kT.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_50" value="D"><div><span><strong>D.</strong> \overlineEd = 3/2kT.</span></div></label></div></div><div class="question-card" id="q-card-id-51"><div class="question-header"><div class="question-text">Câu 51: (Câu 14 - Trang 170 - Đề số 13) Cho hằng số Boltzmann k = 1,38.10⁻²³ J/K. Động năng tịnh tiến trung bình của phân tử không khí ở nhiệt độ 20°C là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_51" value="A"><div><span><strong>A.</strong> 6,07.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_51" value="B"><div><span><strong>B.</strong> 0,04 J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_51" value="C"><div><span><strong>C.</strong> 6,51.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_51" value="D"><div><span><strong>D.</strong> 4,14.10⁻²¹ J.</span></div></label></div></div><div class="question-card" id="q-card-id-52"><div class="question-header"><div class="question-text">Câu 52: (Câu 10 - Trang 80) Trong các phát biểu sau về lực do các phân tử khí tác dụng lên thành bình, phát biểu nào là đúng theo mô hình động học phân tử?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_52" value="A"><div><span><strong>A.</strong> Lực gây ra do sự thay đổi động lượng của phân tử khí khi va chạm đàn hồi với thành bình.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_52" value="B"><div><span><strong>B.</strong> Lực tác dụng của các phân tử lên thành bình là lực hút tĩnh điện.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_52" value="C"><div><span><strong>C.</strong> Lực do phân tử tác dụng làm phân tử dừng lại hẳn ở thành bình.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_52" value="D"><div><span><strong>D.</strong> Lực tác dụng chỉ xuất hiện khi phân tử khí chuyển động theo một phương duy nhất.</span></div></label></div></div><div class="question-card" id="q-card-id-53"><div class="question-header"><div class="question-text">Câu 53: (Câu 3 - Trang 79 - Biến thể) Áp suất chất khí tác dụng lên thành bình chứa tỉ lệ với</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_53" value="A"><div><span><strong>A.</strong> mật độ phân tử khí và bình phương nhiệt độ tuyệt đối.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_53" value="B"><div><span><strong>B.</strong> mật độ phân tử khí và động năng tịnh tiến trung bình của phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_53" value="C"><div><span><strong>C.</strong> thể tích bình chứa và khối lượng phân tử.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_53" value="D"><div><span><strong>D.</strong> nhiệt độ Celsius và khối lượng riêng.</span></div></label></div></div><div class="question-card" id="q-card-id-54"><div class="question-header"><div class="question-text">Câu 54: (Ví dụ 8a - Trang 85 - Biến thể) Khối lượng riêng của không khí ở nhiệt độ 20°C và áp suất 1,013.10⁵ Pa là 1,29 kg/m³. Tốc độ căn quân phương của phân tử không khí ở điều kiện này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_54" value="A"><div><span><strong>A.</strong> 485 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_54" value="B"><div><span><strong>B.</strong> 502 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_54" value="C"><div><span><strong>C.</strong> 330 m/s.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_54" value="D"><div><span><strong>D.</strong> 600 m/s.</span></div></label></div></div><div class="question-card" id="q-card-id-55"><div class="question-header"><div class="question-text">Câu 55: (Câu 2 - Trang 86 - Biến thể) Động năng tịnh tiến trung bình của các phân tử khí lí tưởng ở nhiệt độ 0°C có giá trị gần bằng</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_55" value="A"><div><span><strong>A.</strong> 3,77.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_55" value="B"><div><span><strong>B.</strong> 5,65.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_55" value="C"><div><span><strong>C.</strong> 6,21.10⁻²¹ J.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_55" value="D"><div><span><strong>D.</strong> 1,38.10⁻²³ J.</span></div></label></div></div><div class="question-card" id="q-card-id-56"><div class="question-header"><div class="question-text">Câu 56: (Ví dụ 6 - Trang 84 - Biến thể) Nhiệt độ của một khối khí mà ở đó động năng tịnh tiến trung bình của các phân tử khí bằng 6,21.10⁻²¹ J là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_56" value="A"><div><span><strong>A.</strong> 300 K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_56" value="B"><div><span><strong>B.</strong> 300°C.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_56" value="C"><div><span><strong>C.</strong> 273 K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_56" value="D"><div><span><strong>D.</strong> 27°C.</span></div></label></div></div><div class="question-card" id="q-card-id-57"><div class="question-header"><div class="question-text">Câu 57: (Câu 5 - Trang 79 - Biến thể) Hệ thức nào sau đây thể hiện đúng mối quan hệ giữa áp suất p, mật độ phân tử μ và động năng tịnh tiến trung bình \overlineEd của phân tử khí?</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_57" value="A"><div><span><strong>A.</strong> p = 2/3μ\overlineEd.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_57" value="B"><div><span><strong>B.</strong> p = 3/2μ\overlineEd.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_57" value="C"><div><span><strong>C.</strong> p = 1/3μ\overlineEd.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_57" value="D"><div><span><strong>D.</strong> p = 2μ\overlineEd.</span></div></label></div></div><div class="question-card" id="q-card-id-58"><div class="question-header"><div class="question-text">Câu 58: (Câu 7 - Trang 80 - Biến thể) Khi nhiệt độ tuyệt đối của một lượng khí lí tưởng giảm đi một nửa thì động năng tịnh tiến trung bình của phân tử khí sẽ</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_58" value="A"><div><span><strong>A.</strong> tăng gấp đôi.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_58" value="B"><div><span><strong>B.</strong> giảm đi một nửa.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_58" value="C"><div><span><strong>C.</strong> giảm 4 lần.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_58" value="D"><div><span><strong>D.</strong> không thay đổi.</span></div></label></div></div><div class="question-card" id="q-card-id-59"><div class="question-header"><div class="question-text">Câu 59: (Ví dụ 9 - Trang 85 - Biến thể) Nếu áp suất của khối khí trong bình kín là 10⁻⁴ Pa thì mật độ động năng phân tử khí trong bình bằng</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_59" value="A"><div><span><strong>A.</strong> 1,5.10⁻⁴ J/m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_59" value="B"><div><span><strong>B.</strong> 1,0.10⁻⁴ J/m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_59" value="C"><div><span><strong>C.</strong> 0,67.10⁻⁴ J/m³.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_59" value="D"><div><span><strong>D.</strong> 3,0.10⁻⁴ J/m³.</span></div></label></div></div><div class="question-card" id="q-card-id-60"><div class="question-header"><div class="question-text">Câu 60: (Câu 3 - Trang 86 - Biến thể) Động năng tịnh tiến trung bình của phân tử khí lí tưởng là 1,0.10⁻²⁰ J. Nhiệt độ của khối khí này là</div><div class="header-buttons"><button class="action-tool-btn">🔊</button><button class="action-tool-btn">🔍</button></div></div><div class="options-group"><label class="option-label"><input type="radio" name="q_ans_0_60" value="A"><div><span><strong>A.</strong> 483 K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_60" value="B"><div><span><strong>B.</strong> 210°C.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_60" value="C"><div><span><strong>C.</strong> 725 K.</span></div></label><label class="option-label"><input type="radio" name="q_ans_0_60" value="D"><div><span><strong>D.</strong> 300 K.</span></div></label></div></div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- LIGHTBOX MODAL FULL SCREEN -->
+    <div id="lightbox-modal">
+        <button class="lightbox-close" onclick="closeLightbox()">×</button>
+        <button class="lightbox-nav lightbox-prev" onclick="changeLightboxImage(-1)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image">
+        <button class="lightbox-nav lightbox-next" onclick="changeLightboxImage(1)">❯</button>
+    </div>
+
+    <div id="toast-container"></div>
+
+<script>
+    const PRE_LOADED_RAW_DATA = `Bài 12. Dạng 1. TRẮC NGHIỆM LỰA CHỌN ĐƠN
+
+Câu 1. (Câu 1 - Trang 79) Gọi N là tổng số phân tử của khí trong bình. Nếu coi chuyển động hoàn toàn hỗn loạn của các phân tử khí tương đương với chuyển động theo 3 phương vuông góc với nhau thì số phân tử chuyển động trên một phương xác định so với tất cả các phân tử khí trong bình là
+A. N/2.
+*B. N/3.
+C. N/4.
+D. N/6.
+
+Câu 2. (Câu 2 - Trang 79) Đối với một chất khí lí tưởng thì vận tốc của phân tử trước và sau khi va chạm đàn hồi với thành bình
+A. có cùng hướng và cùng độ lớn.
+B. có cùng hướng và khác độ lớn.
+*C. ngược hướng và cùng độ lớn.
+D. ngược hướng và khác độ lớn.
+
+Câu 3. (Câu 3 - Trang 79) Công thức nào sau đây là công thức tính áp suất chất khí theo mô hình động học phân tử chất khí? Trong đó: p là áp suất chất khí, V là thể tích khí, N là số phân tử khí, m là khối lượng phân tử khí, ρ là khối lượng riêng của chất khí, \overlinev² là giá trị trung bình của bình phương tốc độ phân tử khí.
+A. p = 1/3Nm\overlinev².
+B. pV = 1/3μ m\overlinev².
+*C. p = 1/3\fracNm\overlinev²V.
+D. p = 1/3\fracρ\overlinev²V.
+
+Câu 4. (Câu 4 - Trang 79) Hai bình kín có thể tích bằng nhau đều chứa khí lí tưởng ở cùng một nhiệt độ. Khối lượng khí trong hai bình bằng nhau nhưng khối lượng một phân tử khí của bình 1 lớn gấp hai lần khối lượng một phân tử khí ở bình 2. Áp suất khí ở bình 1
+A. bằng áp suất khí ở bình 2.
+B. gấp bốn lần áp suất khí ở bình 2.
+C. gấp hai lần áp suất khí ở bình 2.
+*D. bằng một nửa áp suất khí ở bình 2.
+
+Câu 5. (Câu 5 - Trang 79) Trong hệ SI, hằng số Boltzmann có giá trị
+*A. k = R/NA = \frac8,31 J.mol⁻¹.K⁻¹6,02.10²³ mol⁻¹ = 1,38.10⁻²³ J/K.
+B. k = NA/R = 1,38 J⁻¹.K.
+C. k = NA/R = 0,72.10²³ J⁻¹.K.
+D. không tính được nếu không biết cấu tạo của phân tử khí.
+
+Câu 6. (Câu 6 - Trang 79) Động năng trung bình của phân tử nước \overlineEd₁ bằng động năng của hạt phấn hoa \overlineEd₂. So sánh tốc độ trung bình của các phân tử nước \overlinevd₁ và tốc độ trung bình của hạt phấn hoa \overlinevd₂.
+*A. \overlinevd₁ > \overlinevd₂.
+B. \overlinevd₁ < \overlinevd₂.
+C. \overlinevd₁ = \overlinevd₂.
+D. Không so sánh được.
+
+Câu 7. (Câu 7 - Trang 80) Khi tăng nhiệt độ của một lượng khí lí tưởng từ 300 K đến 600 K thì giá trị trung bình của bình phương tốc độ của các phân tử khí
+*A. tăng gấp đôi.
+B. tăng gấp bốn.
+C. giảm gấp đôi.
+D. không thay đổi.
+
+Câu 8. (Câu 8 - Trang 80) Không khí là hỗn hợp của một vài loại khí chính như nitrogen, oxygen, carbon dioxide. Gọi giá trị trung bình của bình phương tốc độ của các phân tử nitrogen, oxygen, carbon dioxide lần lượt là \overlinev²₁; \overlinev²₂; \overlinev²₃. So sánh giá trị \overlinev² của phân tử các chất khí này trong không khí?
+*A. \overlinev²₁ > \overlinev²₂ > \overlinev²₃.
+B. \overlinev²₁ > \overlinev²₃ > \overlinev²₂.
+C. \overlinev²₂ > \overlinev²₁ > \overlinev²₃.
+D. \overlinev²₃ > \overlinev²₂ > \overlinev²₁.
+
+Câu 9. (Câu 9a - Trang 80) Khi nhiệt độ của không khí tăng lên thì giá trị trung bình của bình phương tốc độ \overlinev² của các phân tử không khí
+*A. \overlinev² tăng lên.
+B. \overlinev² giảm xuống.
+C. \overlinev² không đổi.
+D. \overlinev² tăng hoặc giảm tùy thuộc vào áp suất.
+
+Câu 10. (Câu 9b - Trang 80) Khi xét hai vị trí chênh lệch độ cao nhưng nhiệt độ không đổi thì giá trị trung bình của bình phương tốc độ \overlinev² của các phân tử không khí
+*A. \overlinev² không thay đổi.
+B. \overlinev² tăng lên.
+C. \overlinev² giảm xuống.
+D. \overlinev² phụ thuộc vào độ cao.
+
+Câu 11. (Ví dụ 2a - Trang 81) Một bình có thể tích 0,1 m³ chứa khí hydrogen (\H₂\) ở nhiệt độ 25°C. Bình có áp suất 6.10⁵ Pa. Cho R = 8,31 J.mol⁻¹K⁻¹; NA = 6,02.10²³ mol⁻¹. Số phân tử khí hydrogen chứa trong bình là
+*A. N = 1,456.10²⁵ phân tử.
+B. N = 1,200.10²⁵ phân tử.
+C. N = 1,600.10²⁵ phân tử.
+D. N = 1,000.10²⁵ phân tử.
+
+Câu 12. (Ví dụ 2b - Trang 81) Biết khối lượng phân tử khí hydrogen là m = 0,33.10⁻²⁶ kg. Giá trị điển hình cho tốc độ của các phân tử khí hydrogen trong bình (được lấy bằng cách tính √\overlinev²) là
+*A. √\overlinev² = 1936 m/s.
+B. √\overlinev² = 1800 m/s.
+C. √\overlinev² = 2000 m/s.
+D. √\overlinev² = 2100 m/s.
+
+Câu 13. (Ví dụ 3a - Trang 82) Một bình chứa 500 g helium ở áp suất 5.10⁵ Pa và nhiệt độ 27°C. Cho rằng khí He trong bình là một khí lí tưởng. Khối lượng mol He là 4 g/mol. Cho R = 8,31 J.mol⁻¹K⁻¹; NA = 6,02.10²³ mol⁻¹. Số nguyên tử He trong bình là
+*A. N = 7,5.10²⁵ nguyên tử.
+B. N = 6,0.10²⁵ nguyên tử.
+C. N = 8,2.10²⁵ nguyên tử.
+D. N = 5,0.10²⁵ nguyên tử.
+
+Câu 14. (Ví dụ 3b - Trang 82) Thể tích của bình chứa 500 g helium ở ví dụ trên là
+*A. V = 0,623 m³.
+B. V = 0,700 m³.
+C. V = 0,500 m³.
+D. V = 0,800 m³.
+
+Câu 15. (Ví dụ 4a - Trang 82) Một bình có thể tích 0,2 m³ chứa một loại khí ở nhiệt độ 27°C, khí trong bình có áp suất 3.10⁵ Pa. Cho R = 8,31 J.mol⁻¹K⁻¹; NA = 6,02.10²³ mol⁻¹; k = 1,38.10⁻²³ J/K. Số phân tử khí chứa trong bình là
+*A. 1,45.10²⁵ phân tử.
+B. 1,30.10²⁵ phân tử.
+C. 1,60.10²⁵ phân tử.
+D. 1,10.10²⁵ phân tử.
+
+Câu 16. (Ví dụ 4b - Trang 83) Động năng tịnh tiến trung bình của phân tử khí trong bình ở ví dụ trên là
+*A. \overlineEd = 6,21.10⁻²¹ J.
+B. \overlineEd = 5,00.10⁻²¹ J.
+C. \overlineEd = 7,50.10⁻²¹ J.
+D. \overlineEd = 4,80.10⁻²¹ J.
+
+Câu 17. (Ví dụ 5a - Trang 83) Một chiếc xe tải vượt qua sa mạc Sahara. Chuyến đi bắt đầu vào sáng sớm khi nhiệt độ là 3°C. Thể tích khí chứa trong mỗi lốp xe là 1,5 m³ và áp suất trong các lốp xe là 3,42.10⁵ Pa. Coi khí trong lốp xe có nhiệt độ như ngoài trời. Cho R = 8,31 J.mol⁻¹K⁻¹. Số mol khí trong mỗi lốp xe là
+*A. 223,7 mol.
+B. 200,0 mol.
+C. 250,0 mol.
+D. 180,0 mol.
+
+Câu 18. (Ví dụ 5b - Trang 83) Đến giữa trưa, nhiệt độ tăng lên đến 42°C. Tính áp suất trong lốp ở nhiệt độ mới này. Cho rằng khí trong lốp không thoát ra ngoài và thể tích lốp không thay đổi.
+*A. 3,9.10⁵ Pa.
+B. 3,5.10⁵ Pa.
+C. 4,2.10⁵ Pa.
+D. 3,0.10⁵ Pa.
+
+Câu 19. (Ví dụ 5c - Trang 84) Tính độ tăng động năng tịnh tiến trung bình của một phân tử không khí do sự gia tăng nhiệt độ từ 3°C lên 42°C ở ví dụ trên.
+*A. 0,81.10⁻²¹ J.
+B. 0,70.10⁻²¹ J.
+C. 0,93.10⁻²¹ J.
+D. 0,54.10⁻²¹ J.
+
+Câu 20. (Ví dụ 6 - Trang 84) Tính nhiệt độ của một khối khí để động năng tịnh tiến trung bình của các phân tử khí đó bằng 1 eV. Lấy 1 eV = 1,6.10⁻¹⁹ J, k = 1,38.10⁻²³ J/K.
+*A. 7729 K.
+B. 7729°C.
+C. 729 K.
+D. 729°C.
+
+Câu 21. (Ví dụ 7 - Trang 84) Tính trung bình của bình phương tốc độ trong chuyển động nhiệt của phân tử khí helium có khối lượng mol là 4 g/mol ở nhiệt độ 320 K. Coi các phân tử khí là giống nhau. Cho NA = 6,02.10²³ mol⁻¹, k = 1,38.10⁻²³ J/K.
+*A. 1993824 m²/s².
+B. 19938 m²/s².
+C. 1993 m²/s².
+D. 199 m²/s².
+
+Câu 22. (Ví dụ 8a - Trang 85) Ở nhiệt độ 20°C và áp suất 1 atm, không khí có khối lượng riêng là 1,29 kg/m³. Giá trị trung bình của bình phương tốc độ phân tử khí ở điều kiện này là
+*A. \overlinev² ≈ 2,35.10⁵ m²/s².
+B. \overlinev² ≈ 1,80.10⁵ m²/s².
+C. \overlinev² ≈ 3,00.10⁵ m²/s².
+D. \overlinev² ≈ 2,00.10⁵ m²/s².
+
+Câu 23. (Ví dụ 8b - Trang 85) Tìm một giá trị điển hình cho tốc độ của một phân tử khí ở ví dụ trên bằng cách tính √\overlinev².
+*A. √\overlinev² ≈ 485 m/s.
+B. √\overlinev² ≈ 450 m/s.
+C. √\overlinev² ≈ 600 m/s.
+D. √\overlinev² ≈ 330 m/s.
+
+Câu 24. (Ví dụ 9 - Trang 85) Xét khối khí chứa trong một bình kín, biết mật độ động năng phân tử (tổng động năng tịnh tiến trung bình của các phân tử khí trong 1 m³ thể tích khí) có giá trị là 10⁻⁴ J/m³. Áp suất của khí trong bình là
+*A. 6,67.10⁻⁵ Pa.
+B. 5,00.10⁻⁵ Pa.
+C. 7,50.10⁻⁵ Pa.
+D. 4,80.10⁻⁵ Pa.
+
+Câu 25. (Câu 1a - Trang 86) Một bình có thể tích 22,4.10⁻³ m³ chứa 1 mol khí hydrogen ở điều kiện tiêu chuẩn (nhiệt độ 0°C và áp suất 1 atm). Người ta bơm thêm 1 mol khí helium cũng ở điều kiện tiêu chuẩn vào bình này. Cho khối lượng riêng ở điều kiện tiêu chuẩn của khí hydrogen và khí helium lần lượt là 9.10⁻² kg/m³ và 18.10⁻² kg/m³. Khối lượng riêng của hỗn hợp khí trong bình là
+*A. 0,27 kg/m³.
+B. 0,20 kg/m³.
+C. 0,35 kg/m³.
+D. 0,30 kg/m³.
+
+Câu 26. (Câu 1b - Trang 86) Áp suất của hỗn hợp khí lên thành bình ở bài tập trên là
+*A. 2,00 atm.
+B. 1,50 atm.
+C. 2,50 atm.
+D. 1,75 atm.
+
+Câu 27. (Câu 1c - Trang 86) Giá trị trung bình của bình phương tốc độ phân tử khí trong bình ở bài tập trên là
+*A. \overlinev² ≈ 2,25.10⁶ m²/s².
+B. \overlinev² ≈ 4,50.10⁴ m²/s².
+C. \overlinev² ≈ 3,00.10⁴ m²/s².
+D. \overlinev² ≈ 5,00.10⁴ m²/s².
+
+Câu 28. (Câu 2 - Trang 86) Cho k = 1,38.10⁻²³ J/K. Động năng tịnh tiến trung bình của phân tử khí lí tưởng ở 25°C có giá trị
+A. 5,2.10⁻²² J.
+*B. 6,17.10⁻²¹ J.
+C. 6,2.10²³ J.
+D. 3,2.10²⁵ J.
+
+Câu 29. (Câu 3 - Trang 86) Cho k = 1,38.10⁻²³ J/K. Các phân tử của một chất khí lí tưởng có động năng tịnh tiến trung bình bằng 5,0.10⁻²¹ J. Tính nhiệt độ của khí theo K và °C.
+*A. T ≈ 241,5 K, t°C ≈ -31,5°C.
+B. T ≈ 300,0 K, t°C ≈ 27,0°C.
+C. T ≈ 200,0 K, t°C ≈ -73,0°C.
+D. T ≈ 273,0 K, t°C ≈ 0,0°C.
+
+Câu 30. (Câu 4a - Trang 86) Cho k = 1,38.10⁻²³ J/K. Động năng tịnh tiến trung bình của các nguyên tử Ne ở 27°C và 243°C lần lượt là
+*A. \overlineEd₁ ≈ 6,21.10⁻²¹ J, \overlineEd₂ ≈ 1,07.10⁻²⁰ J.
+B. \overlineEd₁ ≈ 5,00.10⁻²¹ J, \overlineEd₂ ≈ 9,50.10⁻²¹ J.
+C. \overlineEd₁ ≈ 7,00.10⁻²¹ J, \overlineEd₂ ≈ 1,20.10⁻²⁰ J.
+D. \overlineEd₁ ≈ 6,00.10⁻²¹ J, \overlineEd₂ ≈ 1,00.10⁻²⁰ J.
+
+Câu 31. (Câu 4b - Trang 86) So sánh áp suất gây ra bởi các phân tử Ne trong xilanh có thể tích không đổi ở hai nhiệt độ 27°C và 243°C.
+*A. p₂/p₁ ≈ 1,723.
+B. p₂/p₁ ≈ 2,000.
+C. p₂/p₁ ≈ 1,500.
+D. p₂/p₁ ≈ 1,600.
+
+Câu 32. (Câu 11 - Trang 87 - Đề số 1) Nhiệt độ không tuyệt đối (0 K) là nhiệt độ mà tại đó các phân tử có
+*A. động năng chuyển động nhiệt bằng không và thế năng tương tác giữa chúng là cực đại.
+B. động năng chuyển động nhiệt cực đại và thế năng tương tác giữa chúng là cực đại.
+C. động năng chuyển động nhiệt bằng không và thế năng tương tác giữa chúng là tối thiểu.
+D. động năng chuyển động nhiệt cực đại và thế năng tương tác giữa chúng là bằng không.
+
+Câu 33. (Câu 8 - Trang 93 - Đề số 2) Áp suất của khí lên thành bình là
+A. lực tác dụng lên một đơn vị diện tích thành bình.
+*B. lực tác dụng vuông góc lên một đơn vị diện tích thành bình.
+C. lực tác dụng lên thành bình.
+D. lực tác dụng vuông góc lên toàn bộ diện tích thành bình.
+
+Câu 34. (Câu 12 - Trang 99 - Đề số 3) Động năng trung bình của các phân tử chất khí
+A. chỉ phụ thuộc vào khối lượng phân tử.
+*B. chỉ phụ thuộc vào nhiệt độ.
+C. chỉ phụ thuộc vào áp suất.
+D. phụ thuộc vào nhiệt độ và khối lượng phân tử chất khí.
+
+Câu 35. (Câu 15 - Trang 99 - Đề số 3) Một chất khí mà các phân tử có tốc độ căn quân phương là 1760 m/s ở 0°C. Tốc độ căn quân phương của các phân tử khí này ở nhiệt độ 1000°C là
+A. 3000 m/s.
+*B. 3800 m/s.
+C. 1800 m/s.
+D. 2000 m/s.
+
+Câu 36. (Câu 16 - Trang 99 - Đề số 3) Một bình chứa khí nitrogen có khối lượng riêng ρ = 1,25 kg/m³ và giá trị trung bình của bình phương tốc độ của các phân tử khí là \overlinev² = 3.10⁵ m²/s². Áp suất của khí trong bình là
+*A. 1,25.10⁵ Pa.
+B. 1,25.10⁻⁵ Pa.
+C. 2,15.10⁵ Pa.
+D. 3,75.10⁵ Pa.
+
+Câu 37. (Câu 17 - Trang 99 - Đề số 3) Một bình chứa 1 mol khí neon, xảy ra quá trình biến đổi trạng thái. Động năng trung bình ở trạng thái (3) có áp suất p = 3.10⁵ Pa và thể tích V = 8.10⁻³ m³ của các phân tử khí neon là
+A. 2,99.10⁻²⁰ J.
+B. 1,28.10⁻²¹ J.
+C. 2,99.10⁻¹⁸ J.
+*D. 3,35.10⁻²⁰ J.
+
+Câu 38. (Câu 10 - Trang 104 - Đề số 4) Công thức liên hệ giữa áp suất chất khí p và động năng tịnh tiến trung bình của chất khí Ed, số hạt phân tử N của một khối khí có thể tích V là
+A. p = Ed/(3V²).
+*B. p = 2N.Ed/3V.
+C. p = 3N.Ed/2V.
+D. p = 3Ed/(V²).
+
+Câu 39. (Câu 11 - Trang 104 - Đề số 4) Các phân tử khí lí tưởng có các tính chất nào sau đây?
+A. Được coi như chất điểm và luôn đứng yên.
+B. Được coi như chất điểm và có tương tác hút hoặc đẩy với nhau.
+C. Đứng yên tại chỗ và tương tác hút hoặc đẩy với nhau.
+*D. Được coi như chất điểm, chuyển động không ngừng và chỉ tương tác với nhau khi va chạm.
+
+Câu 40. (Câu 8 - Trang 110 - Đề số 5) Áp suất của chất khí tác dụng lên thành bình chứa không liên quan trực tiếp đến
+A. mật độ phân tử.
+B. khối lượng phân tử.
+*C. vị trí của phân tử.
+D. nhiệt độ của khí.
+
+Câu 41. (Câu 17 - Trang 111 - Đề số 5) Một bình chứa khí helium có thể tích V = 400 lít chứa 8.10²⁴ phân tử. Biết rằng khối lượng của mỗi nguyên tử helium là m = 6,64.10⁻²⁷ kg và trung bình của bình phương tốc độ của các nguyên tử là \overlinev² = 5.10⁴ m²/s². Áp suất của khí trong bình là
+*A. 2,21.10³ Pa.
+B. 1,15.10³ Pa.
+C. 3,45.10³ Pa.
+D. 3,21 Pa.
+
+Câu 42. (Câu 12 - Trang 116 - Đề số 6) Đối với khối khí lí tưởng xác định, khi tăng nhiệt độ tuyệt đối của khối khí lên 2 lần thì động năng tịnh tiến trung bình của phân tử
+A. giảm 2 lần.
+B. tăng rồi giảm.
+*C. tăng 2 lần.
+D. giảm rồi tăng.
+
+Câu 43. (Câu 13 - Trang 116 - Đề số 6) Áp suất của một khối khí tác dụng lên thành bình không phụ thuộc vào
+A. khối lượng phân tử khí.
+*B. hình dạng của bình.
+C. mật độ phân tử khí.
+D. nhiệt độ của khối khí.
+
+Câu 44. (Câu 17 - Trang 116 - Đề số 6) Khối lượng của phân tử khí hydrogen là 3,3.10⁻²⁴ g. Biết rằng trong 1 giây, có 10²³ phân tử khí hydrogen chuyển động với vận tốc 1000 m/s đập vào 1 cm² thành bình theo phương nghiêng một góc 30° so với thành bình. Áp suất khí lên thành bình là bao nhiêu?
+A. 3,3.10⁵ Pa.
+*B. 33 kPa.
+C. 3,3 Pa.
+D. 3,3.10³ Pa.
+
+Câu 45. (Câu 10 - Trang 123 - Đề số 7) Với k là hằng số Boltzmann, một lượng khí có nhiệt độ tuyệt đối T (K), động năng tịnh tiến trung bình của phân tử khí là
+*A. \overlineEd = 3/2kT.
+B. \overlineEd = 2/3kT.
+C. \overlineEd = 3kT.
+D. \overlineEd = 1/2kT.
+
+Câu 46. (Câu 13 - Trang 124 - Đề số 7) Xét khối khí chứa trong một bình kín, gồm N phân tử, chuyển động hỗn loạn với các tốc độ là v₁, v₂, ..., vN. Trung bình của các bình phương tốc độ phân tử được xác định theo công thức
+A. \overlinev² = (v₁ + v₂ + ... + vN)/N.
+*B. \overlinev² = (v₁² + v₂² + ... + vN²)/N.
+C. \overlinev² = √(v₁² + v₂² + ... + vN²)/N.
+D. \overlinev² = √v₁² + v₂² + ... + vN².
+
+Câu 47. (Câu 12 - Trang 130 - Đề số 8) Biết p là áp suất chất khí, μ là mật độ phân tử khí, m là khối lượng phân tử khí, \overlinev² là giá trị trung bình của bình phương tốc độ phân tử khí. Hệ thức đúng của áp suất chất khí theo mô hình động học phân tử là
+A. p = μ m \overlinev².
+B. p = 2/3μ m \overlinev².
+C. p = 3/2μ m \overlinev².
+*D. p = 1/3μ m \overlinev².
+
+Câu 48. (Câu 14 - Trang 131 - Đề số 8) Nếu nhiệt độ của một lượng khí lí tưởng đơn nguyên tử tăng từ 27°C lên 87°C thì động năng trung bình của các phân tử khí
+*A. bằng 1,2 lần động năng ban đầu.
+B. bằng 1,44 lần động năng ban đầu.
+C. gần bằng 3,2 lần động năng ban đầu.
+D. gần bằng 1,24 lần động năng ban đầu.
+
+Câu 49. (Câu 18 - Trang 131 - Đề số 8) Một máy hút chân không làm giảm áp suất khí nitrogen trong một bình kín tới 3,6.10⁻¹⁰ Pa ở nhiệt độ 27,0°C. Số phân tử khí nitrogen trong thể tích 1,5 cm³ gần đúng bằng bao nhiêu?
+*A. 1,3.10⁵.
+B. 3,6.10⁵.
+C. 8,3.10⁵.
+D. 2,6.10⁵.
+
+Câu 50. (Câu 14 - Trang 138 - Đề số 9) Với hằng số Boltzmann k = 1,38.10⁻²³ J/K. Công thức liên hệ giữa động năng tịnh tiến trung bình của phân tử \overlineEd và nhiệt độ tuyệt đối T là
+A. \overlineEd = 2/3kT.
+B. \overlineEd = 1/2kT.
+C. \overlineEd = 2kT.
+*D. \overlineEd = 3/2kT.
+
+Câu 51. (Câu 14 - Trang 170 - Đề số 13) Cho hằng số Boltzmann k = 1,38.10⁻²³ J/K. Động năng tịnh tiến trung bình của phân tử không khí ở nhiệt độ 20°C là
+*A. 6,07.10⁻²¹ J.
+B. 0,04 J.
+C. 6,51.10⁻²¹ J.
+D. 4,14.10⁻²¹ J.
+
+Câu 52. (Câu 10 - Trang 80) Trong các phát biểu sau về lực do các phân tử khí tác dụng lên thành bình, phát biểu nào là đúng theo mô hình động học phân tử?
+*A. Lực gây ra do sự thay đổi động lượng của phân tử khí khi va chạm đàn hồi với thành bình.
+B. Lực tác dụng của các phân tử lên thành bình là lực hút tĩnh điện.
+C. Lực do phân tử tác dụng làm phân tử dừng lại hẳn ở thành bình.
+D. Lực tác dụng chỉ xuất hiện khi phân tử khí chuyển động theo một phương duy nhất.
+
+Câu 53. (Câu 3 - Trang 79 - Biến thể) Áp suất chất khí tác dụng lên thành bình chứa tỉ lệ với
+A. mật độ phân tử khí và bình phương nhiệt độ tuyệt đối.
+*B. mật độ phân tử khí và động năng tịnh tiến trung bình của phân tử.
+C. thể tích bình chứa và khối lượng phân tử.
+D. nhiệt độ Celsius và khối lượng riêng.
+
+Câu 54. (Ví dụ 8a - Trang 85 - Biến thể) Khối lượng riêng của không khí ở nhiệt độ 20°C và áp suất 1,013.10⁵ Pa là 1,29 kg/m³. Tốc độ căn quân phương của phân tử không khí ở điều kiện này là
+*A. 485 m/s.
+B. 502 m/s.
+C. 330 m/s.
+D. 600 m/s.
+
+Câu 55. (Câu 2 - Trang 86 - Biến thể) Động năng tịnh tiến trung bình của các phân tử khí lí tưởng ở nhiệt độ 0°C có giá trị gần bằng
+A. 3,77.10⁻²¹ J.
+*B. 5,65.10⁻²¹ J.
+C. 6,21.10⁻²¹ J.
+D. 1,38.10⁻²³ J.
+
+Câu 56. (Ví dụ 6 - Trang 84 - Biến thể) Nhiệt độ của một khối khí mà ở đó động năng tịnh tiến trung bình của các phân tử khí bằng 6,21.10⁻²¹ J là
+*A. 300 K.
+B. 300°C.
+C. 273 K.
+D. 27°C.
+
+Câu 57. (Câu 5 - Trang 79 - Biến thể) Hệ thức nào sau đây thể hiện đúng mối quan hệ giữa áp suất p, mật độ phân tử μ và động năng tịnh tiến trung bình \overlineEd của phân tử khí?
+*A. p = 2/3μ\overlineEd.
+B. p = 3/2μ\overlineEd.
+C. p = 1/3μ\overlineEd.
+D. p = 2μ\overlineEd.
+
+Câu 58. (Câu 7 - Trang 80 - Biến thể) Khi nhiệt độ tuyệt đối của một lượng khí lí tưởng giảm đi một nửa thì động năng tịnh tiến trung bình của phân tử khí sẽ
+A. tăng gấp đôi.
+*B. giảm đi một nửa.
+C. giảm 4 lần.
+D. không thay đổi.
+
+Câu 59. (Ví dụ 9 - Trang 85 - Biến thể) Nếu áp suất của khối khí trong bình kín là 10⁻⁴ Pa thì mật độ động năng phân tử khí trong bình bằng
+*A. 1,5.10⁻⁴ J/m³.
+B. 1,0.10⁻⁴ J/m³.
+C. 0,67.10⁻⁴ J/m³.
+D. 3,0.10⁻⁴ J/m³.
+
+Câu 60. (Câu 3 - Trang 86 - Biến thể) Động năng tịnh tiến trung bình của phân tử khí lí tưởng là 1,0.10⁻²⁰ J. Nhiệt độ của khối khí này là
+*A. 483 K.
+B. 210°C.
+C. 725 K.
+D. 300 K.
+
+Dạng 2. TRẮC NGHIỆM ĐÚNG / SAI
+
+Câu 61. (Câu 10 - Trang 80) Khi xây dựng công thức tính áp suất chất khí từ mô hình động học phân tử khí:
+a) Trong thời gian giữa hai va chạm liên tiếp với thành bình, động lượng của phân tử khí thay đổi một lượng bằng tích khối lượng phân tử và tốc độ trung bình của nó.
+b) Lực gây ra thay đổi động lượng của phân tử khí là lực do phân tử khí tác dụng lên thành bình.
+*c) Giữa hai va chạm, phân tử khí chuyển động thẳng đều.
+*d) Các phân tử khí chuyển động không có phương ưu tiên, số phân tử đến va chạm với các mặt của thành bình trong mỗi giây là như nhau.
+
+Câu 62. (Câu 3 - Trang 100 - Đề số 3) Gọi trung bình của bình phương tốc độ các phân tử khí là \overlinev², khối lượng riêng ρ, tốc độ căn quân phương là √\overlinev². Áp suất p được xác định theo các đại lượng trên là 3p = ρ\overlinev². Lấy NA = 6,02.10²³ mol⁻¹.
+*a) Trung bình của bình phương tốc độ các phân tử không khí có khối lượng riêng khoảng 1,29 kg/m³, ở nhiệt độ phòng 25°C và áp suất 10⁵ Pa là 232,6.10³ m²/s².
+*b) Áp suất mà khí có khối lượng riêng bằng 6.10⁻² kg/m³, tốc độ căn quân phương của chúng là 500 m/s, gây lên thành bình là 5.10³ Pa.
+c) Tốc độ căn quân phương của các phân tử khí có khối lượng riêng là 0,3 kg/m³ ở áp suất 300 mmHg là 1032 m/s.
+d) Số phân tử khí hydro chứa trong 1 m³ có áp suất 200 mmHg và tốc độ căn quân phương 2400 m/s là 4,22.10²¹.
+
+Câu 63. (Câu 4 - Trang 106 - Đề số 4) Khối lượng phân tử H₂ là 3,3.10⁻²⁴ g. Biết rằng trong 1 s, có 10²³ phân tử H₂ với vận tốc 10³ m/s đập vào 1 cm² thành bình theo phương nghiêng 30° với thành bình.
+a) Khối lượng nguyên tử hidro là 1,65.10⁻²⁴ g.
+*b) Lực do một phân tử tác dụng lên thành bình là 3,3.10⁻²¹ N.
+c) Áp suất một phân tử khí gây lên thành bình bằng 3,3.10³ Pa.
+*d) Áp suất khí gây lên thành bình bằng 3,3.10³ Pa.
+
+Câu 64. (Câu 3 - Trang 141 - Đề số 9) Hai bình có cùng thể tích đang chứa khí: bình A chứa khí oxygen (\O₂\) có khối lượng mol nguyên tử là 16 g/mol và bình B chứa khí neon (Ne) có khối lượng mol nguyên tử là 20 g/mol, ban đầu nhiệt độ và áp suất khí trong hai bình là như nhau (30°C và 160123 Pa).
+*a) Các phân tử khí ở hai bình chuyển động hỗn loạn, không ngừng.
+b) Số phân tử trong bình B nhỏ hơn số phân tử trong bình A.
+*c) Động năng tịnh tiến trung bình của các phân tử ở hai bình có giá trị bằng nhau.
+*d) Khối lượng khí ở bình B lớn hơn ở bình A.
+
+Câu 65. (Câu 3 - Trang 149 - Đề số 10) Một bình kín chứa 1 mol nitrogen, áp suất khí là 10⁵ Pa, ở nhiệt độ 27°C. Biết hằng số khí R = 8,31 J/mol.K, hằng số Boltzmann k = 1,38.10⁻²³ J/K.
+a) Nhiệt độ của khí trong bình là 303 K.
+*b) Thể tích của bình xấp xỉ 25 lít.
+*c) Động năng tịnh tiến trung bình của phân tử khí ở nhiệt độ 27°C bằng 6,21.10⁻²¹ J.
+*d) Giả sử một lượng khí thoát ra ngoài nên áp suất khí trong bình giảm còn 0,25.10⁵ Pa, nhiệt độ khí lúc này là 20°C. Lượng khí đã thoát ra ngoài là 0,74 mol.
+
+Câu 66. (Câu 4 - Trang 172 - Đề số 13) Nhiệt độ của một mol khí lí tưởng (đơn nguyên tử) trong một bình kín được làm tăng từ 12°C lên 297°C. Khi đó nội năng của khí thay đổi.
+*a) Động năng tịnh tiến trung bình của mỗi phân tử khí ở 12°C xấp xỉ 5,9.10⁻²¹ J.
+*b) Áp suất khí tăng lên 2 lần trong quá trình này.
+c) Động năng tịnh tiến trung bình của phân tử khí tỉ lệ với nhiệt độ tuyệt đối của khí theo công thức \overlineEd = 2/3kT.
+*d) Nội năng của khối khí ở 297°C xấp xỉ 7105 J.
+
+Câu 67. (Câu 1 - Trang 192 - Đề số 16) Xét mối quan hệ giữa các phân tử khí và áp suất chất khí trong bình kín:
+*a) Áp suất chất khí tác dụng lên thành bình được tạo nên bởi va chạm của các phân tử khí với thành bình.
+*b) Mật độ phân tử khí càng lớn thì số va chạm của các phân tử vào thành bình trong một đơn vị thời gian càng nhiều.
+c) Nhiệt độ của khí tăng không làm thay đổi động năng trung bình của các phân tử khí.
+*d) Động năng tịnh tiến trung bình của các phân tử khí chỉ phụ thuộc vào nhiệt độ tuyệt đối của khối khí.
+
+Câu 68. (Câu 4 - Trang 198 - Đề số 17) Khi xây dựng công thức tính áp suất chất khí từ mô hình động học phân tử khí, trong các phát biểu sau:
+a) Trong thời gian giữa hai va chạm liên tiếp với thành bình, động lượng của phân tử khí thay đổi một lượng bằng tích khối lượng phân tử và tốc độ trung bình của nó.
+b) Lực gây ra thay đổi động lượng của phân tử khí là lực do phân tử khí tác dụng lên thành bình.
+*c) Giữa hai va chạm, phân tử khí chuyển động thẳng đều.
+*d) Các phân tử khí chuyển động không có phương ưu tiên, số phân tử đến va chạm với các mặt của thành bình trong mỗi giây là như nhau.
+
+Câu 69. (Câu 3 - Trang 200 - Đề số 18) Xét động năng tịnh tiến trung bình và áp suất khí:
+*a) Động năng tịnh tiến trung bình của phân tử khí tỉ lệ thuận với nhiệt độ tuyệt đối T.
+*b) Khi hai khí có cùng nhiệt độ thì động năng tịnh tiến trung bình của các phân tử của hai khí đó là như nhau.
+c) Phân tử khí có khối lượng càng lớn thì chuyển động càng nhanh ở cùng một nhiệt độ.
+*d) Áp suất của chất khí lên thành bình tỉ lệ thuận với mật độ phân tử khí và động năng tịnh tiến trung bình của phân tử.
+
+Câu 70. (Câu 1 - Trang 220 - Đề số 21) Xét bình chứa một lượng khí lí tưởng xác định.
+a) Bình chứa khí càng lớn thì áp suất khí trong bình càng lớn.
+*b) Phân tử khí có khối lượng càng lớn thì gây ra áp suất càng lớn khi va chạm với thành bình.
+c) Phân tử khí chuyển động càng chậm thì va chạm với thành bình càng nhiều lần.
+*d) Từ công thức tính áp suất chất khí có thể suy ra hệ thức của định luật Boyle.
+
+Câu 71. (Câu 4 - Trang 239 - Đề số 24) Khi xem xét các giả thuyết về khí lí tưởng và áp suất chất khí:
+*a) Khoảng cách giữa các phân tử khí lí tưởng rất lớn so với kích thước mỗi phân tử nên có thể bỏ qua kích thước của chúng.
+*b) Khi không va chạm, có thể bỏ qua lực tương tác giữa các phân tử khí lí tưởng.
+c) Các phân tử khí lí tưởng luôn chuyển động thẳng đều không va chạm nhau.
+*d) Áp suất khí lên thành bình được giải thích là do các phân tử khí va chạm đàn hồi với thành bình.
+
+Câu 72. (Câu 3 - Trang 242 - Đề số 25) Xét mô hình động học phân tử chất khí:
+*a) Các phân tử khí chuyển động hỗn loạn không ngừng.
+*b) Nhiệt độ của khối khí càng cao thì tốc độ chuyển động nhiệt của các phân tử càng lớn.
+*c) Các phân tử khí coi như chất điểm và chỉ tương tác với nhau khi va chạm.
+d) Va chạm của các phân tử khí với thành bình là va chạm không đàn hồi.
+
+Dạng 3. TRẢ LỜI NGẮN
+
+Câu 73. (Ví dụ 1 - Trang 81) Ở nhiệt độ phòng và áp suất 10⁵ Pa, không khí có khối lượng riêng khoảng 1,29 kg/m³. Giá trị trung bình của bình phương tốc độ mỗi phân tử không khí bằng bao nhiêu km²/s² (làm tròn kết quả đến chữ số hàng đơn vị)?
+Đáp số: 233
+
+Câu 74. (Câu 3 - Trang 102 - Đề số 3) Một quả bóng chứa đầy một lượng 2 mol khí helium ở nhiệt độ 20°C. Giả sử hệ khí được xem là khí lí tưởng. Lấy NA = 6,02.10²³ mol⁻¹, k = 1,38.10⁻²³ J/K. Tổng động năng tịnh tiến của hệ khí bằng bao nhiêu jun (làm tròn kết quả đến chữ số hàng đơn vị)?
+Đáp số: 7311
+
+Câu 75. (Câu 4 - Trang 102 - Đề số 3) Khi tăng nhiệt độ của một lượng khí lí tưởng từ 300 K đến 600 K thì tốc độ căn quân phương của các phân tử khí tăng bao nhiêu lần (làm tròn kết quả đến chữ số hàng phần trăm)?
+Đáp số: 1,41
+
+Câu 76. (Câu 2 - Trang 126 - Đề số 7) Một bình có thể tích 8 lít có chứa 0,8 g khí lí tưởng helium (He) ở áp suất 10⁵ Pa. Biết khối lượng mol của phân tử khí helium là 4 g/mol. Cho biết 1 eV = 1,6.10⁻¹⁹ J. Động năng trung bình của phân tử khí là bao nhiêu eV (làm tròn kết quả đến chữ số hàng phần trăm)?
+Đáp số: 0,04
+
+Câu 77. (Câu 1 - Trang 158 - Đề số 11) Một bình kín chứa khí hydrogen ở nhiệt độ 25°C. Giá trị căn bậc hai của trung bình bình phương tốc độ phân tử √\overlinev² của các phân tử hydrogen trong bình là x.10³ m/s. Tìm x (làm tròn kết quả đến chữ số hàng phần mười).
+Đáp số: 1,9
+
+Câu 78. (Câu 3 - Trang 158 - Đề số 11) Thông thường, phổi của một người trưởng thành có thể tích khoảng 5,7 lít. Biết không khí trong phổi có áp suất bằng áp suất khí quyển (101 kPa) và nhiệt độ là 37°C. Giả sử số phân tử khí oxygen chiếm 25% số phân tử không khí có trong phổi. Số phân tử oxygen có trong phổi là x.10²² phân tử. Tìm x (làm tròn kết quả đến chữ số hàng phần mười).
+Đáp số: 3,4
+
+Câu 79. (Câu 1 - Trang 166 - Đề số 12) Động năng tịnh tiến trung bình của mỗi nguyên tử helium trong vành Nhật hoa của Mặt Trời là 12,4.10⁻¹⁸ J, nhiệt độ của vùng này là x.10⁵ K. Lấy hằng số Boltzmann k = 1,38.10⁻²³ J/K. Tìm x (làm tròn kết quả đến chữ số hàng đơn vị).
+Đáp số: 60
+
+Câu 80. (Câu 5 - Trang 126 - Đề số 7) Túi khí của xe ô tô sẽ phồng lên nhanh chóng khi một tác động đủ mạnh từ bên ngoài gây ra phản ứng hóa học và giải phóng một lượng lớn nitrogen. Trong một thử nghiệm, túi khí phồng lên đến thể tích 60.10⁻³ m³ và áp suất 103 kPa ở nhiệt độ là 27°C. Số mol khí trong túi là bao nhiêu (làm tròn kết quả đến chữ số hàng phần trăm)?
+Đáp số: 2,48
+
+Câu 81. (Câu 6 - Trang 126 - Đề số 7) Ở bài tập trên, áp suất ban đầu của khí là x.10⁶ Pa nếu nó được giải phóng khỏi một bình chứa có thể tích 7,6.10⁻⁵ m³ ở cùng nhiệt độ. Tìm x (làm tròn kết quả đến chữ số hàng phần mười).
+Đáp số: 81,3
+
+Câu 82. (Câu 1 - Trang 150 - Đề số 10) Số phân tử có trong 50 g nước tinh khiết là x.10²⁴ phân tử. Biết khối lượng mol của phân tử nước bằng 18 g/mol. Tìm x (làm tròn kết quả đến chữ số hàng phần trăm).
+Đáp số: 1,67
+
+Câu 83. (Câu 6 - Trang 141 - Đề số 9) Một bình có dung tích 20 lít chứa 4,8.10⁻³ kg khí helium ở 18°C. Khối lượng mol của helium là 4,0 g/mol. Áp suất khí helium trong bình là x.10⁵ Pa. Tìm x (làm tròn kết quả đến chữ số hàng phần trăm).
+Đáp số: 1,45
+
+Câu 84. (Câu 2 - Trang 173 - Đề số 13) Một bình kín có thể tích 5 lít chứa 8 g khí helium ở nhiệt độ 27°C. Coi khí helium trong bình là khí lí tưởng, khối lượng mol của khí helium là 4 g/mol. Áp suất trong bình bằng x.10⁵ Pa. Tìm x (làm tròn kết quả đến chữ số hàng đơn vị).
+Đáp số: 10
+
+Câu 85. (Câu 1 - Trang 180 - Đề số 14) Một bình chứa 2 mol khí lí tưởng ở 27°C. Tổng động năng tịnh tiến của các phân tử khí trong bình bằng bao nhiêu jun (làm tròn kết quả đến chữ số hàng đơn vị)?
+Đáp số: 7479
+
+Câu 86. (Câu 2 - Trang 180 - Đề số 14) Động năng tịnh tiến trung bình của phân tử khí nitrogen ở 100°C là x.10⁻²¹ J. Tìm x (làm tròn kết quả đến chữ số hàng phần trăm).
+Đáp số: 7,72
+
+Câu 87. (Câu 3 - Trang 180 - Đề số 14) Nhiệt độ của một khối khí mà ở đó tốc độ căn quân phương của các phân tử khí bằng 500 m/s, biết khối lượng mol của khí là 28 g/mol bằng bao nhiêu Kelvin (làm tròn kết quả đến chữ số hàng đơn vị)?
+Đáp số: 281
+
+Câu 88. (Câu 4 - Trang 180 - Đề số 14) Mật độ phân tử của một chất khí ở áp suất 10⁵ Pa và động năng tịnh tiến trung bình 6.10⁻²¹ J là x.10²⁵ m⁻³. Tìm x (làm tròn kết quả đến chữ số hàng phần trăm).
+Đáp số: 2,5
+
+Câu 89. (Câu 5 - Trang 180 - Đề số 14) Số phân tử khí chứa trong 1 cm³ ở nhiệt độ 0°C và áp suất 10⁻⁵ mmHg là x.10¹¹ phân tử. Tìm x (làm tròn kết quả đến chữ số hàng phần trăm).
+Đáp số: 3,54
+
+Câu 90. (Câu 6 - Trang 180 - Đề số 14) Một bình kín có thể tích 10 lít chứa khí oxygen ở áp suất 2.10⁵ Pa và nhiệt độ 27°C. Tổng động năng tịnh tiến của tất cả các phân tử khí oxygen trong bình là bao nhiêu jun?
+Đáp số: 3000
+`;
+    const PRE_LOADED_SAVED_SESSION = null;
+
+    let listLessons = []; 
+    let currentLessonIndex = 0;
+    let hasGraded = {}; 
+    let singleCheckedQuestions = {}; 
+    let activeQuestionNumber = "1"; 
+    let timerInterval = null;
+    let totalSeconds = 0;
+    let currentTFSubLabelIndex = 0; 
+    let currentSpeechLanguage = 'vi-VN';
+    let currentFilterMode = 'ALL'; 
+
+    let allGlobalImageUrls = [];
+    let currentLightboxIndex = 0;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if(PRE_LOADED_SAVED_SESSION && PRE_LOADED_SAVED_SESSION.listLessons && PRE_LOADED_SAVED_SESSION.listLessons.length > 0) {
+            restoreSavedSession(PRE_LOADED_SAVED_SESSION);
+        } else if(PRE_LOADED_RAW_DATA && PRE_LOADED_RAW_DATA.trim().length > 0) {
+            document.getElementById('txt-input').value = PRE_LOADED_RAW_DATA.trim();
+            parseAndGenerateQuiz();
+        }
+        window.addEventListener('keydown', handleGlobalKeydowns);
+    });
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+    function closeSidebarOnMobile() { if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active'); }
+
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        let icon = 'ℹ️';
+        if (type === 'success') icon = '✓';
+        else if (type === 'error') icon = '✕';
+        else if (type === 'warning') icon = '⚠️';
+
+        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    function toggleSpeechLanguage() {
+        const toggle = document.getElementById('language-speech-toggle');
+        const label = document.getElementById('lang-label');
+        if(toggle.checked) {
+            currentSpeechLanguage = 'en-US';
+            label.innerText = "🗣️ Giọng đọc: EN";
+            showToast('Đã đổi giọng đọc sang Tiếng Anh', 'info');
+        } else {
+            currentSpeechLanguage = 'vi-VN';
+            label.innerText = "🗣️ Giọng đọc: VN";
+            showToast('Đã đổi giọng đọc sang Tiếng Việt', 'info');
+        }
+    }
+
+    function copyGeneratedPromptToClipboard() {
+        const topic = document.getElementById('cfg-topic').value.trim() || "[Chủ đề bạn muốn biên soạn]";
+        const mcqCount = document.getElementById('cfg-mcq').value || "60";
+        const tfCount = document.getElementById('cfg-tf').value || "12";
+        const saCount = document.getElementById('cfg-sa').value || "18";
+        
+        const fullPrompt = `Bạn là một chuyên gia biên soạn đề thi. Hãy giúp tôi soạn thảo bộ câu hỏi trắc nghiệm theo đúng cấu trúc cú pháp của hệ thống phân tích dữ liệu tự động. Hãy tuân thủ nghiêm ngặt các quy tắc định dạng dưới đây:
+
+### 1. CẤU TRÚC PHÂN LOẠI & DẠNG BÀI:
+Phân loại nội dung theo từng dạng/mục. Mỗi tiêu đề mục/dạng bài phải đặt trên một dòng riêng, viết hoa và bắt đầu bằng ký tự La Mã (I., II., III...) hoặc từ "Dạng" (Ví dụ: Dạng 1., Dạng 2...).
+
+### 2. QUY TẮC ĐỊNH DẠNG 3 DẠNG CÂU HỎI:
+Mỗi câu hỏi phải bắt đầu bằng chữ "Câu X:" hoặc "Câu X." (với X là số).
+
+#### Dạng 1: Trắc nghiệm lựa chọn đơn (MCQ - 4 đáp án A, B, C, D)
+- Bắt đầu bằng Câu X.
+- Các đáp án bắt đầu bằng A., B., C., D. (phải có dấu chấm và dấu cách sau chữ cái phương án).
+- Đáp án ĐÚNG phải có thêm dấu ký tự hoa thị (*) đứng ngay trước chữ cái phương án (Ví dụ: *A. hoặc *B.).
+Ví dụ:
+Câu 1. Thủ đô của Việt Nam là gì?
+*A. Hà Nội
+B. TP. Hồ Chí Minh
+C. Đà Nẵng
+D. Hải Phòng
+
+#### Dạng 2: Trắc nghiệm Đúng / Sai (TF)
+- Mỗi câu gồm nhiều ý nhỏ, bắt đầu bằng chữ cái thường và dấu đóng ngoặc đơn: a), b), c), d).
+- Mệnh đề ĐÚNG: Thêm dấu hoa thị (*) vào đầu dòng trước chữ cái phương án (Ví dụ: *a)... hoặc *c)...).
+- Mệnh đề SAI: Không thêm dấu hoa thị (*) ở đầu dòng (Ví dụ: b)... hoặc d)...).
+- KHÔNG thêm chữ "Đúng:" hoặc "Sai:" trong câu.
+Ví dụ:
+Câu 2. Xét các mệnh đề sau về địa lý thế giới:
+*a) Trái Đất quay quanh Mặt Trời.
+b) Mặt Trăng tự phát ra ánh sáng.
+*c) Châu Á là châu lục có diện tích lớn nhất.
+d) Sông Nile chảy qua châu Âu.
+
+#### Dạng 3: Trả lời ngắn (SA)
+- Cuối câu hỏi, bắt buộc phải có một dòng ghi rõ chữ "Đáp số:" kèm theo câu trả lời ngắn (chữ hoặc số).
+Ví dụ:
+Câu 3. Kết quả của phép tính 15 + 25 bằng bao nhiêu?
+Đáp số: 40
+
+### 3. YÊU CẦU BỔ SUNG (NẾU CÓ CHÈN ẢNH):
+Hệ thống có tính năng tự động trích xuất link hình ảnh trong nội dung câu hỏi. Nếu câu hỏi nào cần hình ảnh minh họa, hãy chèn link URL trực tiếp của ảnh (đuôi .jpg, .png, .webp,...) vào bất kỳ vị trí nào trong phần text của câu hỏi đó.
+
+---
+BÂY GIỜ, hãy soạn cho tôi một bộ câu hỏi về chủ đề: ${topic}
+- Số lượng câu hỏi mong muốn: ${mcqCount} câu MCQ, ${tfCount} câu Đúng/Sai, ${saCount} câu Trả lời ngắn
+- Đảm bảo không thêm bất kỳ văn bản giải thích, lời mở đầu hay ký tự Markdown thụt lề nào ngoài cấu trúc quy định trên.
+- Sắp xếp và phân loại các câu hỏi theo từng dạng (Dạng 1..., Dạng 2...).
+- Chú ý, đặc biệt lưu ý, rằng trích dẫn nguyên văn đề, không giản lược hay rút gọn câu dẫn, nội dung đề.
+- Yêu cầu lấy câu MCQ thì lấy nội dung từ câu MCQ, yêu cầu lấy câu TF thì lấy từ câu TF, yêu cầu lấy câu SA thì lấy từ câu SA.
+- Yêu cầu trích dẫn giùm tôi là câu này lấy từ câu nào của đề gốc, trích rõ giùm. Theo form kiểu Câu X. (Câu Y - Trang z), hoặc Câu X. (Ví dụ Y - Trang z), Y là câu gốc trong tài liệu.`;
+
+        navigator.clipboard.writeText(fullPrompt).then(() => {
+            showToast('Đã sao chép Prompt đầy đủ vào bộ nhớ tạm!', 'success');
+        });
+    }
+
+    function handleGlobalKeydowns(e) {
+        const lightboxModal = document.getElementById('lightbox-modal');
+        if (lightboxModal.classList.contains('active')) {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                changeLightboxImage(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                changeLightboxImage(1);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeLightbox();
+            }
+            return;
+        }
+
+        if (e.target.tagName === 'TEXTAREA') return;
+        if (e.target.tagName === 'INPUT' && e.key !== 'Enter') return;
+        const lesson = listLessons[currentLessonIndex];
+        if (!lesson || lesson.questions.length === 0) return;
+        const visibleQuestions = getFilteredQuestions(lesson);
+        const currentIdx = visibleQuestions.findIndex(q => q.numberStr === activeQuestionNumber);
+        if (currentIdx === -1) return;
+        const activeQ = visibleQuestions[currentIdx];
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (currentIdx > 0) focusAndScrollToQuestion(visibleQuestions[currentIdx - 1].numberStr);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (currentIdx < visibleQuestions.length - 1) focusAndScrollToQuestion(visibleQuestions[currentIdx + 1].numberStr);
+        }
+
+        if (activeQ.type === 'MCQ') {
+            const keyUpper = e.key.toUpperCase();
+            if (['A', 'B', 'C', 'D'].includes(keyUpper) && activeQ.options[keyUpper]) {
+                e.preventDefault();
+                const radio = document.querySelector(`input[name="q_ans_${currentLessonIndex}_${activeQ.numberStr}"][value="${keyUpper}"]`);
+                if (radio && !radio.disabled) { radio.checked = true; handleSelectMCQ(activeQ.numberStr, keyUpper); }
+            }
+        }
+        if (activeQ.type === 'TF') {
+            const keyLower = e.key.toLowerCase();
+            if (keyLower === 'd' || keyLower === 's') {
+                e.preventDefault();
+                const subQuestions = activeQ.subQuestions;
+                if (currentTFSubLabelIndex < subQuestions.length) {
+                    const targetSub = subQuestions[currentTFSubLabelIndex];
+                    const choiceValue = (keyLower === 'd');
+                    const isLock = hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${activeQ.numberStr}`];
+                    if (!isLock) handleSelectTF(activeQ.numberStr, targetSub.label, choiceValue);
+                }
+            }
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        document.getElementById('quiz-timer-container').classList.remove('hidden');
+        timerInterval = setInterval(() => {
+            totalSeconds++;
+            const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const secs = String(totalSeconds % 60).padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+        }, 1000);
+    }
+    function stopTimer() { clearInterval(timerInterval); }
+
+    function extractAllImageUrls(text) {
+        if (!text) return [];
+        const imgRegex = /(https?:\/\/[^\s]+)/gi;
+        const matches = text.match(imgRegex);
+        return matches ? Array.from(new Set(matches)) : [];
+    }
+
+    function updateGlobalImageRegistry() {
+        allGlobalImageUrls = [];
+        listLessons.forEach(lesson => {
+            lesson.questions.forEach(q => {
+                let cleanQText = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:\s]/i, '').trim();
+                let imgUrls = extractAllImageUrls(cleanQText);
+                imgUrls.forEach(url => {
+                    if (!allGlobalImageUrls.includes(url)) {
+                        allGlobalImageUrls.push(url);
+                    }
+                });
+            });
+        });
+    }
+
+    function openLightbox(url) {
+        const modal = document.getElementById('lightbox-modal');
+        const imgEl = document.getElementById('lightbox-img');
+        currentLightboxIndex = allGlobalImageUrls.indexOf(url);
+        if (currentLightboxIndex === -1) currentLightboxIndex = 0;
+        imgEl.src = url;
+        modal.classList.add('active');
+    }
+
+    function closeLightbox() {
+        document.getElementById('lightbox-modal').classList.remove('active');
+    }
+
+    function changeLightboxImage(direction) {
+        if (allGlobalImageUrls.length === 0) return;
+        currentLightboxIndex = (currentLightboxIndex + direction + allGlobalImageUrls.length) % allGlobalImageUrls.length;
+        document.getElementById('lightbox-img').src = allGlobalImageUrls[currentLightboxIndex];
+    }
+
+    function parseAndGenerateQuiz() {
+        const rawText = document.getElementById('txt-input').value.trim();
+        if (!rawText) { showToast('Vui lòng nhập nội dung văn bản trắc nghiệm!', 'warning'); return; }
+
+        const parts = rawText.split(/(?=^[I|II|III|IV|V|VI|VII|VIII|IX|X]+\.\s+|^Dạng\s+\d+[\.:\s]|^[B-Z]\.\s+BÀI TẬP)/mi);
+        listLessons = []; hasGraded = {}; singleCheckedQuestions = {}; totalSeconds = 0;
+        let globalIndex = 1;
+
+        parts.forEach((part) => {
+            if (!part.trim()) return;
+            let title = `Mục trắc nghiệm ${globalIndex}`;
+            const firstLine = part.trim().split('\n')[0];
+            if (firstLine.length < 100) title = firstLine.replace(/_+/g, '').trim();
+
+            const rawQuestions = part.split(/(?=^Câu\s+\d+(?:\.\d+)?[\.:\s])/m);
+            let questions = [];
+
+            rawQuestions.forEach(qBlock => {
+                const cleanBlock = qBlock.trim();
+                if (!cleanBlock || !cleanBlock.match(/^Câu\s+\d+(?:\.\d+)?[\.:]/i)) return;
+
+                const numMatch = cleanBlock.match(/^Câu\s+(\d+(?:\.\d+)?)/i);
+                const qNumberStr = numMatch ? numMatch[1] : String(questions.length + 1);
+                const lines = cleanBlock.split('\n').map(l => l.trim()).filter(l => l);
+                
+                let questionLines = [];
+                let options = {}; let mcqCorrect = null;
+                let tfSubQuestions = []; let isTFType = false;
+                let shortAnswerCorrect = null; let isShortAnswerType = false;
+
+                lines.forEach(line => {
+                    const saMatch = line.match(/(?:^|\.)\s*Đáp\s+số\s*:\s*(.*)$/i);
+                    if(saMatch) { isShortAnswerType = true; shortAnswerCorrect = saMatch[1].trim(); return; }
+
+                    const tfMatch = line.match(/^(\*?)([a-d])\)\s*(.*)$/i);
+                    if (tfMatch) {
+                        isTFType = true;
+                        const isCorrect = (tfMatch[1] === '*');
+                        let contentText = tfMatch[3].trim().replace(/^(Đúng|Sai)\s*[\.:]\s*/i, '');
+                        tfSubQuestions.push({ label: tfMatch[2].toLowerCase(), text: contentText, correctValue: isCorrect });
+                        return;
+                    }
+
+                    const mcqMatch = line.match(/^(\*?)([A-D])\.\s*(.*)$/i);
+                    if (mcqMatch) {
+                        const optLetter = mcqMatch[2].toUpperCase();
+                        options[optLetter] = mcqMatch[3].trim();
+                        if (mcqMatch[1] === '*') mcqCorrect = optLetter;
+                        return;
+                    }
+
+                    if (line.match(/^https?:\/\/[^\s]+$/i)) {
+                        questionLines.push(line);
+                        return;
+                    }
+
+                    questionLines.push(line);
+                });
+
+                if(isShortAnswerType) {
+                    questions.push({ numberStr: qNumberStr, type: 'SA', text: questionLines.join('\n'), correctAnswer: shortAnswerCorrect, rawBlock: cleanBlock });
+                } else if(isTFType) {
+                    questions.push({ numberStr: qNumberStr, type: 'TF', text: questionLines.join('\n'), subQuestions: tfSubQuestions, rawBlock: cleanBlock });
+                } else if (Object.keys(options).length > 0) {
+                    questions.push({ numberStr: qNumberStr, type: 'MCQ', text: questionLines.join('\n'), options: options, correctAnswer: mcqCorrect, rawBlock: cleanBlock });
+                }
+            });
+
+            if (questions.length > 0) {
+                listLessons.push({ title: title, questions: questions, userAnswers: {} });
+                globalIndex++;
+            }
+        });
+
+        if (listLessons.length === 0) { showToast('Không tìm thấy câu hỏi đúng cú pháp!', 'error'); return; }
+
+        updateGlobalImageRegistry();
+
+        document.getElementById('import-container').classList.add('hidden');
+        document.getElementById('import-actions').classList.add('hidden');
+        document.getElementById('menu-section').classList.remove('hidden');
+        document.getElementById('quiz-actions').classList.remove('hidden');
+        document.getElementById('quiz-container-box').classList.remove('hidden');
+
+        showToast(`Tạo thành công ${listLessons.length} mục bài tập!`, 'success');
+        renderSidebarMenu(); startTimer(); switchLesson(0);
+    }
+
+    function switchLesson(idx) {
+        currentLessonIndex = idx;
+        const lesson = listLessons[currentLessonIndex];
+        if (lesson && lesson.questions.length > 0) activeQuestionNumber = lesson.questions[0].numberStr;
+        currentTFSubLabelIndex = 0;
+        renderSidebarMenu(); renderQuestions();
+    }
+
+    function renderSidebarMenu() {
+        const menuContainer = document.getElementById('lesson-menu'); menuContainer.innerHTML = '';
+        listLessons.forEach((lesson, index) => {
+            const btn = document.createElement('button');
+            btn.className = `menu-item ${index === currentLessonIndex ? 'active' : ''}`;
+            let displayTitle = lesson.title;
+            if(displayTitle.length > 30) displayTitle = displayTitle.substring(0, 27) + '...';
+            btn.innerText = displayTitle; 
+            btn.onclick = () => { switchLesson(index); closeSidebarOnMobile(); };
+            menuContainer.appendChild(btn);
+        });
+    }
+
+    function handleFilterChange() {
+        currentFilterMode = document.getElementById('view-filter-select').value;
+        const lesson = listLessons[currentLessonIndex];
+        const filtered = getFilteredQuestions(lesson);
+        if (filtered.length > 0) activeQuestionNumber = filtered[0].numberStr;
+        renderQuestions();
+    }
+
+    function isQuestionAnswered(q, uAns) {
+        if (!uAns) return false;
+        if (q.type === 'MCQ') return !!uAns;
+        if (q.type === 'SA') return typeof uAns === 'string' && uAns.trim().length > 0;
+        if (q.type === 'TF') return Object.keys(uAns).length === q.subQuestions.length;
+        return false;
+    }
+
+    function isQuestionCorrect(q, uAns) {
+        if (!uAns) return false;
+        if (q.type === 'MCQ') return uAns === q.correctAnswer;
+        if (q.type === 'SA') return uAns.trim().replace(',', '.') === q.correctAnswer.trim().replace(',', '.');
+        if (q.type === 'TF') {
+            let ok = true;
+            q.subQuestions.forEach(sub => { if (uAns[sub.label] !== sub.correctValue) ok = false; });
+            return ok;
+        }
+        return false;
+    }
+
+    function getFilteredQuestions(lesson) {
+        if (!lesson) return [];
+        return lesson.questions.filter(q => {
+            const uAns = lesson.userAnswers[q.numberStr];
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`];
+            const isChecked = hasGraded[currentLessonIndex] || isSingleChecked;
+
+            if (currentFilterMode === 'WRONG') return isChecked && !isQuestionCorrect(q, uAns);
+            else if (currentFilterMode === 'UNANSWERED') return !isQuestionAnswered(q, uAns);
+            return true; 
+        });
+    }
+
+    function renderPagination() {
+        const pagContainer = document.getElementById('question-pagination'); pagContainer.innerHTML = '';
+        const lesson = listLessons[currentLessonIndex];
+        const filteredQuestions = getFilteredQuestions(lesson);
+
+        if (filteredQuestions.length === 0) {
+            pagContainer.innerHTML = `<span style="grid-column: span 5; font-size: 12px; color: #a0aec0;">Không có câu hỏi thỏa điều kiện.</span>`;
+            return;
+        }
+        
+        filteredQuestions.forEach(q => {
+            const item = document.createElement('div');
+            item.className = 'page-item'; item.innerText = q.numberStr;
+            if(q.numberStr === activeQuestionNumber) item.classList.add('active');
+
+            const uAns = lesson.userAnswers[q.numberStr];
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`];
+
+            if (hasGraded[currentLessonIndex] || isSingleChecked) {
+                const isCorrect = isQuestionCorrect(q, uAns);
+                item.classList.add(isCorrect ? 'correct' : 'wrong');
+            } else if (isQuestionAnswered(q, uAns)) {
+                item.classList.add('answered');
+            }
+
+            item.onclick = (e) => { e.stopPropagation(); focusAndScrollToQuestion(q.numberStr); closeSidebarOnMobile(); };
+            pagContainer.appendChild(item);
+        });
+    }
+
+    function renderQuestions() {
+        const displayZone = document.getElementById('questions-display'); displayZone.innerHTML = '';
+        const lesson = listLessons[currentLessonIndex];
+        const isAllGraded = hasGraded[currentLessonIndex] || false;
+        const filteredQuestions = getFilteredQuestions(lesson);
+
+        const h2 = document.createElement('h2'); h2.className = 'quiz-title'; h2.innerText = lesson.title;
+        displayZone.appendChild(h2);
+
+        if (filteredQuestions.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.style.padding = '30px'; emptyMsg.style.textAlign = 'center';
+            emptyMsg.style.background = '#fff'; emptyMsg.style.borderRadius = '8px';
+            emptyMsg.innerHTML = '🎉 Không có câu hỏi nào trong danh mục lọc này!';
+            displayZone.appendChild(emptyMsg);
+            renderPagination();
+            return;
+        }
+
+        filteredQuestions.forEach(q => {
+            const card = document.createElement('div');
+            card.className = 'question-card'; card.id = `q-card-id-${q.numberStr}`;
+            card.addEventListener('click', () => { if (activeQuestionNumber !== q.numberStr) focusAndScrollToQuestion(q.numberStr); });
+
+            let cleanQText = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:\s]/i, '').trim();
+            let imgUrls = extractAllImageUrls(cleanQText);
+            imgUrls.forEach(url => { cleanQText = cleanQText.replace(url, ''); });
+
+            const qHeader = document.createElement('div'); qHeader.className = 'question-header';
+            const qText = document.createElement('div'); qText.className = 'question-text'; qText.innerText = `Câu ${q.numberStr}: ${cleanQText.trim()}`;
+            qHeader.appendChild(qText);
+
+            const headerBtns = document.createElement('div'); headerBtns.className = 'header-buttons';
+            const speakBtn = document.createElement('button'); speakBtn.className = 'action-tool-btn'; speakBtn.innerHTML = '🔊';
+            speakBtn.onclick = (e) => { e.stopPropagation(); speakQuestion(q); };
+            const searchBtn = document.createElement('button'); searchBtn.className = 'action-tool-btn'; searchBtn.innerHTML = '🔍';
+            searchBtn.onclick = (e) => { e.stopPropagation(); searchQuestionOnGoogle(q); };
+            
+            headerBtns.appendChild(speakBtn); headerBtns.appendChild(searchBtn);
+            qHeader.appendChild(headerBtns); card.appendChild(qHeader);
+
+            if (imgUrls.length > 0) {
+                const gallery = document.createElement('div'); gallery.className = 'image-gallery';
+                imgUrls.forEach(url => {
+                    const img = document.createElement('img'); 
+                    img.src = url.trim(); 
+                    img.className = 'quiz-image';
+                    img.onclick = (e) => {
+                        e.stopPropagation();
+                        openLightbox(url.trim());
+                    };
+                    gallery.appendChild(img);
+                });
+                card.appendChild(gallery);
+            }
+
+            const savedAnswer = lesson.userAnswers[q.numberStr] || null;
+            const isSingleChecked = singleCheckedQuestions[`${currentLessonIndex}_${q.numberStr}`] || false;
+            const lockOptions = isAllGraded || isSingleChecked;
+
+            if (q.type === 'MCQ') {
+                const optGroup = document.createElement('div'); optGroup.className = 'options-group';
+                ['A', 'B', 'C', 'D'].forEach(letter => {
+                    if (!q.options[letter]) return;
+                    const label = document.createElement('label'); label.className = 'option-label';
+                    label.innerHTML = `<input type="radio" name="q_ans_${currentLessonIndex}_${q.numberStr}" value="${letter}" ${savedAnswer === letter ? 'checked' : ''} ${lockOptions ? 'disabled' : ''}><div><span><strong>${letter}.</strong> ${q.options[letter]}</span></div>`;
+                    if (lockOptions) {
+                        if (letter === q.correctAnswer) label.classList.add('correct');
+                        if (savedAnswer === letter && letter !== q.correctAnswer) label.classList.add('wrong');
+                    }
+                    label.querySelector('input').addEventListener('change', (e) => handleSelectMCQ(q.numberStr, e.target.value));
+                    optGroup.appendChild(label);
+                });
+                card.appendChild(optGroup);
+            } else if (q.type === 'TF') {
+                const tfGroup = document.createElement('div'); tfGroup.style.display = 'flex'; tfGroup.style.flexDirection = 'column';
+                q.subQuestions.forEach((sub, sIdx) => {
+                    const row = document.createElement('div'); row.className = `tf-row tf-row-item-${q.numberStr}-${sub.label}`;
+                    if (q.numberStr === activeQuestionNumber && sIdx === currentTFSubLabelIndex && !lockOptions) row.classList.add('active-tf-row');
+
+                    const txtDiv = document.createElement('div'); txtDiv.className = 'tf-text'; txtDiv.innerHTML = `<strong>${sub.label})</strong> ${sub.text}`;
+                    row.appendChild(txtDiv);
+
+                    const btnGroup = document.createElement('div'); btnGroup.className = 'tf-buttons';
+                    const bT = document.createElement('button'); bT.className = `tf-btn tf-btn-true-${q.numberStr}-${sub.label} ${savedAnswer?.[sub.label] === true ? 'selected-true' : ''}`; bT.innerText = 'Đúng';
+                    const bF = document.createElement('button'); bF.className = `tf-btn tf-btn-false-${q.numberStr}-${sub.label} ${savedAnswer?.[sub.label] === false ? 'selected-false' : ''}`; bF.innerText = 'Sai';
+
+                    if(lockOptions) {
+                        bT.disabled = true; bF.disabled = true;
+                        row.classList.add(savedAnswer?.[sub.label] === sub.correctValue ? 'correct-row' : 'wrong-row');
+                    } else {
+                        bT.onclick = () => handleSelectTF(q.numberStr, sub.label, true);
+                        bF.onclick = () => handleSelectTF(q.numberStr, sub.label, false);
+                    }
+                    btnGroup.appendChild(bT); btnGroup.appendChild(bF); row.appendChild(btnGroup); tfGroup.appendChild(row);
+                });
+                card.appendChild(tfGroup);
+            } else if (q.type === 'SA') {
+                const saGroup = document.createElement('div'); saGroup.className = 'sa-group';
+                const inputEl = document.createElement('input'); inputEl.type = 'text';
+                inputEl.className = 'sa-input sa-input-field-selector';
+                inputEl.id = `sa-input-id-${q.numberStr}`;
+                inputEl.placeholder = 'Nhập đáp số...'; inputEl.value = savedAnswer || ''; inputEl.disabled = lockOptions;
+
+                inputEl.addEventListener('change', (e) => handleSelectSA(q.numberStr, e.target.value));
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSelectSA(q.numberStr, inputEl.value);
+                        jumpToNextSAQuestion(q.numberStr);
+                    }
+                });
+
+                saGroup.appendChild(inputEl);
+                const resultZone = document.createElement('div'); resultZone.className = 'sa-result-zone';
+                if(lockOptions) {
+                    const isOk = (savedAnswer && savedAnswer.trim().replace(',', '.') === q.correctAnswer.trim().replace(',', '.'));
+                    resultZone.innerHTML = isOk ? `<span style="color:var(--success);">✓ Đúng. Gốc: ${q.correctAnswer}</span>` : `<span style="color:var(--error);">✗ Sai. Gốc: ${q.correctAnswer}</span>`;
+                    inputEl.classList.add(isOk ? 'correct' : 'wrong');
+                }
+                saGroup.appendChild(resultZone); card.appendChild(saGroup);
+            }
+            displayZone.appendChild(card);
+        });
+        highlightFocusedCard(); renderPagination();
+    }
+
+    function searchQuestionOnGoogle(q) {
+        let textOnly = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:]/i, '').trim();
+        extractAllImageUrls(textOnly).forEach(url => { textOnly = textOnly.replace(url, ''); });
+        let fullQuery = textOnly.trim();
+        if (q.type === 'MCQ') {
+            ['A', 'B', 'C', 'D'].forEach(l => { if(q.options[l]) fullQuery += ` ${l}. ${q.options[l]}`; });
+        } else if (q.type === 'TF') {
+            q.subQuestions.forEach(sub => { fullQuery += ` ${sub.label}) ${sub.text}`; });
+        }
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(fullQuery)}`, '_blank');
+    }
+
+    function speakQuestion(q) {
+        window.speechSynthesis.cancel();
+        let textToSpeak = q.text.replace(/^Câu\s+\d+(?:\.\d+)?[\.:]/i, '').trim();
+        extractAllImageUrls(textToSpeak).forEach(url => { textToSpeak = textToSpeak.replace(url, ''); });
+        let content = currentSpeechLanguage === 'vi-VN' ? `Câu ${q.numberStr}. ${textToSpeak}. ` : `Question ${q.numberStr}. ${textToSpeak}. `;
+        const utterance = new SpeechSynthesisUtterance(content);
+        utterance.lang = currentSpeechLanguage;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function jumpToNextSAQuestion(currentNumStr) {
+        const lesson = listLessons[currentLessonIndex];
+        const visibleQuestions = getFilteredQuestions(lesson);
+        const currentIdx = visibleQuestions.findIndex(q => q.numberStr === currentNumStr);
+        if (currentIdx === -1) return;
+
+        for (let i = currentIdx + 1; i < visibleQuestions.length; i++) {
+            if (visibleQuestions[i].type === 'SA') {
+                const nextQ = visibleQuestions[i];
+                focusAndScrollToQuestion(nextQ.numberStr);
+                setTimeout(() => {
+                    const nextInput = document.getElementById(`sa-input-id-${nextQ.numberStr}`);
+                    if (nextInput && !nextInput.disabled) { nextInput.focus(); nextInput.select(); }
+                }, 300);
+                return;
+            }
+        }
+        jumpToNextQuestion(currentNumStr);
+    }
+
+    function handleSelectMCQ(qNumStr, letter) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        lesson.userAnswers[qNumStr] = letter;
+        if (document.getElementById('auto-check-toggle').checked) {
+            singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+            renderQuestions(); setTimeout(() => { jumpToNextQuestion(qNumStr); }, 400);
+        } else { renderPagination(); }
+    }
+
+    function handleSelectTF(qNumStr, subLabel, value) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        if (!lesson.userAnswers[qNumStr]) lesson.userAnswers[qNumStr] = {};
+        lesson.userAnswers[qNumStr][subLabel] = value;
+        const qData = lesson.questions.find(q => q.numberStr === qNumStr);
+        currentTFSubLabelIndex++;
+
+        if (Object.keys(lesson.userAnswers[qNumStr]).length === qData.subQuestions.length) {
+            if (document.getElementById('auto-check-toggle').checked) {
+                singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+                renderQuestions(); setTimeout(() => { jumpToNextQuestion(qNumStr); }, 400);
+            } else { renderQuestions(); }
+        } else { renderQuestions(); }
+    }
+
+    function handleSelectSA(qNumStr, value) {
+        const lesson = listLessons[currentLessonIndex];
+        if (hasGraded[currentLessonIndex] || singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`]) return;
+        lesson.userAnswers[qNumStr] = value;
+        if (document.getElementById('auto-check-toggle').checked && value.trim().length > 0) {
+            singleCheckedQuestions[`${currentLessonIndex}_${qNumStr}`] = true;
+            renderQuestions();
+        } else { renderPagination(); }
+    }
+
+    function jumpToNextQuestion(currentNumStr) {
+        const lesson = listLessons[currentLessonIndex];
+        const visibleQuestions = getFilteredQuestions(lesson);
+        const idx = visibleQuestions.findIndex(q => q.numberStr === currentNumStr);
+        if (idx !== -1 && idx < visibleQuestions.length - 1) {
+            focusAndScrollToQuestion(visibleQuestions[idx + 1].numberStr);
+        }
+    }
+
+    function focusAndScrollToQuestion(qNumStr) {
+        activeQuestionNumber = qNumStr; currentTFSubLabelIndex = 0;
+        highlightFocusedCard(); renderQuestions();
+        const targetCard = document.getElementById(`q-card-id-${qNumStr}`);
+        if (targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function highlightFocusedCard() {
+        document.querySelectorAll('.question-card').forEach(card => card.classList.remove('focused-card'));
+        const currentCard = document.getElementById(`q-card-id-${activeQuestionNumber}`);
+        if(currentCard) currentCard.classList.add('focused-card');
+    }
+
+    function gradeQuiz() {
+        stopTimer(); const lesson = listLessons[currentLessonIndex];
+        let correctCount = 0;
+        lesson.questions.forEach(q => {
+            const uAns = lesson.userAnswers[q.numberStr];
+            if (isQuestionCorrect(q, uAns)) correctCount++;
+        });
+        hasGraded[currentLessonIndex] = true; renderQuestions();
+        showToast(`Bạn làm đúng ${correctCount}/${lesson.questions.length} câu. Thời gian: ${document.getElementById('timer-display').innerText}`, 'success', 5000);
+    }
+
+    function saveWorkSession() {
+        let rawData = document.getElementById('txt-input').value;
+        if (!rawData.trim() && listLessons.length > 0) {
+            let reconstructed = "";
+            listLessons.forEach(l => {
+                reconstructed += `\n${l.title}\n`;
+                l.questions.forEach(q => {
+                    reconstructed += `${q.rawBlock}\n\n`;
+                });
+            });
+            rawData = reconstructed.trim();
+        }
+
+        if(!rawData.trim()) {
+            showToast('Không có dữ liệu đề để save!', 'warning');
+            return;
+        }
+
+        const sessionState = {
+            listLessons: listLessons,
+            currentLessonIndex: currentLessonIndex,
+            hasGraded: hasGraded,
+            singleCheckedQuestions: singleCheckedQuestions,
+            activeQuestionNumber: activeQuestionNumber,
+            totalSeconds: totalSeconds,
+            currentFilterMode: currentFilterMode
+        };
+
+        let htmlContent = document.documentElement.outerHTML;
+
+        htmlContent = htmlContent.replace(
+            /const\s+PRE_LOADED_RAW_DATA\s*=\s*`[\s\S]*?`;/, 
+            `const PRE_LOADED_RAW_DATA = \`${rawData.replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`;`
+        );
+
+        const sessionAssignment = `const PRE_LOADED_SAVED_SESSION = ${JSON.stringify(sessionState)};`;
+        if (htmlContent.includes('const PRE_LOADED_SAVED_SESSION')) {
+            htmlContent = htmlContent.replace(/const\s+PRE_LOADED_SAVED_SESSION\s*=\s*[\s\S]*?;/, sessionAssignment);
+        } else {
+            htmlContent = htmlContent.replace('const PRE_LOADED_RAW_DATA =', sessionAssignment + '\n    const PRE_LOADED_SAVED_SESSION =');
+        }
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const timeLabel = `${year}-${month}-${day}_${hours}-${minutes}`;
+
+        const blob = new Blob(["<!DOCTYPE html>\n" + htmlContent], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = `trac_nghiem_save_${timeLabel}.html`; 
+        a.click();
+
+        showToast(`Đã save bài làm lúc ${hours}:${minutes} (${day}/${month}/${year})!`, 'success', 4000);
+    }
+
+    function saveOriginalQuizFile() {
+        let rawData = document.getElementById('txt-input').value;
+        if (!rawData.trim() && listLessons.length > 0) {
+            let reconstructed = "";
+            listLessons.forEach(l => {
+                reconstructed += `\n${l.title}\n`;
+                l.questions.forEach(q => {
+                    reconstructed += `${q.rawBlock}\n\n`;
+                });
+            });
+            rawData = reconstructed.trim();
+        }
+
+        if(!rawData.trim()) {
+            showToast('Không có dữ liệu đề để save!', 'warning');
+            return;
+        }
+
+        let htmlContent = document.documentElement.outerHTML;
+
+        htmlContent = htmlContent.replace(
+            /const\s+PRE_LOADED_RAW_DATA\s*=\s*`[\s\S]*?`;/, 
+            `const PRE_LOADED_RAW_DATA = \`${rawData.replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`;`
+        );
+
+        if (htmlContent.includes('const PRE_LOADED_SAVED_SESSION')) {
+            htmlContent = htmlContent.replace(/const\s+PRE_LOADED_SAVED_SESSION\s*=\s*[\s\S]*?;/, `const PRE_LOADED_SAVED_SESSION = null;`);
+        }
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const timeLabel = `${year}-${month}-${day}_${hours}-${minutes}`;
+
+        const blob = new Blob(["<!DOCTYPE html>\n" + htmlContent], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = `de_goc_${timeLabel}.html`; 
+        a.click();
+
+        showToast(`Đã xuất file đề gốc thành công lúc ${hours}:${minutes}!`, 'success', 4000);
+    }
+
+    function restoreSavedSession(session) {
+        listLessons = session.listLessons || [];
+        currentLessonIndex = session.currentLessonIndex || 0;
+        hasGraded = session.hasGraded || {};
+        singleCheckedQuestions = session.singleCheckedQuestions || {};
+        activeQuestionNumber = session.activeQuestionNumber || "1";
+        totalSeconds = session.totalSeconds || 0;
+        currentFilterMode = session.currentFilterMode || 'ALL';
+
+        document.getElementById('view-filter-select').value = currentFilterMode;
+
+        updateGlobalImageRegistry();
+
+        let reconstructed = "";
+        listLessons.forEach(l => {
+            reconstructed += `\n${l.title}\n`;
+            l.questions.forEach(q => {
+                reconstructed += `${q.rawBlock}\n\n`;
+            });
+        });
+        document.getElementById('txt-input').value = reconstructed.trim();
+
+        document.getElementById('import-container').classList.add('hidden');
+        document.getElementById('import-actions').classList.add('hidden');
+        document.getElementById('menu-section').classList.remove('hidden');
+        document.getElementById('quiz-actions').classList.remove('hidden');
+        document.getElementById('quiz-container-box').classList.remove('hidden');
+
+        renderSidebarMenu(); 
+        startTimer(); 
+        switchLesson(currentLessonIndex);
+        
+        showToast('Đã khôi phục thành công phiên làm việc từ file đã save!', 'info', 4000);
+    }
+</script>
+
+</body></html>
