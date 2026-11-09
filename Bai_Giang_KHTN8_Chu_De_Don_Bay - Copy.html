@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bài giảng KHTN 8: Chủ đề Đòn bẩy</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\[', right: '\\]', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false}
+      ],
+      throwOnError: false
+    });"></script>
+  <style>
+    :root {
+      --base-font-size: 1.25rem;
+      --bg-color: #f4f7fb;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --accent: #0d9488;
+      --accent-light: #ccfbf1;
+      --border-color: #cbd5e1;
+      --highlight-bg: #fef9c3;
+      --highlight-border: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-size: var(--base-font-size);
+      line-height: 1.65;
+      padding-bottom: 120px;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Navigation & Control Bar */
+    #control-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    body.hud-hidden #control-bar,
+    body.hud-hidden #bottom-nav,
+    body.hud-hidden #toc-drawer,
+    body.hud-hidden #shortcut-hint {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-20px);
+    }
+
+    body.hud-hidden #bottom-nav {
+      transform: translateY(20px);
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      color: #ffffff;
+    }
+
+    .btn.speaking {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #ffffff;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+      70% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+
+    /* Toggle Switch */
+    .switch-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f1f5f9;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--primary);
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+      z-index: 1001;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1080px;
+      margin: 85px auto 40px;
+      padding: 0 24px;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #0369a1 0%, #0d9488 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2);
+    }
+
+    .hero-card h1 {
+      font-size: 1.8em;
+      line-height: 1.3;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-card .subtitle {
+      font-size: 1.35em;
+      font-weight: 700;
+      color: #fef08a;
+      margin-bottom: 16px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.18);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      backdrop-filter: blur(4px);
+    }
+
+    section.lesson-section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    h2 {
+      font-size: 1.45em;
+      color: var(--primary-dark);
+      border-bottom: 3px solid var(--primary-light);
+      padding-bottom: 10px;
+      margin-bottom: 22px;
+    }
+
+    h3 {
+      font-size: 1.22em;
+      color: var(--accent);
+      margin-top: 26px;
+      margin-bottom: 14px;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      margin-left: 28px;
+      margin-bottom: 18px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    .callout {
+      background: var(--primary-light);
+      border-left: 5px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .callout-warn {
+      background: var(--highlight-bg);
+      border-left: 5px solid var(--highlight-border);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .formula-box {
+      background: #f8fafc;
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin: 20px auto;
+      text-align: center;
+      font-size: 1.3em;
+      font-weight: 700;
+      color: var(--primary-dark);
+      max-width: 580px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    }
+
+    /* Image Gallery Grid */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .img-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .img-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+    }
+
+    .img-card img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: zoom-in;
+    }
+
+    .img-caption {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Step-by-Step Reveal Mechanics */
+    .reveal-item {
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  background-color 0.6s ease;
+    }
+
+    body.step-mode .reveal-item.hidden-step {
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      height: 0;
+      overflow: hidden;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+    }
+
+    body.step-mode .reveal-item.active-step {
+      border-radius: 8px;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+      background-color: rgba(224, 242, 254, 0.35);
+    }
+
+    /* Bottom Floating Navigation */
+    #bottom-nav {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.9);
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+      backdrop-filter: blur(8px);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    #bottom-nav button {
+      background: rgba(255,255,255,0.14);
+      border: none;
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #bottom-nav button:hover {
+      background: var(--primary);
+    }
+
+    #step-counter {
+      font-size: 0.95rem;
+      font-weight: 600;
+      min-width: 90px;
+      text-align: center;
+      color: #bae6fd;
+    }
+
+    /* TOC Drawer */
+    #toc-drawer {
+      position: fixed;
+      top: 66px;
+      left: 20px;
+      width: 330px;
+      max-height: calc(100vh - 150px);
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      z-index: 999;
+      display: none;
+    }
+
+    #toc-drawer.open {
+      display: block;
+    }
+
+    #toc-drawer h4 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+
+    #toc-list {
+      list-style: none;
+      margin: 0;
+    }
+
+    #toc-list li {
+      margin-bottom: 6px;
+    }
+
+    #toc-list a {
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      display: block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    #toc-list a:hover {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Lightbox Modal */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.94);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 24px;
+    }
+
+    #lightbox.open {
+      display: flex;
+    }
+
+    #lightbox img {
+      max-width: 92vw;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transition: transform 0.2s ease;
+    }
+
+    #lightbox-caption {
+      color: #f1f5f9;
+      margin-top: 14px;
+      font-size: 1.05rem;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 28px;
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lightbox-close:hover {
+      background: #ef4444;
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .lightbox-nav:hover {
+      background: var(--primary);
+    }
+
+    #lb-prev { left: 24px; }
+    #lb-next { right: 24px; }
+
+    #shortcut-hint {
+      position: fixed;
+      bottom: 18px;
+      right: 20px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      z-index: 990;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    kbd {
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    @media (max-width: 768px) {
+      #shortcut-hint { display: none; }
+      section.lesson-section { padding: 20px; }
+      .hero-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body class="step-mode">
+
+  <!-- Progress Bar -->
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <!-- Top Control Bar -->
+  <header id="control-bar">
+    <div class="nav-group">
+      <button class="btn" id="btn-toc" title="Mục lục bài giảng">☰ Mục lục</button>
+      <div class="switch-wrapper" title="Chuyển đổi giữa chế độ hiện từng bước và hiện toàn bộ">
+        <span>Từng bước</span>
+        <label class="switch">
+          <input type="checkbox" id="mode-toggle">
+          <span class="slider"></span>
+        </label>
+        <span>Hiện tất cả</span>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="btn" id="btn-font-dec" title="Giảm cỡ chữ (Phím -)">A-</button>
+      <span id="font-size-label" style="font-size: 0.9rem; font-weight: 700; min-width: 58px; text-align: center;">1.25rem</span>
+      <button class="btn" id="btn-font-inc" title="Tăng cỡ chữ (Phím +)">A+</button>
+      <button class="btn btn-primary" id="btn-speak" title="Đọc nội dung vừa hiện (Phím Space)">🔊 Đọc (Space)</button>
+      <button class="btn" id="btn-hud" title="Ẩn/hiện thanh điều khiển (Phím H)">👁️ Ẩn thanh (H)</button>
+    </div>
+  </header>
+
+  <!-- Table of Contents Drawer -->
+  <nav id="toc-drawer">
+    <h4>Mục lục bài học</h4>
+    <ul id="toc-list"></ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="lesson-content">
+
+    <!-- HERO SECTION -->
+    <div class="hero-card" id="sec-intro">
+      <h1 class="reveal-item">BÀI HỌC: ĐÒN BẨY</h1>
+      <div class="subtitle reveal-item">KHOA HỌC TỰ NHIÊN 8</div>
+      <div class="hero-meta reveal-item">
+        <span class="badge">📘 Bộ sách: Kết nối tri thức với cuộc sống</span>
+      </div>
+    </div>
+
+    <!-- SECTION I -->
+    <section class="lesson-section" id="sec-1">
+      <h2 class="reveal-item">I. Khởi động: Vì sao dùng đòn bẩy?</h2>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/ctzjU4rV4jxRUEtOlLEmWB44Xa0YWpo4BmCq2GMd0hXpxfkl9OqorYrgezGNsPs-sbSvtNNZKaYHkAcFwG8uurMHbGR0UTwUt5XXfhWmzuGgRjJJB8ntFAtYrMMBE9W5nhBdoWPawOUmEtX4WQDCfFZ3qiW-rCoZD-SV4xqMXHQ?purpose=inline" alt="Xà beng">
+          <div class="img-caption">Dùng xà beng để nâng vật nặng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/aya0mfS-e-gRXrY23JEbG4hDEDnP86uJGHcaKS4hEFaZIzjoKKfTtS1XckZiJh8kbrAsvz36e_5F9miZoawHG4V7W-C8coj4WhcBEZmBRaFyy7-TBTDKJpmSJQI0oB8_p6vdDewPETk49llPI-ZDTjOCgWTGAhmnPoWUyjb8uuM?purpose=inline" alt="Đồ mở nắp chai">
+          <div class="img-caption">Dùng đồ mở nắp chai để bật nắp</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/txWNO1PkupVP-_FT63hnP5ZEEUCJa9wHR8rYdHMyNxssaSuewq199C-wwHPqvCydmNprCqRa1j7NTvQSIafXQc7knCIG6HElsZDkviwBJAVn6CnlWLCZTwogKf6pGEeotm7TcZ-xJh5a1jMOdpwKpPPDv-wsEgblxXHUiBIOpp1BoN41a_q1WBidD-GaXtw4?purpose=inline" alt="Kéo cắt giấy">
+          <div class="img-caption">Dùng kéo để cắt giấy</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Quan sát hình ảnh:</strong></p>
+      <ul>
+        <li class="reveal-item">Dùng xà beng để nâng vật nặng.</li>
+        <li class="reveal-item">Dùng đồ mở nắp chai để bật nắp.</li>
+        <li class="reveal-item">Dùng kéo để cắt giấy.</li>
+      </ul>
+
+      <div class="callout reveal-item">
+        <strong>Điểm chung:</strong> Các dụng cụ trên đều có thể hoạt động theo nguyên lí đòn bẩy.
+      </div>
+    </section>
+
+    <!-- SECTION II -->
+    <section class="lesson-section" id="sec-2">
+      <h2 class="reveal-item">II. Đòn bẩy là gì?</h2>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/tXqrvl-nX9So6EsvdSVjiEo71KbubRnx3WJICWP8MgQzQz4-Vbc7wckIgDGQMqkMCk6ZZFzpzNXFLVPEcpUKxbQiVf2L_40zJWTZ5h0KVGJ33XhZh_2TKeAFfRthuAOqn21pOrFsKIqiSgbtXhVTYwySICK3GdL4nGK7i_PxM_c?purpose=inline" alt="Các bộ phận của đòn bẩy">
+          <div class="img-caption">Cấu tạo chung của một đòn bẩy</div>
+        </div>
+      </div>
+
+      <div class="callout reveal-item">
+        <strong>Đòn bẩy</strong> là một vật rắn có thể quay quanh một điểm cố định gọi là điểm tựa.
+      </div>
+
+      <p class="reveal-item">Một đòn bẩy thường có ba yếu tố:</p>
+      <ul>
+        <li class="reveal-item"><strong>Điểm tựa (O):</strong> Điểm mà đòn bẩy quay quanh.</li>
+        <li class="reveal-item"><strong>Lực tác dụng ($F_1$):</strong> Lực do người hoặc vật tác dụng lên đòn bẩy.</li>
+        <li class="reveal-item"><strong>Lực cản ($F_2$):</strong> Lực do vật cần nâng hoặc dịch chuyển tác dụng lên đòn bẩy.</li>
+      </ul>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/xC5uIgjHHlDnR4FdbPD-r58z0J4lTMAOEadqYcnKOjcisywQXmfrUpjF1k_yMthku2TDQMyBuApCx6vAI9FLAviHySXGEL_cU0qH7lbiqLVD_TQ35Sp96yuZ8MN5s6MI4LtTQvTn7E4cp4D2YNEtBtGICkCKGyF0pw3j7gQExBg?purpose=inline" alt="Bập bênh minh họa đòn bẩy cân bằng">
+          <div class="img-caption">Hình ảnh: Bập bênh – một ví dụ thực tế về đòn bẩy.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION III -->
+    <section class="lesson-section" id="sec-3">
+      <h2 class="reveal-item">III. Tác dụng của đòn bẩy</h2>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/ctzjU4rV4jxRUEtOlLEmWB44Xa0YWpo4BmCq2GMd0hXpxfkl9OqorYrgezGNsPs-sbSvtNNZKaYHkAcFwG8uurMHbGR0UTwUt5XXfhWmzuGgRjJJB8ntFAtYrMMBE9W5nhBdoWPawOUmEtX4WQDCfFZ3qiW-rCoZD-SV4xqMXHQ?purpose=inline" alt="Xà beng">
+          <div class="img-caption">Xà beng hỗ trợ nâng vật</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/aAYgW5RIqbc6yry9LxbsvHJe2cjKZ1woQx7Jq0N606Ru4GDDNReGx8Zu_dC_WAspYwhE5zVH9Va_jF20oIcW1YeZSoR9XHQgqdwircZgUdCS1I4jS96s4lQDdA7QJ31-Up3P624FF3R82ZIIZ3ozrdIOB8_uaoHYvQQCTwnfcecwCYYMy07A3ULiGMBhNJ8g?purpose=inline" alt="Nhổ đinh bằng búa">
+          <div class="img-caption">Dùng búa nhổ đinh thay đổi hướng và độ lớn lực</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/wEHmBWU3u1mGWXBmQULq6Yk90sIKCrAoybMaW8mjdWp-TMpg4fgICgcOMZ2MdDbi7BAF_qj6MU_zl-cSXmZYNZaY7VhK--9abBRRqNLodXfQHe3IaZTakzYH7dMs6PJOsgxSSsoUQdRaf1CPG-byPXOn5ngfJrADewfJZebHlLOfQIxKA2J9brjrDFnfSnOR?purpose=inline" alt="Xe cút kít">
+          <div class="img-caption">Xe cút kít giúp vận chuyển vật nặng dễ dàng</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Đòn bẩy có thể giúp:</p>
+      <ul>
+        <li class="reveal-item">Làm thay đổi hướng của lực.</li>
+        <li class="reveal-item">Giúp nâng hoặc dịch chuyển vật nặng dễ dàng hơn.</li>
+        <li class="reveal-item">Thay đổi độ lớn của lực tùy thuộc vào vị trí tác dụng lực và điểm tựa.</li>
+      </ul>
+
+      <div class="callout reveal-item">
+        <strong>Kết luận:</strong> Khi cánh tay đòn của lực tác dụng lớn hơn cánh tay đòn của lực cản, ta có thể dùng lực nhỏ hơn để thắng lực cản.
+      </div>
+    </section>
+
+    <!-- SECTION IV -->
+    <section class="lesson-section" id="sec-4">
+      <h2 class="reveal-item">IV. Cánh tay đòn và điều kiện cân bằng</h2>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/25sdNkGs5RMyTJLpTUIAAMTMCJVz1j2MW_et5veG5cN_83aJbwq1y8xKFEmoBpoGTUqXbMiogyWNlc3e2cVmp8MvsKaQxzJ08kUhPdZZRuTAJHtJYYsLuhaOCPxjpcsgNoGlK8px5xNRoB0dQxBbAasgOk5WoYhma49pDJY9Epc?purpose=inline" alt="Sơ đồ cân bằng đòn bẩy">
+          <div class="img-caption">Khoảng cách từ điểm tựa đến giá của lực gọi là cánh tay đòn</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Cánh tay đòn</strong> là khoảng cách từ điểm tựa đến giá của lực.</p>
+
+      <p class="reveal-item">Khi đòn bẩy cân bằng:</p>
+      <div class="formula-box reveal-item">
+        $$F_1 	imes d_1 = F_2 	imes d_2$$
+      </div>
+
+      <p class="reveal-item">Trong đó:</p>
+      <ul>
+        <li class="reveal-item">$F_1, F_2$: Độ lớn của các lực ($	ext{N}$).</li>
+        <li class="reveal-item">$d_1, d_2$: Cánh tay đòn tương ứng ($	ext{m}$).</li>
+      </ul>
+
+      <div class="callout reveal-item">
+        <strong>Ví dụ:</strong> Muốn nâng một vật nặng, ta có thể đặt vật gần điểm tựa và tác dụng lực ở vị trí xa điểm tựa hơn.
+      </div>
+    </section>
+
+    <!-- SECTION V -->
+    <section class="lesson-section" id="sec-5">
+      <h2 class="reveal-item">V. Các loại đòn bẩy trong đời sống</h2>
+
+      <p class="reveal-item">Được chia thành các ứng dụng phổ biến:</p>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/SXMcH9tga57yAAFtdjYWmpVEdKTQws16VsbWKDiFY38Z5xUpOc2n0yYhZmNRduZaQUEc6iptnmaMtxG4VAByjbJMpCw4jultQXmWbwrSx3KFa6n4pHfPWUOZaxxXSGgQjG24oOJkCn2Yk4yStkQ7rZldy8u39Bbn2TDKIebTVL6QCbDFP0-fw4MJFWEAMRzw?purpose=inline" alt="Kéo cắt giấy">
+          <div class="img-caption">1. Kéo: Điểm tựa nằm giữa hai lực</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/rAFJtYGsLr4B0yjw7zZiR3OUgJtJsCOWJt6I7SNR7k1xFnHlP5iD3y6SBVrq1ogvyblLlJfi_Bn_qyuveexSrUN_0JxKEAgU4yqG1vb3Y1hcATlbZk7Ka2zUpnzLKD4Em_S_BUUlW1BsHhJp5UVhHc3E7WYT1wbZl9koe9N2-mM?purpose=inline" alt="Xe cút kít">
+          <div class="img-caption">2. Xe cút kít: Vật nằm giữa điểm tựa và lực tác dụng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/1HiPdZp3y2fZVvoD7fUTwMqJnivTF4MHd6Dj4q4NNhIKKaY2tl64BvlOpg6trbZiD_G94jUfQifLp2qB5U9-2-aE1nkYu6QI2nJ8neSx1JLXnJZVi7xsDc_gwvlo5lvnVEymKVZSIYTfRD8xTd6WZE7gqojk-gIMebcKj_wNOs8?purpose=inline" alt="Nhíp gắp">
+          <div class="img-caption">3. Nhíp: Lực tác dụng nằm giữa điểm tựa và vật</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/aya0mfS-e-gRXrY23JEbG4hDEDnP86uJGHcaKS4hEFaZIzjoKKfTtS1XckZiJh8kbrAsvz36e_5F9miZoawHG4V7W-C8coj4WhcBEZmBRaFyy7-TBTDKJpmSJQI0oB8_p6vdDewPETk49llPI-ZDTjOCgWTGAhmnPoWUyjb8uuM?purpose=inline" alt="Đồ mở nắp chai">
+          <div class="img-caption">4. Đồ mở nắp chai: Giúp bật nắp chai bằng lực nhỏ</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION VI -->
+    <section class="lesson-section" id="sec-6">
+      <h2 class="reveal-item">VI. Luyện tập và vận dụng</h2>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/bRnU4eu3NIgJe8CCjKNHmkmUtuoDd1wylDa9KMCZR9CD51AGXVNbMHsiWY-vcGSphclDI8zONBhRWN03k0UaRYWftIvAbNQiuSc19jmSkfj9mCfrgA7TudKmG8VNvRf6at6YP7tjrlnvCvRwxDmPDd4Kf3vF-6JY1BEmXWXuqz4?purpose=inline" alt="Xà beng chuyên dụng">
+          <div class="img-caption">Xà beng tác dụng lực hiệu quả</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/bJqfXIR0SdfWabZN65UQmES2o4Cv6bw-62tnZ3i2LUx9McNps2qd4znGlbFvBkqAp1-peQxFe7YJgddAVMizxYweLIj4_A1J0_5G2cb4lwNUbwfvn_l49VSOWdIsEMGxTSFFhPIh44id6lJkMRzrFILZrcBKvw7TLC_ArJ7mR0XuCIzv2Ft3mzT1Pf96MHwb?purpose=inline" alt="Cần câu cá">
+          <div class="img-caption">Cần câu cá hoạt động theo nguyên lí đòn bẩy</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/7pNScWhpQjWQRziAhjbvpktgL-k2n2qDg5uGAqC4nne1wHYGlKMWDFf-R230XgUHrduysw0lhaS4pJk56uel5Q6ZlvwuLKGorMukiHBzaHHMBvrcndG8BWUWAkei0zY9Moc9uCb_-aKGDM6ffCXUa7_7HVYb3DnjXoXRaj0Pl5Q?purpose=inline" alt="Kìm cắt">
+          <div class="img-caption">Kìm cắt ứng dụng đòn bẩy lực lớn</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>1. Kể tên ba dụng cụ hoạt động theo nguyên lí đòn bẩy:</strong> Kìm, xà beng, xe cút kít.</p>
+      <p class="reveal-item"><strong>2. Vì sao dùng xà beng dài giúp nâng vật nặng dễ hơn?</strong> Vì xà beng dài giúp tăng cánh tay đòn của lực tác dụng, từ đó giảm lực cần thiết để nâng vật.</p>
+      <p class="reveal-item"><strong>3. Xác định điểm tựa:</strong></p>
+      <ul>
+        <li class="reveal-item">Kéo: Trục chốt ở giữa hai lưỡi kéo.</li>
+        <li class="reveal-item">Bập bênh: Trục quay ở giữa thanh bập bênh.</li>
+        <li class="reveal-item">Xe cút kít: Trục bánh xe ở phía trước.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>4. Bài tập tính toán:</strong> Một đòn bẩy có $F_1 = 20	ext{ N}$, $d_1 = 40	ext{ cm}$, $d_2 = 10	ext{ cm}$. Tính $F_2$ khi đòn bẩy cân bằng.</p>
+
+      <div class="formula-box reveal-item">
+        $$F_2 = rac{F_1 	imes d_1}{d_2} = rac{20 	imes 40}{10} = 80	ext{ N}$$
+      </div>
+
+      <p class="reveal-item"><strong>Đáp số:</strong> $F_2 = 80	ext{ N}$.</p>
+
+      <div class="callout-warn reveal-item">
+        <strong>Ghi nhớ:</strong> Đòn bẩy là máy cơ đơn giản giúp thay đổi hướng và độ lớn của lực. Tác dụng của đòn bẩy phụ thuộc vào độ lớn của lực và cánh tay đòn.
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <div id="bottom-nav">
+    <button id="btn-prev" title="Lùi lại 1 bước (Phím ←)">◀ Lùi</button>
+    <span id="step-counter">1 / 1</span>
+    <button id="btn-next" title="Tiếp theo 1 bước (Phím →)">Tiếp ▶</button>
+    <button id="btn-reset" title="Quay lại từ đầu">↺ Đầu bài</button>
+  </div>
+
+  <!-- Shortcut Hint -->
+  <div id="shortcut-hint">
+    <kbd>→</kbd> Tiếp &nbsp;|&nbsp; <kbd>←</kbd> Lùi &nbsp;|&nbsp; <kbd>Space</kbd> Đọc &nbsp;|&nbsp; <kbd>+</kbd>/<kbd>-</kbd> Cỡ chữ &nbsp;|&nbsp; <kbd>H</kbd> Ẩn thanh
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox">
+    <button id="lightbox-close" title="Đóng (Esc)">✕</button>
+    <button class="lightbox-nav" id="lb-prev" title="Ảnh trước (←)">❮</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-caption"></div>
+    <button class="lightbox-nav" id="lb-next" title="Ảnh tiếp theo (→)">❯</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const body = document.body;
+      const revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+      const modeToggle = document.getElementById('mode-toggle');
+      const stepCounter = document.getElementById('step-counter');
+      const progressBar = document.getElementById('progress-bar');
+      const btnNext = document.getElementById('btn-next');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnReset = document.getElementById('btn-reset');
+      const btnFontInc = document.getElementById('btn-font-inc');
+      const btnFontDec = document.getElementById('btn-font-dec');
+      const fontSizeLabel = document.getElementById('font-size-label');
+      const btnSpeak = document.getElementById('btn-speak');
+      const btnHud = document.getElementById('btn-hud');
+      const btnToc = document.getElementById('btn-toc');
+      const tocDrawer = document.getElementById('toc-drawer');
+      const tocList = document.getElementById('toc-list');
+
+      let currentIndex = 0;
+      let isShowAll = false;
+      let currentFontSize = 1.25;
+      const MIN_FONT = 1.2;
+      const MAX_FONT = 2.6;
+
+      // Table of Contents
+      const headings = document.querySelectorAll('h2');
+      headings.forEach((h, idx) => {
+        if (!h.id) h.id = 'heading-' + idx;
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetIdx = revealItems.indexOf(h);
+          if (!isShowAll && targetIdx > currentIndex) {
+            revealUpTo(targetIdx, false);
+          }
+          h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          tocDrawer.classList.remove('open');
+        });
+        li.appendChild(a);
+        tocList.appendChild(li);
+      });
+
+      btnToc.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tocDrawer.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!tocDrawer.contains(e.target) && e.target !== btnToc) {
+          tocDrawer.classList.remove('open');
+        }
+      });
+
+      // Step-by-Step Reveal Logic
+      function updateUI() {
+        const total = revealItems.length;
+        revealItems.forEach((item, idx) => {
+          item.classList.remove('hidden-step', 'active-step');
+          if (!isShowAll) {
+            if (idx > currentIndex) {
+              item.classList.add('hidden-step');
+            } else if (idx === currentIndex) {
+              item.classList.add('active-step');
+            }
+          }
+        });
+
+        if (isShowAll) {
+          stepCounter.textContent = `Tất cả (${total})`;
+          progressBar.style.width = '100%';
+        } else {
+          stepCounter.textContent = `${currentIndex + 1} / ${total}`;
+          const pct = ((currentIndex + 1) / total) * 100;
+          progressBar.style.width = pct + '%';
+        }
+      }
+
+      function scrollToCenter(el) {
+        if (!el) return;
+        requestAnimationFrame(() => {
+          el.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        });
+      }
+
+      function revealUpTo(index, shouldScroll = true) {
+        if (index < 0) index = 0;
+        if (index >= revealItems.length) index = revealItems.length - 1;
+        currentIndex = index;
+        updateUI();
+        if (shouldScroll && !isShowAll) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+      }
+
+      function nextStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex < revealItems.length - 1) {
+          stopSpeech();
+          revealUpTo(currentIndex + 1, true);
+        }
+      }
+
+      function prevStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: -window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex > 0) {
+          stopSpeech();
+          revealUpTo(currentIndex - 1, true);
+        }
+      }
+
+      btnNext.addEventListener('click', nextStep);
+      btnPrev.addEventListener('click', prevStep);
+      btnReset.addEventListener('click', () => {
+        stopSpeech();
+        if (isShowAll) {
+          modeToggle.checked = false;
+          isShowAll = false;
+          body.classList.add('step-mode');
+        }
+        revealUpTo(0, true);
+      });
+
+      modeToggle.addEventListener('change', (e) => {
+        isShowAll = e.target.checked;
+        if (isShowAll) {
+          body.classList.remove('step-mode');
+        } else {
+          body.classList.add('step-mode');
+        }
+        updateUI();
+        if (!isShowAll) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+      });
+
+      revealUpTo(0, false);
+
+      // Font Size Controls (+ / -)
+      function setFontSize(size) {
+        currentFontSize = Math.min(MAX_FONT, Math.max(MIN_FONT, Number(size.toFixed(2))));
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'rem');
+        fontSizeLabel.textContent = currentFontSize.toFixed(2) + 'rem';
+      }
+
+      btnFontInc.addEventListener('click', () => setFontSize(currentFontSize + 0.1));
+      btnFontDec.addEventListener('click', () => setFontSize(currentFontSize - 0.1));
+
+      // Text-to-Speech (Spacebar)
+      function stopSpeech() {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        btnSpeak.classList.remove('speaking');
+        btnSpeak.textContent = '🔊 Đọc (Space)';
+      }
+
+      function speakCurrentItem() {
+        if (!('speechSynthesis' in window)) {
+          alert('Trình duyệt của bạn không hỗ trợ đọc văn bản tự động.');
+          return;
+        }
+
+        if (window.speechSynthesis.speaking) {
+          stopSpeech();
+          return;
+        }
+
+        const targetEl = revealItems[currentIndex];
+        if (!targetEl) return;
+
+        const clone = targetEl.cloneNode(true);
+        clone.querySelectorAll('.katex-mathml, .img-caption').forEach(el => el.remove());
+        let text = clone.innerText.replace(/\s+/g, ' ').trim();
+        if (!text) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'vi-VN';
+        utterance.rate = 1.0;
+
+        utterance.onstart = () => {
+          btnSpeak.classList.add('speaking');
+          btnSpeak.textContent = '⏹️ Dừng đọc';
+        };
+        utterance.onend = () => stopSpeech();
+        utterance.onerror = () => stopSpeech();
+
+        window.speechSynthesis.speak(utterance);
+      }
+
+      btnSpeak.addEventListener('click', speakCurrentItem);
+
+      // Toggle HUD (Key H)
+      function toggleHud() {
+        body.classList.toggle('hud-hidden');
+      }
+      btnHud.addEventListener('click', toggleHud);
+
+      // Lightbox Fullscreen Image Viewer
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxCaption = document.getElementById('lightbox-caption');
+      const lightboxClose = document.getElementById('lightbox-close');
+      const lbPrev = document.getElementById('lb-prev');
+      const lbNext = document.getElementById('lb-next');
+
+      const allImages = Array.from(document.querySelectorAll('.img-card img'));
+      let currentImgIdx = 0;
+
+      function openLightbox(idx) {
+        currentImgIdx = idx;
+        const img = allImages[currentImgIdx];
+        lightboxImg.src = img.src;
+        lightboxCaption.textContent = img.alt || '';
+        lightbox.classList.add('open');
+      }
+
+      function closeLightbox() {
+        lightbox.classList.remove('open');
+      }
+
+      allImages.forEach((img, idx) => {
+        img.addEventListener('click', () => openLightbox(idx));
+      });
+
+      lightboxClose.addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+      });
+
+      lbPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+      });
+
+      lbNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLightbox((currentImgIdx + 1) % allImages.length);
+      });
+
+      // Keyboard Shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        if (lightbox.classList.contains('open')) {
+          if (e.key === 'Escape') closeLightbox();
+          if (e.key === 'ArrowRight') openLightbox((currentImgIdx + 1) % allImages.length);
+          if (e.key === 'ArrowLeft') openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+          return;
+        }
+
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          nextStep();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevStep();
+        } else if (e.key === 'Space' || e.key === ' ') {
+          e.preventDefault();
+          speakCurrentItem();
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          setFontSize(currentFontSize + 0.1);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          setFontSize(currentFontSize - 0.1);
+        } else if (e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          toggleHud();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
