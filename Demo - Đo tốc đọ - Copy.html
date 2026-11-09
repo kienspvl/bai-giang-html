@@ -1,0 +1,3765 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light" style="--font-size: 28px;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Đọc Bài Giảng Markdown &amp; Word Chuyên Nghiệp v3.11</title>
+    <!-- MarkedJS: Chuyển Markdown sang HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Mammoth.js: Đọc file .docx Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js: Chuyển HTML từ Word sang Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    
+    <!-- KaTeX: Render Toán LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- MathJax v3 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['[', ']']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            },
+            startup: {
+                pageReady: function () {
+                    return MathJax.startup.defaultPageReady().then(function () {
+                        // Đảm bảo sau khi MathJax render xong, các khối toán học hiển thị chuẩn căn giữa
+                    });
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #020617;
+            --card-bg: #1e293b;
+            --text-color: #94a3b8;
+            --text-active: #f8fafc;
+            --border-color: #334155;
+            --accent-color: #38bdf8;
+            --highlight-bg: rgba(56, 189, 248, 0.12);
+            --sidebar-width: 280px;
+            --font-size: 20px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #475569;
+            --text-active: #0f172a;
+            --border-color: #cbd5e1;
+            --accent-color: #0284c7;
+            --highlight-bg: rgba(2, 132, 199, 0.12);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 8px 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .controls-group { 
+            display: flex; 
+            gap: 6px; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+
+        button, label.btn {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover, label.btn:hover { border-color: var(--accent-color); }
+        button.active { background-color: var(--accent-color); color: #fff; }
+
+        input[type="text"], input[type="number"], select {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 8px; border-radius: 6px; font-size: 13px;
+        }
+
+        .toggle-switch-wrapper { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-active); }
+        .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .toggle-switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* Ép hiển thị công thức MathJax chuẩn giữa màn hình */
+        mjx-container[jax="CHTML"][display="true"] {
+            display: block !important;
+            text-align: center !important;
+            margin: 1em 0 !important;
+        }
+
+        #selection-popup {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-width: 380px;
+        }
+        #selection-popup button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #selection-popup input[type="text"] {
+            width: 150px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 5;
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        #sidebar.open { margin-left: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; font-weight: bold; color: var(--text-active);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item {
+            padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            cursor: pointer; font-size: 14px; color: var(--text-color);
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-item:hover { background-color: var(--card-bg); color: var(--text-active); }
+        .toc-item.active-toc {
+            background-color: var(--highlight-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            border-left: 3px solid var(--accent-color);
+        }
+        .toc-item.level-1 { font-weight: bold; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; }
+        .toc-item.level-3 { padding-left: 30px; font-style: italic; }
+        .toc-item.level-4 { padding-left: 40px; opacity: 0.8; }
+
+        main {
+            flex: 1; overflow-y: auto;
+            padding: 30px 20px 150px 20px;
+            scroll-behavior: smooth;
+        }
+
+        #lecture-paper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            font-size: var(--font-size); line-height: 1.8;
+            transition: font-size 0.2s ease, background-color 0.3s;
+        }
+
+        #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4 { 
+            color: var(--accent-color); 
+            margin-top: 1.2em; margin-bottom: 0.5em; 
+            line-height: 1.4;
+        }
+        #lecture-paper p { margin: 0.8em 0; color: inherit; }
+        #lecture-paper ul, #lecture-paper ol { padding-left: 28px; margin: 0.8em 0; }
+        #lecture-paper li { margin-bottom: 6px; }
+        #lecture-paper strong { color: var(--accent-color); font-weight: 700; }
+        
+        #lecture-paper blockquote {
+            margin: 1em 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        #lecture-paper blockquote p { margin: 0.4em 0; }
+
+        #lecture-paper hr {
+            border: none;
+            border-top: 2px dashed var(--border-color);
+            margin: 2em 0;
+        }
+
+        /* KHUNG CHỨA HÌNH ẢNH TRONG BÀI GIẢNG (CĂN GIỮA & HOVER XÓA) */
+        .image-wrapper {
+            position: relative;
+            display: block;
+            margin: 16px auto;
+            width: fit-content;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        #lecture-paper img {
+            max-width: 100%; height: auto; max-height: 400px;
+            object-fit: contain; border-radius: 8px;
+            margin: 0 auto; display: block; cursor: zoom-in;
+            border: 1px solid var(--border-color);
+        }
+
+        .img-delete-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .image-wrapper:hover .img-delete-btn {
+            opacity: 1;
+        }
+
+        .img-delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        #lecture-paper table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        #lecture-paper th, #lecture-paper td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+        #lecture-paper th { background-color: var(--highlight-bg); }
+
+        .markdown-unit {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            border-radius: 6px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .markdown-unit.revealed {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+
+        li.markdown-unit.revealed, li.markdown-unit.active {
+            display: list-item !important;
+        }
+
+        .markdown-unit.active {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        hr.markdown-unit.active {
+            border-top-color: var(--accent-color);
+            box-shadow: none;
+            background-color: transparent;
+        }
+
+        body.mode-expand .markdown-unit {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+        body.mode-expand li.markdown-unit {
+            display: list-item !important;
+        }
+        body.mode-expand .markdown-unit.active {
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        footer {
+            background-color: var(--header-bg); 
+            padding: 10px 20px; display: flex; 
+            justify-content: center; align-items: center;
+            position: relative; border-top: 1px solid var(--border-color); 
+            font-size: 14px; color: var(--text-color); z-index: 10;
+        }
+
+        .author-info { font-weight: 600; color: var(--accent-color); text-align: center; }
+        #progress-counter { 
+            position: absolute; right: 20px; font-size: 13px; 
+            display: flex; align-items: center; gap: 4px;
+        }
+        #page-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); padding: 24px; border-radius: 12px;
+            width: 85%; max-width: 800px; display: flex; flex-direction: column; gap: 15px;
+            border: 1px solid var(--border-color); max-height: 90vh;
+        }
+
+        textarea {
+            width: 100%; height: 350px; background: var(--bg-color);
+            color: var(--text-active); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 8px; font-family: monospace; resize: vertical;
+        }
+
+        input[type="file"] { display: none; }
+
+        .history-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-color); padding: 10px 14px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .changelog-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .changelog-item:last-child { border-bottom: none; }
+        .changelog-version { font-weight: bold; color: var(--accent-color); font-size: 16px; }
+        .changelog-date { font-size: 12px; color: var(--text-color); margin-left: 8px; }
+        .changelog-list { margin: 6px 0 0 20px; padding: 0; font-size: 14px; line-height: 1.6; }
+
+        /* LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG */
+        #image-lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); z-index: 200;
+            justify-content: center; align-items: center; user-select: none;
+            cursor: pointer;
+        }
+
+        #image-lightbox img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            cursor: default;
+        }
+
+        .lightbox-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 220;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .lightbox-close-btn:hover {
+            background: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15); color: #fff;
+            border: none; padding: 16px 20px; font-size: 24px; cursor: pointer;
+            border-radius: 50%; transition: background 0.2s; z-index: 210;
+        }
+        .lightbox-nav:hover { background: var(--accent-color); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-size: 14px;
+            pointer-events: none;
+        }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast {
+            background-color: var(--card-bg); color: var(--text-active); border: 1px solid var(--accent-color);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        body.slideshow-mode header, body.slideshow-mode footer, body.slideshow-mode #sidebar { display: none !important; }
+        body.slideshow-mode main { padding: 40px 20px; }
+        #exit-slideshow-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 99;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        #exit-slideshow-btn:hover { background: var(--accent-color); color: #fff; }
+        body.slideshow-mode #exit-slideshow-btn { display: block; }
+
+        /* CẤU HÌNH IN (PRINT STYLES) - CHỈ IN NỘI DUNG BÀI GIẢNG */
+        @media print {
+            header, footer, #sidebar, .modal, #selection-popup, #image-lightbox, #toast-container, #exit-slideshow-btn, .img-delete-btn {
+                display: none !important;
+            }
+            body, .app-container, main {
+                background: #fff !important;
+                color: #000 !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #lecture-paper {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #000 !important;
+                background: #fff !important;
+            }
+            .markdown-unit {
+                display: block !important;
+                opacity: 1 !important;
+                color: #000 !important;
+                background: none !important;
+                box-shadow: none !important;
+            }
+            li.markdown-unit {
+                display: list-item !important;
+            }
+            #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4, #lecture-paper strong {
+                color: #000 !important;
+            }
+            #lecture-paper img {
+                max-height: 500px !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-math {
+  display: inline-block;
+  text-align: left;
+  line-height: 0;
+  text-indent: 0;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 100%;
+  font-size-adjust: none;
+  letter-spacing: normal;
+  border-collapse: collapse;
+  word-wrap: normal;
+  word-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  padding: 1px 0;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="CHTML"][display="true"][width="full"] {
+  display: flex;
+}
+
+mjx-container[jax="CHTML"][display="true"] mjx-math {
+  padding: 0;
+}
+
+mjx-container[jax="CHTML"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="CHTML"][justify="right"] {
+  text-align: right;
+}
+
+mjx-semantics {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mrow {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mi {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c {
+  display: inline-block;
+}
+
+mjx-utext {
+  display: inline-block;
+  padding: .75em 0 .2em 0;
+}
+
+mjx-mover {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mover:not([limits="false"]) {
+  padding-top: .1em;
+}
+
+mjx-mover:not([limits="false"]) > * {
+  display: block;
+  text-align: left;
+}
+
+mjx-mo {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-stretchy-h {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-stretchy-h > * {
+  display: table-cell;
+  width: 0;
+}
+
+mjx-stretchy-h > * > mjx-c {
+  display: inline-block;
+  transform: scalex(1.0000001);
+}
+
+mjx-stretchy-h > * > mjx-c::before {
+  display: inline-block;
+  width: initial;
+}
+
+mjx-stretchy-h > mjx-ext {
+  /* IE */ overflow: hidden;
+  /* others */ overflow: clip visible;
+  width: 100%;
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c::before {
+  transform: scalex(500);
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c {
+  width: 0;
+}
+
+mjx-stretchy-h > mjx-beg > mjx-c {
+  margin-right: -.1em;
+}
+
+mjx-stretchy-h > mjx-end > mjx-c {
+  margin-left: -.1em;
+}
+
+mjx-stretchy-v {
+  display: inline-block;
+}
+
+mjx-stretchy-v > * {
+  display: block;
+}
+
+mjx-stretchy-v > mjx-beg {
+  height: 0;
+}
+
+mjx-stretchy-v > mjx-end > mjx-c {
+  display: block;
+}
+
+mjx-stretchy-v > * > mjx-c {
+  transform: scaley(1.0000001);
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+mjx-stretchy-v > mjx-ext {
+  display: block;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0px solid transparent;
+  /* IE */ overflow: hidden;
+  /* others */ overflow: visible clip;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c::before {
+  width: initial;
+  box-sizing: border-box;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c {
+  transform: scaleY(500) translateY(.075em);
+  overflow: visible;
+}
+
+mjx-mark {
+  display: inline-block;
+  height: 0px;
+}
+
+mjx-msqrt {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-root {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+mjx-surd {
+  display: inline-block;
+  vertical-align: top;
+}
+
+mjx-sqrt {
+  display: inline-block;
+  padding-top: .07em;
+}
+
+mjx-sqrt > mjx-box {
+  border-top: .07em solid;
+}
+
+mjx-sqrt.mjx-tall > mjx-box {
+  padding-left: .3em;
+  margin-left: -.3em;
+}
+
+mjx-mn {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mspace {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-menclose {
+  display: inline-block;
+  text-align: left;
+  position: relative;
+}
+
+mjx-menclose > mjx-dstrike {
+  display: inline-block;
+  left: 0;
+  top: 0;
+  position: absolute;
+  border-top: 0.067em solid;
+  transform-origin: top left;
+}
+
+mjx-menclose > mjx-ustrike {
+  display: inline-block;
+  left: 0;
+  bottom: 0;
+  position: absolute;
+  border-top: 0.067em solid;
+  transform-origin: bottom left;
+}
+
+mjx-menclose > mjx-hstrike {
+  border-top: 0.067em solid;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 50%;
+  transform: translateY(0.034em);
+}
+
+mjx-menclose > mjx-vstrike {
+  border-left: 0.067em solid;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 50%;
+  transform: translateX(0.034em);
+}
+
+mjx-menclose > mjx-rbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  border: 0.067em solid;
+  border-radius: 0.267em;
+}
+
+mjx-menclose > mjx-cbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  border: 0.067em solid;
+  border-radius: 50%;
+}
+
+mjx-menclose > mjx-arrow {
+  position: absolute;
+  left: 0;
+  bottom: 50%;
+  height: 0;
+  width: 0;
+}
+
+mjx-menclose > mjx-arrow > * {
+  display: block;
+  position: absolute;
+  transform-origin: bottom;
+  border-left: 0.268em solid;
+  border-right: 0;
+  box-sizing: border-box;
+}
+
+mjx-menclose > mjx-arrow > mjx-aline {
+  left: 0;
+  top: -0.034em;
+  right: 0.201em;
+  height: 0;
+  border-top: 0.067em solid;
+  border-left: 0;
+}
+
+mjx-menclose > mjx-arrow[double] > mjx-aline {
+  left: 0.201em;
+  height: 0;
+}
+
+mjx-menclose > mjx-arrow > mjx-rthead {
+  transform: skewX(0.464rad);
+  right: 0;
+  bottom: -1px;
+  border-bottom: 1px solid transparent;
+  border-top: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-rbhead {
+  transform: skewX(-0.464rad);
+  transform-origin: top;
+  right: 0;
+  top: -1px;
+  border-top: 1px solid transparent;
+  border-bottom: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-lthead {
+  transform: skewX(-0.464rad);
+  left: 0;
+  bottom: -1px;
+  border-left: 0;
+  border-right: 0.268em solid;
+  border-bottom: 1px solid transparent;
+  border-top: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-lbhead {
+  transform: skewX(0.464rad);
+  transform-origin: top;
+  left: 0;
+  top: -1px;
+  border-left: 0;
+  border-right: 0.268em solid;
+  border-top: 1px solid transparent;
+  border-bottom: 0.134em solid transparent;
+}
+
+mjx-menclose > dbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.3em;
+  width: 0.6em;
+  border: 0.067em solid;
+  border-radius: 50%;
+  clip-path: inset(0 0 0 0.3em);
+  box-sizing: border-box;
+}
+
+mjx-mfrac {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-frac {
+  display: inline-block;
+  vertical-align: 0.17em;
+  padding: 0 .22em;
+}
+
+mjx-frac[type="d"] {
+  vertical-align: .04em;
+}
+
+mjx-frac[delims] {
+  padding: 0 .1em;
+}
+
+mjx-frac[atop] {
+  padding: 0 .12em;
+}
+
+mjx-frac[atop][delims] {
+  padding: 0;
+}
+
+mjx-dtable {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-dtable > * {
+  font-size: 2000%;
+}
+
+mjx-dbox {
+  display: block;
+  font-size: 5%;
+}
+
+mjx-num {
+  display: block;
+  text-align: center;
+}
+
+mjx-den {
+  display: block;
+  text-align: center;
+}
+
+mjx-mfrac[bevelled] > mjx-num {
+  display: inline-block;
+}
+
+mjx-mfrac[bevelled] > mjx-den {
+  display: inline-block;
+}
+
+mjx-den[align="right"], mjx-num[align="right"] {
+  text-align: right;
+}
+
+mjx-den[align="left"], mjx-num[align="left"] {
+  text-align: left;
+}
+
+mjx-nstrut {
+  display: inline-block;
+  height: .054em;
+  width: 0;
+  vertical-align: -.054em;
+}
+
+mjx-nstrut[type="d"] {
+  height: .217em;
+  vertical-align: -.217em;
+}
+
+mjx-dstrut {
+  display: inline-block;
+  height: .505em;
+  width: 0;
+}
+
+mjx-dstrut[type="d"] {
+  height: .726em;
+}
+
+mjx-line {
+  display: block;
+  box-sizing: border-box;
+  min-height: 1px;
+  height: .06em;
+  border-top: .06em solid;
+  margin: .06em -.1em;
+  overflow: hidden;
+}
+
+mjx-line[type="d"] {
+  margin: .18em -.1em;
+}
+
+mjx-msub {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-munder {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-over {
+  text-align: left;
+}
+
+mjx-munder:not([limits="false"]) {
+  display: inline-table;
+}
+
+mjx-munder > mjx-row {
+  text-align: left;
+}
+
+mjx-under {
+  padding-bottom: .1em;
+}
+
+mjx-msup {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mtable {
+  display: inline-block;
+  text-align: center;
+  vertical-align: .25em;
+  position: relative;
+  box-sizing: border-box;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+mjx-mstyle[size="s"] mjx-mtable {
+  vertical-align: .354em;
+}
+
+mjx-labels {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+mjx-table {
+  display: inline-block;
+  vertical-align: -.5ex;
+  box-sizing: border-box;
+}
+
+mjx-table > mjx-itable {
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+mjx-labels > mjx-itable {
+  position: absolute;
+  top: 0;
+}
+
+mjx-mtable[justify="left"] {
+  text-align: left;
+}
+
+mjx-mtable[justify="right"] {
+  text-align: right;
+}
+
+mjx-mtable[justify="left"][side="left"] {
+  padding-right: 0 ! important;
+}
+
+mjx-mtable[justify="left"][side="right"] {
+  padding-left: 0 ! important;
+}
+
+mjx-mtable[justify="right"][side="left"] {
+  padding-right: 0 ! important;
+}
+
+mjx-mtable[justify="right"][side="right"] {
+  padding-left: 0 ! important;
+}
+
+mjx-mtable[align] {
+  vertical-align: baseline;
+}
+
+mjx-mtable[align="top"] > mjx-table {
+  vertical-align: top;
+}
+
+mjx-mtable[align="bottom"] > mjx-table {
+  vertical-align: bottom;
+}
+
+mjx-mtable[side="right"] mjx-labels {
+  min-width: 100%;
+}
+
+mjx-mtr {
+  display: table-row;
+  text-align: left;
+}
+
+mjx-mtr[rowalign="top"] > mjx-mtd {
+  vertical-align: top;
+}
+
+mjx-mtr[rowalign="center"] > mjx-mtd {
+  vertical-align: middle;
+}
+
+mjx-mtr[rowalign="bottom"] > mjx-mtd {
+  vertical-align: bottom;
+}
+
+mjx-mtr[rowalign="baseline"] > mjx-mtd {
+  vertical-align: baseline;
+}
+
+mjx-mtr[rowalign="axis"] > mjx-mtd {
+  vertical-align: .25em;
+}
+
+mjx-mtd {
+  display: table-cell;
+  text-align: center;
+  padding: .215em .4em;
+}
+
+mjx-mtd:first-child {
+  padding-left: 0;
+}
+
+mjx-mtd:last-child {
+  padding-right: 0;
+}
+
+mjx-mtable > * > mjx-itable > *:first-child > mjx-mtd {
+  padding-top: 0;
+}
+
+mjx-mtable > * > mjx-itable > *:last-child > mjx-mtd {
+  padding-bottom: 0;
+}
+
+mjx-tstrut {
+  display: inline-block;
+  height: 1em;
+  vertical-align: -.25em;
+}
+
+mjx-labels[align="left"] > mjx-mtr > mjx-mtd {
+  text-align: left;
+}
+
+mjx-labels[align="right"] > mjx-mtr > mjx-mtd {
+  text-align: right;
+}
+
+mjx-mtd[extra] {
+  padding: 0;
+}
+
+mjx-mtd[rowalign="top"] {
+  vertical-align: top;
+}
+
+mjx-mtd[rowalign="center"] {
+  vertical-align: middle;
+}
+
+mjx-mtd[rowalign="bottom"] {
+  vertical-align: bottom;
+}
+
+mjx-mtd[rowalign="baseline"] {
+  vertical-align: baseline;
+}
+
+mjx-mtd[rowalign="axis"] {
+  vertical-align: .25em;
+}
+
+mjx-msubsup {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-script {
+  display: inline-block;
+  padding-right: .05em;
+  padding-left: .033em;
+}
+
+mjx-script > mjx-spacer {
+  display: block;
+}
+
+mjx-TeXAtom {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+
+mjx-stretchy-v.mjx-c28 mjx-beg mjx-c::before {
+  content: "\239B";
+  padding: 1.154em 0.875em 0.655em 0;
+}
+
+mjx-stretchy-v.mjx-c28 mjx-ext mjx-c::before {
+  content: "\239C";
+  width: 0.875em;
+}
+
+mjx-stretchy-v.mjx-c28 mjx-end mjx-c::before {
+  content: "\239D";
+  padding: 1.165em 0.875em 0.644em 0;
+}
+
+mjx-stretchy-v.mjx-c28 > mjx-end {
+  margin-top: -1.809em;
+}
+
+mjx-stretchy-v.mjx-c28 > mjx-ext {
+  border-top-width: 1.779em;
+  border-bottom-width: 1.779em;
+}
+
+mjx-stretchy-v.mjx-c29 mjx-beg mjx-c::before {
+  content: "\239E";
+  padding: 1.154em 0.875em 0.655em 0;
+}
+
+mjx-stretchy-v.mjx-c29 mjx-ext mjx-c::before {
+  content: "\239F";
+  width: 0.875em;
+}
+
+mjx-stretchy-v.mjx-c29 mjx-end mjx-c::before {
+  content: "\23A0";
+  padding: 1.165em 0.875em 0.644em 0;
+}
+
+mjx-stretchy-v.mjx-c29 > mjx-end {
+  margin-top: -1.809em;
+}
+
+mjx-stretchy-v.mjx-c29 > mjx-ext {
+  border-top-width: 1.779em;
+  border-bottom-width: 1.779em;
+}
+
+mjx-c.mjx-c2223::before {
+  padding: 0.75em 0.278em 0.249em 0;
+  content: "\2223";
+}
+
+mjx-c.mjx-c20D7.TEX-V::before {
+  padding: 0.714em 0.5em 0 0;
+  content: "\2192";
+}
+
+mjx-c.mjx-c1D43F.TEX-I::before {
+  padding: 0.683em 0.681em 0 0;
+  content: "L";
+}
+
+mjx-c.mjx-c3D::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "=";
+}
+
+mjx-c.mjx-c221A.TEX-S2::before {
+  padding: 1.15em 1.02em 0.65em 0;
+  content: "\221A";
+}
+
+mjx-c.mjx-c1D459.TEX-I::before {
+  padding: 0.694em 0.298em 0.011em 0;
+  content: "l";
+}
+
+mjx-c.mjx-c28::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c2B::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "+";
+}
+
+mjx-c.mjx-c31::before {
+  padding: 0.666em 0.5em 0 0;
+  content: "1";
+}
+
+mjx-c.mjx-c29::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c210F.TEX-A::before {
+  padding: 0.695em 0.562em 0.013em 0;
+  content: "\210F";
+}
+
+mjx-c.mjx-c1D45B.TEX-I::before {
+  padding: 0.442em 0.6em 0.011em 0;
+  content: "n";
+}
+
+mjx-c.mjx-c2C::before {
+  padding: 0.121em 0.278em 0.194em 0;
+  content: ",";
+}
+
+mjx-c.mjx-c30::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "0";
+}
+
+mjx-c.mjx-c32::before {
+  padding: 0.666em 0.5em 0 0;
+  content: "2";
+}
+
+mjx-c.mjx-c221A::before {
+  padding: 0.8em 0.853em 0.2em 0;
+  content: "\221A";
+}
+
+mjx-c.mjx-c1D460.TEX-I::before {
+  padding: 0.442em 0.469em 0.01em 0;
+  content: "s";
+}
+
+mjx-c.mjx-c1D446.TEX-I::before {
+  padding: 0.705em 0.645em 0.022em 0;
+  content: "S";
+}
+
+mjx-c.mjx-c33::before {
+  padding: 0.665em 0.5em 0.022em 0;
+  content: "3";
+}
+
+mjx-c.mjx-c1D456.TEX-I::before {
+  padding: 0.661em 0.345em 0.011em 0;
+  content: "i";
+}
+
+mjx-c.mjx-c1D43D.TEX-I::before {
+  padding: 0.683em 0.633em 0.022em 0;
+  content: "J";
+}
+
+mjx-c.mjx-c2C6.TEX-S1::before {
+  padding: 0.744em 0.556em 0 0;
+  content: "\2C6";
+}
+
+mjx-c.mjx-c2211.TEX-S2::before {
+  padding: 0.95em 1.444em 0.45em 0;
+  content: "\2211";
+}
+
+mjx-c.mjx-c1D434.TEX-I::before {
+  padding: 0.716em 0.75em 0 0;
+  content: "A";
+}
+
+mjx-c.mjx-c2026::before {
+  padding: 0.12em 1.172em 0 0;
+  content: "\2026";
+}
+
+mjx-c.mjx-c2F::before {
+  padding: 0.75em 0.5em 0.25em 0;
+  content: "/";
+}
+
+mjx-c.mjx-c35::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "5";
+}
+
+mjx-c.mjx-c1D467.TEX-I::before {
+  padding: 0.442em 0.465em 0.011em 0;
+  content: "z";
+}
+
+mjx-c.mjx-c1D45A.TEX-I::before {
+  padding: 0.442em 0.878em 0.011em 0;
+  content: "m";
+}
+
+mjx-c.mjx-c2212::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "\2212";
+}
+
+mjx-c.mjx-c1D707.TEX-I::before {
+  padding: 0.442em 0.603em 0.216em 0;
+  content: "\3BC";
+}
+
+mjx-c.mjx-c1D454.TEX-I::before {
+  padding: 0.442em 0.477em 0.205em 0;
+  content: "g";
+}
+
+mjx-c.mjx-c1D45E.TEX-I::before {
+  padding: 0.442em 0.46em 0.194em 0;
+  content: "q";
+}
+
+mjx-c.mjx-c1D450.TEX-I::before {
+  padding: 0.442em 0.433em 0.011em 0;
+  content: "c";
+}
+
+mjx-c.mjx-c1D452.TEX-I::before {
+  padding: 0.442em 0.466em 0.011em 0;
+  content: "e";
+}
+
+mjx-c.mjx-c2248::before {
+  padding: 0.483em 0.778em 0 0;
+  content: "\2248";
+}
+
+mjx-c.mjx-c1D441.TEX-I::before {
+  padding: 0.683em 0.888em 0 0;
+  content: "N";
+}
+
+mjx-c.mjx-c1D45D.TEX-I::before {
+  padding: 0.442em 0.503em 0.194em 0;
+  content: "p";
+}
+
+mjx-c.mjx-c1D435.TEX-I::before {
+  padding: 0.683em 0.759em 0 0;
+  content: "B";
+}
+
+mjx-c.mjx-c38::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "8";
+}
+
+mjx-c.mjx-c36::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "6";
+}
+
+mjx-c.mjx-c1D440.TEX-I::before {
+  padding: 0.683em 1.051em 0 0;
+  content: "M";
+}
+
+mjx-c.mjx-cD7::before {
+  padding: 0.491em 0.778em 0 0;
+  content: "\D7";
+}
+
+mjx-c.mjx-c1D6FC.TEX-I::before {
+  padding: 0.442em 0.64em 0.011em 0;
+  content: "\3B1";
+}
+
+mjx-c.mjx-c2220::before {
+  padding: 0.694em 0.722em 0 0;
+  content: "\2220";
+}
+
+mjx-c.mjx-c73::before {
+  padding: 0.448em 0.394em 0.011em 0;
+  content: "s";
+}
+
+mjx-c.mjx-c69::before {
+  padding: 0.669em 0.278em 0 0;
+  content: "i";
+}
+
+mjx-c.mjx-c6E::before {
+  padding: 0.442em 0.556em 0 0;
+  content: "n";
+}
+
+mjx-c.mjx-c2061::before {
+  padding: 0 0 0 0;
+  content: "";
+}
+
+mjx-c.mjx-c1D451.TEX-I::before {
+  padding: 0.694em 0.52em 0.01em 0;
+  content: "d";
+}
+
+mjx-c.mjx-c1D461.TEX-I::before {
+  padding: 0.626em 0.361em 0.011em 0;
+  content: "t";
+}
+
+mjx-c.mjx-c22C5::before {
+  padding: 0.31em 0.278em 0 0;
+  content: "\22C5";
+}
+
+mjx-c.mjx-c68::before {
+  padding: 0.694em 0.556em 0 0;
+  content: "h";
+}
+
+mjx-c.mjx-c2CB::before {
+  padding: 0.699em 0.5em 0 0;
+  content: "\2CB";
+}
+
+mjx-c.mjx-c2D8::before {
+  padding: 0.694em 0.5em 0 0;
+  content: "\2D8";
+}
+
+mjx-c.mjx-c61::before {
+  padding: 0.448em 0.5em 0.011em 0;
+  content: "a";
+}
+
+mjx-c.mjx-c67::before {
+  padding: 0.453em 0.5em 0.206em 0;
+  content: "g";
+}
+
+mjx-c.mjx-cA0::before {
+  padding: 0 0.25em 0 0;
+  content: "\A0";
+}
+
+mjx-c.mjx-c2CA::before {
+  padding: 0.699em 0.5em 0 0;
+  content: "\2CA";
+}
+
+mjx-c.mjx-c2C6::before {
+  padding: 0.694em 0.5em 0 0;
+  content: "\2C6";
+}
+
+mjx-c.mjx-c6F::before {
+  padding: 0.448em 0.5em 0.01em 0;
+  content: "o";
+}
+
+mjx-c.mjx-c1D714.TEX-I::before {
+  padding: 0.443em 0.622em 0.011em 0;
+  content: "\3C9";
+}
+
+mjx-c.mjx-c3C::before {
+  padding: 0.54em 0.778em 0.04em 0;
+  content: "<";
+}
+
+mjx-c.mjx-c1D453.TEX-I::before {
+  padding: 0.705em 0.55em 0.205em 0;
+  content: "f";
+}
+
+mjx-c.mjx-c1D70B.TEX-I::before {
+  padding: 0.431em 0.57em 0.011em 0;
+  content: "\3C0";
+}
+
+mjx-c.mjx-c1D6FE.TEX-I::before {
+  padding: 0.441em 0.543em 0.216em 0;
+  content: "\3B3";
+}
+
+mjx-c.mjx-c1D442.TEX-I::before {
+  padding: 0.704em 0.763em 0.022em 0;
+  content: "O";
+}
+
+mjx-c.mjx-c2032::before {
+  padding: 0.56em 0.275em 0 0;
+  content: "\2032";
+}
+
+mjx-c.mjx-c226A::before {
+  padding: 0.568em 1em 0.067em 0;
+  content: "\226A";
+}
+
+mjx-c.mjx-c63::before {
+  padding: 0.448em 0.444em 0.011em 0;
+  content: "c";
+}
+
+mjx-c.mjx-c3A9::before {
+  padding: 0.704em 0.722em 0 0;
+  content: "\3A9";
+}
+
+mjx-c.mjx-c1D457.TEX-I::before {
+  padding: 0.661em 0.412em 0.204em 0;
+  content: "j";
+}
+
+mjx-c.mjx-c1D465.TEX-I::before {
+  padding: 0.442em 0.572em 0.011em 0;
+  content: "x";
+}
+
+mjx-c.mjx-c1D466.TEX-I::before {
+  padding: 0.442em 0.49em 0.205em 0;
+  content: "y";
+}
+
+mjx-c.mjx-c74::before {
+  padding: 0.615em 0.389em 0.01em 0;
+  content: "t";
+}
+
+mjx-c.mjx-c1D447.TEX-I::before {
+  padding: 0.677em 0.704em 0 0;
+  content: "T";
+}
+
+mjx-c.mjx-c1D438.TEX-I::before {
+  padding: 0.68em 0.764em 0 0;
+  content: "E";
+}
+
+mjx-c.mjx-c210E.TEX-I::before {
+  padding: 0.694em 0.576em 0.011em 0;
+  content: "h";
+}
+
+mjx-c.mjx-c37::before {
+  padding: 0.676em 0.5em 0.022em 0;
+  content: "7";
+}
+
+mjx-c.mjx-c1D705.TEX-I::before {
+  padding: 0.442em 0.576em 0.011em 0;
+  content: "\3BA";
+}
+
+mjx-c.mjx-c28.TEX-S3::before {
+  padding: 1.45em 0.736em 0.949em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c29.TEX-S3::before {
+  padding: 1.45em 0.736em 0.949em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c2020::before {
+  padding: 0.705em 0.444em 0.216em 0;
+  content: "\2020";
+}
+
+mjx-c.mjx-c1D44E.TEX-I::before {
+  padding: 0.441em 0.529em 0.01em 0;
+  content: "a";
+}
+
+mjx-c.mjx-c1D44F.TEX-I::before {
+  padding: 0.694em 0.429em 0.011em 0;
+  content: "b";
+}
+
+mjx-c.mjx-c1D703.TEX-I::before {
+  padding: 0.705em 0.469em 0.01em 0;
+  content: "\3B8";
+}
+
+mjx-c.mjx-c3E::before {
+  padding: 0.54em 0.778em 0.04em 0;
+  content: ">";
+}
+
+mjx-c.mjx-c28.TEX-S2::before {
+  padding: 1.15em 0.597em 0.649em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c1D70E.TEX-I::before {
+  padding: 0.431em 0.571em 0.011em 0;
+  content: "\3C3";
+}
+
+mjx-c.mjx-c1D458.TEX-I::before {
+  padding: 0.694em 0.521em 0.011em 0;
+  content: "k";
+}
+
+mjx-c.mjx-c29.TEX-S2::before {
+  padding: 1.15em 0.597em 0.649em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c1D448.TEX-I::before {
+  padding: 0.683em 0.767em 0.022em 0;
+  content: "U";
+}
+
+mjx-c.mjx-c2202::before {
+  padding: 0.715em 0.566em 0.022em 0;
+  content: "\2202";
+}
+
+mjx-c.mjx-c1D43B.TEX-I::before {
+  padding: 0.683em 0.888em 0 0;
+  content: "H";
+}
+
+mjx-c.mjx-c27E8::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: "\27E8";
+}
+
+mjx-c.mjx-c27E9::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: "\27E9";
+}
+
+mjx-c.mjx-c28.TEX-S1::before {
+  padding: 0.85em 0.458em 0.349em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c29.TEX-S1::before {
+  padding: 0.85em 0.458em 0.349em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c5B.TEX-S3::before {
+  padding: 1.45em 0.528em 0.949em 0;
+  content: "[";
+}
+
+mjx-c.mjx-c5D.TEX-S3::before {
+  padding: 1.45em 0.528em 0.949em 0;
+  content: "]";
+}
+
+mjx-c.mjx-c70::before {
+  padding: 0.442em 0.556em 0.194em 0;
+  content: "p";
+}
+
+mjx-c.mjx-c221A.TEX-S3::before {
+  padding: 1.45em 1.02em 0.95em 0;
+  content: "\221A";
+}
+
+mjx-c.mjx-c34::before {
+  padding: 0.677em 0.5em 0 0;
+  content: "4";
+}
+
+mjx-c.mjx-c5B.TEX-S1::before {
+  padding: 0.85em 0.417em 0.349em 0;
+  content: "[";
+}
+
+mjx-c.mjx-c5D.TEX-S1::before {
+  padding: 0.85em 0.417em 0.349em 0;
+  content: "]";
+}
+
+mjx-c.mjx-c27F6::before {
+  padding: 0.511em 1.638em 0.011em 0;
+  content: "\27F6";
+}
+
+mjx-c.mjx-c2DC.TEX-S1::before {
+  padding: 0.722em 0.556em 0 0;
+  content: "\2DC";
+}
+
+mjx-c.mjx-c28.TEX-S4::before {
+  padding: 1.75em 0.792em 1.249em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c29.TEX-S4::before {
+  padding: 1.75em 0.792em 1.249em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c2D9::before {
+  padding: 0.669em 0.5em 0 0;
+  content: "\2D9";
+}
+
+mjx-c.mjx-c1D443.TEX-I::before {
+  padding: 0.683em 0.751em 0 0;
+  content: "P";
+}
+
+mjx-c.mjx-c394::before {
+  padding: 0.716em 0.833em 0 0;
+  content: "\394";
+}
+
+mjx-c.mjx-c210F::before {
+  padding: 0.695em 0.562em 0.013em 0;
+  content: "\210F";
+}
+
+mjx-c.mjx-c5E::before {
+  padding: 0.694em 0.5em 0 0;
+  content: "^";
+}
+
+mjx-c.mjx-c1D715::before {
+  padding: 0.715em 0.566em 0.022em 0;
+  content: "\2202";
+}
+</style></head>
+<body class="mode-expand">
+
+    <header>
+        <div class="controls-group">
+            <button onclick="toggleSidebar()" title="Ẩn/Hiện Mục lục">☰</button>
+            <button onclick="openImportModal()">📥 Import</button>
+            <button onclick="printLecture()" title="In chỉ nội dung bài giảng">🖨️ In</button>
+            <button onclick="openHistoryModal()">📜 History</button>
+            <button onclick="openSaveModal()">💾 Save as</button>
+            <button onclick="openUpdateModal()" title="Xem lịch sử cập nhật (Phím tắt U)">🚀 U</button>
+            <button onclick="toggleSlideshow()" style="background-color: var(--accent-color); color: #fff;">📺 Slide</button>
+            
+            <div class="toggle-switch-wrapper" style="margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                <span title="Chế độ Mở Rộng / Hiện tất cả">📖 Expand</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="expand-toggle" checked="" onchange="toggleExpandMode(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 6px;">
+                <span title="Tự động đọc đoạn tiếp theo">▶️ Autoplay</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoplay-toggle" onchange="toggleAutoplay(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 4px;">
+                <span>🌙</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-toggle" checked="" onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+                <span>☀️</span>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button id="btn-mute" onclick="toggleMute()" title="Âm thanh" class="active">🔊</button>
+            <select id="rate-select" onchange="updateRate(this.value)">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="controls-group">
+            <input type="text" id="prompt-topic" placeholder="Chủ đề..." style="width: 110px;">
+            <button id="btn-copy-prompt" onclick="copyPrompt()">📋 Copy Prompt</button>
+        </div>
+    </header>
+
+    <!-- POPUP KHI BÔI ĐEN CHỮ -->
+    <div id="selection-popup" style="display: none;">
+        <button onclick="searchImageSelected()" title="Tìm kiếm hình ảnh">🔍 Ảnh</button>
+        <button onclick="searchGifSelected()" title="Tìm kiếm GIF">🎞️ GIF</button>
+        <button onclick="searchGoogleSelected()" title="Tìm kiếm trên Google">🌐 Google</button>
+        <input type="text" id="popup-img-url" placeholder="Nhập/Dán URL ảnh..." oninput="autoInsertImageFromPopup(this)" onchange="autoInsertImageFromPopup(this)">
+    </div>
+
+    <div class="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <span>📑 Mục Lục</span>
+                <button onclick="toggleSidebar()" style="padding: 2px 6px; font-size: 12px;">✕</button>
+            </div>
+            <div class="sidebar-content">
+                <ul id="toc-container" class="toc-list"><li class="toc-item level-1" data-unit-index="0">BÀI 9. ĐO TỐC ĐỘ</li><li class="toc-item level-2" data-unit-index="10">I. MỤC TIÊU BÀI HỌC</li><li class="toc-item level-2" data-unit-index="24">II. KHỞI ĐỘNG – LÀM THẾ NÀO ĐỂ BIẾT MỘT VẬT CHUYỂN ĐỘNG NHANH HAY CHẬM?</li><li class="toc-item level-1" data-unit-index="41">III. HÌNH THÀNH KIẾN THỨC</li><li class="toc-item level-2" data-unit-index="42">1. Đo tốc độ bằng đồng hồ bấm giây</li><li class="toc-item level-3" data-unit-index="43">1.1. Dụng cụ đo</li><li class="toc-item level-3" data-unit-index="72">1.2. Hai cách đo tốc độ</li><li class="toc-item level-3 active-toc" data-unit-index="92">1.3. Các bước đo tốc độ bằng đồng hồ bấm giây</li><li class="toc-item level-3" data-unit-index="120">1.4. Ví dụ thực tế: Đo tốc độ của ô tô đồ chơi</li><li class="toc-item level-3" data-unit-index="148">1.5. Vì sao phải đo nhiều lần?</li><li class="toc-item level-2" data-unit-index="162">2. Đo tốc độ bằng đồng hồ đo thời gian hiện số và cổng quang điện</li><li class="toc-item level-3" data-unit-index="163">2.1. Các dụng cụ trong thí nghiệm</li><li class="toc-item level-3" data-unit-index="185">2.2. Nguyên tắc hoạt động</li><li class="toc-item level-3" data-unit-index="204">2.3. Ví dụ minh họa</li><li class="toc-item level-3" data-unit-index="214">2.4. So sánh hai phương pháp đo</li><li class="toc-item level-2" data-unit-index="217">3. Tìm hiểu thiết bị bắn tốc độ</li><li class="toc-item level-3" data-unit-index="218">3.1. Hình ảnh thiết bị bắn tốc độ</li><li class="toc-item level-3" data-unit-index="228">3.2. Nguyên tắc hoạt động</li><li class="toc-item level-3" data-unit-index="244">3.3. Ứng dụng trong đời sống</li><li class="toc-item level-1" data-unit-index="263">IV. KIẾN THỨC TRỌNG TÂM CẦN GHI NHỚ</li><li class="toc-item level-1" data-unit-index="275">V. LUYỆN TẬP – VẬN DỤNG</li><li class="toc-item level-2" data-unit-index="276">1. Câu hỏi nhận biết</li><li class="toc-item level-2" data-unit-index="296">2. Câu hỏi thông hiểu</li><li class="toc-item level-2" data-unit-index="312">3. Câu hỏi vận dụng</li><li class="toc-item level-1" data-unit-index="332">VI. HOẠT ĐỘNG THỰC HÀNH TẠI LỚP</li><li class="toc-item level-1" data-unit-index="358">VII. CÂU HỎI CỦNG CỐ CUỐI BÀI</li><li class="toc-item level-2" data-unit-index="371">VIII. TÀI LIỆU VÀ HÌNH ẢNH THAM KHẢO</li></ul>
+            </div>
+        </aside>
+
+        <button id="exit-slideshow-btn" onclick="toggleSlideshow()">✖ Thoát Slide Show (Esc)</button>
+
+        <main id="main-scroll">
+            <div id="lecture-paper"><h1 class="markdown-unit revealed">BÀI 9. ĐO TỐC ĐỘ</h1>
+<p class="markdown-unit revealed">Khoa học tự nhiên 7</p>
+<p class="markdown-unit revealed">Bộ sách Kết nối tri thức với cuộc sống</p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/8-FClnoB9SrGE-3pnXJGHOKj5Y8XraOkxDIZlXeYWyacQ4Jce38_h1vQBwaMpXwtLnAx33ddLgqIcpmPVFPq0BuHWoGmAN-xT98Kgwl0RIepOg_PuFAI8o54iGxApwYuLhIXebEnCCbuaaaZuQaINrWvkaBBIqCzIin-C2DBms4?purpose=inline" alt="Cronómetros de Corrida | Decathlon"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/iAm3k9lEUm2Nw3OFhx9R2LGAVa6Y02zkE3zs5b3D6A0dA8a2WugiGiV4rqJV6aHe0HloewNrYpUDVGZqVSPYS6TNnSgsJumGGeVdYYEjmo9q8wKVNzpEIY8k-azLI4P20LQOyCCnCnLxOe_KwxMEy21-pu9nIxpXMQTyvG9sWsU?purpose=inline" alt="Grace Covenant Academy (Top-Ranked Private School for 2026) - Cornelius, NC"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/U-J4Aj-pdIxZfM9os5npdS1wNbekZgLreaWPj0xz9NTOA2akbyb5OFTbwian49Ycdehpkv4l85f8VjazQTtNceU5aATwqNiERuFcRmRdvydItU4OiST5zpyhCAkFxecQYCC1D7r2LFQIInZLRO1pCnxaYwNw2JWjPsqAkTI6XV8Ii2cLJyi6d7FESh91Zyoi?purpose=inline" alt="Close-up of a car speedometer in kilometers"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">9</p>
+<h2 class="markdown-unit revealed">I. MỤC TIÊU BÀI HỌC</h2>
+<p class="markdown-unit revealed">Sau bài học, học sinh cần đạt được:</p>
+<p class="markdown-unit revealed">1. Kiến thức</p>
+<ul>
+<li class="markdown-unit revealed">Biết được muốn xác định tốc độ của một vật cần đo quãng đường và thời gian chuyển động.</li>
+<li class="markdown-unit revealed">Mô tả được cách đo tốc độ bằng đồng hồ bấm giây.</li>
+<li class="markdown-unit revealed">Mô tả được cách đo tốc độ bằng đồng hồ đo thời gian hiện số và cổng quang điện.</li>
+<li class="markdown-unit revealed">Nêu được nguyên tắc hoạt động cơ bản của thiết bị bắn tốc độ.</li>
+</ul>
+<p class="markdown-unit revealed">2. Năng lực</p>
+<ul>
+<li class="markdown-unit revealed">Sử dụng được thước đo độ dài và đồng hồ bấm giây.</li>
+<li class="markdown-unit revealed">Biết thực hiện phép đo, ghi kết quả và tính giá trị trung bình.</li>
+<li class="markdown-unit revealed">Biết vận dụng kiến thức để đo tốc độ trong các tình huống thực tế.</li>
+</ul>
+<p class="markdown-unit revealed">3. Phẩm chất</p>
+<ul>
+<li class="markdown-unit revealed">Trung thực, cẩn thận khi thực hiện phép đo.</li>
+<li class="markdown-unit revealed">Có ý thức tuân thủ quy định về tốc độ khi tham gia giao thông.</li>
+</ul>
+<h2 class="markdown-unit revealed">II. KHỞI ĐỘNG – LÀM THẾ NÀO ĐỂ BIẾT MỘT VẬT CHUYỂN ĐỘNG NHANH HAY CHẬM?</h2>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/uCbpcD27fmR3UhdQiJlSvdyEHS7TKV7FkF7TW3QPl0jX7R1LDzD5kxDATN-5Ndgh44YHC628ERio2wqmdjeEgGcYW_SgRXFh4kTTfEaOYuaETsNma2bxvu1GwMrodUVW8L2nv1bqa73MvG8-MaFYIzZzTWQN7Q1eeAgy2vKngF0?purpose=inline" alt="UniSport Australia | University Sports | Nationals"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/x3zNuiV3vFw6jrXTJCGchpOqwYMJO2cHVsH4L8SSyo7JB30jowZPuRwBtqEE0gY_ne2YD_8z1_8LEQj47WSYmk8NxwRwLQ0BlQOWAf_NdQTWHW2OUPZBDrglX9wi6i2nytlYj1UJ-pVwsLPwKfSptfAhEXt1waQ69GGeEwPukhM?purpose=inline" alt="Ewen Premel de l’AC Gouesnou au Morlaix CP | Le Télégramme"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/a4LquEaRjJHJLZZCFhbqG5Vcc6n9usMdyGPd-IPkztC9o_yrpbElz7IT8UALdnfX9UtwC7D3irEpuJxXKw1W2Ixksn2SNcJrd5nfnQ2Nlq6eRQzavVIzvM4paJViUw_-7xA3TlqPb_hF8GI6KXCMww2jtCamR2N5be3rPBPelko?purpose=inline" alt="mauritius images"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">Hãy quan sát các hình ảnh trên và trả lời:</p>
+<ol>
+<li class="markdown-unit revealed">Làm thế nào để biết một vận động viên chạy nhanh hay chậm?</li>
+<li class="markdown-unit revealed">Nếu hai bạn cùng chạy một quãng đường 60 m, bạn nào chạy nhanh hơn?</li>
+<li class="markdown-unit revealed">Muốn xác định chính xác tốc độ chạy của một bạn, chúng ta cần đo những đại lượng nào?</li>
+</ol>
+<p class="markdown-unit revealed">Gợi ý trả lời:</p>
+<p class="markdown-unit revealed">Để xác định tốc độ chuyển động của một vật, chúng ta cần biết:</p>
+<ul>
+<li class="markdown-unit revealed">Quãng đường vật đi được (s).</li>
+<li class="markdown-unit revealed">Thời gian vật đi hết quãng đường đó (t).</li>
+</ul>
+<p class="markdown-unit revealed">Từ hai đại lượng này, ta có thể tính được tốc độ chuyển động của vật.</p>
+<p class="markdown-unit revealed">Dẫn vào bài: Trong bài học hôm nay, chúng ta sẽ tìm hiểu các dụng cụ và phương pháp đo tốc độ của một vật trong phòng thí nghiệm cũng như trong đời sống.</p>
+<h1 class="markdown-unit revealed">III. HÌNH THÀNH KIẾN THỨC</h1>
+<h2 class="markdown-unit revealed">1. Đo tốc độ bằng đồng hồ bấm giây</h2>
+<h3 class="markdown-unit revealed">1.1. Dụng cụ đo</h3>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/IWo7mTKHMs_LHVRTcCxfOmsW7l_4fgxrK01ho_jtWoZhvENiWcpJOVqxpp2GRu0AB_mD91sni151JGHlls0JiQF_AsfU9UdN_ifxqHIDKUO1DMVAm0xnsauzWKE2H9aHXroucGfm6XP1tTeA3iuQTcBbZY7lwo70mld9LVoeAT-AnsY2aqo1Zjf5C-yOubUr?purpose=inline" alt="Stopwatch"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/gy7biO6VcR4AUrZHzMyPdAQbdYXhpx__XgnA03Go4NSWds7gjIkHNVMKzTU9aqXB65RwcC4EbZZ0DbWhEHXu70z8ox6E8S9RQNSC9JzkoU6mUPE-XK9gZGauNYZD-g9jSWTS_GODS7hHmbqdOAAa-We8oU16EoGNoFb0sGVfV6WUQzXYnjOBRPlSDo1oMa6M?purpose=inline" alt="Tape measure and ruler"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/DfSaCRlNEHAdSbAqQ-nmKJAdtc2o2H1KE-LUsb0weOiNG0ZkcWtdYIRAQ8ew5ypy3y-9uOHumwAAm_9D6QAszzQa7EjEl_bKBUH46RJv7wfKRwGEOD-yyDDO0xfvk5T5LpAY2RGrM5jY93rN0jaOQRc1tzZ_wnf1aYETZVyjN4sGm1MRWskd874oC_7jvW3v?purpose=inline" alt="Athletics children running coaches at the track during a session"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">7</p>
+<p class="markdown-unit revealed">Để đo tốc độ bằng đồng hồ bấm giây, chúng ta cần sử dụng hai nhóm dụng cụ:</p>
+<p class="markdown-unit revealed">a) Dụng cụ đo thời gian</p>
+<ul>
+<li class="markdown-unit revealed">Đồng hồ bấm giây (Stopwatch).</li>
+<li class="markdown-unit revealed">Dùng để đo khoảng thời gian vật chuyển động.</li>
+<li class="markdown-unit revealed">Kí hiệu thời gian: t.</li>
+<li class="markdown-unit revealed">Đơn vị: giây (s).</li>
+</ul>
+<p class="markdown-unit revealed">b) Dụng cụ đo quãng đường</p>
+<ul>
+<li class="markdown-unit revealed">Thước thẳng (Ruler).</li>
+<li class="markdown-unit revealed">Thước dây (Measuring tape).</li>
+<li class="markdown-unit revealed">Thước cuộn (Tape measure).</li>
+<li class="markdown-unit revealed">Dùng để đo chiều dài quãng đường vật chuyển động.</li>
+<li class="markdown-unit revealed">Kí hiệu quãng đường: s.</li>
+<li class="markdown-unit revealed">Đơn vị: mét (m).</li>
+</ul>
+<p class="markdown-unit revealed">c) Tốc kế</p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/x0vDvAuVbi71ZKISQTsvd-4DKXXH23HPylX_bSRISf0gwuCc_JjlGIeX1eyrlL2SpdN-vka-68KV2gCRzcN0jj6BBHz3ruZ0f7l0-YqF20Cn6UllRWjAPQoK6x8w0jgQBler5emTl7Gf_GJUyN-bpE2LQjuq87Jq4cgrX_UEe_3CxLWtSQ3wg5qP_GS2f3cp?purpose=inline" alt="a speed dial of a car with the arrow on zero"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">Tốc kế (Speedometer) là dụng cụ dùng để đo tốc độ của các phương tiện giao thông như ô tô, xe máy.</p>
+<ul>
+<li class="markdown-unit revealed">Đơn vị thường gặp: km/h.</li>
+<li class="markdown-unit revealed">Tốc kế thường được lắp trên bảng điều khiển của phương tiện.</li>
+</ul>
+<p class="markdown-unit revealed">Ghi nhớ:</p>
+<table class="markdown-unit revealed">
+<thead>
+<tr>
+<th>Dụng cụ</th>
+<th>Đại lượng đo</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Thước đo</td>
+<td>Quãng đường s</td>
+</tr>
+<tr>
+<td>Đồng hồ bấm giây</td>
+<td>Thời gian t</td>
+</tr>
+<tr>
+<td>Tốc kế</td>
+<td>Tốc độ v</td>
+</tr>
+</tbody></table>
+<h3 class="markdown-unit revealed">1.2. Hai cách đo tốc độ</h3>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/HRYNCuSV0s7WD7MLqazKzfGjUczaThfmbHP5SkTKRwfbQDbF680CGRmKoPkFb_lRerkZSAmv500CRbrJeTbq9-cnnReATucy8W-9POmsMsP1K7NHcciRrAE75ui6tO28A8P1qcEzEzYkQsLLp7S5KSApuJkU4oWDm1Bn55VkECE?purpose=inline" alt="Physics in Motion | News Post General - Mount Carmel Academy"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://www.mcacubs.com/about/school-news/news-post-general/~board/school-news/post/physics-in-motion?utm_source=chatgpt.com" alt="mcacubs.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">Có hai cách lựa chọn đại lượng khi tiến hành đo tốc độ:</p>
+<p class="markdown-unit revealed">Cách 1: Chọn quãng đường trước, đo thời gian sau.</p>
+<ul>
+<li class="markdown-unit revealed">Xác định trước quãng đường s.</li>
+<li class="markdown-unit revealed">Cho vật chuyển động trên quãng đường đó.</li>
+<li class="markdown-unit revealed">Dùng đồng hồ bấm giây đo thời gian t.</li>
+</ul>
+<p class="markdown-unit revealed">Ví dụ: Đo thời gian một bạn chạy hết quãng đường 60 m.</p>
+<p class="markdown-unit revealed">Cách 2: Chọn thời gian trước, đo quãng đường sau.</p>
+<ul>
+<li class="markdown-unit revealed">Xác định trước khoảng thời gian t.</li>
+<li class="markdown-unit revealed">Cho vật chuyển động trong khoảng thời gian đó.</li>
+<li class="markdown-unit revealed">Đo quãng đường s mà vật đi được.</li>
+</ul>
+<p class="markdown-unit revealed">Ví dụ: Đo quãng đường một bạn đi xe đạp trong 10 giây.</p>
+<p class="markdown-unit revealed">Câu hỏi kiểm tra nhanh</p>
+<p class="markdown-unit revealed">Một học sinh muốn đo tốc độ chạy trên quãng đường 100 m. Bạn ấy sử dụng đồng hồ bấm giây để đo thời gian chạy.</p>
+<p class="markdown-unit revealed">Đây là cách đo nào?</p>
+<p class="markdown-unit revealed">Đáp án: Cách 1 – Chọn quãng đường trước, đo thời gian sau.</p>
+<h3 class="markdown-unit revealed">1.3. Các bước đo tốc độ bằng đồng hồ bấm giây</h3>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/OShbTV8QyxGG2q97jaeYDh5MAtnZnKA-YEylJ-8ywsRR29YfXL61TM2YgIUrLtZ5RI1_TZog1q2rbUV4yi1L5pIhjaaQkhrRTxXXjAHi-bP3IVrPTE0PkeeAttDxYSu0H2eO43GhY9Axv2RapGF42KSgd7ktzUJ4xrG5hZucbggzCpOmOPTOEJKJ5zoZTm0O?purpose=inline" alt="ATHLETICS-OLY-2020-2021-TOKYO"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/p7gLhLw2CTdSLc9x8Qu1addMBgn5KxLpUmcnHkwY-S8hTAuESvRlO7p_uwJvML7l3ludqN24Ka1uYT5dvhwELk649NBSM_Zduz76_XO6MPNbww2wFl7BjK8_FQFBSHmE7mIwHhLJmEOrnY6VUGe2f_t2Ayi7SAdPcLopQemb_TU?purpose=inline" alt="LA FORTALEZA DE SEXTO: PRÁCTICA CON LA CINTA MÉTRICA"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/uP914DvX1TpFjMNEp84MzMVTMxhmzVc8UsTeKNXi07SGhrsEFZNk9Mk9B659FRuVmmfJtL-y-xGLDY06ebz4k26xt4qpmb1gaFjKai8MHi2687PpxwT2ZBAfPa3h_LzfECyI-ao9_lMMGZOPheEHxvxRemOrbncjyaOebGTIHcOAgJou5TdQXCVxz87-otjA?purpose=inline" alt="Timing times"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">5</p>
+<p class="markdown-unit revealed">Trong phòng thực hành, thông thường chúng ta sử dụng cách 1.</p>
+<p class="markdown-unit revealed">Tiến hành theo các bước:</p>
+<p class="markdown-unit revealed">Bước 1. Đo quãng đường</p>
+<ul>
+<li class="markdown-unit revealed">Dùng thước đo chiều dài quãng đường vật sẽ chuyển động.</li>
+<li class="markdown-unit revealed">Xác định rõ vạch xuất phát và vạch đích.</li>
+</ul>
+<p class="markdown-unit revealed">Bước 2. Đo thời gian</p>
+<ul>
+<li class="markdown-unit revealed">Đặt vật tại vạch xuất phát.</li>
+<li class="markdown-unit revealed">Khi vật bắt đầu chuyển động, nhấn nút START trên đồng hồ.</li>
+<li class="markdown-unit revealed">Khi vật đến vạch đích, nhấn nút STOP.</li>
+<li class="markdown-unit revealed">Đọc thời gian hiển thị trên đồng hồ.</li>
+</ul>
+<p class="markdown-unit revealed">Bước 3. Lặp lại phép đo</p>
+<ul>
+<li class="markdown-unit revealed">Thực hiện phép đo ít nhất 3 lần.</li>
+<li class="markdown-unit active">Ghi lại kết quả từng lần đo.</li>
+</ul>
+<p class="markdown-unit">Bước 4. Tính giá trị trung bình</p>
+<ul>
+<li class="markdown-unit">Tính quãng đường trung bình (nếu các lần đo có quãng đường khác nhau).</li>
+<li class="markdown-unit">Tính thời gian trung bình.</li>
+<li class="markdown-unit">Sử dụng công thức để tính tốc độ.</li>
+</ul>
+<p class="markdown-unit">Bước 5. Nhận xét kết quả</p>
+<ul>
+<li class="markdown-unit">So sánh các lần đo.</li>
+<li class="markdown-unit">Đánh giá độ ổn định và độ tin cậy của kết quả.</li>
+</ul>
+<h3 class="markdown-unit">1.4. Ví dụ thực tế: Đo tốc độ của ô tô đồ chơi</h3>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/JwaTBzzpqq4bvQ0ZcA_thYfae3dSRgiSwgN4v3V9CYKKsMVKp48KLCNuqrHWx6Ioa69xRfvY2JjC9TlxaolmckppWb7VsnRseLJruiWniHyp2jj_y68OgFim98Yg9t5ZMPi5NZH0Tpo502Ze3dowpbdTAT4r9EK7NPOpoHGwE-s?purpose=inline" alt="Science Kits - SUP - Science United Project"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.scienceunitedproject.com/science-kits-for-displaced-students.html?utm_source=chatgpt.com" alt="scienceunitedproject.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Dụng cụ:</p>
+<ul>
+<li class="markdown-unit">Một ô tô đồ chơi không có động cơ.</li>
+<li class="markdown-unit">Một tấm gỗ phẳng dài khoảng 80 cm.</li>
+<li class="markdown-unit">Thước đo độ dài.</li>
+<li class="markdown-unit">Bút dạ hoặc phấn.</li>
+<li class="markdown-unit">Đồng hồ bấm giây.</li>
+<li class="markdown-unit">Một vài cuốn sách để kê tạo mặt dốc.</li>
+</ul>
+<p class="markdown-unit">Tiến hành thí nghiệm:</p>
+<ol>
+<li class="markdown-unit">Dùng sách kê một đầu tấm gỗ để tạo thành mặt dốc.</li>
+<li class="markdown-unit">Dùng thước xác định hai vạch xuất phát và đích cách nhau 50 cm.</li>
+<li class="markdown-unit">Đặt ô tô tại vạch xuất phát.</li>
+<li class="markdown-unit">Thả ô tô đồng thời bấm đồng hồ.</li>
+<li class="markdown-unit">Khi ô tô đến vạch đích, dừng đồng hồ.</li>
+<li class="markdown-unit">Ghi lại thời gian và thực hiện phép đo 3 lần.</li>
+</ol>
+<p class="markdown-unit">Bảng 9.1. Bảng ghi kết quả thí nghiệm</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Lần đo</th>
+<th>Quãng đường (m)</th>
+<th>Thời gian (s)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>0,5</td>
+<td>1,2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0,5</td>
+<td>1,1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0,5</td>
+<td>1,3</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Tính thời gian trung bình:</p>
+<p class="markdown-unit">t̄ = (1,2 + 1,1 + 1,3) : 3 = 1,2 s</p>
+<p class="markdown-unit">Tốc độ trung bình:</p>
+<p class="markdown-unit">v = s/t = 0,5/1,2 ≈ 0,42 m/s</p>
+<p class="markdown-unit">Kết quả</p>
+<p class="markdown-unit"> Tốc độ của ô tô đồ chơi khoảng 0,42 m/s.</p>
+<p class="markdown-unit">Lưu ý: Các số liệu trên là số liệu minh họa để học sinh luyện tập cách xử lí kết quả.</p>
+<h3 class="markdown-unit">1.5. Vì sao phải đo nhiều lần?</h3>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/7sQwrVAZak3ocl95OhdAg8UURAW8iX5gFQ3JIOc26n4gOwapTmIzagxy73OD079q75xFQ8OkAybvpa-tR02NRKZgiK172QBSqPiQ1EM54G_3-qYL9hUvfr7HFgItQoJKk_fc4dvl77__AFs4Ju0VBgX3jGXZmNfoeFIxWB4igDM?purpose=inline" alt="Physics - Century College"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.century.edu/programs/physics/?utm_source=chatgpt.com" alt="century.edu"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Khi đo tốc độ, kết quả có thể bị ảnh hưởng bởi:</p>
+<ul>
+<li class="markdown-unit">Người bấm đồng hồ không hoàn toàn chính xác.</li>
+<li class="markdown-unit">Thời điểm bắt đầu và kết thúc chuyển động khó xác định tuyệt đối.</li>
+<li class="markdown-unit">Vật chuyển động không hoàn toàn giống nhau giữa các lần đo.</li>
+</ul>
+<p class="markdown-unit">Vì vậy, cần thực hiện phép đo nhiều lần để hạn chế ảnh hưởng của sai số ngẫu nhiên và tăng độ tin cậy của kết quả.</p>
+<p class="markdown-unit">Công thức tính giá trị trung bình:</p>
+<p class="markdown-unit">t̄ = (t₁ + t₂ + t₃)/3</p>
+<p class="markdown-unit">Nếu quãng đường mỗi lần đo giống nhau:</p>
+<p class="markdown-unit">v = s/t̄</p>
+<h2 class="markdown-unit">2. Đo tốc độ bằng đồng hồ đo thời gian hiện số và cổng quang điện</h2>
+<h3 class="markdown-unit">2.1. Các dụng cụ trong thí nghiệm</h3>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/Rw4ivGqFYuUOD4xVuVarv0pw1mnyOPX6cAnqehe-iASne_RapGwbEwL-s-lgzuLQUSF7ywlG6X1x5a5l12fzAFEIlmi4sJvZRQLghQDzOOE5FUt7ndq-8Ginnh7JCY5XpTfAEXnn4HTsf80lAUsLI9cE3MmZNyj-6UcHuZZiNwY?purpose=inline" alt="Timer and Photogates  – Arbor Scientific"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.arborsci.com/products/timer-and-photogates?utm_source=chatgpt.com" alt="arborsci.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trong phòng thực hành, để đo tốc độ của một vật chuyển động, người ta có thể sử dụng:</p>
+<p class="markdown-unit">a) Cổng quang điện (Photogate)</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/RfNN4RLGBlFWZMq62rYzNtxbOEQ2hedsBCpJG9nJ3tBkdtpF_DxyhmxkRK9Zq26gjEbZBdybG3cKd9m0hQ2PxNPlQkVvX1RenDWLpYkMqsoqjYSuhEHDw5Y5ZZoMszPpfxQ8uXgXM46KDKL4ZJq8AsIA9nY-Fyear3iX5n1p-G4?purpose=inline" alt="Vernier Go Direct® Lichtschranke (GDX-VPG) Photoschranke für Experimente aus der Bewegungslehre Infrarot-Lichtquelle: 880 nm, Öffnung: 77,5mm ✓ ab 178,70&nbsp;€ bei DynaTech"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.dynatech.de/vernier-go-direct-lichtschranke-gdx-vpg-photoschranke-fuer-experimente-aus-der-bewegungslehre-infrarot-lichtquelle-880-nm-oeffnung-77-5mm?utm_source=chatgpt.com" alt="dynatech.de"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<ul>
+<li class="markdown-unit">Là thiết bị sử dụng tia sáng để phát hiện vật đi qua.</li>
+<li class="markdown-unit">Khi vật đi qua và chắn tia sáng, cổng quang điện phát tín hiệu.</li>
+<li class="markdown-unit">Tín hiệu này được truyền đến đồng hồ đo thời gian.</li>
+</ul>
+<p class="markdown-unit">b) Đồng hồ đo thời gian hiện số</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/lgk9-VaGfrlEWe-zyfDyVQJz4s0x8HMAFDv--r7DqMBvTEpvfsVay370MtjsLxnuatVFa1bkerFfkxFRC4m6fsYxmHjqptyvFAGzmkpotaIvdn3uqEFa__1SBnsGJZGYh-Jum1MpxPUE6VyZbTybvGI8eiRfwul0d4VjMAwpDiI?purpose=inline" alt="Timer and Photogates  – Arbor Scientific"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.arborsci.com/products/timer-and-photogates?utm_source=chatgpt.com" alt="arborsci.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<ul>
+<li class="markdown-unit">Dùng để đo khoảng thời gian chuyển động.</li>
+<li class="markdown-unit">Có thể tự động bắt đầu và kết thúc phép đo khi nhận tín hiệu từ cổng quang điện.</li>
+<li class="markdown-unit">Kết quả được hiển thị bằng số trên màn hình.</li>
+</ul>
+<h3 class="markdown-unit">2.2. Nguyên tắc hoạt động</h3>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/DW5P8oPkgx8847kVPeLSC4I8BBr2HR6B5Vkq2C3BXdqiN7Lc0YFT18lMorMDAFghNZXfhq8cIPMK3OFbMr6wgZb4sgC9aUtBwmAJips19VPS32u2z3dhyMYJdXfoKecSkLT5dOnohxRSq9QGIIuF_okpszXQ1f-DHKA8WlsW_7w?purpose=inline" alt="Hãy dựa vào Hình 9.3 để mô tả sơ lược cách đo tốc độ dùng cổng quang điện và đồng hồ đo thời gian hiện số khi viên bi ch..."><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://hoc24.vn/cau-hoi/hay-dua-vao-hinh-93-de-mo-ta-so-luoc-cach-do-toc-do-dung-cong-quang-dien-va-dong-ho-do-thoi-gian-hien-so-khi-vien-bi-chuyen-dong-tu-cong-quang-dien.7642816454730?utm_source=chatgpt.com" alt="hoc24.vn"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Thí nghiệm sử dụng hai cổng quang điện đặt trên đường chuyển động của viên bi.</p>
+<p class="markdown-unit">Nguyên tắc hoạt động:</p>
+<p class="markdown-unit">Bước 1: Viên bi bắt đầu chuyển động và đi qua cổng quang điện thứ nhất.</p>
+<ul>
+<li class="markdown-unit">Cổng quang điện thứ nhất phát tín hiệu.</li>
+<li class="markdown-unit">Đồng hồ bắt đầu tính thời gian.</li>
+</ul>
+<p class="markdown-unit">Bước 2: Viên bi tiếp tục chuyển động đến cổng quang điện thứ hai.</p>
+<ul>
+<li class="markdown-unit">Cổng quang điện thứ hai phát tín hiệu.</li>
+<li class="markdown-unit">Đồng hồ dừng tính thời gian.</li>
+</ul>
+<p class="markdown-unit">Bước 3: Đọc kết quả.</p>
+<p class="markdown-unit">- Đồng hồ hiển thị khoảng thời gian viên bi chuyển động giữa hai cổng quang điện.</p>
+<p class="markdown-unit">Bước 4: Xác định quãng đường.</p>
+<p class="markdown-unit">- Đo khoảng cách giữa hai cổng quang điện.</p>
+<p class="markdown-unit">Bước 5: Tính tốc độ.</p>
+<p class="markdown-unit">- Sử dụng quãng đường và thời gian vừa đo được để tính tốc độ trung bình.</p>
+<h3 class="markdown-unit">2.3. Ví dụ minh họa</h3>
+<p class="markdown-unit">Một viên bi chuyển động giữa hai cổng quang điện cách nhau 0,8 m.</p>
+<p class="markdown-unit">Đồng hồ đo thời gian hiện số hiển thị 2 giây.</p>
+<p class="markdown-unit">Tính tốc độ trung bình của viên bi.</p>
+<p class="markdown-unit">Bài giải:</p>
+<p class="markdown-unit">Quãng đường: s = 0,8 m.</p>
+<p class="markdown-unit">Thời gian: t = 2 s.</p>
+<p class="markdown-unit">Tốc độ:</p>
+<p class="markdown-unit">v = s/t = 0,8/2 = 0,4 m/s.</p>
+<p class="markdown-unit">Đáp số: 0,4 m/s.</p>
+<h3 class="markdown-unit">2.4. So sánh hai phương pháp đo</h3>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>Đồng hồ bấm giây</th>
+<th>Cổng quang điện</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Cách bắt đầu đo</td>
+<td>Người bấm nút</td>
+<td>Cảm biến phát tín hiệu</td>
+</tr>
+<tr>
+<td>Cách kết thúc đo</td>
+<td>Người bấm nút</td>
+<td>Cảm biến phát tín hiệu</td>
+</tr>
+<tr>
+<td>Độ chính xác</td>
+<td>Phụ thuộc thao tác người đo</td>
+<td>Thường cao hơn</td>
+</tr>
+<tr>
+<td>Ứng dụng</td>
+<td>Đo chạy bộ, xe đồ chơi</td>
+<td>Thí nghiệm vật lí</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Kết luận: Cổng quang điện giúp tự động hóa quá trình đo thời gian, giảm sai số do thao tác bấm đồng hồ bằng tay.</p>
+<h2 class="markdown-unit">3. Tìm hiểu thiết bị bắn tốc độ</h2>
+<h3 class="markdown-unit">3.1. Hình ảnh thiết bị bắn tốc độ</h3>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/R2WcQZAFlJLfOcO3H1aui6PiB_QkXCJ6UR94RIqoLzSyicMDJsRdQBfj0KWXQuhUiDHnAnI3eJ29RcMdt_LE41Kf0oN6fjipO9JcEZIRYLOltegh4zTtMlwoSnX2q-nNqPSh4tcDB9P638hPIjYmcRgyw9a3X4SAL-DsyG54T1k?purpose=inline" alt="El radar que multa a 1,2 km ya está en España: TruCam II y su plan"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/_Xy2AGN71TE4kzAeLKeYJTh1atHSBHypqjIUVZkDdt7lRjnIIX1yIyuk6elvt7Vi-qIsuWqCqJU8QJXbGuXYmDcK-SEetFu4uf-2lb3jbsTyb8GY15OzUcT3EBuazLsmMV0mTCt50uN-CebtzWta86YGP1Q5EPzJ7hsLQ2n1Wa0?purpose=inline" alt="Raser auf der A8 bei Augsburg geblitzt: 239 statt erlaubter 120 Stundenkilometer"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/p4F3z_QirpB2zLBV72wRw-zdLWeOZxvrhlkwzVZT5V63agigX6KMS4GHRJ2G-jk9PXYq3XsDgIhQX7tgCeSsYc7pyLov_4ZBkzur-k0ZyE_qJFVymVimw_XwHwRXoKQhkZhgNwAQ2aTptlq1a0zOmopc7FMMNjsP3MMLPsPEoZ4?purpose=inline" alt="CSGT Đăk Lăk xử lý lái xe ‘không để ý tốc độ’ trên đường Hồ Chí Minh"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">7</p>
+<p class="markdown-unit">Thiết bị bắn tốc độ (Speed Gun / Speed Radar) là thiết bị được sử dụng để kiểm tra tốc độ của các phương tiện giao thông.</p>
+<p class="markdown-unit">Thiết bị thường được sử dụng bởi lực lượng chức năng để kiểm tra tốc độ ô tô, xe máy trên đường.</p>
+<h3 class="markdown-unit">3.2. Nguyên tắc hoạt động</h3>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/P0VcygQRvZvC8ahLTbWC-GiP9CkOGuT3p4C-9U6ecitM1A00D-7oFeLEeLK2ye6AFQH2Feim8_rRwkg6ePRkqePAgfXHQGAuFvqVHvIzE2MsJ1YBkvFEu8fiDXyExET3pGPgNGAzxgYKxYEyGSPe4qwKNMobfuVl-oocvh2rFLM?purpose=inline" alt="Police Laser Speed Guns Explained (UK) | How Laser Detection Works  – Aguri Limited"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://aguri-iq.co.uk/pages/police-laser-speed-guns-explained?utm_source=chatgpt.com" alt="aguri-iq.co.uk"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Một số thiết bị bắn tốc độ sử dụng nguyên tắc hiệu ứng Doppler của sóng radar hoặc đo khoảng cách bằng tia laser theo thời gian.</p>
+<p class="markdown-unit">a) Thiết bị sử dụng sóng radar</p>
+<ul>
+<li class="markdown-unit">Phát sóng điện từ về phía phương tiện đang chuyển động.</li>
+<li class="markdown-unit">Sóng phản xạ từ phương tiện quay trở lại thiết bị.</li>
+<li class="markdown-unit">Dựa vào sự thay đổi tần số của sóng phản xạ, thiết bị xác định tốc độ phương tiện.</li>
+</ul>
+<p class="markdown-unit">b) Thiết bị sử dụng tia laser</p>
+<ul>
+<li class="markdown-unit">Phát các xung tia laser về phía phương tiện.</li>
+<li class="markdown-unit">Đo thời gian tia laser truyền đi và phản xạ trở lại.</li>
+<li class="markdown-unit">Thực hiện nhiều lần đo khoảng cách trong các khoảng thời gian rất ngắn.</li>
+<li class="markdown-unit">Từ sự thay đổi khoảng cách theo thời gian, thiết bị tính được tốc độ phương tiện.</li>
+</ul>
+<p class="markdown-unit">Lưu ý: Không phải mọi thiết bị bắn tốc độ đều hoạt động theo cùng một nguyên tắc. Hai phương pháp trên là những nguyên tắc phổ biến.</p>
+<h3 class="markdown-unit">3.3. Ứng dụng trong đời sống</h3>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/xySTFuGIVxtjAFRlQk-X_iq8hRdUg5E36Uxp_ECTQ4tAHrJ0fPNvyKPiGDyLH76k5Is0ZpbPdF2pe-ehQHcJm58t8qKUoV8kGtRGwQ3lzS3rXtkg7pPja5egKDXDHLE1DkUrRDGyzMuUkfawCmGKOxP2vtXPVFOMkxgPzn12Yos?purpose=inline" alt="Cao tốc Nội Bài - Lào Cai chính thức dùng camera bắn tốc độ 24/24h trên toàn tuyến - Báo điện tử VnMedia - Tin nóng Việt Nam và thế giới"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/MmD6Vx6qrGB8MOa8L6HX8nXbGAuq6RfNbj-fA24kM_EnmXG9K5Lni5VQDh-wkoKPaDo66Qe9s9C_QMdGD4BGf59-KF7uDM_ytwfA9ccXf79AzQk6LAObY3thyUkWzuNRACqwabRweb2Y9Qdq649_HlFwrd73J1K1ZW1SfH1jSnQ?purpose=inline" alt="Speed Marathon na Jičínsku: policie vybrala místa, kde bude měřit rychlost - Jičínský deník"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/Ftv1jTdpv9FB3V05bSM4WGDJUMKbFjevnkRD2cvZY2SLl1ljF99468HAIh52lkLPPzSsiCpflWDBcaPBR6iUwTuFs3br84IWdY_2nDBTpqUqqGJ5p9Hlh1gBziRIl5jbQTKf7VbR2TMd2ryaS28thtq28xdoiiG6ce9tsSWy8Lc?purpose=inline" alt="¿Para qué sirve el velocímetro de un auto? | KIA"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">6</p>
+<p class="markdown-unit">Thiết bị bắn tốc độ có vai trò:</p>
+<ul>
+<li class="markdown-unit">Kiểm tra tốc độ của các phương tiện giao thông.</li>
+<li class="markdown-unit">Phát hiện phương tiện chạy quá tốc độ cho phép.</li>
+<li class="markdown-unit">Hỗ trợ lực lượng chức năng xử lí vi phạm.</li>
+<li class="markdown-unit">Góp phần bảo đảm an toàn giao thông.</li>
+</ul>
+<p class="markdown-unit">Liên hệ thực tế:</p>
+<p class="markdown-unit">Khi tham gia giao thông, người điều khiển phương tiện cần:</p>
+<ul>
+<li class="markdown-unit">Tuân thủ biển báo giới hạn tốc độ.</li>
+<li class="markdown-unit">Không phóng nhanh, vượt ẩu.</li>
+<li class="markdown-unit">Giữ khoảng cách an toàn với phương tiện phía trước.</li>
+<li class="markdown-unit">Điều chỉnh tốc độ phù hợp với điều kiện đường sá và thời tiết.</li>
+</ul>
+<h1 class="markdown-unit">IV. KIẾN THỨC TRỌNG TÂM CẦN GHI NHỚ</h1>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/JpN-l-3HpoWX0BofcjGXIi-A30zQskJJzye7StgB7yhzOcPfgtjbbAahhYjEBIHjNTrIB9y2-Z3cyfiRMnCntBeq1sVcMfrG4YdXaBDTDeHOoCAJcm1-tZsUy3frz0ReSqSOW5IHYPX-oi9NVkQBVNtiBf3C1xVPbZ5LgYgrYuM?purpose=inline" alt="Measuring Speed | SQA National 5 Physics Revision Notes 2019"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.savemyexams.com/national-5/physics/sqa/19/revision-notes/dynamics/vectors-scalars/measuring-speed/?utm_source=chatgpt.com" alt="savemyexams.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Nội dung</th>
+<th>Kiến thức cần nhớ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Đo thời gian</td>
+<td>Dùng đồng hồ bấm giây</td>
+</tr>
+<tr>
+<td>Đo quãng đường</td>
+<td>Dùng thước đo</td>
+</tr>
+<tr>
+<td>Đo tốc độ</td>
+<td>Xác định quãng đường và thời gian</td>
+</tr>
+<tr>
+<td>Đo bằng cổng quang điện</td>
+<td>Sử dụng cảm biến để xác định thời điểm vật đi qua</td>
+</tr>
+<tr>
+<td>Đo tốc độ giao thông</td>
+<td>Sử dụng thiết bị bắn tốc độ</td>
+</tr>
+<tr>
+<td>Đo nhiều lần</td>
+<td>Tính giá trị trung bình để hạn chế sai số ngẫu nhiên</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Công thức quan trọng:</p>
+<p class="markdown-unit">v = s/t</p>
+<p class="markdown-unit">Trong đó:</p>
+<ul>
+<li class="markdown-unit">v: Tốc độ (m/s).</li>
+<li class="markdown-unit">s: Quãng đường (m).</li>
+<li class="markdown-unit">t: Thời gian (s).</li>
+</ul>
+<h1 class="markdown-unit">V. LUYỆN TẬP – VẬN DỤNG</h1>
+<h2 class="markdown-unit">1. Câu hỏi nhận biết</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/vRiTBAN3hjc9fyZndRYQlxVgdDgCO2wZWr3IL4fE7QwZ_VrVpl5Bg-ygo7OfEVuMC8nMNXAZLdodAFRnuj63nATn8Eqq9-tXMsqUHfrYhIMSEEzkvJG-RVQSZe13_sfZf0UdidpVPBuiJkL6f-gYzq59_f78d2Kyrq31DGmL_hM?purpose=inline" alt="Norwegian Double-Threshold Training for Youth Athletes | by Steve Hadley | Medium"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://medium.com/%40sarahb57/norwegian-double-threshold-training-for-youth-athletes-bfbacdbb8812?utm_source=chatgpt.com" alt="medium.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Câu 1. Muốn đo tốc độ của một học sinh chạy trên sân trường bằng phương pháp thông thường, cần sử dụng những dụng cụ nào?</p>
+<p class="markdown-unit">A. Cân và nhiệt kế.</p>
+<p class="markdown-unit">B. Thước đo và đồng hồ bấm giây.</p>
+<p class="markdown-unit">C. Lực kế và đồng hồ.</p>
+<p class="markdown-unit">D. Nhiệt kế và thước đo.</p>
+<p class="markdown-unit">Câu 2. Đồng hồ bấm giây dùng để đo đại lượng nào?</p>
+<p class="markdown-unit">A. Quãng đường.</p>
+<p class="markdown-unit">B. Khối lượng.</p>
+<p class="markdown-unit">C. Thời gian.</p>
+<p class="markdown-unit">D. Tốc độ trực tiếp.</p>
+<p class="markdown-unit">Câu 3. Tốc kế trên ô tô có tác dụng gì?</p>
+<p class="markdown-unit">A. Đo quãng đường.</p>
+<p class="markdown-unit">B. Đo thời gian.</p>
+<p class="markdown-unit">C. Đo tốc độ.</p>
+<p class="markdown-unit">D. Đo khối lượng.</p>
+<h2 class="markdown-unit">2. Câu hỏi thông hiểu</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/e2XtxGJOftV5Q6UATZNJ9TB8jAdsStle--oFMtvuT07g9DTcLTxLvTqwU99rBOXGdyR0dD22DZNawZGxLiEskgUimTHiqoBOQk9TiGw6FZD-jnRiajb_HmFlJXIpYGSZEfDKI7KTPn_nCosNUVrHu-hZIkK_5kuSyOTaJYfpVfo?purpose=inline" alt="测平均速度实验套装斜面小车长木板木块学生秒表初中物理力学操作考试用品教学仪器器材教具_虎窝淘"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://tao.hooos.com/goods_DvzzqoqfDt5wm4n63vSQQPHjtn-BmWKKNHr0B8xQoduo.html?utm_source=chatgpt.com" alt="tao.hooos.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Câu 4. Một học sinh muốn đo tốc độ của xe đồ chơi chạy trên mặt bàn.</p>
+<p class="markdown-unit">a) Hãy kể tên các dụng cụ cần chuẩn bị.</p>
+<p class="markdown-unit">b) Trình bày các bước tiến hành đo.</p>
+<p class="markdown-unit">c) Tại sao cần thực hiện phép đo nhiều lần?</p>
+<p class="markdown-unit">d) Nếu khoảng cách giữa hai vạch là 1 m và thời gian xe đi hết quãng đường là 2,5 s, hãy tính tốc độ của xe.</p>
+<p class="markdown-unit">Câu 5.</p>
+<p class="markdown-unit">Một viên bi chuyển động qua hai cổng quang điện.</p>
+<p class="markdown-unit">a) Cổng quang điện thứ nhất có nhiệm vụ gì?</p>
+<p class="markdown-unit">b) Cổng quang điện thứ hai có nhiệm vụ gì?</p>
+<p class="markdown-unit">c) Đồng hồ đo thời gian hiện số hiển thị đại lượng nào?</p>
+<p class="markdown-unit">d) Tại sao phương pháp này thường chính xác hơn việc dùng đồng hồ bấm giây bằng tay?</p>
+<h2 class="markdown-unit">3. Câu hỏi vận dụng</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/C-orX4iR1662YeqYyFBfyml88nrd07_c8iVaqxpT9MG28q_xrDFA31Rerq_bW928_7IgVgVBXPzl1KdjJBmv-LnCiSPHeeKtIvqLR6brRT6Vw3Bl-lI8AbrR4LQA-8zwLAQ0JJFqO1ew6su75mcHFL5vW0iysNcdNrTQQFpp5b0?purpose=inline" alt="Πάνω από 40.000 παραβιάσεις του ΚΟΚ τα Χριστούγεννα και την Πρωτοχρονιά"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.emakedonia.gr/pano-apo-40-000-paraviaseis-toy-kok-ta-christoygenna-kai-tin-protochronia?utm_source=chatgpt.com" alt="emakedonia.gr"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Câu 6.</p>
+<p class="markdown-unit">Một xe máy đi qua đoạn đường dài 120 m trong thời gian 6 giây.</p>
+<p class="markdown-unit">a) Xác định quãng đường xe máy đi được.</p>
+<p class="markdown-unit">b) Xác định thời gian chuyển động.</p>
+<p class="markdown-unit">c) Tính tốc độ của xe máy theo đơn vị m/s.</p>
+<p class="markdown-unit">d) Đổi tốc độ vừa tìm được sang km/h.</p>
+<p class="markdown-unit">Câu 7.</p>
+<p class="markdown-unit">Ba lần đo thời gian một ô tô đồ chơi đi hết quãng đường 0,6 m có kết quả:</p>
+<ul>
+<li class="markdown-unit">Lần 1: 1,5 s.</li>
+<li class="markdown-unit">Lần 2: 1,4 s.</li>
+<li class="markdown-unit">Lần 3: 1,6 s.</li>
+</ul>
+<p class="markdown-unit">a) Tính thời gian trung bình.</p>
+<p class="markdown-unit">b) Tính tốc độ của ô tô đồ chơi.</p>
+<p class="markdown-unit">c) Vì sao thời gian ở ba lần đo không hoàn toàn giống nhau?</p>
+<p class="markdown-unit">d) Nếu thực hiện thêm nhiều lần đo, kết quả có thể đáng tin cậy hơn không? Giải thích.</p>
+<h1 class="markdown-unit">VI. HOẠT ĐỘNG THỰC HÀNH TẠI LỚP</h1>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/XsrYRXxOUlHOBnsR70VIbv1IxD9bnvMmvKbbEsmrU_EW48KdefBRQKHoqgA9NQP7sUweoIN3kkNHn31tHhejTDZpGvxnNuwli-908YOT1P93vEMm2srgf5ZZTBbo6U58kTROKU5P_Ts6wfruScc6p5amMsDPfLvRKta1xol2fYA?purpose=inline" alt="Trang chủ - Trường TH-THCS - THPT Trịnh Hoài Đức"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://thd.igcschool.edu.vn/?utm_source=chatgpt.com" alt="thd.igcschool.edu.vn"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Nhiệm vụ: Đo tốc độ chuyển động của một vật</p>
+<p class="markdown-unit">Chia lớp thành các nhóm, mỗi nhóm 4–5 học sinh.</p>
+<p class="markdown-unit">Dụng cụ:</p>
+<ul>
+<li class="markdown-unit">Một ô tô đồ chơi.</li>
+<li class="markdown-unit">Một thước dây hoặc thước mét.</li>
+<li class="markdown-unit">Một đồng hồ bấm giây.</li>
+<li class="markdown-unit">Một tấm ván phẳng.</li>
+</ul>
+<p class="markdown-unit">Phân công:</p>
+<ul>
+<li class="markdown-unit">Học sinh 1: Thả xe.</li>
+<li class="markdown-unit">Học sinh 2: Bấm đồng hồ.</li>
+<li class="markdown-unit">Học sinh 3: Quan sát vạch đích.</li>
+<li class="markdown-unit">Học sinh 4: Ghi kết quả.</li>
+<li class="markdown-unit">Học sinh 5: Tính toán và báo cáo.</li>
+</ul>
+<p class="markdown-unit">Phiếu ghi kết quả thực hành</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Lần đo</th>
+<th>Quãng đường (m)</th>
+<th>Thời gian (s)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Trung bình</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Yêu cầu:</p>
+<ol>
+<li class="markdown-unit">Ghi đầy đủ kết quả đo.</li>
+<li class="markdown-unit">Tính thời gian trung bình.</li>
+<li class="markdown-unit">Tính tốc độ trung bình.</li>
+<li class="markdown-unit">So sánh kết quả giữa các nhóm.</li>
+<li class="markdown-unit">Nêu những nguyên nhân có thể gây sai số.</li>
+</ol>
+<h1 class="markdown-unit">VII. CÂU HỎI CỦNG CỐ CUỐI BÀI</h1>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/YBP6e1JfxmasuIXsKEfXjeizFhVAQ-9NO91SYD2K1JxhN62bGGUS6jpXSachC63xt6acgQPGQ-xnpKcSzb7VVkTSjJPoxCZVbMniNhaIDN31j8PtBB4ZQ_lQoJP6ksqonuAlNb92X8qpP77qMZxzoP4d2akVLnZ0QV0LTOUHWKk?purpose=inline" alt="Lý thuyết Khoa học tự nhiên 7 bài 10 CTST  - Đo tốc độ - VnDoc.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://vndoc.com/ly-thuyet-khoa-hoc-tu-nhien-7-bai-10-ctst-301095?utm_source=chatgpt.com" alt="vndoc.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Học sinh cần tự trả lời được 5 câu hỏi sau:</p>
+<ol>
+<li class="markdown-unit">Muốn đo tốc độ của một vật cần đo những đại lượng nào?</li>
+<li class="markdown-unit">Đồng hồ bấm giây và thước đo có vai trò gì trong phép đo tốc độ?</li>
+<li class="markdown-unit">Trình bày các bước đo tốc độ bằng đồng hồ bấm giây.</li>
+<li class="markdown-unit">Cổng quang điện và đồng hồ đo thời gian hiện số hoạt động như thế nào?</li>
+<li class="markdown-unit">Thiết bị bắn tốc độ được sử dụng để làm gì?</li>
+</ol>
+<p class="markdown-unit">Thông điệp cuối bài:</p>
+<p class="markdown-unit">Đo tốc độ thực chất là xác định quãng đường vật đi được và thời gian vật thực hiện chuyển động. Biết đo tốc độ giúp chúng ta nghiên cứu chuyển động trong khoa học, thể thao, sản xuất và đặc biệt là bảo đảm an toàn giao thông.</p>
+<h2 class="markdown-unit">VIII. TÀI LIỆU VÀ HÌNH ẢNH THAM KHẢO</h2>
+<p class="markdown-unit">Các nội dung bài giảng được đối chiếu với cấu trúc Bài 9 trong sách Khoa học tự nhiên 7 – Kết nối tri thức với cuộc sống. </p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://www.google.com/s2/favicons?domain=https://sgkvn.com&amp;sz=32" alt="image"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">SGKVN+2</p>
+<ul>
+<li class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://sgkvn.com/lop-7-10/ket-noi-tri-thuc-voi-cuoc-song-3/chuong-iii-toc-do-1775/bai-9-do-toc-do-5932.html?utm_source=chatgpt.com" alt="Nội dung Bài 9 – SGKVN: Đo tốc độ"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div>.</li>
+<li class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://lop7.vn/bai-giang-khoa-hoc-tu-nhien-7-vat-li-sach-ket-noi-tri-thuc-bai-9-do-toc-do-vu-thi-hai-yen-5933/?utm_source=chatgpt.com" alt="Bài giảng tham khảo Bài 9 – Đo tốc độ"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div>.</li>
+<li class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://loigiaihay.com/giai-khoa-hoc-tu-nhien-7-bai-9-trang-49-50-51-52-ket-noi-tri-a106755.html?utm_source=chatgpt.com" alt="Hình ảnh thí nghiệm đo tốc độ bằng cổng quang điện"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div>.</li>
+<li class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://commons.wikimedia.org/wiki/File%3ACasio_F-91W_watch_%282023%29_%28front_closeup_-stopwatch_mode%29.jpg?utm_source=chatgpt.com" alt="Hình ảnh đồng hồ bấm giây – Wikimedia Commons"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div>.</li>
+</ul>
+<p class="markdown-unit">Lưu ý khi sử dụng hình ảnh: Một số hình là ảnh thiết bị thực tế từ nguồn giáo dục và thương mại quốc tế; giáo viên nên kiểm tra điều kiện sử dụng nếu đưa vào tài liệu phát hành công khai.</p>
+</div>
+        </main>
+    </div>
+
+    <footer>
+        <span class="author-info">Icarus - kienspvl@gmail.com - 097 463 8794</span>
+        <div id="progress-counter">
+            Mục: <input type="number" id="page-input" min="1" value="0" onkeydown="handlePageInputChange(event)" onblur="jumpToInputValue()" max="385"> / <span id="total-units-count">385</span>
+        </div>
+    </footer>
+
+    <!-- LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG -->
+    <div id="image-lightbox" onclick="closeLightboxOnBg(event)" style="display: none;">
+        <button class="lightbox-close-btn" onclick="closeLightbox(event)" title="Thoát Lightbox (Esc)">✕</button>
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image" onclick="event.stopPropagation()">
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div id="lightbox-counter" class="lightbox-counter">0 / 0</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="import-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập hoặc Chỉnh Sửa Bài Giảng</h3>
+            <textarea id="import-text" placeholder="Dán văn bản Markdown hoặc Import file Word vào đây..."></textarea>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <label class="btn">
+                        📄 Chọn File .txt / .md
+                        <input type="file" accept=".txt,.md" onchange="handleFileImport(event)">
+                    </label>
+                    <label class="btn" style="border-color: #22c55e;">
+                        📘 Import từ File Word (.docx)
+                        <input type="file" accept=".docx" onchange="handleWordImport(event)">
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="closeImportModal()">Hủy</button>
+                    <button onclick="processImport()" style="background-color: var(--accent-color); color: #fff;">Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SAVE AS HTML -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>💾 Lưu Bài Giảng Dưới Dạng HTML</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-color);">Nhập tên file HTML muốn lưu:</label>
+                <input type="text" id="save-filename-input" placeholder="Tên file..." onkeydown="if(event.key==='Enter') executeSaveAsHtml()">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeSaveModal()">Hủy</button>
+                <button onclick="executeSaveAsHtml()" style="background-color: var(--accent-color); color: #fff;">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Lịch Sử Bài Giảng Dưới LocalStorage</h3>
+                <button onclick="clearAllHistory()" style="background-color: #ef4444; color: #fff;">🗑️ Xóa Tất Cả</button>
+            </div>
+            <div id="history-container" class="history-list"></div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+    <div id="update-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🚀 Lịch Sử Cập Nhật Chương Trình (Changelog v3.11)</h3>
+            <div class="history-list" style="max-height: 400px; padding-right: 8px;">
+                <div class="changelog-item">
+                    <span class="changelog-version">v3.11</span><span class="changelog-date">(Cập nhật mới)</span>
+                    <ul class="changelog-list">
+                        <li><strong>Tải dữ liệu đang ngậm khi Import:</strong> Khi bấm nút Import, nếu file đang chứa sẵn dữ liệu (ngậm dữ liệu), nội dung sẽ tự động xuất hiện trong ô nhập liệu để xem hoặc copy.</li>
+                        <li><strong>Thêm nút In (Print):</strong> Nút "In" hỗ trợ xuất/in nhanh riêng phần bài giảng, tự động ẩn giao diện, thanh điều khiển và mục lục khi in.</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeUpdateModal()">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ô NGẬM DỮ LIỆU MARKDOWN GỐC -->
+    <script id="embedded-data" type="application/json">"# BÀI 9. ĐO TỐC ĐỘ\n\n\n\nKhoa học tự nhiên 7\n\nBộ sách Kết nối tri thức với cuộc sống\n\n\n\n![Cronómetros de Corrida | Decathlon](https://images.openai.com/static-rsc-4/8-FClnoB9SrGE-3pnXJGHOKj5Y8XraOkxDIZlXeYWyacQ4Jce38_h1vQBwaMpXwtLnAx33ddLgqIcpmPVFPq0BuHWoGmAN-xT98Kgwl0RIepOg_PuFAI8o54iGxApwYuLhIXebEnCCbuaaaZuQaINrWvkaBBIqCzIin-C2DBms4?purpose=inline)\n\n![Grace Covenant Academy (Top-Ranked Private School for 2026) - Cornelius, NC](https://images.openai.com/static-rsc-4/iAm3k9lEUm2Nw3OFhx9R2LGAVa6Y02zkE3zs5b3D6A0dA8a2WugiGiV4rqJV6aHe0HloewNrYpUDVGZqVSPYS6TNnSgsJumGGeVdYYEjmo9q8wKVNzpEIY8k-azLI4P20LQOyCCnCnLxOe_KwxMEy21-pu9nIxpXMQTyvG9sWsU?purpose=inline)\n\n![Close-up of a car speedometer in kilometers](https://images.openai.com/static-rsc-4/U-J4Aj-pdIxZfM9os5npdS1wNbekZgLreaWPj0xz9NTOA2akbyb5OFTbwian49Ycdehpkv4l85f8VjazQTtNceU5aATwqNiERuFcRmRdvydItU4OiST5zpyhCAkFxecQYCC1D7r2LFQIInZLRO1pCnxaYwNw2JWjPsqAkTI6XV8Ii2cLJyi6d7FESh91Zyoi?purpose=inline)\n\n9\n\n## I. MỤC TIÊU BÀI HỌC\n\nSau bài học, học sinh cần đạt được:\n\n1\\. Kiến thức\n\n- Biết được muốn xác định tốc độ của một vật cần đo quãng đường và thời gian chuyển động.\n- Mô tả được cách đo tốc độ bằng đồng hồ bấm giây.\n- Mô tả được cách đo tốc độ bằng đồng hồ đo thời gian hiện số và cổng quang điện.\n- Nêu được nguyên tắc hoạt động cơ bản của thiết bị bắn tốc độ.\n\n2\\. Năng lực\n\n- Sử dụng được thước đo độ dài và đồng hồ bấm giây.\n- Biết thực hiện phép đo, ghi kết quả và tính giá trị trung bình.\n- Biết vận dụng kiến thức để đo tốc độ trong các tình huống thực tế.\n\n3\\. Phẩm chất\n\n- Trung thực, cẩn thận khi thực hiện phép đo.\n- Có ý thức tuân thủ quy định về tốc độ khi tham gia giao thông.\n\n## II. KHỞI ĐỘNG – LÀM THẾ NÀO ĐỂ BIẾT MỘT VẬT CHUYỂN ĐỘNG NHANH HAY CHẬM?\n\n![UniSport Australia | University Sports | Nationals](https://images.openai.com/static-rsc-4/uCbpcD27fmR3UhdQiJlSvdyEHS7TKV7FkF7TW3QPl0jX7R1LDzD5kxDATN-5Ndgh44YHC628ERio2wqmdjeEgGcYW_SgRXFh4kTTfEaOYuaETsNma2bxvu1GwMrodUVW8L2nv1bqa73MvG8-MaFYIzZzTWQN7Q1eeAgy2vKngF0?purpose=inline)\n\n![Ewen Premel de l’AC Gouesnou au Morlaix CP | Le Télégramme](https://images.openai.com/static-rsc-4/x3zNuiV3vFw6jrXTJCGchpOqwYMJO2cHVsH4L8SSyo7JB30jowZPuRwBtqEE0gY_ne2YD_8z1_8LEQj47WSYmk8NxwRwLQ0BlQOWAf_NdQTWHW2OUPZBDrglX9wi6i2nytlYj1UJ-pVwsLPwKfSptfAhEXt1waQ69GGeEwPukhM?purpose=inline)\n\n![mauritius images](https://images.openai.com/static-rsc-4/a4LquEaRjJHJLZZCFhbqG5Vcc6n9usMdyGPd-IPkztC9o_yrpbElz7IT8UALdnfX9UtwC7D3irEpuJxXKw1W2Ixksn2SNcJrd5nfnQ2Nlq6eRQzavVIzvM4paJViUw_-7xA3TlqPb_hF8GI6KXCMww2jtCamR2N5be3rPBPelko?purpose=inline)\n\nHãy quan sát các hình ảnh trên và trả lời:\n\n1. Làm thế nào để biết một vận động viên chạy nhanh hay chậm?\n2. Nếu hai bạn cùng chạy một quãng đường 60 m, bạn nào chạy nhanh hơn?\n3. Muốn xác định chính xác tốc độ chạy của một bạn, chúng ta cần đo những đại lượng nào?\n\nGợi ý trả lời:\n\nĐể xác định tốc độ chuyển động của một vật, chúng ta cần biết:\n\n- Quãng đường vật đi được (s).\n- Thời gian vật đi hết quãng đường đó (t).\n\nTừ hai đại lượng này, ta có thể tính được tốc độ chuyển động của vật.\n\nDẫn vào bài: Trong bài học hôm nay, chúng ta sẽ tìm hiểu các dụng cụ và phương pháp đo tốc độ của một vật trong phòng thí nghiệm cũng như trong đời sống.\n\n# III. HÌNH THÀNH KIẾN THỨC\n\n## 1. Đo tốc độ bằng đồng hồ bấm giây\n\n### 1.1. Dụng cụ đo\n\n![Stopwatch](https://images.openai.com/static-rsc-4/IWo7mTKHMs_LHVRTcCxfOmsW7l_4fgxrK01ho_jtWoZhvENiWcpJOVqxpp2GRu0AB_mD91sni151JGHlls0JiQF_AsfU9UdN_ifxqHIDKUO1DMVAm0xnsauzWKE2H9aHXroucGfm6XP1tTeA3iuQTcBbZY7lwo70mld9LVoeAT-AnsY2aqo1Zjf5C-yOubUr?purpose=inline)\n\n![Tape measure and ruler](https://images.openai.com/static-rsc-4/gy7biO6VcR4AUrZHzMyPdAQbdYXhpx__XgnA03Go4NSWds7gjIkHNVMKzTU9aqXB65RwcC4EbZZ0DbWhEHXu70z8ox6E8S9RQNSC9JzkoU6mUPE-XK9gZGauNYZD-g9jSWTS_GODS7hHmbqdOAAa-We8oU16EoGNoFb0sGVfV6WUQzXYnjOBRPlSDo1oMa6M?purpose=inline)\n\n![Athletics children running coaches at the track during a session](https://images.openai.com/static-rsc-4/DfSaCRlNEHAdSbAqQ-nmKJAdtc2o2H1KE-LUsb0weOiNG0ZkcWtdYIRAQ8ew5ypy3y-9uOHumwAAm_9D6QAszzQa7EjEl_bKBUH46RJv7wfKRwGEOD-yyDDO0xfvk5T5LpAY2RGrM5jY93rN0jaOQRc1tzZ_wnf1aYETZVyjN4sGm1MRWskd874oC_7jvW3v?purpose=inline)\n\n7\n\nĐể đo tốc độ bằng đồng hồ bấm giây, chúng ta cần sử dụng hai nhóm dụng cụ:\n\na) Dụng cụ đo thời gian\n\n- Đồng hồ bấm giây (Stopwatch).\n- Dùng để đo khoảng thời gian vật chuyển động.\n- Kí hiệu thời gian: t.\n- Đơn vị: giây (s).\n\nb) Dụng cụ đo quãng đường\n\n- Thước thẳng (Ruler).\n- Thước dây (Measuring tape).\n- Thước cuộn (Tape measure).\n- Dùng để đo chiều dài quãng đường vật chuyển động.\n- Kí hiệu quãng đường: s.\n- Đơn vị: mét (m).\n\nc) Tốc kế\n\n![a speed dial of a car with the arrow on zero](https://images.openai.com/static-rsc-4/x0vDvAuVbi71ZKISQTsvd-4DKXXH23HPylX_bSRISf0gwuCc_JjlGIeX1eyrlL2SpdN-vka-68KV2gCRzcN0jj6BBHz3ruZ0f7l0-YqF20Cn6UllRWjAPQoK6x8w0jgQBler5emTl7Gf_GJUyN-bpE2LQjuq87Jq4cgrX_UEe_3CxLWtSQ3wg5qP_GS2f3cp?purpose=inline)\n\nTốc kế (Speedometer) là dụng cụ dùng để đo tốc độ của các phương tiện giao thông như ô tô, xe máy.\n\n- Đơn vị thường gặp: km/h.\n- Tốc kế thường được lắp trên bảng điều khiển của phương tiện.\n\nGhi nhớ:\n\n| Dụng cụ          | Đại lượng đo  |\n| ---------------- | ------------- |\n| Thước đo         | Quãng đường s |\n| Đồng hồ bấm giây | Thời gian t   |\n| Tốc kế           | Tốc độ v      |\n\n### 1.2. Hai cách đo tốc độ\n\n![Physics in Motion | News Post General - Mount Carmel Academy](https://images.openai.com/static-rsc-4/HRYNCuSV0s7WD7MLqazKzfGjUczaThfmbHP5SkTKRwfbQDbF680CGRmKoPkFb_lRerkZSAmv500CRbrJeTbq9-cnnReATucy8W-9POmsMsP1K7NHcciRrAE75ui6tO28A8P1qcEzEzYkQsLLp7S5KSApuJkU4oWDm1Bn55VkECE?purpose=inline)\n\n![mcacubs.com](https://www.mcacubs.com/about/school-news/news-post-general/~board/school-news/post/physics-in-motion?utm_source=chatgpt.com)\n\nCó hai cách lựa chọn đại lượng khi tiến hành đo tốc độ:\n\nCách 1: Chọn quãng đường trước, đo thời gian sau.\n\n- Xác định trước quãng đường s.\n- Cho vật chuyển động trên quãng đường đó.\n- Dùng đồng hồ bấm giây đo thời gian t.\n\nVí dụ: Đo thời gian một bạn chạy hết quãng đường 60 m.\n\nCách 2: Chọn thời gian trước, đo quãng đường sau.\n\n- Xác định trước khoảng thời gian t.\n- Cho vật chuyển động trong khoảng thời gian đó.\n- Đo quãng đường s mà vật đi được.\n\nVí dụ: Đo quãng đường một bạn đi xe đạp trong 10 giây.\n\nCâu hỏi kiểm tra nhanh\n\nMột học sinh muốn đo tốc độ chạy trên quãng đường 100 m. Bạn ấy sử dụng đồng hồ bấm giây để đo thời gian chạy.\n\nĐây là cách đo nào?\n\nĐáp án: Cách 1 – Chọn quãng đường trước, đo thời gian sau.\n\n### 1.3. Các bước đo tốc độ bằng đồng hồ bấm giây\n\n![ATHLETICS-OLY-2020-2021-TOKYO](https://images.openai.com/static-rsc-4/OShbTV8QyxGG2q97jaeYDh5MAtnZnKA-YEylJ-8ywsRR29YfXL61TM2YgIUrLtZ5RI1_TZog1q2rbUV4yi1L5pIhjaaQkhrRTxXXjAHi-bP3IVrPTE0PkeeAttDxYSu0H2eO43GhY9Axv2RapGF42KSgd7ktzUJ4xrG5hZucbggzCpOmOPTOEJKJ5zoZTm0O?purpose=inline)\n\n![LA FORTALEZA DE SEXTO: PRÁCTICA CON LA CINTA MÉTRICA](https://images.openai.com/static-rsc-4/p7gLhLw2CTdSLc9x8Qu1addMBgn5KxLpUmcnHkwY-S8hTAuESvRlO7p_uwJvML7l3ludqN24Ka1uYT5dvhwELk649NBSM_Zduz76_XO6MPNbww2wFl7BjK8_FQFBSHmE7mIwHhLJmEOrnY6VUGe2f_t2Ayi7SAdPcLopQemb_TU?purpose=inline)\n\n![Timing times](https://images.openai.com/static-rsc-4/uP914DvX1TpFjMNEp84MzMVTMxhmzVc8UsTeKNXi07SGhrsEFZNk9Mk9B659FRuVmmfJtL-y-xGLDY06ebz4k26xt4qpmb1gaFjKai8MHi2687PpxwT2ZBAfPa3h_LzfECyI-ao9_lMMGZOPheEHxvxRemOrbncjyaOebGTIHcOAgJou5TdQXCVxz87-otjA?purpose=inline)\n\n5\n\nTrong phòng thực hành, thông thường chúng ta sử dụng cách 1.\n\nTiến hành theo các bước:\n\nBước 1. Đo quãng đường\n\n- Dùng thước đo chiều dài quãng đường vật sẽ chuyển động.\n- Xác định rõ vạch xuất phát và vạch đích.\n\nBước 2. Đo thời gian\n\n- Đặt vật tại vạch xuất phát.\n- Khi vật bắt đầu chuyển động, nhấn nút START trên đồng hồ.\n- Khi vật đến vạch đích, nhấn nút STOP.\n- Đọc thời gian hiển thị trên đồng hồ.\n\nBước 3. Lặp lại phép đo\n\n- Thực hiện phép đo ít nhất 3 lần.\n- Ghi lại kết quả từng lần đo.\n\nBước 4. Tính giá trị trung bình\n\n- Tính quãng đường trung bình (nếu các lần đo có quãng đường khác nhau).\n- Tính thời gian trung bình.\n- Sử dụng công thức để tính tốc độ.\n\nBước 5. Nhận xét kết quả\n\n- So sánh các lần đo.\n- Đánh giá độ ổn định và độ tin cậy của kết quả.\n\n### 1.4. Ví dụ thực tế: Đo tốc độ của ô tô đồ chơi\n\n![Science Kits - SUP - Science United Project](https://images.openai.com/static-rsc-4/JwaTBzzpqq4bvQ0ZcA_thYfae3dSRgiSwgN4v3V9CYKKsMVKp48KLCNuqrHWx6Ioa69xRfvY2JjC9TlxaolmckppWb7VsnRseLJruiWniHyp2jj_y68OgFim98Yg9t5ZMPi5NZH0Tpo502Ze3dowpbdTAT4r9EK7NPOpoHGwE-s?purpose=inline)\n\n![scienceunitedproject.com](https://www.scienceunitedproject.com/science-kits-for-displaced-students.html?utm_source=chatgpt.com)\n\nDụng cụ:\n\n- Một ô tô đồ chơi không có động cơ.\n- Một tấm gỗ phẳng dài khoảng 80 cm.\n- Thước đo độ dài.\n- Bút dạ hoặc phấn.\n- Đồng hồ bấm giây.\n- Một vài cuốn sách để kê tạo mặt dốc.\n\nTiến hành thí nghiệm:\n\n1. Dùng sách kê một đầu tấm gỗ để tạo thành mặt dốc.\n2. Dùng thước xác định hai vạch xuất phát và đích cách nhau 50 cm.\n3. Đặt ô tô tại vạch xuất phát.\n4. Thả ô tô đồng thời bấm đồng hồ.\n5. Khi ô tô đến vạch đích, dừng đồng hồ.\n6. Ghi lại thời gian và thực hiện phép đo 3 lần.\n\nBảng 9.1. Bảng ghi kết quả thí nghiệm\n\n| Lần đo | Quãng đường (m) | Thời gian (s) |\n| ------ | --------------- | ------------- |\n| 1      | 0,5             | 1,2           |\n| 2      | 0,5             | 1,1           |\n| 3      | 0,5             | 1,3           |\n\nTính thời gian trung bình:\n\nt̄ = (1,2 + 1,1 + 1,3) : 3 = 1,2 s\n\nTốc độ trung bình:\n\nv = s/t = 0,5/1,2 ≈ 0,42 m/s\n\n\n\nKết quả\n\n&#x20;Tốc độ của ô tô đồ chơi khoảng 0,42 m/s.\n\n\n\nLưu ý: Các số liệu trên là số liệu minh họa để học sinh luyện tập cách xử lí kết quả.\n\n### 1.5. Vì sao phải đo nhiều lần?\n\n![Physics - Century College](https://images.openai.com/static-rsc-4/7sQwrVAZak3ocl95OhdAg8UURAW8iX5gFQ3JIOc26n4gOwapTmIzagxy73OD079q75xFQ8OkAybvpa-tR02NRKZgiK172QBSqPiQ1EM54G_3-qYL9hUvfr7HFgItQoJKk_fc4dvl77__AFs4Ju0VBgX3jGXZmNfoeFIxWB4igDM?purpose=inline)\n\n![century.edu](https://www.century.edu/programs/physics/?utm_source=chatgpt.com)\n\nKhi đo tốc độ, kết quả có thể bị ảnh hưởng bởi:\n\n- Người bấm đồng hồ không hoàn toàn chính xác.\n- Thời điểm bắt đầu và kết thúc chuyển động khó xác định tuyệt đối.\n- Vật chuyển động không hoàn toàn giống nhau giữa các lần đo.\n\nVì vậy, cần thực hiện phép đo nhiều lần để hạn chế ảnh hưởng của sai số ngẫu nhiên và tăng độ tin cậy của kết quả.\n\nCông thức tính giá trị trung bình:\n\nt̄ = (t₁ + t₂ + t₃)/3\n\nNếu quãng đường mỗi lần đo giống nhau:\n\nv = s/t̄\n\n## 2. Đo tốc độ bằng đồng hồ đo thời gian hiện số và cổng quang điện\n\n### 2.1. Các dụng cụ trong thí nghiệm\n\n![Timer and Photogates  – Arbor Scientific](https://images.openai.com/static-rsc-4/Rw4ivGqFYuUOD4xVuVarv0pw1mnyOPX6cAnqehe-iASne_RapGwbEwL-s-lgzuLQUSF7ywlG6X1x5a5l12fzAFEIlmi4sJvZRQLghQDzOOE5FUt7ndq-8Ginnh7JCY5XpTfAEXnn4HTsf80lAUsLI9cE3MmZNyj-6UcHuZZiNwY?purpose=inline)\n\n![arborsci.com](https://www.arborsci.com/products/timer-and-photogates?utm_source=chatgpt.com)\n\nTrong phòng thực hành, để đo tốc độ của một vật chuyển động, người ta có thể sử dụng:\n\na) Cổng quang điện (Photogate)\n\n![Vernier Go Direct® Lichtschranke (GDX-VPG) Photoschranke für Experimente aus der Bewegungslehre Infrarot-Lichtquelle: 880 nm, Öffnung: 77,5mm ✓ ab 178,70 € bei DynaTech](https://images.openai.com/static-rsc-4/RfNN4RLGBlFWZMq62rYzNtxbOEQ2hedsBCpJG9nJ3tBkdtpF_DxyhmxkRK9Zq26gjEbZBdybG3cKd9m0hQ2PxNPlQkVvX1RenDWLpYkMqsoqjYSuhEHDw5Y5ZZoMszPpfxQ8uXgXM46KDKL4ZJq8AsIA9nY-Fyear3iX5n1p-G4?purpose=inline)\n\n![dynatech.de](https://www.dynatech.de/vernier-go-direct-lichtschranke-gdx-vpg-photoschranke-fuer-experimente-aus-der-bewegungslehre-infrarot-lichtquelle-880-nm-oeffnung-77-5mm?utm_source=chatgpt.com)\n\n- Là thiết bị sử dụng tia sáng để phát hiện vật đi qua.\n- Khi vật đi qua và chắn tia sáng, cổng quang điện phát tín hiệu.\n- Tín hiệu này được truyền đến đồng hồ đo thời gian.\n\nb) Đồng hồ đo thời gian hiện số\n\n![Timer and Photogates  – Arbor Scientific](https://images.openai.com/static-rsc-4/lgk9-VaGfrlEWe-zyfDyVQJz4s0x8HMAFDv--r7DqMBvTEpvfsVay370MtjsLxnuatVFa1bkerFfkxFRC4m6fsYxmHjqptyvFAGzmkpotaIvdn3uqEFa__1SBnsGJZGYh-Jum1MpxPUE6VyZbTybvGI8eiRfwul0d4VjMAwpDiI?purpose=inline)\n\n![arborsci.com](https://www.arborsci.com/products/timer-and-photogates?utm_source=chatgpt.com)\n\n- Dùng để đo khoảng thời gian chuyển động.\n- Có thể tự động bắt đầu và kết thúc phép đo khi nhận tín hiệu từ cổng quang điện.\n- Kết quả được hiển thị bằng số trên màn hình.\n\n### 2.2. Nguyên tắc hoạt động\n\n![Hãy dựa vào Hình 9.3 để mô tả sơ lược cách đo tốc độ dùng cổng quang điện và đồng hồ đo thời gian hiện số khi viên bi ch...](https://images.openai.com/static-rsc-4/DW5P8oPkgx8847kVPeLSC4I8BBr2HR6B5Vkq2C3BXdqiN7Lc0YFT18lMorMDAFghNZXfhq8cIPMK3OFbMr6wgZb4sgC9aUtBwmAJips19VPS32u2z3dhyMYJdXfoKecSkLT5dOnohxRSq9QGIIuF_okpszXQ1f-DHKA8WlsW_7w?purpose=inline)\n\n![hoc24.vn](https://hoc24.vn/cau-hoi/hay-dua-vao-hinh-93-de-mo-ta-so-luoc-cach-do-toc-do-dung-cong-quang-dien-va-dong-ho-do-thoi-gian-hien-so-khi-vien-bi-chuyen-dong-tu-cong-quang-dien.7642816454730?utm_source=chatgpt.com)\n\nThí nghiệm sử dụng hai cổng quang điện đặt trên đường chuyển động của viên bi.\n\nNguyên tắc hoạt động:\n\nBước 1: Viên bi bắt đầu chuyển động và đi qua cổng quang điện thứ nhất.\n\n- Cổng quang điện thứ nhất phát tín hiệu.\n- Đồng hồ bắt đầu tính thời gian.\n\nBước 2: Viên bi tiếp tục chuyển động đến cổng quang điện thứ hai.\n\n- Cổng quang điện thứ hai phát tín hiệu.\n- Đồng hồ dừng tính thời gian.\n\nBước 3: Đọc kết quả.\n\n\\- Đồng hồ hiển thị khoảng thời gian viên bi chuyển động giữa hai cổng quang điện.\n\nBước 4: Xác định quãng đường.\n\n\\- Đo khoảng cách giữa hai cổng quang điện.\n\nBước 5: Tính tốc độ.\n\n\\- Sử dụng quãng đường và thời gian vừa đo được để tính tốc độ trung bình.\n\n### 2.3. Ví dụ minh họa\n\nMột viên bi chuyển động giữa hai cổng quang điện cách nhau 0,8 m.\n\nĐồng hồ đo thời gian hiện số hiển thị 2 giây.\n\nTính tốc độ trung bình của viên bi.\n\nBài giải:\n\nQuãng đường: s = 0,8 m.\n\nThời gian: t = 2 s.\n\nTốc độ:\n\nv = s/t = 0,8/2 = 0,4 m/s.\n\nĐáp số: 0,4 m/s.\n\n### 2.4. So sánh hai phương pháp đo\n\n| Tiêu chí         | Đồng hồ bấm giây            | Cổng quang điện        |\n| ---------------- | --------------------------- | ---------------------- |\n| Cách bắt đầu đo  | Người bấm nút               | Cảm biến phát tín hiệu |\n| Cách kết thúc đo | Người bấm nút               | Cảm biến phát tín hiệu |\n| Độ chính xác     | Phụ thuộc thao tác người đo | Thường cao hơn         |\n| Ứng dụng         | Đo chạy bộ, xe đồ chơi      | Thí nghiệm vật lí      |\n\nKết luận: Cổng quang điện giúp tự động hóa quá trình đo thời gian, giảm sai số do thao tác bấm đồng hồ bằng tay.\n\n## 3. Tìm hiểu thiết bị bắn tốc độ\n\n### 3.1. Hình ảnh thiết bị bắn tốc độ\n\n![El radar que multa a 1,2 km ya está en España: TruCam II y su plan](https://images.openai.com/static-rsc-4/R2WcQZAFlJLfOcO3H1aui6PiB_QkXCJ6UR94RIqoLzSyicMDJsRdQBfj0KWXQuhUiDHnAnI3eJ29RcMdt_LE41Kf0oN6fjipO9JcEZIRYLOltegh4zTtMlwoSnX2q-nNqPSh4tcDB9P638hPIjYmcRgyw9a3X4SAL-DsyG54T1k?purpose=inline)\n\n![Raser auf der A8 bei Augsburg geblitzt: 239 statt erlaubter 120 Stundenkilometer](https://images.openai.com/static-rsc-4/_Xy2AGN71TE4kzAeLKeYJTh1atHSBHypqjIUVZkDdt7lRjnIIX1yIyuk6elvt7Vi-qIsuWqCqJU8QJXbGuXYmDcK-SEetFu4uf-2lb3jbsTyb8GY15OzUcT3EBuazLsmMV0mTCt50uN-CebtzWta86YGP1Q5EPzJ7hsLQ2n1Wa0?purpose=inline)\n\n![CSGT Đăk Lăk xử lý lái xe ‘không để ý tốc độ’ trên đường Hồ Chí Minh](https://images.openai.com/static-rsc-4/p4F3z_QirpB2zLBV72wRw-zdLWeOZxvrhlkwzVZT5V63agigX6KMS4GHRJ2G-jk9PXYq3XsDgIhQX7tgCeSsYc7pyLov_4ZBkzur-k0ZyE_qJFVymVimw_XwHwRXoKQhkZhgNwAQ2aTptlq1a0zOmopc7FMMNjsP3MMLPsPEoZ4?purpose=inline)\n\n7\n\nThiết bị bắn tốc độ (Speed Gun / Speed Radar) là thiết bị được sử dụng để kiểm tra tốc độ của các phương tiện giao thông.\n\nThiết bị thường được sử dụng bởi lực lượng chức năng để kiểm tra tốc độ ô tô, xe máy trên đường.\n\n### 3.2. Nguyên tắc hoạt động\n\n![Police Laser Speed Guns Explained (UK) | How Laser Detection Works  – Aguri Limited](https://images.openai.com/static-rsc-4/P0VcygQRvZvC8ahLTbWC-GiP9CkOGuT3p4C-9U6ecitM1A00D-7oFeLEeLK2ye6AFQH2Feim8_rRwkg6ePRkqePAgfXHQGAuFvqVHvIzE2MsJ1YBkvFEu8fiDXyExET3pGPgNGAzxgYKxYEyGSPe4qwKNMobfuVl-oocvh2rFLM?purpose=inline)\n\n![aguri-iq.co.uk](https://aguri-iq.co.uk/pages/police-laser-speed-guns-explained?utm_source=chatgpt.com)\n\nMột số thiết bị bắn tốc độ sử dụng nguyên tắc hiệu ứng Doppler của sóng radar hoặc đo khoảng cách bằng tia laser theo thời gian.\n\na) Thiết bị sử dụng sóng radar\n\n- Phát sóng điện từ về phía phương tiện đang chuyển động.\n- Sóng phản xạ từ phương tiện quay trở lại thiết bị.\n- Dựa vào sự thay đổi tần số của sóng phản xạ, thiết bị xác định tốc độ phương tiện.\n\nb) Thiết bị sử dụng tia laser\n\n- Phát các xung tia laser về phía phương tiện.\n- Đo thời gian tia laser truyền đi và phản xạ trở lại.\n- Thực hiện nhiều lần đo khoảng cách trong các khoảng thời gian rất ngắn.\n- Từ sự thay đổi khoảng cách theo thời gian, thiết bị tính được tốc độ phương tiện.\n\nLưu ý: Không phải mọi thiết bị bắn tốc độ đều hoạt động theo cùng một nguyên tắc. Hai phương pháp trên là những nguyên tắc phổ biến.\n\n### 3.3. Ứng dụng trong đời sống\n\n![Cao tốc Nội Bài - Lào Cai chính thức dùng camera bắn tốc độ 24/24h trên toàn tuyến - Báo điện tử VnMedia - Tin nóng Việt Nam và thế giới](https://images.openai.com/static-rsc-4/xySTFuGIVxtjAFRlQk-X_iq8hRdUg5E36Uxp_ECTQ4tAHrJ0fPNvyKPiGDyLH76k5Is0ZpbPdF2pe-ehQHcJm58t8qKUoV8kGtRGwQ3lzS3rXtkg7pPja5egKDXDHLE1DkUrRDGyzMuUkfawCmGKOxP2vtXPVFOMkxgPzn12Yos?purpose=inline)\n\n![Speed Marathon na Jičínsku: policie vybrala místa, kde bude měřit rychlost - Jičínský deník](https://images.openai.com/static-rsc-4/MmD6Vx6qrGB8MOa8L6HX8nXbGAuq6RfNbj-fA24kM_EnmXG9K5Lni5VQDh-wkoKPaDo66Qe9s9C_QMdGD4BGf59-KF7uDM_ytwfA9ccXf79AzQk6LAObY3thyUkWzuNRACqwabRweb2Y9Qdq649_HlFwrd73J1K1ZW1SfH1jSnQ?purpose=inline)\n\n![¿Para qué sirve el velocímetro de un auto? | KIA](https://images.openai.com/static-rsc-4/Ftv1jTdpv9FB3V05bSM4WGDJUMKbFjevnkRD2cvZY2SLl1ljF99468HAIh52lkLPPzSsiCpflWDBcaPBR6iUwTuFs3br84IWdY_2nDBTpqUqqGJ5p9Hlh1gBziRIl5jbQTKf7VbR2TMd2ryaS28thtq28xdoiiG6ce9tsSWy8Lc?purpose=inline)\n\n6\n\nThiết bị bắn tốc độ có vai trò:\n\n- Kiểm tra tốc độ của các phương tiện giao thông.\n- Phát hiện phương tiện chạy quá tốc độ cho phép.\n- Hỗ trợ lực lượng chức năng xử lí vi phạm.\n- Góp phần bảo đảm an toàn giao thông.\n\nLiên hệ thực tế:\n\nKhi tham gia giao thông, người điều khiển phương tiện cần:\n\n- Tuân thủ biển báo giới hạn tốc độ.\n- Không phóng nhanh, vượt ẩu.\n- Giữ khoảng cách an toàn với phương tiện phía trước.\n- Điều chỉnh tốc độ phù hợp với điều kiện đường sá và thời tiết.\n\n# IV. KIẾN THỨC TRỌNG TÂM CẦN GHI NHỚ\n\n![Measuring Speed | SQA National 5 Physics Revision Notes 2019](https://images.openai.com/static-rsc-4/JpN-l-3HpoWX0BofcjGXIi-A30zQskJJzye7StgB7yhzOcPfgtjbbAahhYjEBIHjNTrIB9y2-Z3cyfiRMnCntBeq1sVcMfrG4YdXaBDTDeHOoCAJcm1-tZsUy3frz0ReSqSOW5IHYPX-oi9NVkQBVNtiBf3C1xVPbZ5LgYgrYuM?purpose=inline)\n\n![savemyexams.com](https://www.savemyexams.com/national-5/physics/sqa/19/revision-notes/dynamics/vectors-scalars/measuring-speed/?utm_source=chatgpt.com)\n\n| Nội dung                | Kiến thức cần nhớ                                    |\n| ----------------------- | ---------------------------------------------------- |\n| Đo thời gian            | Dùng đồng hồ bấm giây                                |\n| Đo quãng đường          | Dùng thước đo                                        |\n| Đo tốc độ               | Xác định quãng đường và thời gian                    |\n| Đo bằng cổng quang điện | Sử dụng cảm biến để xác định thời điểm vật đi qua    |\n| Đo tốc độ giao thông    | Sử dụng thiết bị bắn tốc độ                          |\n| Đo nhiều lần            | Tính giá trị trung bình để hạn chế sai số ngẫu nhiên |\n\nCông thức quan trọng:\n\nv = s/t\n\nTrong đó:\n\n- v: Tốc độ (m/s).\n- s: Quãng đường (m).\n- t: Thời gian (s).\n\n# V. LUYỆN TẬP – VẬN DỤNG\n\n## 1. Câu hỏi nhận biết\n\n![Norwegian Double-Threshold Training for Youth Athletes | by Steve Hadley | Medium](https://images.openai.com/static-rsc-4/vRiTBAN3hjc9fyZndRYQlxVgdDgCO2wZWr3IL4fE7QwZ_VrVpl5Bg-ygo7OfEVuMC8nMNXAZLdodAFRnuj63nATn8Eqq9-tXMsqUHfrYhIMSEEzkvJG-RVQSZe13_sfZf0UdidpVPBuiJkL6f-gYzq59_f78d2Kyrq31DGmL_hM?purpose=inline)\n\n![medium.com](https://medium.com/%40sarahb57/norwegian-double-threshold-training-for-youth-athletes-bfbacdbb8812?utm_source=chatgpt.com)\n\nCâu 1. Muốn đo tốc độ của một học sinh chạy trên sân trường bằng phương pháp thông thường, cần sử dụng những dụng cụ nào?\n\nA. Cân và nhiệt kế.\n\nB. Thước đo và đồng hồ bấm giây.\n\nC. Lực kế và đồng hồ.\n\nD. Nhiệt kế và thước đo.\n\nCâu 2. Đồng hồ bấm giây dùng để đo đại lượng nào?\n\nA. Quãng đường.\n\nB. Khối lượng.\n\nC. Thời gian.\n\nD. Tốc độ trực tiếp.\n\nCâu 3. Tốc kế trên ô tô có tác dụng gì?\n\nA. Đo quãng đường.\n\nB. Đo thời gian.\n\nC. Đo tốc độ.\n\nD. Đo khối lượng.\n\n## 2. Câu hỏi thông hiểu\n\n![测平均速度实验套装斜面小车长木板木块学生秒表初中物理力学操作考试用品教学仪器器材教具_虎窝淘](https://images.openai.com/static-rsc-4/e2XtxGJOftV5Q6UATZNJ9TB8jAdsStle--oFMtvuT07g9DTcLTxLvTqwU99rBOXGdyR0dD22DZNawZGxLiEskgUimTHiqoBOQk9TiGw6FZD-jnRiajb_HmFlJXIpYGSZEfDKI7KTPn_nCosNUVrHu-hZIkK_5kuSyOTaJYfpVfo?purpose=inline)\n\n![tao.hooos.com](https://tao.hooos.com/goods_DvzzqoqfDt5wm4n63vSQQPHjtn-BmWKKNHr0B8xQoduo.html?utm_source=chatgpt.com)\n\nCâu 4. Một học sinh muốn đo tốc độ của xe đồ chơi chạy trên mặt bàn.\n\na) Hãy kể tên các dụng cụ cần chuẩn bị.\n\nb) Trình bày các bước tiến hành đo.\n\nc) Tại sao cần thực hiện phép đo nhiều lần?\n\nd) Nếu khoảng cách giữa hai vạch là 1 m và thời gian xe đi hết quãng đường là 2,5 s, hãy tính tốc độ của xe.\n\nCâu 5.\n\nMột viên bi chuyển động qua hai cổng quang điện.\n\na) Cổng quang điện thứ nhất có nhiệm vụ gì?\n\nb) Cổng quang điện thứ hai có nhiệm vụ gì?\n\nc) Đồng hồ đo thời gian hiện số hiển thị đại lượng nào?\n\nd) Tại sao phương pháp này thường chính xác hơn việc dùng đồng hồ bấm giây bằng tay?\n\n## 3. Câu hỏi vận dụng\n\n![Πάνω από 40.000 παραβιάσεις του ΚΟΚ τα Χριστούγεννα και την Πρωτοχρονιά](https://images.openai.com/static-rsc-4/C-orX4iR1662YeqYyFBfyml88nrd07_c8iVaqxpT9MG28q_xrDFA31Rerq_bW928_7IgVgVBXPzl1KdjJBmv-LnCiSPHeeKtIvqLR6brRT6Vw3Bl-lI8AbrR4LQA-8zwLAQ0JJFqO1ew6su75mcHFL5vW0iysNcdNrTQQFpp5b0?purpose=inline)\n\n![emakedonia.gr](https://www.emakedonia.gr/pano-apo-40-000-paraviaseis-toy-kok-ta-christoygenna-kai-tin-protochronia?utm_source=chatgpt.com)\n\nCâu 6.\n\nMột xe máy đi qua đoạn đường dài 120 m trong thời gian 6 giây.\n\na) Xác định quãng đường xe máy đi được.\n\nb) Xác định thời gian chuyển động.\n\nc) Tính tốc độ của xe máy theo đơn vị m/s.\n\nd) Đổi tốc độ vừa tìm được sang km/h.\n\nCâu 7.\n\nBa lần đo thời gian một ô tô đồ chơi đi hết quãng đường 0,6 m có kết quả:\n\n- Lần 1: 1,5 s.\n- Lần 2: 1,4 s.\n- Lần 3: 1,6 s.\n\na) Tính thời gian trung bình.\n\nb) Tính tốc độ của ô tô đồ chơi.\n\nc) Vì sao thời gian ở ba lần đo không hoàn toàn giống nhau?\n\nd) Nếu thực hiện thêm nhiều lần đo, kết quả có thể đáng tin cậy hơn không? Giải thích.\n\n# VI. HOẠT ĐỘNG THỰC HÀNH TẠI LỚP\n\n![Trang chủ - Trường TH-THCS - THPT Trịnh Hoài Đức](https://images.openai.com/static-rsc-4/XsrYRXxOUlHOBnsR70VIbv1IxD9bnvMmvKbbEsmrU_EW48KdefBRQKHoqgA9NQP7sUweoIN3kkNHn31tHhejTDZpGvxnNuwli-908YOT1P93vEMm2srgf5ZZTBbo6U58kTROKU5P_Ts6wfruScc6p5amMsDPfLvRKta1xol2fYA?purpose=inline)\n\n![thd.igcschool.edu.vn](https://thd.igcschool.edu.vn/?utm_source=chatgpt.com)\n\nNhiệm vụ: Đo tốc độ chuyển động của một vật\n\nChia lớp thành các nhóm, mỗi nhóm 4–5 học sinh.\n\nDụng cụ:\n\n- Một ô tô đồ chơi.\n- Một thước dây hoặc thước mét.\n- Một đồng hồ bấm giây.\n- Một tấm ván phẳng.\n\nPhân công:\n\n- Học sinh 1: Thả xe.\n- Học sinh 2: Bấm đồng hồ.\n- Học sinh 3: Quan sát vạch đích.\n- Học sinh 4: Ghi kết quả.\n- Học sinh 5: Tính toán và báo cáo.\n\nPhiếu ghi kết quả thực hành\n\n| Lần đo     | Quãng đường (m) | Thời gian (s) |\n| ---------- | --------------- | ------------- |\n| 1          |                 |               |\n| 2          |                 |               |\n| 3          |                 |               |\n| Trung bình |                 |               |\n\nYêu cầu:\n\n1. Ghi đầy đủ kết quả đo.\n2. Tính thời gian trung bình.\n3. Tính tốc độ trung bình.\n4. So sánh kết quả giữa các nhóm.\n5. Nêu những nguyên nhân có thể gây sai số.\n\n# VII. CÂU HỎI CỦNG CỐ CUỐI BÀI\n\n![Lý thuyết Khoa học tự nhiên 7 bài 10 CTST  - Đo tốc độ - VnDoc.com](https://images.openai.com/static-rsc-4/YBP6e1JfxmasuIXsKEfXjeizFhVAQ-9NO91SYD2K1JxhN62bGGUS6jpXSachC63xt6acgQPGQ-xnpKcSzb7VVkTSjJPoxCZVbMniNhaIDN31j8PtBB4ZQ_lQoJP6ksqonuAlNb92X8qpP77qMZxzoP4d2akVLnZ0QV0LTOUHWKk?purpose=inline)\n\n![vndoc.com](https://vndoc.com/ly-thuyet-khoa-hoc-tu-nhien-7-bai-10-ctst-301095?utm_source=chatgpt.com)\n\nHọc sinh cần tự trả lời được 5 câu hỏi sau:\n\n1. Muốn đo tốc độ của một vật cần đo những đại lượng nào?\n2. Đồng hồ bấm giây và thước đo có vai trò gì trong phép đo tốc độ?\n3. Trình bày các bước đo tốc độ bằng đồng hồ bấm giây.\n4. Cổng quang điện và đồng hồ đo thời gian hiện số hoạt động như thế nào?\n5. Thiết bị bắn tốc độ được sử dụng để làm gì?\n\nThông điệp cuối bài:\n\nĐo tốc độ thực chất là xác định quãng đường vật đi được và thời gian vật thực hiện chuyển động. Biết đo tốc độ giúp chúng ta nghiên cứu chuyển động trong khoa học, thể thao, sản xuất và đặc biệt là bảo đảm an toàn giao thông.\n\n## VIII. TÀI LIỆU VÀ HÌNH ẢNH THAM KHẢO\n\nCác nội dung bài giảng được đối chiếu với cấu trúc Bài 9 trong sách Khoa học tự nhiên 7 – Kết nối tri thức với cuộc sống.&#x20;\n\n![image](https://www.google.com/s2/favicons?domain=https://sgkvn.com\\&sz=32)\n\nSGKVN+2\n\n\n\n- ![Nội dung Bài 9 – SGKVN: Đo tốc độ](https://sgkvn.com/lop-7-10/ket-noi-tri-thuc-voi-cuoc-song-3/chuong-iii-toc-do-1775/bai-9-do-toc-do-5932.html?utm_source=chatgpt.com).\n- ![Bài giảng tham khảo Bài 9 – Đo tốc độ](https://lop7.vn/bai-giang-khoa-hoc-tu-nhien-7-vat-li-sach-ket-noi-tri-thuc-bai-9-do-toc-do-vu-thi-hai-yen-5933/?utm_source=chatgpt.com).\n- ![Hình ảnh thí nghiệm đo tốc độ bằng cổng quang điện](https://loigiaihay.com/giai-khoa-hoc-tu-nhien-7-bai-9-trang-49-50-51-52-ket-noi-tri-a106755.html?utm_source=chatgpt.com).\n- ![Hình ảnh đồng hồ bấm giây – Wikimedia Commons](https://commons.wikimedia.org/wiki/File%3ACasio_F-91W_watch_%282023%29_%28front_closeup_-stopwatch_mode%29.jpg?utm_source=chatgpt.com).\n\nLưu ý khi sử dụng hình ảnh: Một số hình là ảnh thiết bị thực tế từ nguồn giáo dục và thương mại quốc tế; giáo viên nên kiểm tra điều kiện sử dụng nếu đưa vào tài liệu phát hành công khai."</script>
+
+    <script>
+        let units = [];
+        let allImages = [];
+        let currentImageIndex = -1;
+        let isLightboxOpen = false;
+        
+        let imageUndoStack = [];
+        let imageRedoStack = [];
+
+        let currentUnitIndex = -1;
+        let fontSize = 20;
+        let isMuted = false;
+        let speechRate = 1;
+        let synth = window.speechSynthesis;
+        let rawContent = "";
+        let lastSavedFilename = "BaiGiang_Complete.html";
+        
+        let isAutoplay = false;
+        let selectedText = "";
+        let selectedNodeParent = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            let loadedMarkdown = "";
+            const embeddedDataElem = document.getElementById('embedded-data');
+            
+            if (embeddedDataElem) {
+                try {
+                    const parsed = JSON.parse(embeddedDataElem.textContent.trim());
+                    if (parsed && typeof parsed === 'string' && parsed.length > 0) {
+                        loadedMarkdown = parsed;
+                    }
+                } catch(e) {}
+            }
+
+            if (!loadedMarkdown) {
+                const lastContent = localStorage.getItem('current_lecture');
+                if (lastContent) {
+                    loadedMarkdown = lastContent;
+                }
+            }
+
+            if (loadedMarkdown) {
+                parseAndBuildDocument(loadedMarkdown);
+            }
+
+            const savedName = localStorage.getItem('last_saved_filename');
+            if (savedName) lastSavedFilename = savedName;
+
+            document.addEventListener('mouseup', handleTextSelection);
+        });
+
+        function saveStateForUndo() {
+            imageUndoStack.push(rawContent);
+            imageRedoStack = [];
+        }
+
+        function handleUndo() {
+            if (imageUndoStack.length > 0) {
+                imageRedoStack.push(rawContent);
+                rawContent = imageUndoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã hoàn tác (Ctrl+Z)!");
+            } else {
+                showToast("Không còn thao tác để hoàn tác!");
+            }
+        }
+
+        function handleRedo() {
+            if (imageRedoStack.length > 0) {
+                imageUndoStack.push(rawContent);
+                rawContent = imageRedoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã làm lại (Ctrl+Y)!");
+            } else {
+                showToast("Không còn thao tác để làm lại!");
+            }
+        }
+
+        function handleTextSelection(e) {
+            const popup = document.getElementById('selection-popup');
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+
+            if (popup.contains(e.target)) return;
+
+            if (text.length > 0 && document.getElementById('lecture-paper').contains(selection.anchorNode)) {
+                selectedText = text;
+                let node = selection.anchorNode;
+                while (node && node.nodeType !== 1) {
+                    node = node.parentNode;
+                }
+                selectedNodeParent = node.closest('p, li, h1, h2, h3, h4, blockquote') || node;
+
+                document.getElementById('popup-img-url').value = '';
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                popup.style.left = `${Math.max(10, rect.left + window.scrollX - 50)}px`;
+                popup.style.display = 'flex';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+
+        function searchImageSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function searchGifSelected() {
+            if (selectedText) {
+                window.open(`https://tenor.com/search/${encodeURIComponent(selectedText)}-gifs`, '_blank');
+            }
+        }
+
+        function searchGoogleSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function autoInsertImageFromPopup(inputEl) {
+            const url = inputEl.value.trim();
+            if (!url) return;
+
+            if (/^(http|https):\/\/[^ "]+$/i.test(url) || url.startsWith('data:image')) {
+                saveStateForUndo();
+                const imageMarkdown = `\n\n![${selectedText || 'Hình ảnh'}](${url})\n\n`;
+
+                if (selectedText && rawContent.includes(selectedText)) {
+                    const index = rawContent.indexOf(selectedText);
+                    const endOfLine = rawContent.indexOf('\n', index);
+                    const insertPos = endOfLine !== -1 ? endOfLine : index + selectedText.length;
+                    rawContent = rawContent.slice(0, insertPos) + imageMarkdown + rawContent.slice(insertPos);
+                } else {
+                    rawContent += imageMarkdown;
+                }
+
+                parseAndBuildDocument(rawContent);
+                showToast("Đã chèn ảnh tự động! (Ctrl+Z để hoàn tác, Ctrl+Y để làm lại)");
+                inputEl.value = '';
+                document.getElementById('selection-popup').style.display = 'none';
+            }
+        }
+
+        function toggleAutoplay(toggle) {
+            isAutoplay = toggle.checked;
+            if (isAutoplay) showToast("Đã bật Autoplay (Tự động chuyển đoạn)");
+            else showToast("Đã tắt Autoplay");
+        }
+
+        function toggleTheme(toggle) {
+            if (toggle.checked) document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+        }
+
+        function toggleExpandMode(toggle) {
+            if (toggle.checked) {
+                document.body.classList.add('mode-expand');
+                showToast("Đã bật chế độ Expand (Hiện tất cả)");
+            } else {
+                document.body.classList.remove('mode-expand');
+                showToast("Đã tắt chế độ Expand");
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function toggleSlideshow() {
+            document.body.classList.toggle('slideshow-mode');
+            const isSlideshow = document.body.classList.contains('slideshow-mode');
+            if (isSlideshow) {
+                showToast("Đã bật chế độ Slide Show (Ấn Esc để thoát)");
+            }
+        }
+
+        function printLecture() {
+            window.print();
+        }
+
+        function openUpdateModal() { document.getElementById('update-modal').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('update-modal').style.display = 'none'; }
+
+        function openLightbox(imgSrc) {
+            allImages = Array.from(document.querySelectorAll('#lecture-paper img'));
+            currentImageIndex = allImages.findIndex(img => img.src === imgSrc);
+            if (currentImageIndex === -1 && allImages.length > 0) currentImageIndex = 0;
+
+            updateLightboxContent();
+            document.getElementById('image-lightbox').style.display = 'flex';
+            isLightboxOpen = true;
+        }
+
+        function updateLightboxContent() {
+            if (allImages.length === 0 || currentImageIndex < 0) return;
+            const img = document.getElementById('lightbox-img');
+            img.src = allImages[currentImageIndex].src;
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${allImages.length}`;
+        }
+
+        function nextImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function prevImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function closeLightbox(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('image-lightbox').style.display = 'none';
+            isLightboxOpen = false;
+        }
+
+        function closeLightboxOnBg(event) {
+            if (event.target.id === 'image-lightbox') {
+                closeLightbox();
+            }
+        }
+
+        function deleteImageBySrc(src) {
+            saveStateForUndo();
+
+            const escapedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const markdownImgRegex = new RegExp(`!\\[[^\\]]*\\]\\(${escapedSrc}\\)`, 'g');
+            const htmlImgRegex = new RegExp(`<img[^>]*src=["']${escapedSrc}["'][^>]*>`, 'gi');
+
+            let newContent = rawContent.replace(markdownImgRegex, '').replace(htmlImgRegex, '');
+
+            if (newContent !== rawContent) {
+                rawContent = newContent;
+                parseAndBuildDocument(rawContent);
+                showToast("Đã xóa ảnh thành công! (Ctrl+Z để hoàn tác)");
+            } else {
+                const allImgs = Array.from(document.querySelectorAll('#lecture-paper img'));
+                const targetImg = allImgs.find(i => i.src === src);
+                if (targetImg) {
+                    const altText = targetImg.alt || '';
+                    const fallbackRegex = new RegExp(`!\\[${altText}\\]\\([^\\)]+\\)`, 'g');
+                    rawContent = rawContent.replace(fallbackRegex, '');
+                    parseAndBuildDocument(rawContent);
+                    showToast("Đã xóa ảnh thành công!");
+                }
+            }
+        }
+
+        function autoAddMarkdownHeaders(text) {
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+/i.test(trimmed)) {
+                    return '# ' + trimmed;
+                } else if (/^\d+\.\s+/.test(trimmed)) {
+                    return '## ' + trimmed;
+                } else if (/^([A-Z]\.|[a-z]\))\s+/.test(trimmed)) {
+                    return '### ' + trimmed;
+                }
+                return line;
+            });
+            return processedLines.join('\n');
+        }
+
+        function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                const options = {
+                    convertImage: mammoth.images.imgElement(function(image) {
+                        return image.read("base64").then(function(imageBuffer) {
+                            return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                        });
+                    })
+                };
+
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer}, options).then(function(result) {
+                    const html = result.value;
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    turndownService.addRule('keepImages', {
+                        filter: 'img',
+                        replacement: function (content, node) {
+                            return `\n\n![image](${node.getAttribute('src')})\n\n`;
+                        }
+                    });
+
+                    let markdown = turndownService.turndown(html);
+                    markdown = autoAddMarkdownHeaders(markdown);
+                    document.getElementById('import-text').value = markdown;
+                    processImport();
+                    showToast("Đã đọc xong file Word!");
+                }).catch(function(err) {
+                    showToast("Lỗi khi đọc file Word: " + err.message);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndBuildDocument(markdownText) {
+            rawContent = markdownText;
+            localStorage.setItem('current_lecture', markdownText);
+            saveToHistory(markdownText);
+
+            const container = document.getElementById('lecture-paper');
+            container.innerHTML = marked.parse(markdownText);
+
+            container.querySelectorAll('img').forEach(img => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'image-wrapper';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'img-delete-btn';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = 'Xóa ảnh này khỏi bài giảng';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteImageBySrc(img.src);
+                };
+
+                img.parentNode.insertBefore(wrapper, img);
+                wrapper.appendChild(img);
+                wrapper.appendChild(deleteBtn);
+
+                img.onclick = (e) => {
+                    e.stopPropagation();
+                    openLightbox(img.src);
+                };
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([container]).catch((err) => console.log('MathJax error:', err));
+            }
+
+            reindexUnits();
+            generateTOC();
+            updateCounter();
+        }
+
+        function reindexUnits() {
+            const container = document.getElementById('lecture-paper');
+            units = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, table, .image-wrapper, hr'));
+            
+            units = units.filter(el => {
+                if (el.classList.contains('image-wrapper')) {
+                    return true;
+                }
+                return !el.parentElement.closest('blockquote, table');
+            });
+
+            units.forEach((unit, idx) => {
+                unit.classList.add('markdown-unit');
+                
+                if (!unit.classList.contains('image-wrapper')) {
+                    unit.onclick = (e) => {
+                        if (window.getSelection().toString().trim().length > 0) return;
+                        jumpToUnit(idx);
+                    };
+                }
+
+                if (idx < currentUnitIndex) {
+                    unit.classList.add('revealed');
+                } else if (idx === currentUnitIndex) {
+                    unit.classList.add('active');
+                }
+            });
+        }
+
+        function generateTOC() {
+            const tocContainer = document.getElementById('toc-container');
+            tocContainer.innerHTML = '';
+
+            const headings = units.filter(unit => ['H1', 'H2', 'H3', 'H4'].includes(unit.tagName));
+
+            if (headings.length === 0) {
+                tocContainer.innerHTML = '<li style="font-size: 13px; color: var(--text-color); padding: 8px;">Không tìm thấy mục lục tiêu đề.</li>';
+                return;
+            }
+
+            headings.forEach((heading) => {
+                const level = heading.tagName.substring(1);
+                const li = document.createElement('li');
+                li.className = `toc-item level-${level}`;
+                li.innerText = heading.innerText || heading.textContent;
+                li.dataset.unitIndex = units.indexOf(heading);
+                
+                li.onclick = () => {
+                    const targetIndex = units.indexOf(heading);
+                    if (targetIndex !== -1) {
+                        jumpToUnit(targetIndex);
+                    }
+                };
+
+                tocContainer.appendChild(li);
+            });
+        }
+
+        function highlightTOCForCurrentUnit() {
+            if (currentUnitIndex < 0 || units.length === 0) return;
+
+            let closestHeadingIndex = -1;
+            for (let i = currentUnitIndex; i >= 0; i--) {
+                if (['H1', 'H2', 'H3', 'H4'].includes(units[i].tagName)) {
+                    closestHeadingIndex = i;
+                    break;
+                }
+            }
+
+            const tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(item => {
+                item.classList.remove('active-toc');
+                if (closestHeadingIndex !== -1 && parseInt(item.dataset.unitIndex) === closestHeadingIndex) {
+                    item.classList.add('active-toc');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function jumpToUnit(index) {
+            if (index < 0 || index >= units.length) return;
+            
+            units.forEach((u, idx) => {
+                u.classList.remove('active');
+                if (idx < index) {
+                    u.classList.add('revealed');
+                } else {
+                    u.classList.remove('revealed');
+                }
+            });
+
+            currentUnitIndex = index;
+            const targetEl = units[currentUnitIndex];
+            targetEl.classList.add('active');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(targetEl);
+        }
+
+        function handlePageInputChange(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        }
+
+        function jumpToInputValue() {
+            const inputEl = document.getElementById('page-input');
+            let val = parseInt(inputEl.value) - 1;
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val >= units.length) val = units.length - 1;
+            jumpToUnit(val);
+        }
+
+        function showNextSentence() {
+            if (units.length === 0) return;
+            if (currentUnitIndex < units.length - 1) {
+                if (currentUnitIndex >= 0) {
+                    units[currentUnitIndex].classList.remove('active');
+                    units[currentUnitIndex].classList.add('revealed');
+                }
+                currentUnitIndex++;
+                const activeEl = units[currentUnitIndex];
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateCounter();
+                highlightTOCForCurrentUnit();
+                speakUnit(activeEl);
+            }
+        }
+
+        function showPrevSentence() {
+            if (units.length === 0 || currentUnitIndex <= 0) return;
+            const activeEl = units[currentUnitIndex];
+            activeEl.classList.remove('active', 'revealed');
+
+            currentUnitIndex--;
+            const prevEl = units[currentUnitIndex];
+            prevEl.classList.remove('revealed');
+            prevEl.classList.add('active');
+            prevEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(prevEl);
+        }
+
+        function replayCurrentSentence() {
+            if (currentUnitIndex >= 0 && currentUnitIndex < units.length) {
+                speakUnit(units[currentUnitIndex]);
+            }
+        }
+
+        /* PHÍM TẮT ĐIỀU HƯỚNG, SPACE (BẬT/TẮT LIGHTBOX) & UNDO/REDO */
+        document.addEventListener('keydown', (e) => {
+            const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+
+            if ((e.ctrlKey || e.metaKey) && !isInputActive) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    handleUndo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    handleRedo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'p') {
+                    e.preventDefault();
+                    printLecture();
+                    return;
+                }
+            }
+
+            if (isInputActive) return;
+
+            if (isLightboxOpen) {
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    closeLightbox();
+                } else if (e.key === 'ArrowRight') {
+                    nextImage();
+                } else if (e.key === 'ArrowLeft') {
+                    prevImage();
+                }
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (document.getElementById('save-modal').style.display === 'flex') {
+                    closeSaveModal();
+                    return;
+                }
+                if (document.getElementById('update-modal').style.display === 'flex') {
+                    closeUpdateModal();
+                    return;
+                }
+                if (document.body.classList.contains('slideshow-mode')) {
+                    toggleSlideshow();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                const updateModal = document.getElementById('update-modal');
+                if (updateModal.style.display === 'flex') closeUpdateModal();
+                else openUpdateModal();
+                return;
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                const activeEl = units[currentUnitIndex];
+                if (activeEl && activeEl.classList.contains('image-wrapper')) {
+                    const img = activeEl.querySelector('img');
+                    if (img) {
+                        openLightbox(img.src);
+                    }
+                } else {
+                    replayCurrentSentence();
+                }
+            } else if (e.key === 'ArrowRight') {
+                showNextSentence();
+            } else if (e.key === 'ArrowLeft') {
+                showPrevSentence();
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(2);
+            } else if (e.key === '-') {
+                changeFontSize(-2);
+            }
+        });
+
+        function saveToHistory(text) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            if (history.length === 0 || history[0].content !== text) {
+                const title = text.slice(0, 40).replace(/[#*]/g, '').trim() + '...';
+                history.unshift({ id: Date.now(), title: title, content: text, date: new Date().toLocaleDateString('vi-VN') });
+                if (history.length > 20) history.pop();
+                localStorage.setItem('lecture_history', JSON.stringify(history));
+            }
+        }
+
+        function openHistoryModal() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px;">Lịch sử trống.</div>';
+            } else {
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size: 12px; color: var(--text-color);">${item.date}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="loadHistoryItem(${item.id})">Mở</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background:#ef4444; color:#fff;">Xóa</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+
+        function loadHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            const found = history.find(item => item.id === id);
+            if (found) {
+                parseAndBuildDocument(found.content);
+                closeHistoryModal();
+                showNextSentence();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('lecture_history', JSON.stringify(history));
+            openHistoryModal();
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem('lecture_history');
+            openHistoryModal();
+            showToast("Đã xóa toàn bộ lịch sử!");
+        }
+
+        function openImportModal() {
+            let contentToLoad = rawContent;
+            if (!contentToLoad) {
+                const embeddedElem = document.getElementById('embedded-data');
+                if (embeddedElem) {
+                    try {
+                        contentToLoad = JSON.parse(embeddedElem.textContent.trim());
+                    } catch(e) {}
+                }
+            }
+            document.getElementById('import-text').value = contentToLoad || "";
+            document.getElementById('import-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('import-text').focus();
+            }, 50);
+        }
+
+        function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            if (text.trim()) {
+                parseAndBuildDocument(text);
+                closeImportModal();
+                showNextSentence();
+                showToast("Đã import thành công bài giảng!");
+            }
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById('import-text').value = e.target.result;
+                processImport();
+                showToast("Đã đọc xong file văn bản!");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('prompt-topic').value.trim() || '[TÊN CHỦ ĐỀ CỦA BẠN]';
+            const btn = document.getElementById('btn-copy-prompt');
+            const promptTemplate = `Hãy tạo một bài giảng chi tiết khoảng 1000 từ về chủ đề: "${topic}". 
+Yêu cầu:
+1. ĐÁNH SỐ VÀ PHÂN CẤP CÁC MỤC BÀI GIẢNG THEO THỨ TỰ CỤ THỂ:
+   - Cấp 1 dùng: I. II. III...
+   - Cấp 2 dùng: 1. 2. 3...
+   - Cấp 3 dùng: a) b) c)...
+2. THÊM TỪ KHÓA TIẾNG ANH TƯƠNG ỨNG CHO CÁC KHÁI NIỆM/TỪ KHÓA/NỘI DUNG QUAN TRỌNG VÀ ĐẶT TRONG DẤU NGOẠC ĐƠN ().
+3. Sử dụng định dạng Markdown đầy đủ: in đậm (**từ khóa**), in nghiêng (*chú thích*), danh sách (*).
+4. Thêm link ảnh minh họa dạng Markdown ![mô tả ảnh](https://url-anh.com) nếu phù hợp.
+5. Công thức toán học và phản ứng hóa học dùng chuẩn LaTeX bọc trong dấu $ (ví dụ $CaCO_3$) hoặc \\[...\\] / \\(...\\).
+6. Các url ảnh được cấp phía trên, đặt các url ảnh đó vào nội dung tương ứng (đặt dưới tiêu đề, nhưng trên nội dung), tất cả các url ảnh đều phải được gắn vào các nội dung phù hợp.
+7. Gửi tôi markdown nhưng dạng plain text để tôi copy.`;
+
+            navigator.clipboard.writeText(promptTemplate).then(() => {
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✅ Đã Copy!';
+                btn.classList.add('active');
+                showToast(`Đã copy Prompt AI cho chủ đề: ${topic}`);
+                
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.classList.remove('active');
+                }, 2000);
+            });
+        }
+
+        function speakUnit(element) {
+            if (!synth) return;
+            synth.cancel();
+            if (isMuted) return;
+
+            if (element.classList.contains('image-wrapper') || element.tagName.toLowerCase() === 'hr') {
+                if (isAutoplay) setTimeout(showNextSentence, 1000);
+                return;
+            }
+
+            const textToSpeak = element.innerText || element.textContent;
+            if (!textToSpeak.trim()) {
+                if (isAutoplay) setTimeout(showNextSentence, 500);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechRate;
+            
+            utterance.onend = () => {
+                if (isAutoplay) {
+                    setTimeout(showNextSentence, 600);
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('btn-mute');
+            if (isMuted) {
+                btn.classList.add('active');
+                if (synth) synth.cancel();
+            } else {
+                btn.classList.remove('active');
+                replayCurrentSentence();
+            }
+        }
+
+        function updateRate(val) { speechRate = parseFloat(val); replayCurrentSentence(); }
+        function changeFontSize(delta) { fontSize = Math.max(14, Math.min(50, fontSize + delta)); document.documentElement.style.setProperty('--font-size', fontSize + 'px'); }
+        
+        function updateCounter() { 
+            const pageInput = document.getElementById('page-input');
+            const totalUnitsCount = document.getElementById('total-units-count');
+            pageInput.value = currentUnitIndex + 1;
+            pageInput.max = units.length;
+            totalUnitsCount.innerText = units.length;
+        }
+
+        function openSaveModal() {
+            if (!rawContent) return showToast("Chưa có nội dung để lưu!");
+            const saveModal = document.getElementById('save-modal');
+            const filenameInput = document.getElementById('save-filename-input');
+            
+            filenameInput.value = lastSavedFilename;
+            saveModal.style.display = 'flex';
+            
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 50);
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').style.display = 'none';
+        }
+
+        function executeSaveAsHtml() {
+            const inputEl = document.getElementById('save-filename-input');
+            let filename = inputEl.value.trim();
+            if (!filename) filename = "BaiGiang_Complete.html";
+            if (!filename.toLowerCase().endsWith('.html') && !filename.toLowerCase().endsWith('.htm')) {
+                filename += '.html';
+            }
+
+            lastSavedFilename = filename;
+            localStorage.setItem('last_saved_filename', filename);
+            closeSaveModal();
+
+            let clonedDoc = document.documentElement.cloneNode(true);
+
+            let embeddedScript = clonedDoc.querySelector('#embedded-data');
+            if (embeddedScript) {
+                embeddedScript.textContent = JSON.stringify(rawContent);
+            }
+
+            let saveModalClone = clonedDoc.querySelector('#save-modal');
+            if (saveModalClone) saveModalClone.style.display = 'none';
+
+            let updateModalClone = clonedDoc.querySelector('#update-modal');
+            if (updateModalClone) updateModalClone.style.display = 'none';
+
+            let importModalClone = clonedDoc.querySelector('#import-modal');
+            if (importModalClone) importModalClone.style.display = 'none';
+
+            let historyModalClone = clonedDoc.querySelector('#history-modal');
+            if (historyModalClone) historyModalClone.style.display = 'none';
+
+            let popupClone = clonedDoc.querySelector('#selection-popup');
+            if (popupClone) popupClone.style.display = 'none';
+
+            let lightboxClone = clonedDoc.querySelector('#image-lightbox');
+            if (lightboxClone) lightboxClone.style.display = 'none';
+
+            clonedDoc.classList.remove('slideshow-mode');
+
+            const fullHtmlContent = "<!DOCTYPE html>\n" + clonedDoc.outerHTML;
+            const blob = new Blob([fullHtmlContent], { type: 'text/html;charset=utf-8' });
+            const link = document.appendLink ? document.appendLink : document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Đã lưu file thành công: ${filename}`);
+        }
+    </script>
+
+</body></html>
