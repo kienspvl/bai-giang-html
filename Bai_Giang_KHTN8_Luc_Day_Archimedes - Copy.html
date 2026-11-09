@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bài giảng KHTN 8: Lực đẩy Archimedes</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\[', right: '\\]', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false}
+      ],
+      throwOnError: false
+    });"></script>
+  <style>
+    :root {
+      --base-font-size: 1.25rem;
+      --bg-color: #f4f7fb;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --accent: #0d9488;
+      --accent-light: #ccfbf1;
+      --border-color: #cbd5e1;
+      --highlight-bg: #fef9c3;
+      --highlight-border: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-size: var(--base-font-size);
+      line-height: 1.65;
+      padding-bottom: 120px;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Navigation & Control Bar */
+    #control-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    body.hud-hidden #control-bar,
+    body.hud-hidden #bottom-nav,
+    body.hud-hidden #toc-drawer,
+    body.hud-hidden #shortcut-hint {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-20px);
+    }
+
+    body.hud-hidden #bottom-nav {
+      transform: translateY(20px);
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      color: #ffffff;
+    }
+
+    .btn.speaking {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #ffffff;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+      70% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+
+    /* Toggle Switch */
+    .switch-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f1f5f9;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--primary);
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+      z-index: 1001;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1080px;
+      margin: 85px auto 40px;
+      padding: 0 24px;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #0369a1 0%, #0d9488 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2);
+    }
+
+    .hero-card h1 {
+      font-size: 1.8em;
+      line-height: 1.3;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-card .subtitle {
+      font-size: 1.35em;
+      font-weight: 700;
+      color: #fef08a;
+      margin-bottom: 16px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.18);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      backdrop-filter: blur(4px);
+    }
+
+    section.lesson-section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    h2 {
+      font-size: 1.45em;
+      color: var(--primary-dark);
+      border-bottom: 3px solid var(--primary-light);
+      padding-bottom: 10px;
+      margin-bottom: 22px;
+    }
+
+    h3 {
+      font-size: 1.22em;
+      color: var(--accent);
+      margin-top: 26px;
+      margin-bottom: 14px;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      margin-left: 28px;
+      margin-bottom: 18px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    .callout {
+      background: var(--primary-light);
+      border-left: 5px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .callout-warn {
+      background: var(--highlight-bg);
+      border-left: 5px solid var(--highlight-border);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .formula-box {
+      background: #f8fafc;
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin: 20px auto;
+      text-align: center;
+      font-size: 1.3em;
+      font-weight: 700;
+      color: var(--primary-dark);
+      max-width: 560px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 14px 18px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    /* Image Gallery Grid */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .img-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .img-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+    }
+
+    .img-card img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: zoom-in;
+    }
+
+    .img-caption {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Step-by-Step Reveal Mechanics */
+    .reveal-item {
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  background-color 0.6s ease;
+    }
+
+    body.step-mode .reveal-item.hidden-step {
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      height: 0;
+      overflow: hidden;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+    }
+
+    body.step-mode .reveal-item.active-step {
+      border-radius: 8px;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+      background-color: rgba(224, 242, 254, 0.35);
+    }
+
+    /* Bottom Floating Navigation */
+    #bottom-nav {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.9);
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+      backdrop-filter: blur(8px);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    #bottom-nav button {
+      background: rgba(255,255,255,0.14);
+      border: none;
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #bottom-nav button:hover {
+      background: var(--primary);
+    }
+
+    #step-counter {
+      font-size: 0.95rem;
+      font-weight: 600;
+      min-width: 90px;
+      text-align: center;
+      color: #bae6fd;
+    }
+
+    /* TOC Drawer */
+    #toc-drawer {
+      position: fixed;
+      top: 66px;
+      left: 20px;
+      width: 310px;
+      max-height: calc(100vh - 150px);
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      z-index: 999;
+      display: none;
+    }
+
+    #toc-drawer.open {
+      display: block;
+    }
+
+    #toc-drawer h4 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+
+    #toc-list {
+      list-style: none;
+      margin: 0;
+    }
+
+    #toc-list li {
+      margin-bottom: 6px;
+    }
+
+    #toc-list a {
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      display: block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    #toc-list a:hover {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Lightbox Modal */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.94);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 24px;
+    }
+
+    #lightbox.open {
+      display: flex;
+    }
+
+    #lightbox img {
+      max-width: 92vw;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transition: transform 0.2s ease;
+    }
+
+    #lightbox-caption {
+      color: #f1f5f9;
+      margin-top: 14px;
+      font-size: 1.05rem;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 28px;
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lightbox-close:hover {
+      background: #ef4444;
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .lightbox-nav:hover {
+      background: var(--primary);
+    }
+
+    #lb-prev { left: 24px; }
+    #lb-next { right: 24px; }
+
+    #shortcut-hint {
+      position: fixed;
+      bottom: 18px;
+      right: 20px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      z-index: 990;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    kbd {
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    @media (max-width: 768px) {
+      #shortcut-hint { display: none; }
+      section.lesson-section { padding: 20px; }
+      .hero-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body class="step-mode">
+
+  <!-- Progress Bar -->
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <!-- Top Control Bar -->
+  <header id="control-bar">
+    <div class="nav-group">
+      <button class="btn" id="btn-toc" title="Mục lục bài giảng">☰ Mục lục</button>
+      <div class="switch-wrapper" title="Chuyển đổi giữa chế độ hiện từng bước và hiện toàn bộ">
+        <span>Từng bước</span>
+        <label class="switch">
+          <input type="checkbox" id="mode-toggle">
+          <span class="slider"></span>
+        </label>
+        <span>Hiện tất cả</span>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="btn" id="btn-font-dec" title="Giảm cỡ chữ (Phím -)">A-</button>
+      <span id="font-size-label" style="font-size: 0.9rem; font-weight: 700; min-width: 58px; text-align: center;">1.25rem</span>
+      <button class="btn" id="btn-font-inc" title="Tăng cỡ chữ (Phím +)">A+</button>
+      <button class="btn btn-primary" id="btn-speak" title="Đọc nội dung vừa hiện (Phím Space)">🔊 Đọc (Space)</button>
+      <button class="btn" id="btn-hud" title="Ẩn/hiện thanh điều khiển (Phím H)">👁️ Ẩn thanh (H)</button>
+    </div>
+  </header>
+
+  <!-- Table of Contents Drawer -->
+  <nav id="toc-drawer">
+    <h4>Mục lục bài học</h4>
+    <ul id="toc-list"></ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="lesson-content">
+
+    <!-- HERO SECTION -->
+    <div class="hero-card" id="sec-intro">
+      <h1 class="reveal-item">BÀI GIẢNG KHOA HỌC TỰ NHIÊN 8</h1>
+      <div class="subtitle reveal-item">CHỦ ĐỀ: LỰC ĐẨY ARCHIMEDES (ÁC-SI-MÉT)</div>
+      <div class="hero-meta reveal-item">
+        <span class="badge">📘 Bộ sách Kết nối tri thức với cuộc sống</span>
+        <span class="badge">📂 Chương: Khối lượng riêng và áp suất – Phần áp suất chất lỏng</span>
+        <span class="badge">⏱️ Thời lượng dự kiến: 2–3 tiết</span>
+      </div>
+      <p class="reveal-item" style="margin-top: 16px;"><strong>Định hướng bài học:</strong> Học sinh quan sát hiện tượng, tiến hành thí nghiệm, rút ra kiến thức, vận dụng công thức và giải thích các hiện tượng thực tế.</p>
+      
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/-n9nqknd4JRRF4RIxsAV73SJUKVHQY6jS0NypBN0dNrTBDHmYe2C7OyyusYQfuTowAXuDM1wRbFjTIz34Ocz0iuLolHAKB2x27bCVbf8ZBD8je251DM9fMleN4JxRtHGLIAjsvU_ckjDxQXBJkJakGs4BcULIna4CQuQcBiFtq8?purpose=inline" alt="Mô phỏng nguyên lý lực đẩy Archimedes">
+          <div class="img-caption">Nguyên lý lực đẩy Archimedes</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/tqFk9D0T1uS88Pn7g7uyLIHHnywEOxwAKKMvE_hdjkk_aE0fQSnkUGKL4cLzHnSW8kpL37NTFlON7Wl2xzgO37HLcxruxLFh8bhrqdkDQnVWgZuEB0_k0fuf2FcKs62HjOrml8ntoG52AaO__3lo7mPAMcZ82Z5slT5RGtBcU0k?purpose=inline" alt="Minh họa lực đẩy chất lỏng">
+          <div class="img-caption">Lực đẩy tác dụng lên vật nhúng trong chất lỏng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/fj2BetkDdpeHNpuGoIOEHCQg0ra0Y3wusgeGFE04fC6lM7P9Wt22nBsXRXI2BBeieKphy5gFqqUE9_XfXv5cOf5Kc0YaxW1zvnjhL_umDtcsit4qqXQvZL_ihNG-LywO5ZfWz0zGFb17CZkP-YaKTx2UZm1eDTWLXYfPQFrDp4w?purpose=inline" alt="Đo lực đẩy Archimedes bằng lực kế">
+          <div class="img-caption">Thí nghiệm đo lực đẩy Archimedes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION I -->
+    <section class="lesson-section" id="sec-1">
+      <h2 class="reveal-item">I. MỤC TIÊU BÀI HỌC</h2>
+      <p class="reveal-item">Sau khi học xong, học sinh có thể:</p>
+      <ol>
+        <li class="reveal-item">Nhận biết được sự tồn tại của lực đẩy Archimedes khi một vật nhúng trong chất lỏng.</li>
+        <li class="reveal-item">Xác định được phương và chiều của lực đẩy Archimedes.</li>
+        <li class="reveal-item">Phát biểu được nội dung định luật Archimedes.</li>
+        <li class="reveal-item">Viết và vận dụng được công thức tính lực đẩy Archimedes.</li>
+        <li class="reveal-item">Giải thích được các hiện tượng nổi, chìm, lơ lửng của vật trong chất lỏng.</li>
+        <li class="reveal-item">Giải thích được một số ứng dụng thực tế: tàu thủy, tàu ngầm, phao cứu sinh, khinh khí cầu.</li>
+      </ol>
+    </section>
+
+    <!-- SECTION II -->
+    <section class="lesson-section" id="sec-2">
+      <h2 class="reveal-item">II. KHỞI ĐỘNG – VÌ SAO TÀU THỦY BẰNG SẮT CÓ THỂ NỔI?</h2>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/NodRzzVN9vubVoyOa1dGETFCbeCPe2ptExM4lUy3m6eWOeQU_yKPY5HMrDeQB6NJqWIEYN-WQUMsKm2506wnXovLrcQ6LGi9eozlpoYIsg4clHsrG94qMdWCoK5OzoNU_8nQUTu8VThNfem9NbyepJzIZndMlaPJlA7vojyIyDNgUWoCrLLUMcaoXHfJ54dG?purpose=inline" alt="Tàu chở hàng khổng lồ bằng thép nổi trên đại dương">
+          <div class="img-caption">Tàu container bằng thép nổi trên mặt biển</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/jW7QPyDD3Dd0DccJobNOuK74kNZqwDLVsS3oVjlZWmyYj8mcoiHGgkuQWz98pN_g7zI03_6Ysg3EnLpwFh4XjYbq7PEtwHJ2FALOJ8b0DEL8QJWAM8-mwi8gJymjbVBR_YBFGMqsurwTjTisyMxFpQtiIlmEjz6lzPv6ysgJPEo?purpose=inline" alt="Khối lượng riêng và tính nổi của vật liệu">
+          <div class="img-caption">So sánh vật nổi và vật chìm</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/AWzrX4HW4ltr7HUcWGi3H8ZtYw1iAqYIlVCvQo9OrT15zyd7uiKx1d222Y-56gQ2nvCcSwuVvwO05HF3vcfXQaoXy4UUJXUyUKJMUo5ZwchsJANe7RpWZ6R18p7Wa4Lon-_z94ASZw0VvSgxx4OpAO2BtD7aJD8_eRuoL6_JB4FSxn4v8XGW_JwLjaO8ajBo?purpose=inline" alt="Thuyền nhựa đồ chơi nổi trong hồ bơi">
+          <div class="img-caption">Thuyền nhựa nổi trên mặt nước</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Hãy quan sát ba hình ảnh trên và suy nghĩ:</p>
+      <ul>
+        <li class="reveal-item">Một viên bi sắt nhỏ thả vào nước thường bị chìm.</li>
+        <li class="reveal-item">Một con tàu khổng lồ được chế tạo chủ yếu từ thép lại nổi trên mặt biển.</li>
+        <li class="reveal-item">Một chiếc phao bằng nhựa có thể nổi trên mặt nước.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Câu hỏi khám phá:</strong></p>
+      <ol>
+        <li class="reveal-item">Vì sao viên bi sắt chìm nhưng tàu thép lại nổi?</li>
+        <li class="reveal-item">Khi nhúng tay vào nước, em có cảm giác tay bị nước đẩy lên không?</li>
+        <li class="reveal-item">Có phải nước đã tác dụng một lực lên các vật nằm trong nước?</li>
+      </ol>
+
+      <div class="callout reveal-item">
+        <strong>Vấn đề cần giải quyết:</strong> Chất lỏng tác dụng lên vật nhúng trong nó một lực như thế nào? Độ lớn của lực này phụ thuộc vào những yếu tố nào?
+      </div>
+    </section>
+
+    <!-- SECTION III -->
+    <section class="lesson-section" id="sec-3">
+      <h2 class="reveal-item">III. SỰ XUẤT HIỆN CỦA LỰC ĐẨY ARCHIMEDES</h2>
+
+      <h3 class="reveal-item">1. Hiện tượng thực tế</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/H_riMrpX0IYxQDTHxfesynbHnkVUmpuWdz9UACtF7D_IvIKZtw-1qcOUpthSxeHVNc16WaVifXihvjTXjNXEQssckoPbW0FQjlcWXuLLna7Q0llGOknWcdl4VWhlsImqVdbUN8zjSsiIKJUghmVCE_pCeBVrACT8cqUN5rXDdWc?purpose=inline" alt="Quả bóng nổi trên mặt nước">
+          <div class="img-caption">Quả bóng có xu hướng nổi lên khi bị dìm</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/gER-twhBuUrGJ6XWc0fK4GAqq3Z1SU3u5LH1lYsrzyxgfozM6Td2ox-0yhj7VidrXO9iNwkaHjvAUjoZUolu_hRTO28x9prsVR6E04MHSpn10nC5tuZwfE2mpjyAZyWJP6AP6vwwOwGk0U2twV0EnAbhP23RjZqsVNpxyHBWZIwsQSWhKcyDdE1D5cQND9Jj?purpose=inline" alt="Bóng bãi biển nổi trên nước">
+          <div class="img-caption">Lực đẩy của nước giữ bóng nổi</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/ExszQgyMMuGKs48cNqPFjwYcay0Mx0N-usk0HFMooy7Jng2Wh7xqCP0OEDCGHGeG5M7JftzEvWCyCLikHhTYvJIHvKi6kr5a727w_JWF3PfLXT41FIdTtWfryN1_gni0rrgrGhQd29U-FYDYIE-E_KGci0m5U7dXuVTEo2G7GreylcALhl_t8PnipDlgPSgg?purpose=inline" alt="Viên sỏi cầm trên tay">
+          <div class="img-caption">Cảm giác hòn đá nhẹ hơn khi nhúng trong nước</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Khi thực hiện các hoạt động sau, chúng ta có thể cảm nhận được lực đẩy của nước:</p>
+      <ul>
+        <li class="reveal-item">Dìm một quả bóng xuống nước: quả bóng có xu hướng nổi lên.</li>
+        <li class="reveal-item">Nhúng một hòn đá vào nước: cảm giác hòn đá nhẹ hơn khi cầm ngoài không khí.</li>
+        <li class="reveal-item">Thả một miếng xốp vào nước: miếng xốp nổi lên trên mặt nước.</li>
+      </ul>
+
+      <div class="callout reveal-item">
+        <strong>Giải thích:</strong> Khi một vật được nhúng trong chất lỏng, chất lỏng tác dụng lên vật một lực hướng từ dưới lên trên. Lực này gọi là <strong>lực đẩy Archimedes</strong> (Archimedes' buoyant force).
+      </div>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/r714X3nfTUaPjaKpwZ09r_lH242lAwENLxPLklPGwW6IZvH2lnafzRps10jRWw_-YRiTHDiI2MuE5W6rJd08lbHK9eyYObJ_PEHi1AOzp1x9dT1MnTm5LqGn5O8tBTZQ6hz_4eLGi1yLC_H5wxyc2LfF1w2DR-k0vP89wJ3suFk?purpose=inline" alt="Hình 1. Lực đẩy Archimedes hướng thẳng đứng từ dưới lên trên">
+          <div class="img-caption">Hình 1. Lực đẩy Archimedes hướng thẳng đứng từ dưới lên trên, ngược chiều trọng lực.</div>
+        </div>
+      </div>
+
+      <h3 class="reveal-item">2. Đặc điểm của lực đẩy Archimedes</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/B7vs9dLcgn3kGLHdSKeehtE3YGgWzGmu13MJy9FYunBB68MzbraF_gvWiRoWLtpTfGtSAX6jXtYPiN7HVc4F-aLKq6qUYCKdeLynW63TDy1GTwj2OzRGEmUtQcIOyFTM55gLd5zbM_HzhjQQ05WbdLFlOvHWSw_tl98wzT_IyyU?purpose=inline" alt="Biểu diễn vectơ lực đẩy Archimedes">
+          <div class="img-caption">Biểu diễn phương, chiều của lực đẩy Archimedes</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Lực đẩy Archimedes có các đặc điểm:</p>
+      <ul>
+        <li class="reveal-item"><strong>Điểm đặt:</strong> Tác dụng lên phần vật tiếp xúc với chất lỏng; trong mô hình phổ thông, có thể biểu diễn lực tại tâm phần chất lỏng bị vật chiếm chỗ.</li>
+        <li class="reveal-item"><strong>Phương:</strong> Thẳng đứng.</li>
+        <li class="reveal-item"><strong>Chiều:</strong> Từ dưới lên trên.</li>
+        <li class="reveal-item"><strong>Độ lớn:</strong> Phụ thuộc vào thể tích phần chất lỏng bị vật chiếm chỗ và trọng lượng riêng của chất lỏng.</li>
+      </ul>
+
+      <h3 class="reveal-item">3. Thí nghiệm chứng minh sự tồn tại của lực đẩy Archimedes</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/lgQvXRwlsmvEQjMmFLfqJkUkirFpcPjKRC58fQZj4GWkN9A89F7JGe1df0zPFIW8TLIw-pRfAIzzcuSfxQgbiAEUWsvSZ0cAyfHSiJXniceNrr83CyZ2Ensie7I881jpT1TPX2dm5EMzpKBVFQwvT44eHgGHgnRSJik5o9YJOtE?purpose=inline" alt="Thí nghiệm đo lực đẩy Archimedes">
+          <div class="img-caption">Bố trí thí nghiệm với lực kế và bình tràn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/jmrFBhfV-RWjz72AUIUvjalfcYIymD2oB6zrNHzAchXr31uNxjJxHlEmknGIJxrZ2u7Jme83I5as0hzGNWj3V6qNSx-oo73ggVMuG0VaNMSZsPu0FEsOmCIPTcKqkpkV_Xd1X1BHuYVaOgkRP62PIknSGwnGvCxVrt68vJouAm0?purpose=inline" alt="Sơ đồ thí nghiệm SGK KHTN 8">
+          <div class="img-caption">Sơ đồ thí nghiệm KHTN 8 Kết nối tri thức</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/J0L7JzcXPKRXkau7GBVKVBQhltNPUHXJfYDe1ihqVkciF9DWpTeBbgZflyClQiPsZWmptVG6PTUna6vXB6RYuisgBcmiVN9GAkl6cmUCgio2GbTWx1coGdn1XB7D1hfowU_EwsAx9jYh8D0iAwjRhEf3iXRfrUZfGjiHpJjE6sA?purpose=inline" alt="Cảm giác nhẹ hơn trong nước">
+          <div class="img-caption">Số chỉ lực kế giảm khi nhúng vật vào nước</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Dụng cụ:</strong></p>
+      <ul>
+        <li class="reveal-item">Lực kế.</li>
+        <li class="reveal-item">Vật nặng bằng kim loại.</li>
+        <li class="reveal-item">Bình chứa nước.</li>
+        <li class="reveal-item">Giá đỡ và dây treo.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Tiến hành:</strong></p>
+      <ol>
+        <li class="reveal-item">Treo vật nặng vào lực kế, đo trọng lượng của vật trong không khí, kí hiệu $P$.</li>
+        <li class="reveal-item">Nhúng vật ngập hoàn toàn trong nước, không để vật chạm đáy hoặc thành bình.</li>
+        <li class="reveal-item">Quan sát số chỉ của lực kế, kí hiệu $P_1$.</li>
+        <li class="reveal-item">So sánh hai kết quả.</li>
+      </ol>
+
+      <p class="reveal-item"><strong>Kết quả quan sát:</strong> Số chỉ của lực kế khi vật nhúng trong nước nhỏ hơn số chỉ khi vật ở ngoài không khí ($P_1 < P$).</p>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/fKP-juRYVXPOXYmPwehua22Uka6b32yPjL_rNQBBsYrAP0kQAYahToKbIc1KTlPHUfQi-01crJG5cmrYmhrvgV5kAExDDN83Rs4Eyomi-cnGUXbU9HK76BAZFiV5j5iPRucd8xSnnthF07CguhyKRDwF-lsBpNAyneKDSCkvUx4?purpose=inline" alt="Hình 2. So sánh trọng lượng biểu kiến">
+          <div class="img-caption">Hình 2. So sánh trọng lượng biểu kiến của vật trong không khí và khi nhúng trong nước.</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Giải thích:</strong> Khi nhúng vật vào nước, vật chịu tác dụng của hai lực chính:</p>
+      <ul>
+        <li class="reveal-item">Trọng lực $P$ hướng xuống dưới.</li>
+        <li class="reveal-item">Lực đẩy Archimedes $F_A$ hướng lên trên.</li>
+      </ul>
+      <p class="reveal-item">Do hai lực ngược chiều nhau nên lực kế chỉ giá trị nhỏ hơn trọng lượng của vật. Khi vật đứng yên và được treo bằng lực kế:</p>
+
+      <div class="formula-box reveal-item">
+        $$F_A = P - P_1$$
+      </div>
+
+      <p class="reveal-item">Trong đó:</p>
+      <ul>
+        <li class="reveal-item">$P$: Trọng lượng của vật trong không khí ($	ext{N}$).</li>
+        <li class="reveal-item">$P_1$: Số chỉ lực kế khi vật nhúng trong nước ($	ext{N}$).</li>
+        <li class="reveal-item">$F_A$: Lực đẩy Archimedes ($	ext{N}$).</li>
+      </ul>
+
+      <div class="callout reveal-item">
+        <strong>Kết luận:</strong> Chất lỏng tác dụng lực đẩy lên vật nhúng trong nó.
+      </div>
+
+      <h3 class="reveal-item">4. Định luật Archimedes</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/zP-3ypMXJWGKQ32CYMnee1gc-sQw2arrkHAICXfSa4PkACYRidi31LYRMzeqIt5InMp0NcVoCeswK8i22hwJ7Ch1wnzP6EAbk6OxeUhlTvxqnw-L4Gzly5Csm8kmVfEJXq_FGBnOV6lcSa50ynCbst2IQuTGwa4-pnXYDZG3VqU?purpose=inline" alt="Minh họa định luật Archimedes">
+          <div class="img-caption">Trọng lượng phần nước tràn ra bằng lực đẩy Archimedes</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/rxRdvX6O0VAzVbS2FtGA0vnKEG2E_peZg5wpYoJ4XIUktalfL4VXHoJyxa1jpvkmHcQKKJfHbrgk_t76Dbrd9zg3qx-WsFuVupEQg9vuCpPPXy2po6o0nszgvMZJLB91UF2OveHlhW5ihEYcqyI6n-EDLhGj6fx3aK8RWOrLk-g?purpose=inline" alt="Bộ dụng cụ thí nghiệm định luật Archimedes">
+          <div class="img-caption">Bộ thí nghiệm bình tràn kiểm chứng định luật</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/tqFk9D0T1uS88Pn7g7uyLIHHnywEOxwAKKMvE_hdjkk_aE0fQSnkUGKL4cLzHnSW8kpL37NTFlON7Wl2xzgO37HLcxruxLFh8bhrqdkDQnVWgZuEB0_k0fuf2FcKs62HjOrml8ntoG52AaO__3lo7mPAMcZ82Z5slT5RGtBcU0k?purpose=inline" alt="Biểu thức lực đẩy Archimedes">
+          <div class="img-caption">Mối liên hệ giữa lực đẩy và phần chất lỏng bị chiếm chỗ</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>a) Phát biểu định luật</strong></p>
+      <div class="callout reveal-item">
+        Một vật đặt trong chất lỏng chịu tác dụng của một lực đẩy hướng thẳng đứng từ dưới lên trên, có độ lớn bằng trọng lượng phần chất lỏng bị vật chiếm chỗ.
+      </div>
+
+      <p class="reveal-item"><strong>b) Công thức tính lực đẩy Archimedes</strong></p>
+      <div class="formula-box reveal-item">
+        $$F_A = d 	imes V$$
+      </div>
+      <p class="reveal-item">Trong đó:</p>
+      <ul>
+        <li class="reveal-item">$F_A$: Lực đẩy Archimedes ($	ext{N}$).</li>
+        <li class="reveal-item">$d$: Trọng lượng riêng của chất lỏng ($	ext{N/m}^3$).</li>
+        <li class="reveal-item">$V$: Thể tích phần chất lỏng bị vật chiếm chỗ ($	ext{m}^3$).</li>
+      </ul>
+
+      <div class="callout-warn reveal-item">
+        <strong>Chú ý quan trọng:</strong>
+        <ul style="margin-top: 8px; margin-bottom: 0;">
+          <li>Nếu vật chìm hoàn toàn trong chất lỏng thì $V$ bằng thể tích của vật.</li>
+          <li>Nếu vật chỉ chìm một phần thì $V$ bằng thể tích phần vật chìm trong chất lỏng.</li>
+          <li>Nếu thay chất lỏng bằng chất lỏng có trọng lượng riêng lớn hơn, lực đẩy Archimedes sẽ lớn hơn khi thể tích chất lỏng bị chiếm chỗ không đổi.</li>
+        </ul>
+      </div>
+
+      <p class="reveal-item"><strong>c) Hình ảnh mô tả các đại lượng trong công thức</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/QLjiQGYQkrEUNEbgjpUB8pV_RzV_yZE6PirjEPoVvVUbzW4TGfwOTMdqB1xRa1N_7fi6RgEqhu_dHo_8Luvr-v8TvvxPakLFFnQX-2-RqAazTq9X6vAGjhBBmSeBqIP41ygCCN13rG8pSwzPPFszTfVGyDVjxDm_NjBjg_wudxg?purpose=inline" alt="Hình 6. Thể tích phần chất lỏng bị vật chiếm chỗ và lực đẩy Archimedes">
+          <div class="img-caption">Hình 6. Thể tích phần chất lỏng bị vật chiếm chỗ và lực đẩy Archimedes.</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>d) Ví dụ tính toán 1 – Vật nhúng hoàn toàn trong nước</strong></p>
+      <p class="reveal-item">Một khối kim loại có thể tích $200	ext{ cm}^3$ được nhúng hoàn toàn trong nước. Biết trọng lượng riêng của nước là $10\,000	ext{ N/m}^3$. Tính lực đẩy Archimedes tác dụng lên khối kim loại.</p>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/8WGXLk76WK3iYDINVefRpEH1RVg4knbIj-ajybCku7F4aYcWhenGkZLBruBiDNz8RcVJTa7Mmi8SbDWxx1VSgZp21ruRJ6dM9c49A7zPhM4eL-jT06Ura1Az3hzIh3WX-405rWY4mjXTYFKNWhMeWkAkDHRa8gw2l7m63Zlruns?purpose=inline" alt="Minh họa vật nhúng hoàn toàn trong chất lỏng">
+          <div class="img-caption">Vật nhúng chìm hoàn toàn trong chất lỏng</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Bước 1. Tóm tắt</strong></p>
+      <ul>
+        <li class="reveal-item">$V = 200	ext{ cm}^3 = 0,0002	ext{ m}^3$.</li>
+        <li class="reveal-item">$d = 10\,000	ext{ N/m}^3$.</li>
+        <li class="reveal-item">$F_A = ?$</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Bước 2. Áp dụng công thức</strong></p>
+      <div class="formula-box reveal-item">
+        $$F_A = d 	imes V = 10\,000 	imes 0,0002 = 2	ext{ N}$$
+      </div>
+      <p class="reveal-item"><strong>Đáp số:</strong> $2	ext{ N}$.</p>
+
+      <p class="reveal-item"><strong>e) Ví dụ tính toán 2 – Vật nhúng trong chất lỏng khác nhau</strong></p>
+      <p class="reveal-item">Một vật có thể tích phần chìm là $0,003	ext{ m}^3$. Tính lực đẩy Archimedes trong hai trường hợp:</p>
+      <ul>
+        <li class="reveal-item">Nhúng vật trong nước, $d_1 = 10\,000	ext{ N/m}^3$.</li>
+        <li class="reveal-item">Nhúng vật trong dầu, $d_2 = 8\,000	ext{ N/m}^3$.</li>
+      </ul>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/ktIORLHpXw6rwyE6UvreBsDujS4nbsthx8Bih_KGp0uwqKaIFh3TAUlxdx4W3SEcUICuss17Go51J6H5YzXn9RmJlxwJaMZP2x02BGll9U0_FVI4L1kjH5bjmRQyUbrBnnQTNqNwMPNEHq4_AjvzUCCSXwaJ5kqQK62TQVMR3_Q?purpose=inline" alt="Lực đẩy trong các môi trường chất lỏng">
+          <div class="img-caption">So sánh lực đẩy trong nước và dầu</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/ht0hiXakcnO_Ird1qi7U3rVt_-y_lVxQ2jsSumeQOvyPenuhTpf0zcgY4eNNRuNHYYiThJsRWgN7gv699dEThoEbuX9FLUHd5wpt-iIoO9_z53PgwHYE_sM_fTorF8X34iDAhayq6xrZL619EyeOf7IFX3De1wL3wcfj_oeYAGc?purpose=inline" alt="Áp suất và lực đẩy chất lỏng">
+          <div class="img-caption">Ảnh hưởng của trọng lượng riêng chất lỏng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/T6fS79z7dt4w1dkKLgSf0CqcC0TrCyBgLIlENa_eNU8fVsaPaOJtrBv6lAdcrh18Xn9KqZz7yJaG3fuJ4aXXtzKXkECFUWJnUXp5uth0F9oH_oLQSrNv6ZTMdET2MeiI8RFH9VJKKES78-fxTILDWdBH7-Owgkp-NCkXfpuCGSs?purpose=inline" alt="Nguyên lý Archimedes">
+          <div class="img-caption">Công thức tính lực đẩy Archimedes</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Trong nước: $$F_{A1} = 10\,000 	imes 0,003 = 30	ext{ N}$$</p>
+      <p class="reveal-item">Trong dầu: $$F_{A2} = 8\,000 	imes 0,003 = 24	ext{ N}$$</p>
+      <div class="callout reveal-item">
+        <strong>Nhận xét:</strong> Cùng một thể tích chất lỏng bị chiếm chỗ, lực đẩy Archimedes trong nước lớn hơn trong dầu vì trọng lượng riêng của nước lớn hơn trọng lượng riêng của dầu.
+      </div>
+    </section>
+
+    <!-- SECTION IV -->
+    <section class="lesson-section" id="sec-4">
+      <h2 class="reveal-item">IV. CÁC YẾU TỐ ẢNH HƯỞNG ĐẾN LỰC ĐẨY ARCHIMEDES</h2>
+
+      <h3 class="reveal-item">1. Ảnh hưởng của thể tích phần chất lỏng bị chiếm chỗ</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/1Bm0hoK2LGrueYisyEq9tYs4s2ZuK7qHoD-F61xrl1EcsnYOuUpqqW7EASLhzWczRyHP628cn76osQzLAbNPS1iJtqe6bAZhAKu_0yE6BbSiKMvJWbSVAHkmJ24BwTMnTDeM06vj6XE4LjKxRPaz4-99KMaZPVdOamOVj6-UAxE?purpose=inline" alt="Thể tích phần chìm khác nhau">
+          <div class="img-caption">So sánh hai vật có thể tích phần chìm khác nhau</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/xDXxc-gP1v1oOSkOakQ6Gmyroio2sAZFxQ4ot-Bo10__NZzu79_osMvorb2ebpNVuVlaaFyQ9p8VrEnp9ecFTZ4zXqQA2xVLa2qRU6IYNXne0U-bfooORQ9-8fjymnLUHWK0nyhem-FMi8tCEhzzJ16hEZ3jZMZ3WB8YqOIh4Co?purpose=inline" alt="Lực đẩy phụ thuộc thể tích">
+          <div class="img-caption">Thể tích chiếm chỗ càng lớn, lực đẩy càng lớn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/g2WZsTmRvAq4AEMtCjqf9qf4wNb4G8irucuTyeqsS7_fft_fNDP2N4YKIv8xe_FJjL-iSDua05VAUAC8v9ztd09jlt0TPU_Wv8WqlzsewtnmRDJzPXbmsVgAAGqkSPnBzBy3hO5QN3qt2iayneu0xz-TxHguARq6ew_k5fmFnYM?purpose=inline" alt="Tính toán lực đẩy theo thể tích">
+          <div class="img-caption">Mối quan hệ tỉ lệ thuận giữa F_A và V</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Giả sử hai vật cùng được nhúng trong nước nhưng có thể tích phần chìm khác nhau:</p>
+      <ul>
+        <li class="reveal-item">Vật có thể tích phần chìm nhỏ → chiếm chỗ ít nước → lực đẩy nhỏ.</li>
+        <li class="reveal-item">Vật có thể tích phần chìm lớn → chiếm chỗ nhiều nước → lực đẩy lớn.</li>
+      </ul>
+      <div class="callout reveal-item">
+        <strong>Kết luận:</strong> Khi trọng lượng riêng của chất lỏng không đổi, thể tích phần chất lỏng bị vật chiếm chỗ càng lớn thì lực đẩy Archimedes càng lớn.
+      </div>
+
+      <h3 class="reveal-item">2. Ảnh hưởng của trọng lượng riêng chất lỏng</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/vHgvVYg8LvFPWaN_ax-u4zqBrgpplzRRwreKl53xY4Qy8QfOuPIrQBGiOSJ6v29rGgR9Eq1X3JMPKiDY4-LzBDf-R4JBaKWamkqHZ8pb2vOAFUgNegW5jPIJF5z97vAdD2vhneG-z6NP2QZZFl2xXgaJd-Li6XiCKFd7UdCy8RU?purpose=inline" alt="Thí nghiệm quả trứng trong nước thường và nước muối">
+          <div class="img-caption">Quả trứng chìm trong nước thường và nổi trong nước muối</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/CjbWGu05hR47CxRREIwDnjuoq5jRWjulC_P8f4IPK9PO2K5vKKXB_7fZVCZBu-rbXdS_gSqi5sKzk-9dmvjwwp-8P9ZJIRgs60RIXKySjK1NY7a4C3r1C-RTA368HfRAQyrHJFjGWVqx2wj55Rz2VPkmNE7Cptet41o0FT6bDmg?purpose=inline" alt="Trứng nổi trong nước muối đậm đặc">
+          <div class="img-caption">Nước muối có trọng lượng riêng lớn hơn nước thường</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/eDYyhI2K59ZlipSkS8ZKHHV-pnavEjEUdWGYiP4RfFqNDMkib1Dg4qJfDrfBUbi1TeqItGNzCuQXhCRA90MT4_ryo1SNwWxI--_1lHEEz7DrhqBwhzkX1mFDqnQSodHsxpCNP0HDnJ4fiq1HelT4DFawCc7h2Q7hGhksVB3SrYI?purpose=inline" alt="Người nổi trên Biển Chết">
+          <div class="img-caption">Hiện tượng dễ nổi hơn trong nước có độ mặn cao</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Một thí nghiệm thú vị: Thả một quả trứng vào hai cốc nước.</p>
+      <ul>
+        <li class="reveal-item">Cốc thứ nhất chứa nước thường.</li>
+        <li class="reveal-item">Cốc thứ hai chứa nước muối đậm đặc.</li>
+      </ul>
+      <p class="reveal-item">Thông thường, quả trứng chìm trong nước thường nhưng có thể nổi trong nước muối đậm đặc.</p>
+      <p class="reveal-item"><strong>Giải thích:</strong> Nước muối có trọng lượng riêng lớn hơn nước thường. Khi quả trứng chiếm chỗ cùng một thể tích chất lỏng, lực đẩy Archimedes trong nước muối lớn hơn.</p>
+      <div class="callout reveal-item">
+        <strong>Kết luận:</strong> Với cùng thể tích chất lỏng bị chiếm chỗ, chất lỏng có trọng lượng riêng càng lớn thì lực đẩy Archimedes càng lớn.
+      </div>
+
+      <h3 class="reveal-item">3. Bảng tổng hợp</h3>
+      <table class="reveal-item">
+        <thead>
+          <tr>
+            <th>Yếu tố</th>
+            <th>Khi yếu tố tăng</th>
+            <th>Lực đẩy Archimedes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Thể tích chất lỏng bị chiếm chỗ ($V$)</td>
+            <td>Tăng</td>
+            <td><strong>Tăng</strong></td>
+          </tr>
+          <tr>
+            <td>Trọng lượng riêng chất lỏng ($d$)</td>
+            <td>Tăng</td>
+            <td><strong>Tăng</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout-warn reveal-item">
+        <strong>Ghi nhớ:</strong> $F_A$ phụ thuộc vào $d$ và $V$, <strong>không phụ thuộc</strong> trực tiếp vào độ sâu của vật nếu $d$ và $V$ không đổi.
+      </div>
+    </section>
+
+    <!-- SECTION V -->
+    <section class="lesson-section" id="sec-5">
+      <h2 class="reveal-item">V. ĐIỀU KIỆN ĐỂ VẬT NỔI, VẬT CHÌM VÀ LƠ LỬNG</h2>
+      <p class="reveal-item">Đây là phần kiến thức rất quan trọng, thường được vận dụng trong các bài tập tính toán và giải thích hiện tượng thực tế.</p>
+
+      <h3 class="reveal-item">1. Trường hợp vật chìm xuống</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/Joyn3O53Z9fZxTm4iid9rgY_-mKkORRkU5FKSQ6YOFlbv4OqvgUUC-o-pb51umcFi-sur23CkoWDCTxaYMCQeCcOeCEkbgV8gsP7zmj4CtWRnMgm8aFgBr6-zIn_Zgg2n0_xfODR4rbZAHxQekB2gqSKzGVudvO80-cAfLHg6pk?purpose=inline" alt="Vật nặng chìm xuống đáy">
+          <div class="img-caption">Vật chìm xuống khi trọng lực lớn hơn lực đẩy</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/hA7nDAQenEwfv5p_jkPwCWT3IsdlX2NB6nAxcIJPad6xgQf8VP3200tjPlV3dkuTkHGkyqSnlMfqr2-W5Z7HIWb80XnA9kM2LhPwBk5J8x_UiyyhHtpw1YBCbUgmmTwDwwEwQVhIB0-d7ME-ChH3ehv-ibco3agYZcivn3dIEYVhdyXWpykYt6byJBMUluIL?purpose=inline" alt="Phân tích lực tác dụng lên vật chìm">
+          <div class="img-caption">Sơ đồ lực khi vật chìm trong chất lỏng</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Khi thả một viên bi sắt vào nước:</p>
+      <ul>
+        <li class="reveal-item">Trọng lực $P$ hướng xuống dưới.</li>
+        <li class="reveal-item">Lực đẩy Archimedes $F_A$ hướng lên trên.</li>
+      </ul>
+      <div class="formula-box reveal-item">
+        $$F_A < P$$
+      </div>
+      <p class="reveal-item">Thì hợp lực hướng xuống dưới, <strong>vật chìm xuống</strong>. Ví dụ: Viên bi sắt, đinh vít kim loại đặc thường chìm trong nước.</p>
+
+      <h3 class="reveal-item">2. Trường hợp vật nổi lên</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/J6zvCNF32-Eb7D0_gfWIHrHUYI5bgsL8b4mo7ATHXoMf5rdrL0oWJzhyrCBy1FnmlLjSL7ceTng1PW0gZ9yrJudQMDyZUAkIlG626y3MZhdHfZt28YQ_JbYqTc9OAMFBEFyR-B8YfnZC45uMrTOhNGW3NExyZMkAIST6zx55RU4?purpose=inline" alt="Nút bần nổi trên mặt nước">
+          <div class="img-caption">Nút bần nổi lên trên mặt nước</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/dMxk_ZBI3hMW5qKEXOh2pdGd8MK_XzmDQ84mXuGcMHUsd9E6F79_cLz0HouVGDAL0CzmLz0iw_uDoqBCEAGS0jGFQT0VNtl1iovyn2_DMsMnbFgZgZEGO81mFrhZWRIzh1wbzo-q9YTLX_ySslABbDh7skgvBNEgRbar0gc4LSY?purpose=inline" alt="Vật di chuyển lên mặt thoáng">
+          <div class="img-caption">Hợp lực hướng lên đẩy vật nổi lên</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/7CwtNzJ479BLO4FWzIWrqd7lUdHI9lLZNjcq-tCsA0-ra570Z8wdR90qh-uMrLnB8ljpKgNyw609v4S9FFu7IgEvKHGk-v92t-ltw95195cA9DX5QdjRRCgd2wWe12Wlv7hyxyFtjtTZ-3J-kn2epm7RI6C6_L-KcyJh8nn5cm9umecI4TwryJs5Y_fsCoTl?purpose=inline" alt="Quả bóng rỗng nổi trên hồ">
+          <div class="img-caption">Bóng nhựa rỗng nổi cân bằng trên mặt nước</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Khi thả một quả bóng nhựa rỗng vào nước, quả bóng có xu hướng nổi lên.</p>
+      <div class="formula-box reveal-item">
+        $$F_A > P$$
+      </div>
+      <p class="reveal-item">Thì hợp lực hướng lên trên, <strong>vật chuyển động nổi lên</strong>. Ví dụ: Miếng xốp, nút chai, bóng nhựa rỗng.</p>
+
+      <h3 class="reveal-item">3. Trường hợp vật lơ lửng trong chất lỏng</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/CcHQmbgMygMUOXBqteCuuOikZlVkOf-xRPh8e9JLqilnZ7uRRE2V_NYn4nJqPVqsEO1kxZoPOaBlRj97rDnVSHCi7HwYffrGB8gbkujcohGIbGk94bnpLxl1MfeNLTYc7q1DChWkwxRYVhmNDqMrjmqtBoSY5v_gU23C-9ofUTY?purpose=inline" alt="Thợ lặn giữ trạng thái lơ lửng trung tính">
+          <div class="img-caption">Thợ lặn điều chỉnh độ nổi để lơ lửng trong nước</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/C9jiDT72w2CV3pDkhhWf2AHQhNqNNilKE4Xdd_DMwTDJjZulTY1jbqUA-66zawWVGSss-TEivyToG-SNeBEOtvv16d1NgLp0C7SzPQpYv_r0rf-r_1UvclZpsuVRMBl3-VWWZ-lFvRVTMGdLuGYKTx2hv9OIVcnnb7thxc2CRiI?purpose=inline" alt="Tảng băng trôi cân bằng trong nước">
+          <div class="img-caption">Trạng thái cân bằng lực trong lòng chất lỏng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/rz0hjgq7yfPN7zYlbFw6WogwBCFY_gFc9ujjewoOBn5d33RBaT7WXrSHr_BQwvfj4EPEMhPKS7kszB6Q_OrOIWMd1diiho5sg3BtSb58XlrnXSV_w1HTX7GEkocxM6ElwY8LcwJbSpGaZR-DDWILpfDMRigotly-TG_B2LALDwQ?purpose=inline" alt="Tàu ngầm lơ lửng dưới biển">
+          <div class="img-caption">Vật đứng yên trong lòng chất lỏng khi F_A = P</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Khi vật lơ lửng trong lòng chất lỏng, vật không nổi lên cũng không chìm xuống.</p>
+      <div class="formula-box reveal-item">
+        $$F_A = P$$
+      </div>
+      <p class="reveal-item">Hai lực cân bằng nhau nên vật đứng yên tại vị trí đó nếu ban đầu đứng yên. Ví dụ: Thợ lặn điều chỉnh lượng khí trong áo phao để có thể lơ lửng dưới nước.</p>
+
+      <h3 class="reveal-item">4. Bảng tổng hợp ba trạng thái</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/-ys1Vj08pptdaim5mYdx01Ewwfdxp-Qtc2G_s8pIP6Qz3wYwKQ5AM0MmDQaW6XrpsoXNeip2B7wmF1TYvwDVfgthDXk0_duXk733oPAg5Cp25sMxMH_kxp4Im4dLgmo6n1CxHjiAzs4C7mcgiBAGa-3_7DI8o-Na6qrmU_mbjbM?purpose=inline" alt="Hình 13. So sánh vật chìm, vật nổi và vật lơ lửng">
+          <div class="img-caption">Hình 13. So sánh vật chìm, vật nổi và vật lơ lửng.</div>
+        </div>
+      </div>
+
+      <table class="reveal-item">
+        <thead>
+          <tr>
+            <th>Trạng thái</th>
+            <th>Điều kiện lực</th>
+            <th>Kết quả</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Chìm xuống</td>
+            <td>$F_A < P$</td>
+            <td>Vật đi xuống</td>
+          </tr>
+          <tr>
+            <td>Nổi lên</td>
+            <td>$F_A > P$</td>
+            <td>Vật đi lên</td>
+          </tr>
+          <tr>
+            <td>Cân bằng (Lơ lửng)</td>
+            <td>$F_A = P$</td>
+            <td>Vật cân bằng</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout-warn reveal-item">
+        <strong>Lưu ý:</strong> Khi vật đã nổi cân bằng trên mặt chất lỏng, lực đẩy Archimedes bằng trọng lượng của vật ($F_A = P$). Không phải lúc nào vật nổi cũng có $F_A > P$. $F_A > P$ là điều kiện để vật đang chìm trong chất lỏng có xu hướng đi lên.
+      </div>
+
+      <h3 class="reveal-item">5. So sánh trọng lượng riêng của vật và chất lỏng</h3>
+      <p class="reveal-item">Đối với vật đồng chất, xét trường hợp thả vật vào chất lỏng:</p>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/A8csMgjWJ_taxiilqAEVjgdUSj74R-PwRd6kC-n10tzApgMKjjB6GRsb9sFxHs7AS2aEwUnFhYKXTC1LRarT8qmH3uYJ0vonMB4JqEUlnWym0981Guyv50yoNU4POX4tvXo4QCF2uebT7hnWlIi7lPKTpO_QM_01AZltseUtW7o?purpose=inline" alt="Thí nghiệm trọng lượng riêng và sự nổi">
+          <div class="img-caption">So sánh trọng lượng riêng giữa vật và chất lỏng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/uOTDDjerWwwwws-rQPrjvH-Nacr1HQdfGvI0tVAKfgZ0WW52hA1bHjfFW3j1c2lDY4rABVMXlppI0B4JQ55l7GkaQaPkY6o-Hcnb9o_8k71DfmHzDaArnd3JxhkoUmSP9_Ly4i2ixJw3aCSRzxhBdwK0Vhze_K8S_yWmIiSA1xs?purpose=inline" alt="Các tầng chất lỏng và vật nổi">
+          <div class="img-caption">Vật có trọng lượng riêng nhỏ hơn sẽ nổi lên trên</div>
+        </div>
+      </div>
+
+      <ul>
+        <li class="reveal-item"><strong>Vật chìm:</strong> trọng lượng riêng trung bình của vật lớn hơn trọng lượng riêng chất lỏng.</li>
+        <li class="reveal-item"><strong>Vật nổi:</strong> trọng lượng riêng trung bình của vật nhỏ hơn trọng lượng riêng chất lỏng.</li>
+        <li class="reveal-item"><strong>Vật lơ lửng:</strong> trọng lượng riêng trung bình của vật bằng trọng lượng riêng chất lỏng.</li>
+      </ul>
+
+      <table class="reveal-item">
+        <thead>
+          <tr>
+            <th>Trạng thái</th>
+            <th>So sánh trọng lượng riêng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Chìm</td>
+            <td>$d_v > d_l$</td>
+          </tr>
+          <tr>
+            <td>Nổi</td>
+            <td>$d_v < d_l$</td>
+          </tr>
+          <tr>
+            <td>Lơ lửng</td>
+            <td>$d_v = d_l$</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="reveal-item">Trong đó $d_v$ là trọng lượng riêng trung bình của vật, $d_l$ là trọng lượng riêng của chất lỏng.</p>
+      <div class="callout reveal-item">
+        Đối với vật rỗng như tàu thủy, phải xét trọng lượng riêng trung bình của toàn bộ vật, bao gồm cả phần rỗng bên trong.
+      </div>
+    </section>
+
+    <!-- SECTION VI -->
+    <section class="lesson-section" id="sec-6">
+      <h2 class="reveal-item">VI. TẠI SAO CÙNG MỘT VIÊN ĐẤT NẶN CÓ LÚC CHÌM, CÓ LÚC NỔI?</h2>
+      <p class="reveal-item">Đây là thí nghiệm khám phá rất hay trong Bài 17 của sách giáo khoa.</p>
+
+      <h3 class="reveal-item">1. Thí nghiệm với viên đất nặn</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/L_2Cv1QOxuKxxyodHtZgS7sJE5DrCfoEvvDw5J-acxf2AAADUGKXD8n873yT9LHpZhg6XGbhJfQ-EXx7PjEyiZR9VkrwxPqpd-1V9ueG2QPHWg3JX61ivYmHILhD9SMhmnKq9iKey-FjRVRFM33OVkv8QRU1bdXem9RvnJdRH7k?purpose=inline" alt="Thí nghiệm đất nặn SGK KHTN 8">
+          <div class="img-caption">Thí nghiệm thả viên đất nặn hình cầu và hình thuyền</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/cHUrAFEmYJGy4rWmbA3606CI8dVR4R0lwJW7RxYweBDQMXb4lGMGvS9E_4LJQvlLMJ6NauTzu1uCaprecBmVQ-iLeVxqawkeJoeq-IgbG4D0N8K1SFpTyK9WxUgk3cch2wLj18lU1NH3YnS-j0TdYZp0g4HD99cWZo205AmdvxU?purpose=inline" alt="Viên đất nặn vo tròn chìm trong nước">
+          <div class="img-caption">Đất nặn vo tròn bị chìm</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/AhZ5_xa57chBKXopIUcIBOOoIHS1T1V0x0SAPmbkYA_pjXRjZ4MenfoBN458HBa6EQh00miwQDbq_I9vRW1NOifN3XyMqW5Lc0t0-OOKtgrPlp-Mx_tf7ZUAAdA1qmLHiUXdF7dIKMNW1QmjqOLXXJOXKuOzID2EfZD33crok6w?purpose=inline" alt="Thuyền đất nặn nổi trên nước">
+          <div class="img-caption">Đất nặn tạo hình thuyền rỗng nổi trên mặt nước</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Chuẩn bị:</strong></p>
+      <ul>
+        <li class="reveal-item">Một viên đất nặn khoảng $100	ext{ g}$.</li>
+        <li class="reveal-item">Một chậu nước.</li>
+        <li class="reveal-item">Khăn lau.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Tiến hành:</strong></p>
+      <ul>
+        <li class="reveal-item"><strong>Bước 1:</strong> Nặn đất thành một viên hình cầu rồi thả vào nước.</li>
+        <li class="reveal-item"><strong>Bước 2:</strong> Quan sát viên đất nặn chìm xuống đáy.</li>
+        <li class="reveal-item"><strong>Bước 3:</strong> Lấy viên đất nặn ra, nặn thành hình chiếc thuyền có lòng rỗng.</li>
+        <li class="reveal-item"><strong>Bước 4:</strong> Thả chiếc thuyền đất nặn vào nước và quan sát.</li>
+      </ul>
+
+      <h3 class="reveal-item">2. Kết quả thí nghiệm</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/qiNaObGuzAC71HNoVsXuJdmJ45KbftpY9ARofXoxX5Oe1nzzwv_wi-Rhcrs_JClca_pf-fGbGwhT6_FM4hle1faUvfg065p7GypKLQdEuEpzaoHfcZv3kk-LLUWbkAlhxaLzWXzvEbPRhkrSKgZg9ReVfLDh3HAnjhbalm9KnVI?purpose=inline" alt="Hình dạng giúp vật nổi hoặc chìm">
+          <div class="img-caption">Ảnh hưởng của hình dạng đến thể tích nước bị chiếm chỗ</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/1LOmpMOFRfsN2mNE4MpTK_DGG-BmlVU5AnBcOkFpwzYQ5EHbKNlcf_uvzsDKo5kYLB1Jya7mqleO_2F_-8Ejl-RpeJPasP2d4dzHFnOS-5AFU6c_XipIVrTCaRzLLV3akAor8rEzOQtWtCb404bx9nidC8AXV4sBwIL6-pwLteY?purpose=inline" alt="Thử nghiệm nổi hay chìm">
+          <div class="img-caption">So sánh hai trạng thái của cùng một khối lượng đất nặn</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Hiện tượng:</strong></p>
+      <ul>
+        <li class="reveal-item">Viên đất nặn hình cầu chìm xuống.</li>
+        <li class="reveal-item">Viên đất nặn được tạo thành hình chiếc thuyền có thể nổi trên mặt nước.</li>
+      </ul>
+
+      <h3 class="reveal-item">3. Giải thích hiện tượng</h3>
+      <p class="reveal-item">Khi đất nặn được tạo thành viên cầu, thể tích nước bị chiếm chỗ nhỏ. Lực đẩy Archimedes không đủ lớn để cân bằng trọng lượng của viên đất nặn.</p>
+      <p class="reveal-item">Khi tạo thành hình chiếc thuyền rỗng:</p>
+      <ul>
+        <li class="reveal-item">Thể tích bên ngoài của chiếc thuyền tăng.</li>
+        <li class="reveal-item">Chiếc thuyền có thể chiếm chỗ một lượng nước lớn hơn trước khi bị ngập hoàn toàn.</li>
+        <li class="reveal-item">Lực đẩy Archimedes tăng theo thể tích phần chìm.</li>
+        <li class="reveal-item">Khi lực đẩy cân bằng trọng lượng của chiếc thuyền, nó nổi trên mặt nước.</li>
+      </ul>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/7iXX8D-cGT9wA92CPvoZvYk1-L2JFGDp8hdB3eHijbsqbLovOGdITLrlixpMUo5e6G_EhjmI3lqo1XRpTSeYT7rQF7nrgRNG5XoBBWw-hMrt-u1qTFP2f2bghdG3yn1WwcxDR2X5tUDlNz2J6hSFOvtPiovfxXvJ38leevF5e20?purpose=inline" alt="Hình 16. Thay đổi hình dạng giúp tăng thể tích nước bị chiếm chỗ">
+          <div class="img-caption">Hình 16. Thay đổi hình dạng giúp tăng thể tích nước bị chiếm chỗ và làm đất nặn nổi.</div>
+        </div>
+      </div>
+
+      <div class="callout reveal-item">
+        <strong>Kết luận:</strong> Khả năng nổi của vật không chỉ phụ thuộc vào vật liệu mà còn phụ thuộc vào hình dạng, thể tích phần chìm và trọng lượng của vật.
+      </div>
+    </section>
+
+    <!-- SECTION VII -->
+    <section class="lesson-section" id="sec-7">
+      <h2 class="reveal-item">VII. ỨNG DỤNG CỦA LỰC ĐẨY ARCHIMEDES TRONG ĐỜI SỐNG</h2>
+
+      <h3 class="reveal-item">1. Tàu thủy – Vì sao con tàu bằng thép có thể nổi?</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/EYnVFq8CxWQgipl9ctt25WBs6HytU54iLAQuXkQco_HhnCOBsCxB9LKgNNhWEDbbpwZZLgfaFW6Xdkp80bOlF59ppL1YZgAdYCnyp1PWra1nseFR0sf6NyN2pHk-JT60LRHMBLZ-VT1aAotJ0ZNyr0rSw_JnMHgfDFpcxA7N7Xc?purpose=inline" alt="Tàu vận tải biển hiện đại">
+          <div class="img-caption">Tàu vận tải biển cỡ lớn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/oNvbGBAzZQDBBvhTYfH8wTE11pmQSGXK-gtZPKspzRBckqZB4gLJV35e5E7WntPV1k2nmpnSwUxac20ta0uf0vOhWFH8LKhp0o4yxp7w2lmeRTU2msM2uistLonUi3T90tbkcza6RfvPwh3Df5DRLCkhoztY8lDDl7gIyb-_TsQ?purpose=inline" alt="Nguyên lý nổi của tàu thủy">
+          <div class="img-caption">Khoang rỗng bên trong giúp giảm trọng lượng riêng trung bình</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Tàu thủy được chế tạo từ các vật liệu nặng như thép nhưng vẫn nổi trên mặt nước.</p>
+      <p class="reveal-item"><strong>Giải thích:</strong></p>
+      <ul>
+        <li class="reveal-item">Thân tàu có cấu tạo rỗng, bên trong chứa không khí.</li>
+        <li class="reveal-item">Thể tích bên ngoài của tàu rất lớn.</li>
+        <li class="reveal-item">Khi tàu chìm xuống một phần, nó chiếm chỗ một lượng nước lớn.</li>
+        <li class="reveal-item">Nước tác dụng lực đẩy Archimedes lên tàu.</li>
+        <li class="reveal-item">Khi lực đẩy Archimedes bằng trọng lượng của tàu, tàu nổi cân bằng.</li>
+      </ul>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/hDvkjBS7I72qRPYjYv4Ig1KR4CkbBPCDhdZQQ8hxYZ8mYQRSxPwB-0DkC55_9CsGAERPvFSe7PkaS4cYVZuXsyHGZwZZs6KR-agAg3neW3lqRMvEEVENvAv2dK3_qff8t-TJBN8zEfAVNZQAbZwGuMlTp8rz3JSFq_SMDV6D9Dk?purpose=inline" alt="Hình 18. Cấu tạo thân tàu rỗng">
+          <div class="img-caption">Hình 18. Cấu tạo thân tàu rỗng giúp tàu chiếm chỗ một thể tích nước lớn.</div>
+        </div>
+      </div>
+      <p class="reveal-item"><strong>Ứng dụng:</strong> Thiết kế tàu chở hàng, tàu du lịch, tàu container và tàu vận tải biển.</p>
+
+      <h3 class="reveal-item">2. Tàu ngầm – Điều chỉnh độ nổi bằng két nước</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/svBUWPnF8agwyRMZXLU1Ns3TDf4UrK17xODAqlpUWxYTgo0MxT9ygW8P49yDDBk8AcEai974_K82LxUkmcutvT7wj462_R5TyOhf-TaB0Xbd6-pw9qITQ7T7mPyy4JWhkYiSiBJl0-vjOtxjF7hjIEhLmcsHlJEad80_R3mUKHh6b373ugZZcmzypfZRGSWH?purpose=inline" alt="Tàu ngầm lặn dưới mặt nước">
+          <div class="img-caption">Tàu ngầm hoạt động dưới mặt biển</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/2BMvwEkt2dGgL1eQWpI4tC_dDIoXdp1Uncl69Qhut0wfPmdtP6HVnZyDx4m32s38jJw-a9_s2oGBsje3CTqt8qi2dcux1ruZfkb0Aw_miexU-_DArjyyUu-3G2YhGCmAWvJjflu_TbIgg4lFDredAgDC2B0qwzR7lQBJuFk1mfU?purpose=inline" alt="Tàu ngầm nổi trên mặt biển">
+          <div class="img-caption">Tàu ngầm nổi khi đẩy nước ra khỏi két dằn</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Tàu ngầm có thể nổi trên mặt nước, lơ lửng trong nước hoặc chìm xuống đáy biển. Tàu ngầm sử dụng các két chứa nước và không khí để điều chỉnh khả năng nổi.</p>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/1COfos4IOJQyQ62SKblh8tL_dt4YNiDWaGrUcKS-bhwu7V7ceg2UXS-t_JgAPNgRq-xfpyjvvq_XYhZokgq-CnChhfIVAuoXRbfK3ZKI6U3rweZfLqGCv-WiYjyu6HBxBQSIXpdAzC6WQk090aMNij5DudV7BNaKEXinU2skIEjyEy5Ck7A45z53KJKxZz07?purpose=inline" alt="Hình 20. Sơ đồ nguyên lí điều chỉnh độ nổi của tàu ngầm">
+          <div class="img-caption">Hình 20. Sơ đồ nguyên lí điều chỉnh độ nổi của tàu ngầm.</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Ba trạng thái hoạt động:</strong></p>
+      <ul>
+        <li class="reveal-item"><strong>Khi muốn lặn:</strong> Cho nước vào các két dằn, làm tăng khối lượng và trọng lượng của tàu. Tàu chìm xuống khi trọng lượng lớn hơn lực đẩy Archimedes ($P > F_A$).</li>
+        <li class="reveal-item"><strong>Khi muốn nổi:</strong> Dùng khí nén đẩy nước ra khỏi két dằn, làm giảm trọng lượng của tàu. Tàu nổi lên khi lực đẩy lớn hơn trọng lượng ($F_A > P$).</li>
+        <li class="reveal-item"><strong>Khi muốn lơ lửng:</strong> Điều chỉnh lượng nước và không khí để lực đẩy Archimedes cân bằng trọng lượng của tàu ($F_A = P$).</li>
+      </ul>
+
+      <h3 class="reveal-item">3. Áo phao và phao cứu sinh</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/4UzpF8w4lPGwJUOAH3-C_jCB_yDvrdLJAtnRMwDUwilQukLTerJufNOqdRrX8iG5ctnanrnEQXeNiNYCY20s0aeGV4pMnp6GMaFFe24DCHVL2a-sklB1xEheKWORmVQFOlcmdegZZzGXDzNUnKCMVgZkDyFZYQIjtFTTYquE1BM?purpose=inline" alt="Áo phao cứu sinh">
+          <div class="img-caption">Áo phao cứu sinh tiêu chuẩn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/_j1rAXta17Xqwho5QXRDv3dqxSdpX_dbd2c56MqEJ00w2x-m5eibowxt0dk2CCpJJhyERVc62opbWbfloJODymjjs-TjNW6Jt5sgh89V7QjtTPdAzXpL-OcWWzhyuOEngIRA11Ol13JUg2DtFBcUXKt9Thf__aB3a0-Jq3-7gyA?purpose=inline" alt="Phao tròn bơm hơi">
+          <div class="img-caption">Phao bơi chứa không khí giúp tăng thể tích chiếm chỗ</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/9Q_AgTdApqp2UBRjM2S4HHDv3kA6wMKWD84WBpUUz11dhmbjsNdu0w1uM0hK0E7NXTVoCEymjgqcN2XOuU1Gwi_Tdiwe6mM8oJcH3r4qs9OgrYTfz9xJALG1lJu8rX2QOMe5NRhhRipfnKS13juke40ltrpPuIP3Er2kKR-9Nlk0lVywilgHMomSQyJXegU-?purpose=inline" alt="Người mặc áo phao nổi trên biển">
+          <div class="img-caption">Áo phao giúp giữ đầu và đường thở trên mặt nước</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Áo phao và phao cứu sinh thường được làm từ vật liệu nhẹ, có khả năng chứa không khí hoặc vật liệu nổi.</p>
+      <p class="reveal-item"><strong>Tác dụng:</strong></p>
+      <ul>
+        <li class="reveal-item">Tăng thể tích chiếm chỗ trong nước.</li>
+        <li class="reveal-item">Làm tăng lực đẩy Archimedes khi phần phao chìm vào nước.</li>
+        <li class="reveal-item">Giúp cơ thể người nổi dễ dàng hơn.</li>
+        <li class="reveal-item">Hỗ trợ giữ đầu và đường thở ở phía trên mặt nước khi được sử dụng đúng cách.</li>
+      </ul>
+      <p class="reveal-item"><strong>Ứng dụng:</strong> An toàn khi đi thuyền, tàu du lịch, hoạt động thể thao dưới nước.</p>
+
+      <h3 class="reveal-item">4. Khinh khí cầu – Lực đẩy của không khí</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/1sxRSJFzxOU4oDx5oa8ygv71MFC4xnQLEfbFRaI8j2OUkM7Ykdsu3l_5Oh_zedHyg20B8x9Wmcclt7mEuUBPaAnnAK8GUj2uVjoWak7KgQ7iZ_c6oxPwivoesh8Vhtj2rOCQMSzuBFBy1UqTo-BOmtWzZkc_wqReUqdwDCvthpo?purpose=inline" alt="Khinh khí cầu bay lên bầu trời">
+          <div class="img-caption">Khinh khí cầu chịu lực đẩy Archimedes của không khí</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/5-S3LFOyRpb0gNMt9nPZ1wn-qgQhy0jfPK5Dnru2eg0GgXp96y3pxyjqOs5F4CYwMTpb8q__deZ5JbNByY2alN4ew6FYN5HZZyyuoz_nO3ZGXqNJISSVaCrerB9o8GkDfDgMnCyP7PeolKTYL91wByTx6ofDfZt6mqCc_L1QiX4?purpose=inline" alt="Khinh khí cầu khí nóng">
+          <div class="img-caption">Không khí nóng bên trong nhẹ hơn không khí lạnh bên ngoài</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Không chỉ chất lỏng mà <strong>chất khí (như không khí)</strong> cũng tác dụng lực đẩy Archimedes hướng thẳng đứng từ dưới lên trên lên mọi vật đặt trong nó.</p>
+      <ul>
+        <li class="reveal-item">Bên trong khinh khí cầu chứa khí nhẹ (như khí Helium) hoặc không khí được đốt nóng có trọng lượng riêng nhỏ hơn không khí bên ngoài.</li>
+        <li class="reveal-item">Khi lực đẩy Archimedes của không khí lớn hơn tổng trọng lượng của khinh khí cầu ($F_A > P$), khinh khí cầu sẽ bay lên cao.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <div id="bottom-nav">
+    <button id="btn-prev" title="Lùi lại 1 bước (Phím ←)">◀ Lùi</button>
+    <span id="step-counter">1 / 1</span>
+    <button id="btn-next" title="Tiếp theo 1 bước (Phím →)">Tiếp ▶</button>
+    <button id="btn-reset" title="Quay lại từ đầu">↺ Đầu bài</button>
+  </div>
+
+  <!-- Shortcut Hint -->
+  <div id="shortcut-hint">
+    <kbd>→</kbd> Tiếp &nbsp;|&nbsp; <kbd>←</kbd> Lùi &nbsp;|&nbsp; <kbd>Space</kbd> Đọc &nbsp;|&nbsp; <kbd>+</kbd>/<kbd>-</kbd> Cỡ chữ &nbsp;|&nbsp; <kbd>H</kbd> Ẩn thanh
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox">
+    <button id="lightbox-close" title="Đóng (Esc)">✕</button>
+    <button class="lightbox-nav" id="lb-prev" title="Ảnh trước (←)">❮</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-caption"></div>
+    <button class="lightbox-nav" id="lb-next" title="Ảnh tiếp theo (→)">❯</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. State & Elements
+      const body = document.body;
+      const revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+      const modeToggle = document.getElementById('mode-toggle');
+      const stepCounter = document.getElementById('step-counter');
+      const progressBar = document.getElementById('progress-bar');
+      const btnNext = document.getElementById('btn-next');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnReset = document.getElementById('btn-reset');
+      const btnFontInc = document.getElementById('btn-font-inc');
+      const btnFontDec = document.getElementById('btn-font-dec');
+      const fontSizeLabel = document.getElementById('font-size-label');
+      const btnSpeak = document.getElementById('btn-speak');
+      const btnHud = document.getElementById('btn-hud');
+      const btnToc = document.getElementById('btn-toc');
+      const tocDrawer = document.getElementById('toc-drawer');
+      const tocList = document.getElementById('toc-list');
+
+      let currentIndex = 0; // Index of the latest revealed item (0-based)
+      let isShowAll = false;
+      let currentFontSize = 1.25; // Minimum >= 1.2rem
+      const MIN_FONT = 1.2;
+      const MAX_FONT = 2.6;
+
+      // 2. Build Table of Contents
+      const headings = document.querySelectorAll('h2, h3');
+      headings.forEach((h, idx) => {
+        if (!h.id) h.id = 'heading-' + idx;
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.style.paddingLeft = '24px';
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          // Reveal up to this heading if in step mode
+          const targetIdx = revealItems.indexOf(h);
+          if (!isShowAll && targetIdx > currentIndex) {
+            revealUpTo(targetIdx, false);
+          }
+          h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          tocDrawer.classList.remove('open');
+        });
+        li.appendChild(a);
+        tocList.appendChild(li);
+      });
+
+      btnToc.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tocDrawer.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!tocDrawer.contains(e.target) && e.target !== btnToc) {
+          tocDrawer.classList.remove('open');
+        }
+      });
+
+      // 3. Step-by-Step Reveal Logic
+      function updateUI() {
+        const total = revealItems.length;
+        revealItems.forEach((item, idx) => {
+          item.classList.remove('hidden-step', 'active-step');
+          if (!isShowAll) {
+            if (idx > currentIndex) {
+              item.classList.add('hidden-step');
+            } else if (idx === currentIndex) {
+              item.classList.add('active-step');
+            }
+          }
+        });
+
+        if (isShowAll) {
+          stepCounter.textContent = `Tất cả (${total})`;
+          progressBar.style.width = '100%';
+        } else {
+          stepCounter.textContent = `${currentIndex + 1} / ${total}`;
+          const pct = ((currentIndex + 1) / total) * 100;
+          progressBar.style.width = pct + '%';
+        }
+      }
+
+      function scrollToCenter(el) {
+        if (!el) return;
+        requestAnimationFrame(() => {
+          el.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        });
+      }
+
+      function revealUpTo(index, shouldScroll = true) {
+        if (index < 0) index = 0;
+        if (index >= revealItems.length) index = revealItems.length - 1;
+        currentIndex = index;
+        updateUI();
+        if (shouldScroll && !isShowAll) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+      }
+
+      function nextStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex < revealItems.length - 1) {
+          stopSpeech();
+          revealUpTo(currentIndex + 1, true);
+        }
+      }
+
+      function prevStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: -window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex > 0) {
+          stopSpeech();
+          revealUpTo(currentIndex - 1, true);
+        }
+      }
+
+      btnNext.addEventListener('click', nextStep);
+      btnPrev.addEventListener('click', prevStep);
+      btnReset.addEventListener('click', () => {
+        stopSpeech();
+        if (isShowAll) {
+          modeToggle.checked = false;
+          isShowAll = false;
+          body.classList.add('step-mode');
+        }
+        revealUpTo(0, true);
+      });
+
+      modeToggle.addEventListener('change', (e) => {
+        isShowAll = e.target.checked;
+        if (isShowAll) {
+          body.classList.remove('step-mode');
+        } else {
+          body.classList.add('step-mode');
+        }
+        updateUI();
+        if (!isShowAll) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+      });
+
+      // Initialize first step
+      revealUpTo(0, false);
+
+      // 4. Font Size Controls (+ / -)
+      function setFontSize(size) {
+        currentFontSize = Math.min(MAX_FONT, Math.max(MIN_FONT, Number(size.toFixed(2))));
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'rem');
+        fontSizeLabel.textContent = currentFontSize.toFixed(2) + 'rem';
+      }
+
+      btnFontInc.addEventListener('click', () => setFontSize(currentFontSize + 0.1));
+      btnFontDec.addEventListener('click', () => setFontSize(currentFontSize - 0.1));
+
+      // 5. Text-to-Speech (Spacebar)
+      function stopSpeech() {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        btnSpeak.classList.remove('speaking');
+        btnSpeak.textContent = '🔊 Đọc (Space)';
+      }
+
+      function speakCurrentItem() {
+        if (!('speechSynthesis' in window)) {
+          alert('Trình duyệt của bạn không hỗ trợ đọc văn bản tự động.');
+          return;
+        }
+
+        if (window.speechSynthesis.speaking) {
+          stopSpeech();
+          return;
+        }
+
+        const targetEl = revealItems[currentIndex];
+        if (!targetEl) return;
+
+        // Clean text for reading (avoid reading raw LaTeX/captions awkwardly)
+        const clone = targetEl.cloneNode(true);
+        clone.querySelectorAll('.katex-mathml, .img-caption').forEach(el => el.remove());
+        let text = clone.innerText.replace(/\s+/g, ' ').trim();
+        if (!text) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'vi-VN';
+        utterance.rate = 1.0;
+
+        utterance.onstart = () => {
+          btnSpeak.classList.add('speaking');
+          btnSpeak.textContent = '⏹️ Dừng đọc';
+        };
+        utterance.onend = () => stopSpeech();
+        utterance.onerror = () => stopSpeech();
+
+        window.speechSynthesis.speak(utterance);
+      }
+
+      btnSpeak.addEventListener('click', speakCurrentItem);
+
+      // 6. Toggle HUD (Key H)
+      function toggleHud() {
+        body.classList.toggle('hud-hidden');
+      }
+      btnHud.addEventListener('click', toggleHud);
+
+      // 7. Lightbox Fullscreen Image Viewer
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxCaption = document.getElementById('lightbox-caption');
+      const lightboxClose = document.getElementById('lightbox-close');
+      const lbPrev = document.getElementById('lb-prev');
+      const lbNext = document.getElementById('lb-next');
+
+      const allImages = Array.from(document.querySelectorAll('.img-card img'));
+      let currentImgIdx = 0;
+
+      function openLightbox(idx) {
+        currentImgIdx = idx;
+        const img = allImages[currentImgIdx];
+        lightboxImg.src = img.src;
+        lightboxCaption.textContent = img.alt || '';
+        lightbox.classList.add('open');
+      }
+
+      function closeLightbox() {
+        lightbox.classList.remove('open');
+      }
+
+      allImages.forEach((img, idx) => {
+        img.addEventListener('click', () => openLightbox(idx));
+      });
+
+      lightboxClose.addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+      });
+
+      lbPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+      });
+
+      lbNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLightbox((currentImgIdx + 1) % allImages.length);
+      });
+
+      // 8. Keyboard Shortcuts
+      document.addEventListener('keydown', (e) => {
+        // Ignore if typing in an input
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        // If lightbox is open, handle lightbox keys
+        if (lightbox.classList.contains('open')) {
+          if (e.key === 'Escape') closeLightbox();
+          if (e.key === 'ArrowRight') openLightbox((currentImgIdx + 1) % allImages.length);
+          if (e.key === 'ArrowLeft') openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+          return;
+        }
+
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          nextStep();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevStep();
+        } else if (e.key === ' ') {
+          e.preventDefault();
+          speakCurrentItem();
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          setFontSize(currentFontSize + 0.1);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          setFontSize(currentFontSize - 0.1);
+        } else if (e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          toggleHud();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
