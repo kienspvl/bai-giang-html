@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bài giảng KHTN 8: Chủ đề Áp suất</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\[', right: '\\]', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false}
+      ],
+      throwOnError: false
+    });"></script>
+  <style>
+    :root {
+      --base-font-size: 1.25rem;
+      --bg-color: #f4f7fb;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --accent: #0d9488;
+      --accent-light: #ccfbf1;
+      --border-color: #cbd5e1;
+      --highlight-bg: #fef9c3;
+      --highlight-border: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-size: var(--base-font-size);
+      line-height: 1.65;
+      padding-bottom: 120px;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Navigation & Control Bar */
+    #control-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    body.hud-hidden #control-bar,
+    body.hud-hidden #bottom-nav,
+    body.hud-hidden #toc-drawer,
+    body.hud-hidden #shortcut-hint {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-20px);
+    }
+
+    body.hud-hidden #bottom-nav {
+      transform: translateY(20px);
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      color: #ffffff;
+    }
+
+    .btn.speaking {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #ffffff;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+      70% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+
+    /* Toggle Switch */
+    .switch-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f1f5f9;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--primary);
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+      z-index: 1001;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1080px;
+      margin: 85px auto 40px;
+      padding: 0 24px;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #0369a1 0%, #0d9488 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2);
+    }
+
+    .hero-card h1 {
+      font-size: 1.8em;
+      line-height: 1.3;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-card .subtitle {
+      font-size: 1.35em;
+      font-weight: 700;
+      color: #fef08a;
+      margin-bottom: 16px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.18);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      backdrop-filter: blur(4px);
+    }
+
+    .part-banner {
+      background: linear-gradient(90deg, #0f172a, #1e3a8a);
+      color: #ffffff;
+      padding: 18px 28px;
+      border-radius: 14px;
+      margin: 36px 0 24px;
+      font-size: 1.35em;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.15);
+      border-left: 8px solid #38bdf8;
+    }
+
+    section.lesson-section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    h2 {
+      font-size: 1.45em;
+      color: var(--primary-dark);
+      border-bottom: 3px solid var(--primary-light);
+      padding-bottom: 10px;
+      margin-bottom: 22px;
+    }
+
+    h3 {
+      font-size: 1.22em;
+      color: var(--accent);
+      margin-top: 26px;
+      margin-bottom: 14px;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      margin-left: 28px;
+      margin-bottom: 18px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    .callout {
+      background: var(--primary-light);
+      border-left: 5px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .callout-warn {
+      background: var(--highlight-bg);
+      border-left: 5px solid var(--highlight-border);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .formula-box {
+      background: #f8fafc;
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin: 20px auto;
+      text-align: center;
+      font-size: 1.3em;
+      font-weight: 700;
+      color: var(--primary-dark);
+      max-width: 580px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 14px 18px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    /* Image Gallery Grid */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .img-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .img-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+    }
+
+    .img-card img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: zoom-in;
+    }
+
+    .img-caption {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Step-by-Step Reveal Mechanics */
+    .reveal-item {
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  background-color 0.6s ease;
+    }
+
+    body.step-mode .reveal-item.hidden-step {
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      height: 0;
+      overflow: hidden;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+    }
+
+    body.step-mode .reveal-item.active-step {
+      border-radius: 8px;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+      background-color: rgba(224, 242, 254, 0.35);
+    }
+
+    /* Bottom Floating Navigation */
+    #bottom-nav {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.9);
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+      backdrop-filter: blur(8px);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    #bottom-nav button {
+      background: rgba(255,255,255,0.14);
+      border: none;
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #bottom-nav button:hover {
+      background: var(--primary);
+    }
+
+    #step-counter {
+      font-size: 0.95rem;
+      font-weight: 600;
+      min-width: 90px;
+      text-align: center;
+      color: #bae6fd;
+    }
+
+    /* TOC Drawer */
+    #toc-drawer {
+      position: fixed;
+      top: 66px;
+      left: 20px;
+      width: 330px;
+      max-height: calc(100vh - 150px);
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      z-index: 999;
+      display: none;
+    }
+
+    #toc-drawer.open {
+      display: block;
+    }
+
+    #toc-drawer h4 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+
+    #toc-list {
+      list-style: none;
+      margin: 0;
+    }
+
+    #toc-list li {
+      margin-bottom: 6px;
+    }
+
+    #toc-list a {
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      display: block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    #toc-list a:hover {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Lightbox Modal */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.94);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 24px;
+    }
+
+    #lightbox.open {
+      display: flex;
+    }
+
+    #lightbox img {
+      max-width: 92vw;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transition: transform 0.2s ease;
+    }
+
+    #lightbox-caption {
+      color: #f1f5f9;
+      margin-top: 14px;
+      font-size: 1.05rem;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 28px;
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lightbox-close:hover {
+      background: #ef4444;
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .lightbox-nav:hover {
+      background: var(--primary);
+    }
+
+    #lb-prev { left: 24px; }
+    #lb-next { right: 24px; }
+
+    #shortcut-hint {
+      position: fixed;
+      bottom: 18px;
+      right: 20px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      z-index: 990;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    kbd {
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    @media (max-width: 768px) {
+      #shortcut-hint { display: none; }
+      section.lesson-section { padding: 20px; }
+      .hero-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body class="step-mode">
+
+  <!-- Progress Bar -->
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <!-- Top Control Bar -->
+  <header id="control-bar">
+    <div class="nav-group">
+      <button class="btn" id="btn-toc" title="Mục lục bài giảng">☰ Mục lục</button>
+      <div class="switch-wrapper" title="Chuyển đổi giữa chế độ hiện từng bước và hiện toàn bộ">
+        <span>Từng bước</span>
+        <label class="switch">
+          <input type="checkbox" id="mode-toggle">
+          <span class="slider"></span>
+        </label>
+        <span>Hiện tất cả</span>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="btn" id="btn-font-dec" title="Giảm cỡ chữ (Phím -)">A-</button>
+      <span id="font-size-label" style="font-size: 0.9rem; font-weight: 700; min-width: 58px; text-align: center;">1.25rem</span>
+      <button class="btn" id="btn-font-inc" title="Tăng cỡ chữ (Phím +)">A+</button>
+      <button class="btn btn-primary" id="btn-speak" title="Đọc nội dung vừa hiện (Phím Space)">🔊 Đọc (Space)</button>
+      <button class="btn" id="btn-hud" title="Ẩn/hiện thanh điều khiển (Phím H)">👁️ Ẩn thanh (H)</button>
+    </div>
+  </header>
+
+  <!-- Table of Contents Drawer -->
+  <nav id="toc-drawer">
+    <h4>Mục lục bài học</h4>
+    <ul id="toc-list"></ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="lesson-content">
+
+    <!-- HERO SECTION -->
+    <div class="hero-card" id="sec-intro">
+      <h1 class="reveal-item">BÀI GIẢNG KHOA HỌC TỰ NHIÊN 8</h1>
+      <div class="subtitle reveal-item">CHỦ ĐỀ: ÁP SUẤT</div>
+      <div class="hero-meta reveal-item">
+        <span class="badge">📘 Bộ sách Kết nối tri thức với cuộc sống</span>
+        <span class="badge">📂 Chương III – Khối lượng riêng và áp suất</span>
+        <span class="badge">⏱️ Thời lượng dự kiến: 3–4 tiết</span>
+      </div>
+      <p class="reveal-item" style="margin-top: 16px;"><strong>Định hướng bài học:</strong> Học sinh khám phá áp suất thông qua các hiện tượng thực tế, tiến hành thí nghiệm, rút ra công thức, giải thích áp suất trong chất rắn, chất lỏng và chất khí, vận dụng vào đời sống.</p>
+      
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/N9uXiRx3HPpBvcS6KhUJSWoFZcN1BkWWzyuk0zSJ3j3d0K3Xo3QuqSrDIE80VK9z10KTTA4srsRButzFS6I9TwkW3rz4WiD5oQpoSaKRb_leQ3vJDC1ptNIqIVKWP30AKeExBOWVDKQEQ6Wt_4EKIWundIoOT21lUj2TsMz5b8M?purpose=inline" alt="Ví dụ về áp suất trong đời sống hằng ngày">
+          <div class="img-caption">Các hiện tượng áp suất trong đời sống</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/vwV4C4pNwTSxAUwUch698Lh4tfn-N5CrZ8fTL0ev1WYRFoY0_lWZLwXphOiwtgo3wZZbHAWWcIIKwQGn5Yub2Jjx2cvq8EWMRgxR77SVuSSo-Z35APOgKWuxa9o51JLx99KS_aoHrzqnIjScyacTILCi67cj7PmleocilbweOkV0W2JHNM71GZXx8DAVL-IF?purpose=inline" alt="Xe ủi bánh xích hoạt động trên công trường">
+          <div class="img-caption">Xe ủi sử dụng bánh xích để giảm áp suất lên nền đất</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/qCMuZzdUCBKYdrIzB92paUhAr5rVt3bgx1lyGUlVT7Z2dBYtMRwCGTWx7YRxHQgf5szuZFWUv665XCBlf47pREkFkccIoMHSu0OyTM9rG5Gvfb757MBK8diOqZyqWIFpJlx20ZJz6M7rE9PtO2y-Jr5a87fkT_FiM-kWahSC1Xk?purpose=inline" alt="Áp suất trong chất lỏng và thủy tĩnh học">
+          <div class="img-caption">Áp suất chất lỏng tăng theo độ sâu</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION I -->
+    <section class="lesson-section" id="sec-1">
+      <h2 class="reveal-item">I. MỤC TIÊU BÀI HỌC</h2>
+      <p class="reveal-item">Sau khi học xong chủ đề, học sinh có thể:</p>
+      <ol>
+        <li class="reveal-item">Nêu được khái niệm áp suất và nhận biết được áp suất trong đời sống.</li>
+        <li class="reveal-item">Nêu được áp lực là gì, phân biệt áp lực với lực thông thường.</li>
+        <li class="reveal-item">Viết và vận dụng công thức tính áp suất.</li>
+        <li class="reveal-item">Giải thích được sự phụ thuộc của áp suất vào áp lực và diện tích bị ép.</li>
+        <li class="reveal-item">Mô tả được sự truyền áp suất trong chất lỏng và nguyên lí Pascal.</li>
+        <li class="reveal-item">Giải thích được áp suất chất lỏng phụ thuộc vào độ sâu.</li>
+        <li class="reveal-item">Nhận biết được áp suất khí quyển và giải thích một số hiện tượng liên quan.</li>
+        <li class="reveal-item">Vận dụng kiến thức để giải thích các ứng dụng như máy ép thủy lực, phanh thủy lực, đập nước, ống hút, giác hút.</li>
+      </ol>
+    </section>
+
+    <!-- SECTION II -->
+    <section class="lesson-section" id="sec-2">
+      <h2 class="reveal-item">II. KHỞI ĐỘNG – VÌ SAO CÙNG MỘT NGƯỜI NHƯNG ĐI GIÀY CAO GÓT LẠI DỄ LÚN XUỐNG CÁT HƠN?</h2>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/TX2uERuvgZkNARA-LWJm4tXs_cIvwuhA12z-En7O_pKOqvXxBE2dILyr4xM8X6KU5hoz4hXXqe6d5jGpliOvD75Q1umYvh12U_D-cIPiAlTjIdntEH4FraF3WfomMJJejU71HmbOFj3uVRaPomkzWDADCLgKI-YXE6ppQ6jOC3M?purpose=inline" alt="Giày cao gót dễ bị lún sâu trên nền cát">
+          <div class="img-caption">Giày cao gót có diện tích tiếp xúc nhỏ nên lún sâu xuống cát</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/k77hZt_Pm8wUO-qXxbLYK1hL6i6q3fqwv9Zl7k1fQeMrWjCOjnN94KQiRMW-Djem6tfd_65t3XQFjfdwXXCB70RWj1TODAlU3C-pXER0Q83gO3UuetQIDTd02z0vJz-9QB-Jqxq7njzNXhmrglqT7YiUP55J70hD_c6-lHcBgFo?purpose=inline" alt="Giày đế bằng có diện tích tiếp xúc rộng">
+          <div class="img-caption">Giày đế bằng phân bố lực trên diện tích lớn hơn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/udeG0YpjhwKSUFRrejCxtasHfOMYkvgpPZ6lnYIHqZtO8qMWkxlps3KO9fFQ2HwsZz9ttJdFA9HmDNDebnFEGVNR7gbh5ziPPZYSruJSeLkoUASqauaxfuhTRKowNf6BZUikdOh6QE0qbf5eAXFDv96Ysmmwxi50ezNCPEgI2aA?purpose=inline" alt="Giày đi tuyết chuyên dụng có bản đế rộng">
+          <div class="img-caption">Giày đi tuyết bản rộng giúp không bị lún</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Quan sát các hình ảnh và trả lời:</strong></p>
+      <ol>
+        <li class="reveal-item">Vì sao giày cao gót dễ lún xuống cát hơn giày đế bằng?</li>
+        <li class="reveal-item">Vì sao người đi trên tuyết thường sử dụng giày có bản đế rộng?</li>
+        <li class="reveal-item">Vì sao máy kéo, xe tăng sử dụng bánh xích thay vì bánh xe thông thường?</li>
+        <li class="reveal-item">Một vật có trọng lượng càng lớn thì có phải lúc nào cũng gây áp suất càng lớn không?</li>
+      </ol>
+
+      <div class="callout reveal-item">
+        <strong>Vấn đề cần khám phá:</strong> Tác dụng ép của một lực lên một bề mặt phụ thuộc vào những yếu tố nào?
+      </div>
+    </section>
+
+    <!-- PART I BANNER -->
+    <div class="part-banner reveal-item">PHẦN I. ÁP SUẤT TRÊN MỘT BỀ MẶT</div>
+
+    <!-- SECTION III -->
+    <section class="lesson-section" id="sec-3">
+      <h2 class="reveal-item">III. ÁP LỰC</h2>
+
+      <h3 class="reveal-item">1. Khái niệm áp lực</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/Uz1OHHa_5R9PRBCEV7YUA8EbuAMvpn1-ltxLXHgJq_KhAvwNU1v08xeY0SJiC65zrk3KmjPErium_ZhF0XHkzltFuwGYEmDXXxzze0mVhtfHsdc7Sy9JNfOmTljeozrcsVL7wR03Z8aFIxfXCvTdfhDAV2SXsp6lArYoNM2zQRA?purpose=inline" alt="Minh họa các lực tác dụng lên vật">
+          <div class="img-caption">Lực ép vuông góc với bề mặt tiếp xúc</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/3sKjY9S4V4ABvoNwFi1jN6GI5rWcdqkBHYwKrfxgcmgjiuYBuheePzjQL9wJM28vv0XtX8CtNWg_iNSDmSfMvW8Nom5eLkACv8BdR3NJ2pfpsqk-4waOBHP2s9FEQbX6KM1PqwQ9h4kcgoNu_HK4xXAODyAd-uaScR8sZykQmzGjMt8xq6k8ac3v9Nrs8VX3?purpose=inline" alt="Người đứng tác dụng áp lực lên mặt sàn đo lực">
+          <div class="img-caption">Bàn chân tác dụng áp lực vuông góc lên mặt sàn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/9z05XAyCtgU8-g6AZN6ldpQE9fr2vJ656LrEwJUUF9P9VuNkEaqasScAfXHvI4VYHFAtSQMMQhlRGGL5yuIse34AmcU-xi8KsTA0K_U5iTFGNs-TzG-WhXFL4-Sl3ukdxEKG58DUOagncoIT-MIVFEfzbGEP8TNltqrgl8gKC7Y?purpose=inline" alt="Sơ đồ phân tích lực tác dụng">
+          <div class="img-caption">Phân tích phương của lực ép lên mặt bị ép</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Trong cuộc sống, chúng ta thường gặp những trường hợp vật này ép lên vật khác:</p>
+      <ul>
+        <li class="reveal-item">Quyển sách đặt trên mặt bàn.</li>
+        <li class="reveal-item">Người đứng trên mặt đất.</li>
+        <li class="reveal-item">Viên gạch đặt trên nền nhà.</li>
+        <li class="reveal-item">Tay người đẩy vào tường.</li>
+      </ul>
+
+      <div class="callout reveal-item">
+        <strong>Áp lực (pressure force)</strong> là lực ép có phương vuông góc với mặt bị ép.
+      </div>
+
+      <p class="reveal-item"><strong>Ví dụ:</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/7EPJhI2ODw4gJBDsb_n5POdNIc3KlJ9FHxe-ipT4YDK_I2FVoHjb1QPOQIyMpJKAqCs4ncjm22tcv5DNC5RMTGXfMzMs-pcTL4G0x5TJf91HQZIK4eQ-0_tG4_KfTuNBfCzwcKHl0T0w9XLpIUMjacVUQCD3pTaIEd13Vn-OLKc?purpose=inline" alt="Hình 1. Quyển sách tác dụng lực ép vuông góc xuống mặt bàn">
+          <div class="img-caption">Hình 1. Quyển sách tác dụng lực ép vuông góc xuống mặt bàn.</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Khi quyển sách nằm yên trên bàn nằm ngang:</p>
+      <ul>
+        <li class="reveal-item">Trọng lực của sách hướng thẳng đứng xuống dưới.</li>
+        <li class="reveal-item">Mặt bàn chịu lực ép của quyển sách.</li>
+        <li class="reveal-item">Lực ép này có phương vuông góc với mặt bàn.</li>
+      </ul>
+
+      <h3 class="reveal-item">2. Phân biệt áp lực và trọng lực</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/Ydhgq0NWQkjPsiY_FlnS0HQohdm1prw9c5onET0zXAiGRMFZiV4dF-XzNOhrtwfF6UU4r9Nhy6_EQ2o51D20clPuZ0WYEUHPlFyi_2yy2GzDM6XhzSzOqSd3WlXK-NXW-INBKOAbhCfE11euo_NXz49qeetabHAUba6X9NXN9_8?purpose=inline" alt="Sơ đồ phân biệt trọng lực và áp lực trên mặt phẳng nghiêng">
+          <div class="img-caption">So sánh phương của trọng lực và áp lực trên các bề mặt khác nhau</div>
+        </div>
+      </div>
+
+      <table class="reveal-item">
+        <thead>
+          <tr>
+            <th>Áp lực</th>
+            <th>Trọng lực</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Là lực ép vuông góc lên mặt bị ép</td>
+            <td>Là lực hút của Trái Đất tác dụng lên vật</td>
+          </tr>
+          <tr>
+            <td>Có thể do nhiều loại lực gây ra</td>
+            <td>Có phương thẳng đứng, chiều hướng xuống dưới</td>
+          </tr>
+          <tr>
+            <td>Có thể có nhiều hướng khác nhau tùy bề mặt</td>
+            <td>Hướng về tâm Trái Đất</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout-warn reveal-item">
+        <strong>Chú ý:</strong> Khi một vật nằm yên trên mặt phẳng nằm ngang, chỉ chịu trọng lực và phản lực của mặt bàn, áp lực vật tác dụng lên bàn có độ lớn bằng trọng lượng của vật. Tuy nhiên, không được đồng nhất áp lực với trọng lực trong mọi trường hợp.
+      </div>
+
+      <h3 class="reveal-item">3. Một số ví dụ về áp lực trong thực tế</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/QG_JfDTCZCkYEWB4c1B286ftV1bxRLEN-Mu118The9_m42xbSJYf9XemsNfrf9I5hawruQCeV8IRS5y_JB02n9qnaNILTlpqItLVBbfWeYzn4y8YX2Nq1RB8HGYIRFa_dW1L-oJK0y2HiE9LVzpX06icKA79jfa_jqBmzAekJj8V7CArbjUsjjEZjpzDV084?purpose=inline" alt="Đóng đinh vào tấm gỗ">
+          <div class="img-caption">Đầu đinh tác dụng áp lực lên gỗ</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/ZOU38OQ2kiPbPG3iTh9iVEMWvG_xV3P__y-bYDyOhJ8lLMqo2oItM63uOfaiMrpjHh00SaSN0BV4us2NvMo6E1FKx10o3xXL7jo9xGAmuHjryPNTfGGGmlSd5GGUroIU2K3VR8WPsBz7pXTuWKA25uEgC9HJb_JqQNAN2R6mtEmeb4VVZgz2havl79HLehg-?purpose=inline" alt="Dùng dao cắt cà rốt">
+          <div class="img-caption">Lưỡi dao tác dụng áp lực lên thực phẩm</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/8M_JtKLy30o61lYWi0hdPX4nyoe58GRsDtxi7_q8JEKlRoAnvKGLUVyHdjMaUIksULavTWrfl6xoadcHfKJ9pKBLXbcuhZ3tGROv-JgE5yVl9JlGrfselKx2P3-HRAuvmL2vlqIkOqZWd4XzbOzwoGuxpjAKgrHB_JAsANORbp4?purpose=inline" alt="Máy kéo di chuyển trên đất ruộng">
+          <div class="img-caption">Bánh xích máy kéo tác dụng áp lực lên mặt đất</div>
+        </div>
+      </div>
+
+      <ul>
+        <li class="reveal-item">Đầu đinh tác dụng áp lực lên gỗ.</li>
+        <li class="reveal-item">Lưỡi dao tác dụng áp lực lên thực phẩm.</li>
+        <li class="reveal-item">Bánh xích máy kéo tác dụng áp lực lên mặt đất.</li>
+        <li class="reveal-item">Chồng sách tác dụng áp lực lên mặt bàn.</li>
+      </ul>
+
+      <div class="callout reveal-item">
+        <strong>Câu hỏi:</strong> Trong các trường hợp trên, hãy xác định vật gây áp lực và bề mặt chịu áp lực.
+      </div>
+    </section>
+
+    <!-- SECTION IV -->
+    <section class="lesson-section" id="sec-4">
+      <h2 class="reveal-item">IV. ÁP SUẤT</h2>
+
+      <h3 class="reveal-item">1. Thí nghiệm tìm hiểu tác dụng của áp lực</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/BkYyJCq4JoYuDxt16UH2GLYlQfbFj5kQsWB05X4FPghJUFdlUDeiVQ1twWuPw39j_pCae48h3znzgT8eBfrhObyeGHyTYgKtgWcmMdrveFvR_0jQtjDJJSt-N6TsnLyqdbkNiTKRaOsUiqCin4ELpFXKbcCVz6D6BPIRvmJhCmA?purpose=inline" alt="Thí nghiệm độ lún của các viên gạch trên cát">
+          <div class="img-caption">Quan sát độ lún trên cát khi thay đổi áp lực và diện tích tiếp xúc</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/z90Mu2cuJLLPjPmUQHr4h9KJBoqyZkrqszti-jh6ghr2PGxeePWHuRX844olckiwjeTNo1VcCQhtwMJwFOZ0y3NlbYiZBhG3eTA1lCIK7yfpg6dtlsHPkTxubCf799be_8SSW9Aqy-wONaWCru9FGJ6i-bYIm5alFuvRa3Kis-E?purpose=inline" alt="Thí nghiệm ép khối vật lên miếng xốp">
+          <div class="img-caption">Độ biến dạng của miếng xốp thể hiện tác dụng của áp lực</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/6NR7kW4nuuBIbPtNqcX1wCuBUdhgQT84DPcYxJn2Zc4OllHm789qND8moYrTyXrzDwbzk-gMuTNZlVDbXKcxdcuThtxbfqoO5yhqdNq1Cm_WjgVhG8azAouihVGa5bc_yhITbwkgPZspp1S0FqTf2wCNVtXZ8hiB3tXTAn3HDsI?purpose=inline" alt="So sánh tác dụng ép trong các trường hợp">
+          <div class="img-caption">So sánh độ lún trong hai thí nghiệm</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Chuẩn bị:</strong></p>
+      <ul>
+        <li class="reveal-item">Một khối gỗ hình hộp chữ nhật.</li>
+        <li class="reveal-item">Một khay cát hoặc miếng xốp mềm.</li>
+        <li class="reveal-item">Một số quả cân.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Tiến hành:</strong></p>
+      <p class="reveal-item"><em>Thí nghiệm 1: Thay đổi áp lực</em></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/vsjZA9uvu-97Rtmi4y9j_L6OixYjjVONAB2kr1yolY1OkQGk_SuLcziBdD3Cvj9eMedJw61dWsifarCpo3eO8R2hgRzcE0BUI6XJifqcPvNld1nVTrrBQ67l7UBrIFrvchF97c1Cs2s-xtei2xhgSu3UyCEUWV3qG0i2jcZbMgI?purpose=inline" alt="Bộ dụng cụ thí nghiệm áp lực và áp suất">
+          <div class="img-caption">Tăng thêm quả cân để tăng áp lực lên mặt bị ép</div>
+        </div>
+      </div>
+
+      <ol>
+        <li class="reveal-item">Đặt khối gỗ lên mặt cát.</li>
+        <li class="reveal-item">Quan sát độ lún của khối gỗ.</li>
+        <li class="reveal-item">Đặt thêm quả cân lên khối gỗ.</li>
+        <li class="reveal-item">Quan sát sự thay đổi độ lún.</li>
+      </ol>
+      <div class="callout reveal-item">
+        <strong>Nhận xét:</strong> Khi diện tích tiếp xúc không đổi, áp lực càng lớn thì tác dụng ép càng lớn.
+      </div>
+
+      <p class="reveal-item"><em>Thí nghiệm 2: Thay đổi diện tích bị ép</em></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/tkMxUtPfwL_jcPFnbJG172FSFzBaqPfBj1EHSEnuoKp-RgXOq57FYpjtmXzp2OZYFl1Rp20otOCu7BZBV0hwabrsvePCk8Qu_IDZx6WMC77hx7uF71fCM0OjqmlgsIrKBzaAHicKp-H4VRkzcJsSkqgEsV_16GGH7nhI7ui20II?purpose=inline" alt="Thay đổi diện tích tiếp xúc của khối vật">
+          <div class="img-caption">Lật khối vật sang mặt có diện tích tiếp xúc nhỏ hơn</div>
+        </div>
+      </div>
+
+      <ol>
+        <li class="reveal-item">Đặt khối gỗ trên mặt có diện tích tiếp xúc lớn.</li>
+        <li class="reveal-item">Lật khối gỗ sang mặt có diện tích tiếp xúc nhỏ.</li>
+        <li class="reveal-item">Quan sát độ lún trong cát.</li>
+      </ol>
+      <div class="callout reveal-item">
+        <strong>Nhận xét:</strong> Khi áp lực không đổi, diện tích bị ép càng nhỏ thì tác dụng ép càng lớn.
+      </div>
+
+      <h3 class="reveal-item">2. Khái niệm áp suất</h3>
+      <p class="reveal-item"><strong>Áp suất (pressure)</strong> là độ lớn của áp lực trên một đơn vị diện tích bị ép.</p>
+      <p class="reveal-item"><strong>Công thức tính áp suất:</strong></p>
+
+      <div class="formula-box reveal-item">
+        $$p = rac{F}{S}$$
+      </div>
+
+      <p class="reveal-item">Trong đó:</p>
+      <ul>
+        <li class="reveal-item">$p$: Áp suất ($	ext{Pa}$).</li>
+        <li class="reveal-item">$F$: Áp lực tác dụng vuông góc với mặt bị ép ($	ext{N}$).</li>
+        <li class="reveal-item">$S$: Diện tích mặt bị ép ($	ext{m}^2$).</li>
+        <li class="reveal-item">$1	ext{ Pa} = 1	ext{ N/m}^2$.</li>
+      </ul>
+
+      <p class="reveal-item">Từ công thức, ta rút ra:</p>
+      <ul>
+        <li class="reveal-item">Khi $F$ tăng, $S$ không đổi $ightarrow p$ tăng.</li>
+        <li class="reveal-item">Khi $F$ giảm, $S$ không đổi $ightarrow p$ giảm.</li>
+        <li class="reveal-item">Khi $S$ tăng, $F$ không đổi $ightarrow p$ giảm.</li>
+        <li class="reveal-item">Khi $S$ giảm, $F$ không đổi $ightarrow p$ tăng.</li>
+      </ul>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/h0Oop_sPHgSwrQcQ1Hi0hWn3LC_39EzZZE3X_UTX5sKxzhEtenGEAIu2QtATQaRux9xZ-aAoC78Eejx8Jgdqlp7RWgdkiqXUTzx4Q67pNzlXIBVM9UmCpoDouH_CRzQAUsjJQIsNZ989_TPcTXzTl-WFnydZUrnfG_l1ziXzpKXJtD9WmK6101IZ2L_z3KTU?purpose=inline" alt="Hình 7. Cùng một áp lực, diện tích tiếp xúc càng nhỏ thì áp suất càng lớn">
+          <div class="img-caption">Hình 7. Cùng một áp lực, diện tích tiếp xúc càng nhỏ thì áp suất càng lớn.</div>
+        </div>
+      </div>
+
+      <h3 class="reveal-item">3. Đơn vị đo áp suất</h3>
+      <p class="reveal-item">Đơn vị áp suất trong hệ SI là <strong>Pascal ($	ext{Pa}$)</strong>:</p>
+      <div class="formula-box reveal-item">
+        $$1	ext{ Pa} = 1	ext{ N/m}^2$$
+      </div>
+      <p class="reveal-item">Một số đơn vị thường gặp:</p>
+      <table class="reveal-item">
+        <thead>
+          <tr>
+            <th>Đơn vị</th>
+            <th>Quy đổi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>$1	ext{ Pa}$</td>
+            <td>$1	ext{ N/m}^2$</td>
+          </tr>
+          <tr>
+            <td>$1	ext{ kPa}$</td>
+            <td>$1\,000	ext{ Pa}$</td>
+          </tr>
+          <tr>
+            <td>$1	ext{ MPa}$</td>
+            <td>$1\,000\,000	ext{ Pa}$</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 class="reveal-item">4. Ví dụ tính toán</h3>
+      <p class="reveal-item"><strong>Ví dụ 1.</strong> Một vật tác dụng áp lực $200	ext{ N}$ lên mặt sàn. Diện tích tiếp xúc là $0,5	ext{ m}^2$. Tính áp suất của vật lên mặt sàn.</p>
+      <p class="reveal-item"><em>Bước 1. Tóm tắt:</em></p>
+      <ul>
+        <li class="reveal-item">$F = 200	ext{ N}$.</li>
+        <li class="reveal-item">$S = 0,5	ext{ m}^2$.</li>
+        <li class="reveal-item">$p = ?$</li>
+      </ul>
+      <p class="reveal-item"><em>Bước 2. Áp dụng công thức:</em></p>
+      <div class="formula-box reveal-item">
+        $$p = rac{F}{S} = rac{200}{0,5} = 400	ext{ Pa}$$
+      </div>
+      <p class="reveal-item"><strong>Đáp số:</strong> $400	ext{ Pa}$.</p>
+
+      <p class="reveal-item"><strong>Ví dụ 2.</strong> Một chiếc tủ có trọng lượng $600	ext{ N}$, đặt trên sàn nhà bằng bốn chân. Tổng diện tích tiếp xúc của bốn chân tủ với sàn là $0,02	ext{ m}^2$. Tính áp suất của tủ lên sàn.</p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/NUhODRXInfePbpKMnBQfJIQazq8t95zM-YknBQ6dEdtShQl5cwsGpqMtlUWzR2qYz17hmtifzSkF924wr0XJIk-H9Ap5ZY9mJZJMiTrC-ucosS84MAEHEnEyErrVX32hJO7WBwVmqQG9r---smhIRDJqa-u6NZggDHtOTIf2_Dc?purpose=inline" alt="Chiếc tủ bốn chân đặt trên sàn nhà">
+          <div class="img-caption">Trọng lượng của tủ phân bố lên diện tích tiếp xúc của 4 chân</div>
+        </div>
+      </div>
+      <div class="formula-box reveal-item">
+        $$p = rac{600}{0,02} = 30\,000	ext{ Pa}$$
+      </div>
+      <p class="reveal-item"><strong>Đáp số:</strong> $30\,000	ext{ Pa}$.</p>
+
+      <h3 class="reveal-item">5. Ứng dụng tăng và giảm áp suất trong đời sống</h3>
+      <p class="reveal-item"><strong>a) Tăng áp suất bằng cách giảm diện tích bị ép</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/fiC0ZB0cjGBFVuF3uIA_VYuxaNPrK-sNBu4HuastQuEJ6ys3IaPTEZklF1KxdToKEuZu3wsfYCKX6-gspmPu3pEwUFycJmh1wb_SZ3-ec_br3hua-m_xNiGYtRYOAoHEjZGmydtrYAxXJXwsmwNoCVJw7XDUnNa7LVal9JNDPM0v_jOuIQ66Cx8TImt3jSpR?purpose=inline" alt="Lưỡi dao sắc cắt cà chua">
+          <div class="img-caption">Lưỡi dao mỏng giảm diện tích bị ép để tăng áp suất cắt</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/UGwgydr18Lw02Nj9eP9LZ5uo1OnODaqPPzoESyqy6QMQFpQVKHlqXt7fjcMezK3AkvI879xYDtUVceyPi00m70Ut-cUDtfthd2jV5MMJJ2tXKT5KJg0PzpV5rTPqoDPqEt-kUNxWzN5LaZ8ZRMDa0FRJfV6fLsKtasVbof75BOme07Rkg2pNBHfaR8sFF1BG?purpose=inline" alt="Đầu mũi kim nhọn">
+          <div class="img-caption">Mũi kim nhọn tạo áp suất lớn dễ xuyên qua vải</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/8ZVkD05LmoEzvJSqGnQjJD75l92yqk7HwE_j57Aac_wHfLR5D27cCkEQ09DYPFKp4fwHUi1dtT7VE6UV4inTMFzNxb7tdQf01CJ2AUDiFpkJhUCIvOoNk86D3OpOlMbCGz6pTZ4NF3X8aaWZRVgm_UxO6QFVuc0IzJRARz_qwkc?purpose=inline" alt="Mũi đinh nhọn">
+          <div class="img-caption">Đinh có đầu nhọn giúp đóng sâu vào gỗ</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Các dụng cụ có đầu nhọn hoặc cạnh sắc thường có diện tích tiếp xúc rất nhỏ. Khi tác dụng cùng một lực, áp suất tạo ra lớn hơn.</p>
+      <ul>
+        <li class="reveal-item">Dao có lưỡi sắc để cắt thực phẩm.</li>
+        <li class="reveal-item">Kim khâu có đầu nhọn để xuyên qua vải.</li>
+        <li class="reveal-item">Đinh có đầu nhọn để đóng vào gỗ.</li>
+        <li class="reveal-item">Giày cao gót tạo áp suất lớn lên mặt đất.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>b) Giảm áp suất bằng cách tăng diện tích bị ép</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/tsrj5qY1ptaFsHUbQBnr7urzvufYCxkVpvaAg3Ffe_TcIjN_MWB_WJmzxid4yqTV0qF7y0Q-PUZd9vECcQfmjebRqYHnKE-ZAY4plFQwmBlIOQcgjqdnBnmXrYldf7dbi0GSD0VlXfouG7pLMcvQ1WVT59ulyac5YYtKy3-wp4kPYkyP2NlEmmzRMK2eS1Jb?purpose=inline" alt="Giày đi tuyết đế rộng">
+          <div class="img-caption">Giày đi tuyết tăng diện tích tiếp xúc để chống lún</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/WV64Hj2e3I1NaIdwyFd3vZkXi2oV2Tt20888HR-ubR42p3EBlACa_vh5Qf3PO3S1VFko6q-OPtFs7xyfoVkLl9cuI9IggwBGI6acL__ztZ8xiHOcif8udmCOkFbKbeaD3z-ov8-e6iKIQNhYHhLjbjrjUaRSpaQBVcNdigNTRds?purpose=inline" alt="Xe công trình bánh xích">
+          <div class="img-caption">Bánh xích phân tán trọng lượng khổng lồ của xe</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/3DK0O6Z0dqshpwHedPKe0oAMG4l4J0NQDwtK06oZg8OkqQUa_dixcz7G5T30VxFdw20HbRmht6JCAaoPzShPP8Ir4GqcfD-zXLDfcVT9QCWUnTUn2-VcRRXssbP_xpM487KQ-q7CQbZAzPielMWe0-iEplY3r4BGTZtrK7zYZddpfYG7WGxtRh5k4TlouY2o?purpose=inline" alt="Bàn chân voi to rộng">
+          <div class="img-caption">Chân voi to rộng giúp giảm áp suất lên mặt đất</div>
+        </div>
+      </div>
+
+      <ul>
+        <li class="reveal-item">Bánh xích xe tăng giúp giảm áp suất lên mặt đất.</li>
+        <li class="reveal-item">Máy kéo sử dụng bánh xích để di chuyển trên nền đất mềm.</li>
+        <li class="reveal-item">Giày đi tuyết có đế rộng giúp người không bị lún sâu.</li>
+        <li class="reveal-item">Chân voi có diện tích tiếp xúc lớn giúp phân bố trọng lượng trên mặt đất.</li>
+      </ul>
+
+      <div class="callout-warn reveal-item">
+        <strong>Ghi nhớ:</strong> Muốn tăng áp suất thì tăng áp lực hoặc giảm diện tích bị ép. Muốn giảm áp suất thì giảm áp lực hoặc tăng diện tích bị ép.
+      </div>
+    </section>
+
+    <!-- PART II BANNER -->
+    <div class="part-banner reveal-item">PHẦN II. ÁP SUẤT CHẤT LỎNG</div>
+
+    <!-- SECTION V -->
+    <section class="lesson-section" id="sec-5">
+      <h2 class="reveal-item">V. SỰ TỒN TẠI CỦA ÁP SUẤT CHẤT LỎNG</h2>
+
+      <h3 class="reveal-item">1. Hiện tượng thực tế</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/s3xxw84KrQ4dFG21US5wsInZwFUhgmqklpXppenok4EdFw69aWCuL47PRBHwXcRNn6NSz7qU16Oq9FIJglv1Nw2wz70S7XIPPqUYEhIQeF-lrlj_RcL-3OGnwyDjri1FGUiVCu4E3cG4El_S4-_ohxrgsMD1DXzQuL3JFCRzHFM?purpose=inline" alt="Người lặn dưới nước chịu áp suất chất lỏng">
+          <div class="img-caption">Khi lặn sâu, áp suất nước tác dụng lên cơ thể tăng lên</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/sMa5OtzVyw-UqAECh45ijrmhW8dsTzOVf0FS7EU_6uCvKGh6VFqLr1a9UcZ9mIksaJcFrljxKUmfmsjlfxo8HR6-EI7cCbbOMaGybnbHIDwycYBExdseRPvyTUYQya9lXmXhdrSOHa09s_pUg2B-bGiYZ9AxBLf05uGNRdBixwo?purpose=inline" alt="Thí nghiệm đục lỗ trên chai nước">
+          <div class="img-caption">Nước phun ra từ các lỗ trên thành chai</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/j7tSUXcCNBQghHlE_Zyg1FI3y8z6UGJ5Q30TGmoAjmB2DiUKJTtkQtl-NUsFErgTZpjZg7AQ6Hv4ZVKkV5wLDbPqS4oDoeGpideYk8WVmYri-Ifc46ER9eoKdLp6rOFWo7Mdyy596EddC58cXkHDk8zJGNex0UflMooViRbIduQ?purpose=inline" alt="Cấu tạo đập thủy điện dày ở phần chân">
+          <div class="img-caption">Chân đập nước xây dày hơn để chịu áp suất lớn</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Quan sát các hiện tượng:</p>
+      <ul>
+        <li class="reveal-item">Khi lặn xuống nước, tai có cảm giác bị ép.</li>
+        <li class="reveal-item">Khi đục các lỗ ở những độ cao khác nhau trên thành chai chứa nước, nước phun ra theo các hướng khác nhau.</li>
+        <li class="reveal-item">Thành đập nước thường được xây dày hơn ở phía dưới.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Câu hỏi:</strong></p>
+      <ol>
+        <li class="reveal-item">Vì sao càng lặn sâu xuống nước, con người càng cảm thấy áp lực của nước lớn?</li>
+        <li class="reveal-item">Vì sao nước có thể tác dụng lực lên thành bình?</li>
+        <li class="reveal-item">Vì sao chân đập thường được xây dày hơn phần phía trên?</li>
+      </ol>
+
+      <div class="callout reveal-item">
+        <strong>Kết luận:</strong> Chất lỏng không chỉ gây áp suất lên đáy bình mà còn gây áp suất lên thành bình và các vật nằm trong lòng chất lỏng.
+      </div>
+
+      <h3 class="reveal-item">2. Thí nghiệm chứng minh áp suất chất lỏng</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/6r82UcbJ72MZGi3ZeWnGQ3Ra-JwOOi6PPlL0zZywFqdje_2R75c2FMNleRwvRQBUd4TvJiFEiFx3IagjRneb5QcDTffuF7nf4WgTygqDjJCytWFT0mh5vogNunaWirc4fNyyWoa3_DUqdjAqyzuTJIeuANfqCXp6P0HbDKPxXgg?purpose=inline" alt="Hình 12. Thí nghiệm chai nước có các lỗ ở những độ cao khác nhau">
+          <div class="img-caption">Hình 12. Thí nghiệm chai nước có các lỗ ở những độ cao khác nhau.</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Chuẩn bị:</strong></p>
+      <ul>
+        <li class="reveal-item">Một chai nhựa trong suốt.</li>
+        <li class="reveal-item">Nước.</li>
+        <li class="reveal-item">Dụng cụ tạo các lỗ nhỏ trên thành chai.</li>
+        <li class="reveal-item">Khay hứng nước.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Tiến hành:</strong></p>
+      <ol>
+        <li class="reveal-item">Tạo ba lỗ nhỏ ở ba độ cao khác nhau trên thành chai.</li>
+        <li class="reveal-item">Dùng tay bịt các lỗ và đổ nước vào chai.</li>
+        <li class="reveal-item">Mở đồng thời các lỗ.</li>
+        <li class="reveal-item">Quan sát khoảng cách nước phun ra.</li>
+      </ol>
+
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/m0IhMGciouk1492a-Xiw-EtLXsC4_Fq5Nuwug38MMpqpgV-LbkJ6tMwvEMlfAph5BFqqE7Fu-BrEclblFoyD5RDvPc0JGSp_h7hKrl229LS0ZAlVEwrjyHIu-8D1jOK-AzBqyrhrnMJ1a0cqfsNhHmIqGMGZcU_adoLqvli-w-E?purpose=inline" alt="So sánh tầm xa tia nước phun ra ở các độ sâu">
+          <div class="img-caption">Lỗ càng ở dưới thấp, tia nước phun càng mạnh và xa</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Hiện tượng:</strong></p>
+      <ul>
+        <li class="reveal-item">Nước ở lỗ phía dưới phun ra xa hơn.</li>
+        <li class="reveal-item">Nước ở lỗ giữa phun ra khoảng cách trung bình.</li>
+        <li class="reveal-item">Nước ở lỗ phía trên phun ra gần hơn.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Giải thích:</strong> Lỗ càng nằm sâu dưới mặt nước thì áp suất chất lỏng tại vị trí đó càng lớn. Vì vậy, nước ở lỗ thấp phun ra mạnh hơn.</p>
+      <div class="callout reveal-item">
+        <strong>Kết luận:</strong> Áp suất chất lỏng phụ thuộc vào độ sâu của điểm đang xét.
+      </div>
+
+      <h3 class="reveal-item">3. Đặc điểm của áp suất chất lỏng</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/W6CLTI9mRjG7FOPUiCZIJNtiWowHwCPZeRr8jTS9rKwnNY_ew_tqjnS9xQTolGW0XGt-YqG5gn4omBq4uKhfWAainXvoTkUuCRwUOARIX9mejyxNX0XVTdMs5C1geUo6WaBBXwCpnsUsmHn7q0MvnfVginaKy_6HWpWwUztahDhN3pU18NnJxvqyWYFWCRZQ?purpose=inline" alt="Sơ đồ áp suất thủy tĩnh tăng theo độ sâu">
+          <div class="img-caption">Áp suất chất lỏng tác dụng theo mọi phương và tăng theo độ sâu</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Áp suất chất lỏng có những đặc điểm:</p>
+      <ul>
+        <li class="reveal-item">Chất lỏng gây áp suất lên đáy bình.</li>
+        <li class="reveal-item">Chất lỏng gây áp suất lên thành bình.</li>
+        <li class="reveal-item">Chất lỏng gây áp suất lên các vật nằm trong lòng nó.</li>
+        <li class="reveal-item">Áp suất chất lỏng tăng theo độ sâu.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Ví dụ:</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/lBATmea74pi8ANS5mNIo9mv-9AYv9rNZc9UURqf654FXoyTItmxmLuGPwMyL9ga9QuY1dEXz48sh5Q4bv4bRk92VG0SHYGlrkM3Y0hivGT8BO53ce1MK1SoDXF-FsJxb3JRy5IOA6x4fySXB6UpvLRr1PsvNNDyxueVKfU1-_gk?purpose=inline" alt="Tàu lặn thám hiểm đáy biển sâu">
+          <div class="img-caption">Tàu lặn biển sâu cần lớp vỏ siêu bền chịu áp suất lớn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/q3CvsK5wVJCg6idB6phWMAKlsvFlPF6ww-UsFcLnaMdYYsCoErMYbJJ4t9YiqbizgyA25cFaTPjsok0H39hzkoL_WmvpoEFJ_WDJ8jFbo-ReVjFsivnUbVEoeaNehu4sCYmb9G61LM4xJWnTyeNtBUxVhvHMFuGbmqZzqs30C1k?purpose=inline" alt="Sinh vật biển sâu thích nghi với áp suất cao">
+          <div class="img-caption">Môi trường đáy đại dương có áp suất cực kỳ lớn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/2Zmwhq-SGPvqeHRKpILvS7b2VkcisxXjS50olIKxF9EfE9b9EnPReoypCghvIDCIbj_HL-j2vb97gYfMAmrlOCiFOV_jedwBjmloIxRQpSLmWRYuDH4F-K7oG_F_3sCPChyEVrDKn3wx_ZQC1eWZbY8J4moreaJLs9cD6ZF7M4o?purpose=inline" alt="Đập thủy điện ngăn hồ chứa nước">
+          <div class="img-caption">Đập thủy điện được thiết kế chịu áp lực nước khổng lồ</div>
+        </div>
+      </div>
+
+      <ul>
+        <li class="reveal-item">Thợ lặn xuống càng sâu cần trang bị thiết bị bảo vệ phù hợp.</li>
+        <li class="reveal-item">Tàu ngầm phải có vỏ chịu được áp suất nước biển lớn.</li>
+        <li class="reveal-item">Đập thủy điện phải có kết cấu chịu áp suất nước.</li>
+      </ul>
+    </section>
+
+    <!-- SECTION VI -->
+    <section class="lesson-section" id="sec-6">
+      <h2 class="reveal-item">VI. CÔNG THỨC TÍNH ÁP SUẤT CHẤT LỎNG</h2>
+
+      <h3 class="reveal-item">1. Công thức</h3>
+      <p class="reveal-item">Áp suất chất lỏng tại một điểm được tính bằng công thức:</p>
+      <div class="formula-box reveal-item">
+        $$p = d 	imes h$$
+      </div>
+      <p class="reveal-item">Trong đó:</p>
+      <ul>
+        <li class="reveal-item">$p$: Áp suất chất lỏng ($	ext{Pa}$).</li>
+        <li class="reveal-item">$d$: Trọng lượng riêng của chất lỏng ($	ext{N/m}^3$).</li>
+        <li class="reveal-item">$h$: Độ sâu tính từ mặt thoáng chất lỏng đến điểm đang xét ($	ext{m}$).</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Giải thích công thức:</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/evi3wC85UFGRhUF_cU6RM2yk42KeXHnoyr_LAu2TuHz-aTymYUgIEStTByvML8hQOw14y6XS3LkDhjJzDzOKHvx95QLO0Xrn5dR7EMy3giotIhlnqpxoFzT_MB9AJjTVmHH9uwK6pMU_8OaSvnA46MuS5TIfGVsemi9MXp1ZORk?purpose=inline" alt="Thiết lập công thức tính áp suất cột chất lỏng">
+          <div class="img-caption">Xét cột chất lỏng diện tích đáy S và chiều cao h</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Xét một cột chất lỏng có diện tích đáy $S$, chiều cao $h$, trọng lượng riêng $d$:</p>
+      <ul>
+        <li class="reveal-item">Thể tích cột chất lỏng: $V = S 	imes h$</li>
+        <li class="reveal-item">Trọng lượng cột chất lỏng: $F = d 	imes V = d 	imes S 	imes h$</li>
+        <li class="reveal-item">Áp suất do cột chất lỏng gây ra: $p = \dfrac{F}{S} = \dfrac{d 	imes S 	imes h}{S}$</li>
+      </ul>
+      <div class="formula-box reveal-item">
+        $$oxed{p = d 	imes h}$$
+      </div>
+
+      <h3 class="reveal-item">2. Các yếu tố ảnh hưởng đến áp suất chất lỏng</h3>
+      <p class="reveal-item"><strong>a) Độ sâu của điểm xét</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/16JaaDtgoNRM-D55qVuvguOWBCy1gKzdTsQGtiI_YI46rsJfie7Qyx2dYxeVPBM599M1NqJIxhvlej7utmkKq9xww86lyJiYxDxA76XcwtKjaDrIpPGwjMe4gys95d74zhRChg9fclUN5nVPS4nDS3xCobdW6D-vGyINmPk3xTo?purpose=inline" alt="Sự thay đổi áp suất theo độ sâu trong bể chứa">
+          <div class="img-caption">Càng xuống sâu trong chất lỏng, áp suất càng tăng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/4XC4lK9OOg-R8Dn6KLhQvjdFXe74e2IcQh9kNW67mkCtNEQ-I2Mei_Q0UbRNmZhAT3AK_2KJYWhKsaQqHotYjdZM-rrmsA0y4QdTXFklWktv2ZSMoWsMr2P6MBi8wShaZRFeVM6BE9ToiGng_4ow4BgujLttE1QOoAbjTrZRidM?purpose=inline" alt="Đo áp suất tại đáy bể chứa chất lỏng">
+          <div class="img-caption">Cảm biến đo áp suất chất lỏng theo chiều cao cột nước</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Trong cùng một chất lỏng:</p>
+      <ul>
+        <li class="reveal-item">Điểm càng gần mặt thoáng $ightarrow$ áp suất càng nhỏ.</li>
+        <li class="reveal-item">Điểm càng sâu $ightarrow$ áp suất càng lớn.</li>
+        <li class="reveal-item">Các điểm có cùng độ sâu $ightarrow$ áp suất bằng nhau nếu chất lỏng đồng nhất và đứng yên.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>b) Trọng lượng riêng của chất lỏng</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/URWTbkDAyq3jmY-ahod6BkgsAJdKh7nMbM8qYnhRrZA8U0GH0L_SvZrc4d3MGooRgAN2Vg-Rv0xqBd0YTt9VesqhicIP5RW2_zT_dbzYhJ-rERvKX00q4YtMUZcJGammcw2D4Ul-B8z5SiPJllVZ_wqP6vtoo8JIO3ZO6ELc40s?purpose=inline" alt="Nước biển có trọng lượng riêng lớn hơn nước ngọt">
+          <div class="img-caption">Nước biển có trọng lượng riêng lớn hơn nước ngọt</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/dM9fwUxc2CHNhddBQYvQG_iDzOHQf8HAY3R859Nu7BQz6k1vAH5Tip6mpumtaEKpp1jj6v1Z0ciGEyNX--f1Ky3dp4zs3KNRdJ8u9dB52Fe0ff6WLoOR0vFVeC6JI9yCarE4VqrhnBenh-jbdKR95qhhZB9lMNikhkSTKWpoi4w?purpose=inline" alt="So sánh dầu và nước có trọng lượng riêng khác nhau">
+          <div class="img-caption">Các chất lỏng khác nhau có trọng lượng riêng khác nhau</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Ở cùng một độ sâu:</p>
+      <ul>
+        <li class="reveal-item">Chất lỏng có trọng lượng riêng lớn $ightarrow$ áp suất lớn.</li>
+        <li class="reveal-item">Chất lỏng có trọng lượng riêng nhỏ $ightarrow$ áp suất nhỏ.</li>
+      </ul>
+      <div class="callout reveal-item">
+        <strong>Ví dụ:</strong> Ở cùng độ sâu, áp suất do nước biển thường lớn hơn áp suất do nước ngọt gây ra vì nước biển có trọng lượng riêng lớn hơn.
+      </div>
+
+      <h3 class="reveal-item">3. Ví dụ tính áp suất chất lỏng</h3>
+      <p class="reveal-item"><strong>Ví dụ 1.</strong> Một điểm nằm cách mặt thoáng của nước $2	ext{ m}$. Biết trọng lượng riêng của nước là $10\,000	ext{ N/m}^3$. Tính áp suất của nước tại điểm đó.</p>
+      <p class="reveal-item"><em>Bước 1. Tóm tắt:</em> $h = 2	ext{ m}$; $d = 10\,000	ext{ N/m}^3$; $p = ?$</p>
+      <p class="reveal-item"><em>Bước 2. Áp dụng công thức:</em></p>
+      <div class="formula-box reveal-item">
+        $$p = d 	imes h = 10\,000 	imes 2 = 20\,000	ext{ Pa}$$
+      </div>
+      <p class="reveal-item"><strong>Đáp số:</strong> $20\,000	ext{ Pa}$.</p>
+
+      <p class="reveal-item"><strong>Ví dụ 2.</strong> Một bể chứa dầu có độ sâu $3	ext{ m}$. Biết trọng lượng riêng của dầu là $8\,000	ext{ N/m}^3$. Tính áp suất của dầu tại đáy bể.</p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/rDeNmvPPGwtM9WgIb7b_7_Y9kWT1Js624ZTb8AxLP_PHknqUusdIDG1WjcQ12Plt5wZsPrwkjRBSWD5u65IFaxN60y5-H6uKkVy5BTq4xFeJnialh7E1wH2cD0HBOGALJnCk3IuoPu8lq8F3wbgYXWipEVWVQ4j80nxdBJVrBUQ?purpose=inline" alt="Bồn chứa chất lỏng có thành dưới dày hơn">
+          <div class="img-caption">Áp suất tại đáy bồn chứa chất lỏng là lớn nhất</div>
+        </div>
+      </div>
+      <div class="formula-box reveal-item">
+        $$p = 8\,000 	imes 3 = 24\,000	ext{ Pa}$$
+      </div>
+      <p class="reveal-item"><strong>Đáp số:</strong> $24\,000	ext{ Pa}$.</p>
+
+      <p class="reveal-item"><strong>Ví dụ 3.</strong> Một điểm trong nước chịu áp suất $30\,000	ext{ Pa}$. Biết trọng lượng riêng của nước là $10\,000	ext{ N/m}^3$. Tính độ sâu của điểm đó.</p>
+      <div class="formula-box reveal-item">
+        $$h = rac{p}{d} = rac{30\,000}{10\,000} = 3	ext{ m}$$
+      </div>
+      <p class="reveal-item"><strong>Đáp số:</strong> $3	ext{ m}$.</p>
+
+      <h3 class="reveal-item">4. Áp suất tại các điểm cùng độ sâu</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/S4Ie9iOiGrynM8gsfgIQimr_wnviZ1BoZf-i7hhyswfpfedAzVnLYEYgszLw8hji0End9VzZfeeqklpBLtg9IxIVugCvW9uh79HWaTZJ0IYukRS_oqgTCDirDGvxyom63fX6_eaaEogmX-lr9jzaPRkmledMxWQ8pTlrvJLNEDU?purpose=inline" alt="Bình thông nhau và mặt thoáng chất lỏng">
+          <div class="img-caption">Mặt thoáng chất lỏng đứng yên trong bình thông nhau luôn ở cùng độ cao</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/-jrn0LkXIb9Mwp_MyJS0OjGOOkjiK1g2AIHRqNOe877ot4peRtlETYnWyqUqYCf2_oECg_qXNSdLk2Mze2Y3tpUcTtfAuyXGkY_A9tDEjVghXJUqYE6lSI_rOGTHJouqrlxCocJeb6pU1migQJWISWRfCI3JqxCailT6OBXWWpQ?purpose=inline" alt="Hình 19. Áp suất tại các điểm cùng độ sâu trong chất lỏng đứng yên">
+          <div class="img-caption">Hình 19. Áp suất tại các điểm cùng độ sâu trong một chất lỏng đứng yên.</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Trong cùng một chất lỏng đứng yên, các điểm nằm trên cùng một mặt phẳng ngang có áp suất như nhau.</p>
+      <p class="reveal-item"><strong>Ví dụ:</strong> Trong một bể nước, các điểm $A, B, C$ cùng nằm ở độ sâu $1	ext{ m}$ thì áp suất tại ba điểm bằng nhau.</p>
+      <div class="callout-warn reveal-item">
+        <strong>Lưu ý:</strong> Áp suất chất lỏng tại một điểm không phụ thuộc vào hình dạng bình chứa mà phụ thuộc vào trọng lượng riêng chất lỏng và độ sâu.
+      </div>
+    </section>
+
+    <!-- SECTION VII -->
+    <section class="lesson-section" id="sec-7">
+      <h2 class="reveal-item">VII. SỰ TRUYỀN ÁP SUẤT TRONG CHẤT LỎNG – NGUYÊN LÍ PASCAL</h2>
+
+      <h3 class="reveal-item">1. Hiện tượng thực tế</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/ort_-fK6-Ode0hHg73LNLTpDi6d41v1d7bBb4o14yAbM6wGCrZp5EkvQJe70-gWaB_7U5mIDM2OdN_VRbphN_KU2fmlumtOxw8XAzoHD2S4BskIaIvV9ogFmURezu9gOfgtDkOlF4h5u9N1bPwdKCBJI0ZHUduvDSC1fpTe_b_U?purpose=inline" alt="Cầu nâng thủy lực nâng xe tải trong xưởng sửa chữa">
+          <div class="img-caption">Hệ thống nâng thủy lực nâng vật nặng dễ dàng</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/T6vcJSmW7f_9rFRVWhJBfx3QXyJfC_jkzSk9VMCynbMHLhQ_mMdB-WgAym-tEv2A54dpTHI4UFL5PjQX8WzixZongE3CK219pXHGlOylIYSCoQdZyHL73lX63e1qL01up46WY7iaVB2GduqXYASO5dgUtxo_fMDw9Vt9XMWBn9Q?purpose=inline" alt="Máy ép thủy lực trong công nghiệp">
+          <div class="img-caption">Máy ép thủy lực tạo ra lực ép rất lớn</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/HlQDyE7spTPKOW2pxvfmh3Ulw0aP4IY0acCGuaF9Z2t-8nJDdIwqVdSairCm6kcxy6DI-VppksLEqFXf1zMRqoPNimujE8gOxmUtey7bETVeVOvPFDHPEXQVBf_nRkO_4WFaBWyew7RAZ5Nyng1qUYjH5UG1jcIcALTNXQIhkZE?purpose=inline" alt="Hệ thống phanh đĩa thủy lực trên ô tô">
+          <div class="img-caption">Hệ thống phanh thủy lực truyền lực đến bánh xe</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Tại sao một người có thể sử dụng máy ép thủy lực để tạo ra lực ép rất lớn? Tại sao hệ thống phanh ô tô có thể truyền lực từ bàn đạp đến các bánh xe?</p>
+      <p class="reveal-item">Các hiện tượng này có liên quan đến sự truyền áp suất trong chất lỏng.</p>
+
+      <h3 class="reveal-item">2. Nguyên lí Pascal</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/YaVUephomKUp5ZupSQo4rrmCQ8xJiCOmuIu7wyaKOxQwEqQj2QjaKzKzAQXoSCPXLnPbApGdAxNuX3hBq0SDCaledJNaYD52tDJvkb9RwuySeePI6SLwtsG2GIZFl1qfp8WOizX40FyKCoHmBlkLCybXCc5F5c8RNVmEhOFIxck?purpose=inline" alt="Sơ đồ minh họa nguyên lí truyền áp suất Pascal">
+          <div class="img-caption">Áp suất tác dụng lên chất lỏng kín được truyền đi nguyên vẹn theo mọi hướng</div>
+        </div>
+      </div>
+
+      <div class="callout reveal-item">
+        <strong>Phát biểu nguyên lí Pascal (Pascal's principle):</strong> Khi tác dụng áp suất lên chất lỏng chứa trong bình kín, áp suất này được truyền nguyên vẹn theo mọi hướng trong chất lỏng và lên thành bình.
+      </div>
+
+      <h3 class="reveal-item">3. Máy ép thủy lực</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/Czugec0setGZ2mU265OiboypPlxJFt-N6U5Vrrrkmn3xo67715tzsYD99AusVogEgsNPcf6EMaInx7gpV-pTyp199lgd3py_ew164LsG9N6P53wLK-UfGezscvH-AGKLeSWjERKCyPpiS0GIMv-osdLCWVW7kRdztjHjZ3OIeFU?purpose=inline" alt="Cấu tạo hai xi lanh và pít-tông của máy ép thủy lực">
+          <div class="img-caption">Cấu tạo cơ bản của máy ép thủy lực</div>
+        </div>
+      </div>
+
+      <p class="reveal-item"><strong>Máy ép thủy lực gồm:</strong></p>
+      <ul>
+        <li class="reveal-item">Hai xi lanh có tiết diện khác nhau.</li>
+        <li class="reveal-item">Hai pít-tông có diện tích khác nhau.</li>
+        <li class="reveal-item">Chất lỏng được chứa trong hệ thống kín.</li>
+      </ul>
+
+      <p class="reveal-item"><strong>Nguyên lí hoạt động:</strong></p>
+      <p class="reveal-item">Khi tác dụng lực $F_1$ lên pít-tông nhỏ có diện tích $S_1$, áp suất truyền vào chất lỏng là: $p_1 = \dfrac{F_1}{S_1}$</p>
+      <p class="reveal-item">Theo nguyên lí Pascal: $p_1 = p_2 \Rightarrow \dfrac{F_1}{S_1} = \dfrac{F_2}{S_2}$</p>
+      <div class="formula-box reveal-item">
+        $$oxed{F_2 = F_1 	imes rac{S_2}{S_1}}$$
+      </div>
+
+      <p class="reveal-item"><strong>Ví dụ:</strong> Một máy ép thủy lực có pít-tông nhỏ diện tích $5	ext{ cm}^2$, pít-tông lớn diện tích $100	ext{ cm}^2$. Người ta tác dụng lực $50	ext{ N}$ lên pít-tông nhỏ. Tính lực tác dụng lên pít-tông lớn.</p>
+      <div class="formula-box reveal-item">
+        $$F_2 = 50 	imes rac{100}{5} = 1\,000	ext{ N}$$
+      </div>
+      <p class="reveal-item">Như vậy, lực tác dụng lên pít-tông lớn là $1\,000	ext{ N}$.</p>
+
+      <p class="reveal-item"><strong>Ứng dụng:</strong></p>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/7vGYCPTUkTDeeat1Kxn4UQ_zTNYmdQhkOdDptUIpMPRVRV5WZMxpr7a98QOhFuAJAH8MKTWPQdGe4mHvK0vP21ZPLlgbzyS_-W2F5qNU5IsCTCKc3t9vdqVwq_ZOJQ0jaCocieM_iRoGfd474UWc_Y3rPv38lFpf-6U7XmfM2wQ?purpose=inline" alt="Kích nâng ô tô thủy lực">
+          <div class="img-caption">Kích nâng ô tô thủy lực</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/1HDkcnEiPw7ZSYeEg90nA-ZuL9yA1oxmasjmwql-7tAXzb9jhJjYbkUQfazSCiL4tra-z8cdV62Xh6OIOzMV7wB7FQDefwoiK-ywHsQbF_C4Wi7OuEAk9J4prZsAV0tRrccLHv9nkmq7K55kYw68y3ejA0br6U4naR6b83EeWjo?purpose=inline" alt="Máy ép thủy lực công nghiệp">
+          <div class="img-caption">Máy ép kim loại công nghiệp</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/D3Px3ZahgVS0M0Nxjh4x6fMg_I1qvyQ-p9PQvO1J-JeP_1A7UVqHdvtO1H-TO8megKvJ_5Tt5wVl7LQ8jl0xpvZ9-NMKDpR3vYK55ACkKWgso0uiowJ31ibOULsruhuRFmkxwiZZOL0YjLHeKE-WJc5tsQBEfmYFcDh4xFncRXM?purpose=inline" alt="Cầu nâng xe trong gara sửa chữa">
+          <div class="img-caption">Cầu nâng xe trong gara</div>
+        </div>
+      </div>
+
+      <ul>
+        <li class="reveal-item">Kích nâng ô tô.</li>
+        <li class="reveal-item">Cầu nâng xe trong gara.</li>
+        <li class="reveal-item">Máy ép kim loại.</li>
+        <li class="reveal-item">Ghế nâng thủy lực.</li>
+      </ul>
+
+      <h3 class="reveal-item">4. Phanh thủy lực</h3>
+      <div class="img-grid reveal-item">
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/tTfVg-LZR1nf1YMRTZQl4VdDXNr6cgfAMQUzSmGu_hjVxjBeIYEuwih9eZLAJZYgbMpfDlpxaMMG1Q7n2SUmu3IVwjRx29ZXrN92EH78zZnG1EW2seJs9aiYt3ULMlHDmYdsZJ-nHe9YIDNZLpDi7Sqm1cbr_2rHHFzb9OI5_6wsUq3_jLrs7kzirQLq4g4q?purpose=inline" alt="Sơ đồ cấu tạo hệ thống phanh thủy lực">
+          <div class="img-caption">Sơ đồ truyền áp suất trong hệ thống phanh thủy lực</div>
+        </div>
+        <div class="img-card">
+          <img src="https://images.openai.com/static-rsc-4/sfdq4uoT6fH5kxH-cR5IbPFpidxkSLLXKFV87RgMJl4r3GP3IjzJhIP5Qp0du7g7eXiD3fVqeWXj_ez9JfNrVgTmZtU7u-CZfaN3xuund48128HtMzpouW4_NEPaHLetzytgStEAF-1QjA6-CBdkeG9qBC2wQySXCgLVAyq2V1Q?purpose=inline" alt="Xi lanh tổng phanh thủy lực ô tô">
+          <div class="img-caption">Xi lanh tổng phanh truyền áp suất dầu đến các bánh xe</div>
+        </div>
+      </div>
+
+      <p class="reveal-item">Khi người lái xe đạp chân lên bàn đạp phanh, pít-tông ở xi lanh chính nén dầu phanh; áp suất này được truyền nguyên vẹn qua các ống dẫn dầu đến pít-tông ở các bánh xe, đẩy má phanh ép chặt vào đĩa phanh hoặc tang trống để hãm bánh xe dừng lại.</p>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <div id="bottom-nav">
+    <button id="btn-prev" title="Lùi lại 1 bước (Phím ←)">◀ Lùi</button>
+    <span id="step-counter">1 / 1</span>
+    <button id="btn-next" title="Tiếp theo 1 bước (Phím →)">Tiếp ▶</button>
+    <button id="btn-reset" title="Quay lại từ đầu">↺ Đầu bài</button>
+  </div>
+
+  <!-- Shortcut Hint -->
+  <div id="shortcut-hint">
+    <kbd>→</kbd> Tiếp &nbsp;|&nbsp; <kbd>←</kbd> Lùi &nbsp;|&nbsp; <kbd>Space</kbd> Đọc &nbsp;|&nbsp; <kbd>+</kbd>/<kbd>-</kbd> Cỡ chữ &nbsp;|&nbsp; <kbd>H</kbd> Ẩn thanh
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox">
+    <button id="lightbox-close" title="Đóng (Esc)">✕</button>
+    <button class="lightbox-nav" id="lb-prev" title="Ảnh trước (←)">❮</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-caption"></div>
+    <button class="lightbox-nav" id="lb-next" title="Ảnh tiếp theo (→)">❯</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const body = document.body;
+      const revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+      const modeToggle = document.getElementById('mode-toggle');
+      const stepCounter = document.getElementById('step-counter');
+      const progressBar = document.getElementById('progress-bar');
+      const btnNext = document.getElementById('btn-next');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnReset = document.getElementById('btn-reset');
+      const btnFontInc = document.getElementById('btn-font-inc');
+      const btnFontDec = document.getElementById('btn-font-dec');
+      const fontSizeLabel = document.getElementById('font-size-label');
+      const btnSpeak = document.getElementById('btn-speak');
+      const btnHud = document.getElementById('btn-hud');
+      const btnToc = document.getElementById('btn-toc');
+      const tocDrawer = document.getElementById('toc-drawer');
+      const tocList = document.getElementById('toc-list');
+
+      let currentIndex = 0;
+      let isShowAll = false;
+      let currentFontSize = 1.25;
+      const MIN_FONT = 1.2;
+      const MAX_FONT = 2.6;
+
+      // Table of Contents
+      const headings = document.querySelectorAll('.part-banner, h2, h3');
+      headings.forEach((h, idx) => {
+        if (!h.id) h.id = 'heading-' + idx;
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.classList.contains('part-banner')) {
+          a.style.fontWeight = '800';
+          a.style.color = '#0369a1';
+        } else if (h.tagName === 'H3') {
+          a.style.paddingLeft = '24px';
+        }
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetIdx = revealItems.indexOf(h);
+          if (!isShowAll && targetIdx > currentIndex) {
+            revealUpTo(targetIdx, false);
+          }
+          h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          tocDrawer.classList.remove('open');
+        });
+        li.appendChild(a);
+        tocList.appendChild(li);
+      });
+
+      btnToc.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tocDrawer.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!tocDrawer.contains(e.target) && e.target !== btnToc) {
+          tocDrawer.classList.remove('open');
+        }
+      });
+
+      // Step-by-Step Reveal Logic
+      function updateUI() {
+        const total = revealItems.length;
+        revealItems.forEach((item, idx) => {
+          item.classList.remove('hidden-step', 'active-step');
+          if (!isShowAll) {
+            if (idx > currentIndex) {
+              item.classList.add('hidden-step');
+            } else if (idx === currentIndex) {
+              item.classList.add('active-step');
+            }
+          }
+        });
+
+        if (isShowAll) {
+          stepCounter.textContent = `Tất cả (${total})`;
+          progressBar.style.width = '100%';
+        } else {
+          stepCounter.textContent = `${currentIndex + 1} / ${total}`;
+          const pct = ((currentIndex + 1) / total) * 100;
+          progressBar.style.width = pct + '%';
+        }
+      }
+
+      function scrollToCenter(el) {
+        if (!el) return;
+        requestAnimationFrame(() => {
+          el.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        });
+      }
+
+      function revealUpTo(index, shouldScroll = true) {
+        if (index < 0) index = 0;
+        if (index >= revealItems.length) index = revealItems.length - 1;
+        currentIndex = index;
+        updateUI();
+        if (shouldScroll && !isShowAll) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+      }
+
+      function nextStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex < revealItems.length - 1) {
+          stopSpeech();
+          revealUpTo(currentIndex + 1, true);
+        }
+      }
+
+      function prevStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: -window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex > 0) {
+          stopSpeech();
+          revealUpTo(currentIndex - 1, true);
+        }
+      }
+
+      btnNext.addEventListener('click', nextStep);
+      btnPrev.addEventListener('click', prevStep);
+      btnReset.addEventListener('click', () => {
+        stopSpeech();
+        if (isShowAll) {
+          modeToggle.checked = false;
+          isShowAll = false;
+          body.classList.add('step-mode');
+        }
+        revealUpTo(0, true);
+      });
+
+      modeToggle.addEventListener('change', (e) => {
+        isShowAll = e.target.checked;
+        if (isShowAll) {
+          body.classList.remove('step-mode');
+        } else {
+          body.classList.add('step-mode');
+        }
+        updateUI();
+        if (!isShowAll) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+      });
+
+      revealUpTo(0, false);
+
+      // Font Size Controls (+ / -)
+      function setFontSize(size) {
+        currentFontSize = Math.min(MAX_FONT, Math.max(MIN_FONT, Number(size.toFixed(2))));
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'rem');
+        fontSizeLabel.textContent = currentFontSize.toFixed(2) + 'rem';
+      }
+
+      btnFontInc.addEventListener('click', () => setFontSize(currentFontSize + 0.1));
+      btnFontDec.addEventListener('click', () => setFontSize(currentFontSize - 0.1));
+
+      // Text-to-Speech (Spacebar)
+      function stopSpeech() {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        btnSpeak.classList.remove('speaking');
+        btnSpeak.textContent = '🔊 Đọc (Space)';
+      }
+
+      function speakCurrentItem() {
+        if (!('speechSynthesis' in window)) {
+          alert('Trình duyệt của bạn không hỗ trợ đọc văn bản tự động.');
+          return;
+        }
+
+        if (window.speechSynthesis.speaking) {
+          stopSpeech();
+          return;
+        }
+
+        const targetEl = revealItems[currentIndex];
+        if (!targetEl) return;
+
+        const clone = targetEl.cloneNode(true);
+        clone.querySelectorAll('.katex-mathml, .img-caption').forEach(el => el.remove());
+        let text = clone.innerText.replace(/\s+/g, ' ').trim();
+        if (!text) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'vi-VN';
+        utterance.rate = 1.0;
+
+        utterance.onstart = () => {
+          btnSpeak.classList.add('speaking');
+          btnSpeak.textContent = '⏹️ Dừng đọc';
+        };
+        utterance.onend = () => stopSpeech();
+        utterance.onerror = () => stopSpeech();
+
+        window.speechSynthesis.speak(utterance);
+      }
+
+      btnSpeak.addEventListener('click', speakCurrentItem);
+
+      // Toggle HUD (Key H)
+      function toggleHud() {
+        body.classList.toggle('hud-hidden');
+      }
+      btnHud.addEventListener('click', toggleHud);
+
+      // Lightbox Fullscreen Image Viewer
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxCaption = document.getElementById('lightbox-caption');
+      const lightboxClose = document.getElementById('lightbox-close');
+      const lbPrev = document.getElementById('lb-prev');
+      const lbNext = document.getElementById('lb-next');
+
+      const allImages = Array.from(document.querySelectorAll('.img-card img'));
+      let currentImgIdx = 0;
+
+      function openLightbox(idx) {
+        currentImgIdx = idx;
+        const img = allImages[currentImgIdx];
+        lightboxImg.src = img.src;
+        lightboxCaption.textContent = img.alt || '';
+        lightbox.classList.add('open');
+      }
+
+      function closeLightbox() {
+        lightbox.classList.remove('open');
+      }
+
+      allImages.forEach((img, idx) => {
+        img.addEventListener('click', () => openLightbox(idx));
+      });
+
+      lightboxClose.addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+      });
+
+      lbPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+      });
+
+      lbNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLightbox((currentImgIdx + 1) % allImages.length);
+      });
+
+      // Keyboard Shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        if (lightbox.classList.contains('open')) {
+          if (e.key === 'Escape') closeLightbox();
+          if (e.key === 'ArrowRight') openLightbox((currentImgIdx + 1) % allImages.length);
+          if (e.key === 'ArrowLeft') openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+          return;
+        }
+
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          nextStep();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevStep();
+        } else if (e.key === ' ') {
+          e.preventDefault();
+          speakCurrentItem();
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          setFontSize(currentFontSize + 0.1);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          setFontSize(currentFontSize - 0.1);
+        } else if (e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          toggleHud();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
