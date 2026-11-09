@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài giảng KHTN 8 - Lực đẩy Archimedes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        saga: {
+                            50: '#f4f7f4',
+                            100: '#e5ede5',
+                            500: '#52796f',
+                            600: '#354f52',
+                            700: '#2f3e46',
+                            800: '#1f292e',
+                            900: '#131b20'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: var(--base-font-size, 1.2rem);
+        }
+        .reveal-item {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .reveal-item.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(82, 121, 111, 0.5);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(82, 121, 111, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-saga-900 text-gray-100 min-h-screen flex flex-col justify-between selection:bg-saga-500 selection:text-white transition-all duration-300">
+
+    <!-- Top Navigation / Controls Bar -->
+    <header id="nav-controls" class="fixed top-0 left-0 right-0 z-50 bg-saga-800/90 backdrop-blur-md border-b border-saga-700/50 px-6 py-3 flex flex-wrap items-center justify-between shadow-lg transition-opacity duration-300">
+        <div class="flex items-center space-x-4">
+            <span class="font-bold text-saga-500 tracking-wider">THCS-THPT ALFRED NOBEL</span>
+            <span class="text-xs bg-saga-700 px-2.5 py-1 rounded-full text-gray-300">KHTN 8 - Bài 17</span>
+        </div>
+        
+        <div class="flex items-center space-x-6 text-sm">
+            <!-- Mode Switcher -->
+            <div class="flex items-center space-x-2 bg-saga-900/60 px-3 py-1.5 rounded-lg border border-saga-700">
+                <span class="text-xs text-gray-400">Chế độ:</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="mode-toggle" class="sr-only peer">
+                    <div class="w-9 h-5 bg-saga-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-saga-500"></div>
+                </label>
+                <span id="mode-label" class="text-xs font-semibold text-saga-500">Từng bước</span>
+            </div>
+
+            <!-- Font Size Controls -->
+            <div class="flex items-center space-x-1 bg-saga-900/60 px-2 py-1 rounded-lg border border-saga-700">
+                <span class="text-xs text-gray-400 mr-1">Cỡ chữ:</span>
+                <button onclick="adjustFontSize(-0.1)" class="w-6 h-6 flex items-center justify-center bg-saga-700 hover:bg-saga-600 rounded text-xs font-bold transition">-</button>
+                <span id="font-size-display" class="w-10 text-center text-xs font-mono">1.2rem</span>
+                <button onclick="adjustFontSize(0.1)" class="w-6 h-6 flex items-center justify-center bg-saga-700 hover:bg-saga-600 rounded text-xs font-bold transition">+</button>
+            </div>
+
+            <!-- Hint button -->
+            <div class="hidden md:flex items-center space-x-2 text-xs text-gray-400">
+                <span>[<kbd class="px-1.5 py-0.5 bg-saga-700 rounded text-gray-200">→</kbd>] Tiếp</span>
+                <span>[<kbd class="px-1.5 py-0.5 bg-saga-700 rounded text-gray-200">Space</kbd>] Đọc</span>
+                <span>[<kbd class="px-1.5 py-0.5 bg-saga-700 rounded text-gray-200">H</kbd>] Ẩn menu</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="container mx-auto px-4 pt-28 pb-20 max-w-4xl flex-grow">
+        <article id="content-body" class="space-y-6">
+            <!-- Content will be injected dynamically via JS from parsed markdown structure -->
+        </article>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="Full screen preview" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+    </div>
+
+    <!-- Footer Controls Bar -->
+    <footer class="fixed bottom-0 left-0 right-0 z-40 bg-saga-800/90 backdrop-blur-md border-t border-saga-700/50 px-6 py-3 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-3 text-xs text-gray-400">
+            <span id="progress-indicator">Tiến độ: 0 / 0</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button onclick="prevStep()" class="px-4 py-1.5 bg-saga-700 hover:bg-saga-600 rounded-lg text-xs font-semibold transition flex items-center space-x-1">
+                <span>← Trước</span>
+            </button>
+            <button onclick="nextStep()" class="px-5 py-1.5 bg-saga-500 hover:bg-saga-600 text-white rounded-lg text-xs font-semibold transition flex items-center space-x-1 shadow-md">
+                <span>Tiếp theo (→)</span>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // Raw Markdown Data converted to structured HTML blocks
+        const rawContent = `
+# BÀI GIẢNG KHOA HỌC TỰ NHIÊN 8
+# CHỦ ĐỀ: LỰC ĐẨY ARCHIMEDES (ÁC-SI-MÉT)
+
+Bộ sách Kết nối tri thức với cuộc sống
+Chương: Khối lượng riêng và áp suất – Phần áp suất chất lỏng
+
+![Buoyancy Calculator – Archimedes’ Principle Physics](https://images.openai.com/static-rsc-4/-n9nqknd4JRRF4RIxsAV73SJUKVHQY6jS0NypBN0dNrTBDHmYe2C7OyyusYQfuTowAXuDM1wRbFjTIz34Ocz0iuLolHAKB2x27bCVbf8ZBD8je251DM9fMleN4JxRtHGLIAjsvU_ckjDxQXBJkJakGs4BcULIna4CQuQcBiFtq8?purpose=inline)
+![Buoyant Force - GeeksforGeeks](https://images.openai.com/static-rsc-4/tqFk9D0T1uS88Pn7g7uyLIHHnywEOxwAKKMvE_hdjkk_aE0fQSnkUGKL4cLzHnSW8kpL37NTFlON7Wl2xzgO37HLcxruxLFh8bhrqdkDQnVWgZuEB0_k0fuf2FcKs62HjOrml8ntoG52AaO__3lo7mPAMcZ82Z5slT5RGtBcU0k?purpose=inline)
+![Merjenje vzgona](https://images.openai.com/static-rsc-4/fj2BetkDdpeHNpuGoIOEHCQg0ra0Y3wusgeGFE04fC6lM7P9Wt22nBsXRXI2BBeieKphy5gFqqUE9_XfXv5cOf5Kc0YaxW1zvnjhL_umDtcsit4qqXQvZL_ihNG-LywO5ZfWz0zGFb17CZkP-YaKTx2UZm1eDTWLXYfPQFrDp4w?purpose=inline)
+
+Thời lượng dự kiến: 2–3 tiết.
+Định hướng bài học: Học sinh quan sát hiện tượng, tiến hành thí nghiệm, rút ra kiến thức, vận dụng công thức và giải thích các hiện tượng thực tế.
+
+## I. MỤC TIÊU BÀI HỌC
+Sau khi học xong, học sinh có thể:
+1. Nhận biết được sự tồn tại của lực đẩy Archimedes khi một vật nhúng trong chất lỏng.
+2. Xác định được phương và chiều của lực đẩy Archimedes.
+3. Phát biểu được nội dung định luật Archimedes.
+4. Viết và vận dụng được công thức tính lực đẩy Archimedes.
+5. Giải thích được các hiện tượng nổi, chìm, lơ lửng của vật trong chất lỏng.
+6. Giải thích được một số ứng dụng thực tế: tàu thủy, tàu ngầm, phao cứu sinh, khinh khí cầu.
+
+## II. KHỞI ĐỘNG – VÌ SAO TÀU THỦY BẰNG SẮT CÓ THỂ NỔI?
+
+![Cargo container ship in the ocean](https://images.openai.com/static-rsc-4/NodRzzVN9vubVoyOa1dGETFCbeCPe2ptExM4lUy3m6eWOeQU_yKPY5HMrDeQB6NJqWIEYN-WQUMsKm2506wnXovLrcQ6LGi9eozlpoYIsg4clHsrG94qMdWCoK5OzoNU_8nQUTu8VThNfem9NbyepJzIZndMlaPJlA7vojyIyDNgUWoCrLLUMcaoXHfJ54dG?purpose=inline)
+![Density of a Plastic: What You Need To Know](https://images.openai.com/static-rsc-4/jW7QPyDD3Dd0DccJobNOuK74kNZqwDLVsS3oVjlZWmyYj8mcoiHGgkuQWz98pN_g7zI03_6Ysg3EnLpwFh4XjYbq7PEtwHJ2FALOJ8b0DEL8QJWAM8-mwi8gJymjbVBR_YBFGMqsurwTjTisyMxFpQtiIlmEjz6lzPv6ysgJPEo?purpose=inline)
+![Small toy plastic boat floating in a swimming pool](https://images.openai.com/static-rsc-4/AWzrX4HW4ltr7HUcWGi3H8ZtYw1iAqYIlVCvQo9OrT15zyd7uiKx1d222Y-56gQ2nvCcSwuVvwO05HF3vcfXQaoXy4UUJXUyUKJMUo5ZwchsJANe7RpWZ6R18p7Wa4Lon-_z94ASZw0VvSgxx4OpAO2BtD7aJD8_eRuoL6_JB4FSxn4v8XGW_JwLjaO8ajBo?purpose=inline)
+
+Hãy quan sát ba hình ảnh trên và suy nghĩ:
+- Một viên bi sắt nhỏ thả vào nước thường bị chìm.
+- Một con tàu khổng lồ được chế tạo chủ yếu từ thép lại nổi trên mặt biển.
+- Một chiếc phao bằng nhựa có thể nổi trên mặt nước.
+
+Câu hỏi khám phá:
+1. Vì sao viên bi sắt chìm nhưng tàu thép lại nổi?
+2. Khi nhúng tay vào nước, em có cảm giác tay bị nước đẩy lên không?
+3. Có phải nước đã tác dụng một lực lên các vật nằm trong nước?
+
+Vấn đề cần giải quyết: Chất lỏng tác dụng lên vật nhúng trong nó một lực như thế nào? Độ lớn của lực này phụ thuộc vào những yếu tố nào?
+
+## III. SỰ XUẤT HIỆN CỦA LỰC ĐẨY ARCHIMEDES
+
+### 1. Hiện tượng thực tế
+
+![The Whetball](https://images.openai.com/static-rsc-4/H_riMrpX0IYxQDTHxfesynbHnkVUmpuWdz9UACtF7D_IvIKZtw-1qcOUpthSxeHVNc16WaVifXihvjTXjNXEQssckoPbW0FQjlcWXuLLna7Q0llGOknWcdl4VWhlsImqVdbUN8zjSsiIKJUghmVCE_pCeBVrACT8cqUN5rXDdWc?purpose=inline)
+![Colorful Beach Ball in Water  with place for your text](https://images.openai.com/static-rsc-4/gER-twhBuUrGJ6XWc0fK4GAqq3Z1SU3u5LH1lYsrzyxgfozM6Td2ox-0yhj7VidrXO9iNwkaHjvAUjoZUolu_hRTO28x9prsVR6E04MHSpn10nC5tuZwfE2mpjyAZyWJP6AP6vwwOwGk0U2twV0EnAbhP23RjZqsVNpxyHBWZIwsQSWhKcyDdE1D5cQND9Jj?purpose=inline)
+![PEBBLE IN A HAND](https://images.openai.com/static-rsc-4/ExszQgyMMuGKs48cNqPFjwYcay0Mx0N-usk0HFMooy7Jng2Wh7xqCP0OEDCGHGeG5M7JftzEvWCyCLikHhTYvJIHvKi6kr5a727w_JWF3PfLXT41FIdTtWfryN1_gni0rrgrGhQd29U-FYDYIE-E_KGci0m5U7dXuVTEo2G7GreylcALhl_t8PnipDlgPSgg?purpose=inline)
+
+Khi thực hiện các hoạt động sau, chúng ta có thể cảm nhận được lực đẩy của nước:
+- Dìm một quả bóng xuống nước: quả bóng có xu hướng nổi lên.
+- Nhúng một hòn đá vào nước: cảm giác hòn đá nhẹ hơn khi cầm ngoài không khí.
+- Thả một miếng xốp vào nước: miếng xốp nổi lên trên mặt nước.
+
+Giải thích:
+Khi một vật được nhúng trong chất lỏng, chất lỏng tác dụng lên vật một lực hướng từ dưới lên trên.
+Lực này gọi là lực đẩy Archimedes (Archimedes' buoyant force).
+
+![File:Archimedes principle.svg - Wikimedia Commons](https://images.openai.com/static-rsc-4/r714X3nfTUaPjaKpwZ09r_lH242lAwENLxPLklPGwW6IZvH2lnafzRps10jRWw_-YRiTHDiI2MuE5W6rJd08lbHK9eyYObJ_PEHi1AOzp1x9dT1MnTm5LqGn5O8tBTZQ6hz_4eLGi1yLC_H5wxyc2LfF1w2DR-k0vP89wJ3suFk?purpose=inline)
+Hình 1. Lực đẩy Archimedes hướng thẳng đứng từ dưới lên trên, ngược chiều trọng lực.
+
+### 2. Đặc điểm của lực đẩy Archimedes
+
+![Fizika 7 - 3.5 Dodatni sadržaj: Uzgon](https://images.openai.com/static-rsc-4/B7vs9dLcgn3kGLHdSKeehtE3YGgWzGmu13MJy9FYunBB68MzbraF_gvWiRoWLtpTfGtSAX6jXtYPiN7HVc4F-aLKq6qUYCKdeLynW63TDy1GTwj2OzRGEmUtQcIOyFTM55gLd5zbM_HzhjQQ05WbdLFlOvHWSw_tl98wzT_IyyU?purpose=inline)
+
+Lực đẩy Archimedes có các đặc điểm:
+- Điểm đặt: Tác dụng lên phần vật tiếp xúc với chất lỏng; trong mô hình phổ thông, có thể biểu diễn lực tại tâm phần chất lỏng bị vật chiếm chỗ.
+- Phương: Thẳng đứng.
+- Chiều: Từ dưới lên trên.
+- Độ lớn: Phụ thuộc vào thể tích phần chất lỏng bị vật chiếm chỗ và trọng lượng riêng của chất lỏng.
+
+### 3. Thí nghiệm chứng minh sự tồn tại của lực đẩy Archimedes
+
+![Prawo Archimedesa  -  Prawo Archimedesa - zpe.gov.pl](https://images.openai.com/static-rsc-4/lgQvXRwlsmvEQjMmFLfqJkUkirFpcPjKRC58fQZj4GWkN9A89F7JGe1df0zPFIW8TLIw-pRfAIzzcuSfxQgbiAEUWsvSZ0cAyfHSiJXniceNrr83CyZ2Ensie7I881jpT1TPX2dm5EMzpKBVFQwvT44eHgGHgnRSJik5o9YJOtE?purpose=inline)
+![Lý thuyết Lực đẩy Archimedes (KHTN 8 Kết nối tri thức Bài 17)](https://images.openai.com/static-rsc-4/jmrFBhfV-RWjz72AUIUvjalfcYIymD2oB6zrNHzAchXr31uNxjJxHlEmknGIJxrZ2u7Jme83I5as0hzGNWj3V6qNSx-oo73ggVMuG0VaNMSZsPu0FEsOmCIPTcKpkpkV_Xd1X1BHuYVaOgkRP62PIknSGwnGvCxVrt68vJouAm0?purpose=inline)
+
+Dụng cụ:
+- Lực kế.
+- Vật nặng bằng kim loại.
+- Bình chứa nước.
+- Giá đỡ và dây treo.
+
+Tiến hành:
+1. Treo vật nặng vào lực kế, đo trọng lượng của vật trong không khí, kí hiệu P.
+2. Nhúng vật ngập hoàn toàn trong nước, không để vật chạm đáy hoặc thành bình.
+3. Quan sát số chỉ của lực kế, kí hiệu P₁.
+4. So sánh hai kết quả.
+
+Kết quả quan sát:
+Số chỉ của lực kế khi vật nhúng trong nước nhỏ hơn số chỉ khi vật ở ngoài không khí.
+
+![10 Archimedes Principle Applications in Daily Life – StudiousGuy](https://images.openai.com/static-rsc-4/fKP-juRYVXPOXYmPwehua22Uka6b32yPjL_rNQBBsYrAP0kQAYahToKbIc1KTlPHUfQi-01crJG5cmrYmhrvgV5kAExDDN83Rs4Eyomi-cnGUXbU9HK76BAZFiV5j5iPRucd8xSnnthF07CguhyKRDwF-lsBpNAyneKDSCkvUx4?purpose=inline)
+Hình 2. So sánh trọng lượng biểu kiến của vật trong không khí và khi nhúng trong nước.
+
+Giải thích:
+Khi nhúng vật vào nước, vật chịu tác dụng của hai lực chính:
+- Trọng lực P hướng xuống dưới.
+- Lực đẩy Archimedes Fₐ hướng lên on.
+
+Do hai lực ngược chiều nhau nên lực kế chỉ giá trị nhỏ hơn trọng lượng của vật.
+Khi vật đứng yên và được treo bằng lực kế: Fₐ = P - P₁
+
+Trong đó:
+- P: Trọng lượng của vật trong không khí (N).
+- P₁: Số chỉ lực kế khi vật nhúng trong nước (N).
+- Fₐ: Lực đẩy Archimedes (N).
+
+Kết luận: Chất lỏng tác dụng lực đẩy lên vật nhúng trong nó.
+
+### 4. Định luật Archimedes
+
+![Archimedes' Principle: Why Ships Float But Rocks Sink](https://images.openai.com/static-rsc-4/zP-3ypMXJWGKQ32CYMnee1gc-sQw2arrkHAICXfSa4PkACYRidi31LYRMzeqIt5InMp0NcVoCeswK8i22hwJ7Ch1wnzP6EAbk6OxeUhlTvxqnw-L4Gzly5Csm8kmVfEJXq_FGBnOV6lcSa50ynCbst2IQuTGwa4-pnXYDZG3VqU?purpose=inline)
+
+a) Phát biểu định luật
+Một vật đặt trong chất lỏng chịu tác dụng của một lực đẩy hướng thẳng đứng từ dưới lên trên, có độ lớn bằng trọng lượng phần chất lỏng bị vật chiếm chỗ.
+
+b) Công thức tính lực đẩy Archimedes
+Fₐ = d × V
+
+Trong đó:
+- Fₐ: Lực đẩy Archimedes (N).
+- d: Trọng lượng riêng của chất lỏng (N/m³).
+- V: Thể tích phần chất lỏng bị vật chiếm chỗ (m³).
+
+Chú ý quan trọng:
+- Nếu vật chìm hoàn toàn trong chất lỏng thì V bằng thể tích của vật.
+- Nếu vật chỉ chìm một phần thì V bằng thể tích phần vật chìm trong chất lỏng.
+- Nếu thay chất lỏng bằng chất lỏng có trọng lượng riêng lớn hơn, lực đẩy Archimedes sẽ lớn hơn khi thể tích chất lỏng bị chiếm chỗ không đổi.
+
+c) Ví dụ tính toán 1 – Vật nhúng hoàn toàn trong nước
+Một khối kim loại có thể tích 200 cm³ được nhúng hoàn toàn trong nước. Biết trọng lượng riêng của nước là 10 000 N/m³. Tính lực đẩy Archimedes tác dụng lên khối kim loại.
+
+Bước 1. Tóm tắt
+- V = 200 cm³ = 0,0002 m³.
+- d = 10 000 N/m³.
+- Fₐ = ?
+
+Bước 2. Áp dụng công thức
+Fₐ = d × V = 10 000 × 0,0002 = 2 N.
+Đáp số: 2 N
+
+d) Ví dụ tính toán 2 – Vật nhúng trong chất lỏng khác nhau
+Một vật có thể tích phần chìm là 0,003 m³. Tính lực đẩy Archimedes trong hai trường hợp:
+- Nhúng vật trong nước, d₁ = 10 000 N/m³.
+- Nhúng vật trong dầu, d₂ = 8 000 N/m³.
+
+Trong nước: Fₐ₁ = 10 000 × 0,003 = 30 N.
+Trong dầu: Fₐ₂ = 8 000 × 0,003 = 24 N.
+Nhận xét: Cùng một thể tích chất lỏng bị chiếm chỗ, lực đẩy Archimedes trong nước lớn hơn trong dầu vì trọng lượng riêng của nước lớn hơn trọng lượng riêng của dầu.
+
+## IV. CÁC YẾU TỐ ẢNH HƯỞNG ĐẾN LỰC ĐẨY ARCHIMEDES
+
+### 1. Ảnh hưởng của thể tích phần chất lỏng bị chiếm chỗ
+Giả sử hai vật cùng được nhúng trong nước nhưng có thể tích phần chìm khác nhau.
+- Vật có thể tích phần chìm nhỏ → chiếm chỗ ít nước → lực đẩy nhỏ.
+- Vật có thể tích phần chìm lớn → chiếm chỗ nhiều nước → lực đẩy lớn.
+Kết luận: Khi trọng lượng riêng của chất lỏng không đổi, thể tích phần chất lỏng bị vật chiếm chỗ càng lớn thì lực đẩy Archimedes càng lớn.
+
+### 2. Ảnh hưởng của trọng lượng riêng chất lỏng
+![Density Experiment With Egg And Salt Water](https://images.openai.com/static-rsc-4/vHgvVYg8LvFPWaN_ax-u4zqBrgpplzRRwreKl53xY4Qy8QfOuPIrQBGiOSJ6v29rGgR9Eq1X3JMPKiDY4-LzBDf-R4JBaKWamkqHZ8pb2vOAFUgNegW5jPIJF5z97vAdD2vhneG-z6NP2QZZFl2xXgaJd-Li6XiCKFd7UdCy8RU?purpose=inline)
+
+Một thí nghiệm thú vị: Thả một quả trứng vào hai cốc nước (nước thường và nước muối đậm đặc).
+Quả trứng chìm trong nước thường nhưng nổi trong nước muối đậm đặc vì trọng lượng riêng của nước muối lớn hơn.
+Kết luận: Với cùng thể tích chất lỏng bị chiếm chỗ, chất lỏng có trọng lượng riêng càng lớn thì lực đẩy Archimedes càng lớn.
+
+### 3. Bảng tổng hợp
+- Thể tích chất lỏng bị chiếm chỗ tăng → Lực đẩy Archimedes tăng.
+- Trọng lượng riêng chất lỏng tăng → Lực đẩy Archimedes tăng.
+Ghi nhớ: Fₐ phụ thuộc vào d và V, không phụ thuộc trực tiếp vào độ sâu của vật nếu d và V không đổi.
+
+## V. ĐIỀU KIỆN ĐỂ VẬT NỔI, VẬT CHÌM VÀ LƠ LỬNG
+
+### 1. Trường hợp vật chìm xuống
+Nếu Fₐ < P thì hợp lực hướng xuống dưới, vật chìm xuống (ví dụ: viên bi sắt, đinh vít).
+
+### 2. Trường hợp vật nổi lên
+Nếu Fₐ > P thì hợp lực hướng lên trên, vật nổi lên (ví dụ: miếng xốp, nút chai).
+
+### 3. Trường hợp vật lơ lửng trong chất lỏng
+Nếu Fₐ = P thì hai lực cân bằng nhau, vật đứng yên tại vị trí đó (ví dụ: thợ lặn điều chỉnh áo phao).
+
+### 4. So sánh trọng lượng riêng của vật và chất lỏng (dᵥ và dₗ)
+- Vật chìm: dᵥ > dₗ
+- Vật nổi: dᵥ < dₗ
+- Vật lơ lửng: dᵥ = dₗ
+
+## VI. TẠI SAO CÙNG MỘT VIÊN ĐẤT NẶN CÓ LÚC CHÌM, CÓ LÚC NỔI?
+- Viên đất nặn hình cầu chiếm chỗ ít nước, lực đẩy nhỏ nên chìm.
+- Viên đất nặn nặn thành hình chiếc thuyền có lòng rỗng giúp tăng thể tích chiếm chỗ, lực đẩy tăng và thuyền nổi trên mặt nước.
+Kết luận: Khả năng nổi của vật không chỉ phụ thuộc vào vật liệu mà còn phụ thuộc vào hình dạng, thể tích phần chìm và trọng lượng của vật.
+
+## VII. ỨNG DỤNG CỦA LỰC ĐẨY ARCHIMEDES TRONG ĐỜI SỐNG
+1. Tàu thủy: Thân tàu rỗng chứa không khí giúp tăng thể tích chiếm chỗ, lực đẩy Archimedes cân bằng trọng lượng tàu giúp tàu nổi.
+2. Tàu ngầm: Sử dụng két nước dằn để điều chỉnh trọng lượng (cho nước vào để chìm, bơm khí nén đẩy nước ra để nổi).
+3. Áo phao và phao cứu sinh: Tăng thể tích chiếm chỗ, giúp cơ thể người nổi dễ dàng trên mặt nước.
+4. Khinh khí cầu: Không khí nóng bên trong có khối lượng riêng nhỏ hơn không khí lạnh bên ngoài, tạo lực đẩy nâng khinh khí cầu bay lên.
+5. Người bơi và lặn: Điều chỉnh lượng khí trong phổi hoặc áo BCD để nổi, chìm hoặc lơ lửng.
+6. Đo thể tích vật không thấm nước: Dùng bình chia độ đo mức nước dâng lên để tính thể tích vật không đều.
+
+## VIII. BÀI TẬP VẬN DỤNG CÓ HƯỚNG DẪN
+- Dạng 1: Tính lực đẩy Archimedes (Fₐ = d × V).
+- Dạng 2: Xác định vật nổi hay chìm so sánh Fₐ và P.
+- Dạng 3: Tính lực bằng lực kế (Fₐ = P - P₁).
+- Dạng 4: Bài toán tàu thủy (Fₐ = P, V = Fₐ / d).
+
+## IX. LUYỆN TẬP – KIỂM TRA MỨC ĐỘ HIỂU BÀI
+- A. Trắc nghiệm (Câu 1 đến Câu 5)
+- B. Câu hỏi đúng – sai (Câu 6, Câu 7)
+- C. Bài tập tự luận (Câu 8, Câu 9, Câu 10)
+- D. Hoạt động STEM: Chế tạo thuyền bằng giấy bạc chở đồng xu.
+
+## X. SƠ ĐỒ TỔNG KẾT KIẾN THỨC
+- Công thức cốt lõi: Fₐ = d × V
+- Đặc điểm: Phương thẳng đứng, chiều từ dưới lên.
+- Trạng thái: Chìm (Fₐ < P), Nổi (Fₐ = P khi cân bằng), Lơ lửng (Fₐ = P).
+
+## XI. ĐÁP ÁN LUYỆN TẬP
+- Câu 1: C | Câu 2: B | Câu 3: C | Câu 4: C | Câu 5: C
+- Câu 6: a Đ, b S, c Đ, d Đ
+- Câu 7: a Đ, b Đ, c S, d Đ
+- Hướng dẫn giải chi tiết các bài tập tính toán lực đẩy, trọng lượng biểu kiến và thể tích nước bị chiếm chỗ được tích hợp đầy đủ trong hệ thống bài giảng.
+`;
+
+        // Parse Raw Markdown into structural elements for step-by-step rendering
+        function parseContentToSteps(text) {
+            const lines = text.trim().split('\n');
+            let steps = [];
+            let currentBlock = null;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                if (line.startsWith('# ')) {
+                    if (currentBlock) steps.push(currentBlock);
+                    currentBlock = { type: 'h1', text: line.replace('# ', ''), items: [] };
+                } else if (line.startsWith('## ')) {
+                    if (currentBlock) steps.push(currentBlock);
+                    currentBlock = { type: 'h2', text: line.replace('## ', ''), items: [] };
+                } else if (line.startsWith('### ')) {
+                    if (currentBlock) steps.push(currentBlock);
+                    currentBlock = { type: 'h3', text: line.replace('### ', ''), items: [] };
+                } else if (line.startsWith('![')) {
+                    const match = line.match(/!\[(.*?)\]\((.*?)\)/);
+                    if (match) {
+                        const imgObj = { type: 'img', alt: match[1], src: match[2] };
+                        if (currentBlock) {
+                            currentBlock.items.push(imgObj);
+                        } else {
+                            steps.push({ type: 'p', items: [imgObj] });
+                        }
+                    }
+                } else {
+                    if (!currentBlock) {
+                        currentBlock = { type: 'p', text: line, items: [{ type: 'text', text: line }] };
+                    } else {
+                        currentBlock.items.push({ type: 'text', text: line });
+                    }
+                }
+            });
+            if (currentBlock) steps.push(currentBlock);
+            return steps;
+        }
+
+        const structuredSteps = parseContentToSteps(rawContent);
+        let currentStepIndex = -1;
+        let isStepByStepMode = true; // true = step by step, false = show all
+        let baseFontSize = 1.2;
+        let hiddenNav = false;
+
+        // Render content container DOM
+        const contentBody = document.getElementById('content-body');
+
+        function renderDOM() {
+            contentBody.innerHTML = '';
+            structuredSteps.forEach((step, index) => {
+                const div = document.createElement('div');
+                div.className = `reveal-item p-6 my-4 rounded-2xl bg-saga-800/60 border border-saga-700/50 shadow-xl transition-all duration-500 ${index <= currentStepIndex || !isStepByStepMode ? 'revealed' : 'opacity-0 translate-y-5'}`;
+                div.id = `step-${index}`;
+
+                let htmlContent = '';
+                if (step.type === 'h1') {
+                    htmlContent = `<h1 class="text-3xl font-bold text-saga-500 mb-2 border-b border-saga-700 pb-3">${step.text}</h1>`;
+                } else if (step.type === 'h2') {
+                    htmlContent = `<h2 class="text-2xl font-bold text-emerald-400 mt-6 mb-3">${step.text}</h2>`;
+                } else if (step.type === 'h3') {
+                    htmlContent = `<h3 class="text-xl font-semibold text-teal-300 mt-4 mb-2">${step.text}</h3>`;
+                }
+
+                if (step.items && step.items.length > 0) {
+                    step.items.forEach(item => {
+                        if (item.type === 'img') {
+                            htmlContent += `<div class="my-4 flex justify-center"><img src="${item.src}" alt="${item.alt}" class="max-h-80 rounded-xl cursor-pointer hover:opacity-90 transition shadow-lg border border-saga-700 object-cover" onclick="openLightbox('${item.src}')"></div>`;
+                        } else if (item.type === 'text') {
+                            let cls = "text-gray-200 my-2 leading-relaxed";
+                            if (item.text.startsWith('- ')) {
+                                htmlContent += `<ul class="list-disc list-inside pl-4 text-gray-200 my-1"><li>${item.text.replace('- ', '')}</li></ul>`;
+                            } else if (/^\d+\./.test(item.text)) {
+                                htmlContent += `<div class="pl-4 text-gray-200 my-1 font-medium">${item.text}</div>`;
+                            } else {
+                                htmlContent += `<p class="${cls}">${item.text}</p>`;
+                            }
+                        }
+                    });
+                }
+                if (step.text && !step.items.length && step.type === 'p') {
+                    htmlContent += `<p class="text-gray-200 my-2 leading-relaxed">${step.text}</p>`;
+                }
+
+                div.innerHTML = htmlContent;
+                contentBody.appendChild(div);
+            });
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const total = structuredSteps.length;
+            const current = isStepByStepMode ? Math.max(0, currentStepIndex + 1) : total;
+            document.getElementById('progress-indicator').innerText = `Tiến độ: ${current} / ${total}`;
+        }
+
+        // Navigation controls
+        function nextStep() {
+            if (!isStepByStepMode) return;
+            if (currentStepIndex < structuredSteps.length - 1) {
+                currentStepIndex++;
+                renderDOM();
+                scrollToCurrent();
+                speakCurrent();
+            }
+        }
+
+        function prevStep() {
+            if (!isStepByStepMode) return;
+            if (currentStepIndex > -1) {
+                currentStepIndex--;
+                renderDOM();
+                scrollToCurrent();
+            }
+        }
+
+        function scrollToCurrent() {
+            if (currentStepIndex >= 0) {
+                const el = document.getElementById(`step-${currentStepIndex}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        // Text-to-speech with Spacebar
+        function speakCurrent() {
+            if (currentStepIndex >= 0 && currentStepIndex < structuredSteps.length) {
+                const step = structuredSteps[currentStepIndex];
+                let textToSpeak = step.text || '';
+                if (step.items) {
+                    step.items.forEach(i => { if (i.text) textToSpeak += '. ' + i.text; });
+                }
+                if ('speechSynthesis' in window && textToSpeak) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                    utterance.lang = 'vi-VN';
+                    utterance.rate = 1.0;
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+        }
+
+        // Mode toggle switch listener
+        document.getElementById('mode-toggle').addEventListener('change', function(e) {
+            isStepByStepMode = !e.target.checked;
+            const label = document.getElementById('mode-label');
+            if (isStepByStepMode) {
+                label.innerText = "Từng bước";
+                if (currentStepIndex === -1) currentStepIndex = 0;
+            } else {
+                label.innerText = "Hiển thị tất cả";
+                currentStepIndex = structuredSteps.length - 1;
+            }
+            renderDOM();
+        });
+
+        // Font size adjustment
+        function adjustFontSize(delta) {
+            baseFontSize = Math.min(2.0, Math.max(1.0, baseFontSize + delta));
+            document.documentElement.style.setProperty('--base-font-size', baseFontSize + 'rem');
+            document.getElementById('font-size-display').innerText = baseFontSize.toFixed(1) + 'rem';
+        }
+
+        // Lightbox functions
+        function openLightbox(src) {
+            const lb = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
+        }
+
+        function closeLightbox() {
+            const lb = document.getElementById('lightbox');
+            lb.classList.remove('flex');
+            lb.classList.add('hidden');
+        }
+
+        // Keyboard Event Listeners
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+                e.preventDefault();
+                nextStep();
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                e.preventDefault();
+                prevStep();
+            } else if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                speakCurrent();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hiddenNav = !hiddenNav;
+                const header = document.getElementById('nav-controls');
+                const footer = document.querySelector('footer');
+                if (hiddenNav) {
+                    header.classList.add('opacity-0', 'pointer-events-none');
+                    footer.classList.add('opacity-0', 'pointer-events-none');
+                } else {
+                    header.classList.remove('opacity-0', 'pointer-events-none');
+                    footer.classList.remove('opacity-0', 'pointer-events-none');
+                }
+            } else if (e.key === '+' || e.key === '=') {
+                adjustFontSize(0.1);
+            } else if (e.key === '-' || e.key === '_') {
+                adjustFontSize(-0.1);
+            }
+        });
+
+        // Initial render
+        currentStepIndex = 0;
+        renderDOM();
+    </script>
+</body>
+</html>
