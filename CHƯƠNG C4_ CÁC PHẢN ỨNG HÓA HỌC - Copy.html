@@ -1,0 +1,2670 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light" style="--font-size: 28px;"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Đọc Bài Giảng Markdown &amp; Word Chuyên Nghiệp v3.11</title>
+    <!-- MarkedJS: Chuyển Markdown sang HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Mammoth.js: Đọc file .docx Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js: Chuyển HTML từ Word sang Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    
+    <!-- KaTeX: Render Toán LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- MathJax v3 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['[', ']']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            },
+            startup: {
+                pageReady: function () {
+                    return MathJax.startup.defaultPageReady().then(function () {
+                        // Đảm bảo sau khi MathJax render xong, các khối toán học hiển thị chuẩn căn giữa
+                    });
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #020617;
+            --card-bg: #1e293b;
+            --text-color: #94a3b8;
+            --text-active: #f8fafc;
+            --border-color: #334155;
+            --accent-color: #38bdf8;
+            --highlight-bg: rgba(56, 189, 248, 0.12);
+            --sidebar-width: 280px;
+            --font-size: 20px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #475569;
+            --text-active: #0f172a;
+            --border-color: #cbd5e1;
+            --accent-color: #0284c7;
+            --highlight-bg: rgba(2, 132, 199, 0.12);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 8px 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .controls-group { 
+            display: flex; 
+            gap: 6px; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+
+        button, label.btn {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover, label.btn:hover { border-color: var(--accent-color); }
+        button.active { background-color: var(--accent-color); color: #fff; }
+
+        input[type="text"], input[type="number"], select {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 8px; border-radius: 6px; font-size: 13px;
+        }
+
+        .toggle-switch-wrapper { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-active); }
+        .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .toggle-switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* Ép hiển thị công thức MathJax chuẩn giữa màn hình */
+        mjx-container[jax="CHTML"][display="true"] {
+            display: block !important;
+            text-align: center !important;
+            margin: 1em 0 !important;
+        }
+
+        #selection-popup {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-width: 380px;
+        }
+        #selection-popup button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #selection-popup input[type="text"] {
+            width: 150px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 5;
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        #sidebar.open { margin-left: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; font-weight: bold; color: var(--text-active);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item {
+            padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            cursor: pointer; font-size: 14px; color: var(--text-color);
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-item:hover { background-color: var(--card-bg); color: var(--text-active); }
+        .toc-item.active-toc {
+            background-color: var(--highlight-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            border-left: 3px solid var(--accent-color);
+        }
+        .toc-item.level-1 { font-weight: bold; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; }
+        .toc-item.level-3 { padding-left: 30px; font-style: italic; }
+        .toc-item.level-4 { padding-left: 40px; opacity: 0.8; }
+
+        main {
+            flex: 1; overflow-y: auto;
+            padding: 30px 20px 150px 20px;
+            scroll-behavior: smooth;
+        }
+
+        #lecture-paper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            font-size: var(--font-size); line-height: 1.8;
+            transition: font-size 0.2s ease, background-color 0.3s;
+        }
+
+        #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4 { 
+            color: var(--accent-color); 
+            margin-top: 1.2em; margin-bottom: 0.5em; 
+            line-height: 1.4;
+        }
+        #lecture-paper p { margin: 0.8em 0; color: inherit; }
+        #lecture-paper ul, #lecture-paper ol { padding-left: 28px; margin: 0.8em 0; }
+        #lecture-paper li { margin-bottom: 6px; }
+        #lecture-paper strong { color: var(--accent-color); font-weight: 700; }
+        
+        #lecture-paper blockquote {
+            margin: 1em 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        #lecture-paper blockquote p { margin: 0.4em 0; }
+
+        #lecture-paper hr {
+            border: none;
+            border-top: 2px dashed var(--border-color);
+            margin: 2em 0;
+        }
+
+        /* KHUNG CHỨA HÌNH ẢNH TRONG BÀI GIẢNG (CĂN GIỮA & HOVER XÓA) */
+        .image-wrapper {
+            position: relative;
+            display: block;
+            margin: 16px auto;
+            width: fit-content;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        #lecture-paper img {
+            max-width: 100%; height: auto; max-height: 400px;
+            object-fit: contain; border-radius: 8px;
+            margin: 0 auto; display: block; cursor: zoom-in;
+            border: 1px solid var(--border-color);
+        }
+
+        .img-delete-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .image-wrapper:hover .img-delete-btn {
+            opacity: 1;
+        }
+
+        .img-delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        #lecture-paper table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        #lecture-paper th, #lecture-paper td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+        #lecture-paper th { background-color: var(--highlight-bg); }
+
+        .markdown-unit {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            border-radius: 6px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .markdown-unit.revealed {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+
+        li.markdown-unit.revealed, li.markdown-unit.active {
+            display: list-item !important;
+        }
+
+        .markdown-unit.active {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        hr.markdown-unit.active {
+            border-top-color: var(--accent-color);
+            box-shadow: none;
+            background-color: transparent;
+        }
+
+        body.mode-expand .markdown-unit {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+        body.mode-expand li.markdown-unit {
+            display: list-item !important;
+        }
+        body.mode-expand .markdown-unit.active {
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        footer {
+            background-color: var(--header-bg); 
+            padding: 10px 20px; display: flex; 
+            justify-content: center; align-items: center;
+            position: relative; border-top: 1px solid var(--border-color); 
+            font-size: 14px; color: var(--text-color); z-index: 10;
+        }
+
+        .author-info { font-weight: 600; color: var(--accent-color); text-align: center; }
+        #progress-counter { 
+            position: absolute; right: 20px; font-size: 13px; 
+            display: flex; align-items: center; gap: 4px;
+        }
+        #page-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); padding: 24px; border-radius: 12px;
+            width: 85%; max-width: 800px; display: flex; flex-direction: column; gap: 15px;
+            border: 1px solid var(--border-color); max-height: 90vh;
+        }
+
+        textarea {
+            width: 100%; height: 350px; background: var(--bg-color);
+            color: var(--text-active); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 8px; font-family: monospace; resize: vertical;
+        }
+
+        input[type="file"] { display: none; }
+
+        .history-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-color); padding: 10px 14px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .changelog-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .changelog-item:last-child { border-bottom: none; }
+        .changelog-version { font-weight: bold; color: var(--accent-color); font-size: 16px; }
+        .changelog-date { font-size: 12px; color: var(--text-color); margin-left: 8px; }
+        .changelog-list { margin: 6px 0 0 20px; padding: 0; font-size: 14px; line-height: 1.6; }
+
+        /* LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG */
+        #image-lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); z-index: 200;
+            justify-content: center; align-items: center; user-select: none;
+            cursor: pointer;
+        }
+
+        #image-lightbox img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            cursor: default;
+        }
+
+        .lightbox-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 220;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .lightbox-close-btn:hover {
+            background: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15); color: #fff;
+            border: none; padding: 16px 20px; font-size: 24px; cursor: pointer;
+            border-radius: 50%; transition: background 0.2s; z-index: 210;
+        }
+        .lightbox-nav:hover { background: var(--accent-color); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-size: 14px;
+            pointer-events: none;
+        }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast {
+            background-color: var(--card-bg); color: var(--text-active); border: 1px solid var(--accent-color);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        body.slideshow-mode header, body.slideshow-mode footer, body.slideshow-mode #sidebar { display: none !important; }
+        body.slideshow-mode main { padding: 40px 20px; }
+        #exit-slideshow-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 99;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        #exit-slideshow-btn:hover { background: var(--accent-color); color: #fff; }
+        body.slideshow-mode #exit-slideshow-btn { display: block; }
+
+        /* CẤU HÌNH IN (PRINT STYLES) - CHỈ IN NỘI DUNG BÀI GIẢNG */
+        @media print {
+            header, footer, #sidebar, .modal, #selection-popup, #image-lightbox, #toast-container, #exit-slideshow-btn, .img-delete-btn {
+                display: none !important;
+            }
+            body, .app-container, main {
+                background: #fff !important;
+                color: #000 !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #lecture-paper {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #000 !important;
+                background: #fff !important;
+            }
+            .markdown-unit {
+                display: block !important;
+                opacity: 1 !important;
+                color: #000 !important;
+                background: none !important;
+                box-shadow: none !important;
+            }
+            li.markdown-unit {
+                display: list-item !important;
+            }
+            #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4, #lecture-paper strong {
+                color: #000 !important;
+            }
+            #lecture-paper img {
+                max-height: 500px !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+</style></head>
+<body class="">
+
+    <header>
+        <div class="controls-group">
+            <button onclick="toggleSidebar()" title="Ẩn/Hiện Mục lục">☰</button>
+            <button onclick="openImportModal()">📥 Import</button>
+            <button onclick="printLecture()" title="In chỉ nội dung bài giảng">🖨️ In</button>
+            <button onclick="openHistoryModal()">📜 History</button>
+            <button onclick="openSaveModal()">💾 Save as</button>
+            <button onclick="openUpdateModal()" title="Xem lịch sử cập nhật (Phím tắt U)">🚀 U</button>
+            <button onclick="toggleSlideshow()" style="background-color: var(--accent-color); color: #fff;">📺 Slide</button>
+            
+            <div class="toggle-switch-wrapper" style="margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                <span title="Chế độ Mở Rộng / Hiện tất cả">📖 Expand</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="expand-toggle" checked="" onchange="toggleExpandMode(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 6px;">
+                <span title="Tự động đọc đoạn tiếp theo">▶️ Autoplay</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoplay-toggle" onchange="toggleAutoplay(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 4px;">
+                <span>🌙</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-toggle" checked="" onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+                <span>☀️</span>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button id="btn-mute" onclick="toggleMute()" title="Âm thanh">🔊</button>
+            <select id="rate-select" onchange="updateRate(this.value)">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="controls-group">
+            <input type="text" id="prompt-topic" placeholder="Chủ đề..." style="width: 110px;">
+            <button id="btn-copy-prompt" onclick="copyPrompt()">📋 Copy Prompt</button>
+        </div>
+    </header>
+
+    <!-- POPUP KHI BÔI ĐEN CHỮ -->
+    <div id="selection-popup" style="display: none; top: 345.578px; left: 205px;">
+        <button onclick="searchImageSelected()" title="Tìm kiếm hình ảnh">🔍 Ảnh</button>
+        <button onclick="searchGifSelected()" title="Tìm kiếm GIF">🎞️ GIF</button>
+        <button onclick="searchGoogleSelected()" title="Tìm kiếm trên Google">🌐 Google</button>
+        <input type="text" id="popup-img-url" placeholder="Nhập/Dán URL ảnh..." oninput="autoInsertImageFromPopup(this)" onchange="autoInsertImageFromPopup(this)">
+    </div>
+
+    <div class="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <span>📑 Mục Lục</span>
+                <button onclick="toggleSidebar()" style="padding: 2px 6px; font-size: 12px;">✕</button>
+            </div>
+            <div class="sidebar-content">
+                <ul id="toc-container" class="toc-list"><li class="toc-item level-1" data-unit-index="0">CHƯƠNG C4: CÁC PHẢN ỨNG HÓA HỌC (CHEMICAL REACTIONS)</li><li class="toc-item level-1" data-unit-index="6">I. CÂU HỎI GIỮA BÀI (IN-CHAPTER QUESTIONS)</li><li class="toc-item level-2" data-unit-index="7">1. Phần C4.01: Phản ứng hóa học và phương trình (Chemical reactions and equations)</li><li class="toc-item level-3" data-unit-index="8">Câu C4.01. Biến đổi vật lý và biến đổi hóa học</li><li class="toc-item level-3" data-unit-index="20">Câu C4.02. Phản ứng tỏa nhiệt và thu nhiệt</li><li class="toc-item level-3" data-unit-index="34">Câu C4.03. Dấu hiệu nhận biết phản ứng hóa học</li><li class="toc-item level-2" data-unit-index="51">2. Phần C4.02: Phương trình cho các phản ứng hóa học (Equations for chemical reactions)</li><li class="toc-item level-3 active-toc" data-unit-index="52">Câu C4.04. Viết phương trình chữ</li><li class="toc-item level-3" data-unit-index="67">Câu C4.05. Cân bằng phương trình hóa học</li><li class="toc-item level-2" data-unit-index="89">3. Phần C4.03: Các loại phản ứng hóa học (Types of chemical reactions)</li><li class="toc-item level-3" data-unit-index="90">Câu C4.06. Phản ứng thế của halogen</li><li class="toc-item level-3" data-unit-index="111">Câu C4.07. Phân loại phản ứng hóa học</li><li class="toc-item level-3" data-unit-index="126">Câu C4.08. Viết phương trình chữ và phương trình hóa học cân bằng</li><li class="toc-item level-2" data-unit-index="155">4. Phần C4.04: Phân tích sâu về phản ứng Redox</li><li class="toc-item level-3" data-unit-index="156">Câu C4.09. Ký hiệu trạng thái và phương trình ion thu gọn</li><li class="toc-item level-3" data-unit-index="183">Câu C4.10. Định nghĩa oxy hóa và khử</li><li class="toc-item level-2" data-unit-index="197">5. Phần C4.05: Điện phân (Electrolysis)</li><li class="toc-item level-3" data-unit-index="198">Câu C4.11. Điện phân chì(II) bromua nóng chảy</li><li class="toc-item level-3" data-unit-index="211">Câu C4.12. Mạ đồng một vật bằng kim loại</li><li class="toc-item level-3" data-unit-index="224">Câu C4.13. Phản ứng tại các điện cực khi điện phân PbBr₂</li><li class="toc-item level-3" data-unit-index="242">Câu C4.14. Dự đoán sản phẩm điện phân dung dịch</li><li class="toc-item level-3" data-unit-index="269">Câu C4.15. Thiết bị mạ đồng</li><li class="toc-item level-1" data-unit-index="289">II. BÀI TẬP ÔN TẬP CUỐI CHƯƠNG 4 (END-OF-CHAPTER QUESTIONS)</li><li class="toc-item level-2" data-unit-index="290">Bài 1. Phân hủy nhiệt của muối cacbonat (Thermal decomposition)</li><li class="toc-item level-3" data-unit-index="292">Trả lời</li><li class="toc-item level-2" data-unit-index="317">Bài 2. Phản ứng oxy hóa – khử (Redox reactions)</li><li class="toc-item level-3" data-unit-index="320">Trả lời</li><li class="toc-item level-2" data-unit-index="356">Bài 3. Các phản ứng hình thành mưa axit (Acid rain)</li><li class="toc-item level-3" data-unit-index="360">Trả lời</li><li class="toc-item level-2" data-unit-index="384">Bài 4. Khả năng dẫn điện và điện phân hợp chất nóng chảy</li><li class="toc-item level-3" data-unit-index="385">Trả lời</li><li class="toc-item level-2" data-unit-index="420">Bài 5. Điện phân dung dịch natri clorua đậm đặc (Electrolysis of concentrated sodium chloride solution)</li><li class="toc-item level-3" data-unit-index="421">Trả lời</li><li class="toc-item level-2" data-unit-index="462">III. BẢNG TỔNG HỢP KIẾN THỨC TRỌNG TÂM</li><li class="toc-item level-3" data-unit-index="465">Một số phương trình quan trọng cần ghi nhớ</li></ul>
+            </div>
+        </aside>
+
+        <button id="exit-slideshow-btn" onclick="toggleSlideshow()">✖ Thoát Slide Show (Esc)</button>
+
+        <main id="main-scroll">
+            <div id="lecture-paper"><h1 class="markdown-unit revealed">CHƯƠNG C4: CÁC PHẢN ỨNG HÓA HỌC (CHEMICAL REACTIONS)</h1>
+<p class="markdown-unit revealed">Dưới đây là bản bổ sung đáp án và hình ảnh minh họa cho toàn bộ 15 câu hỏi giữa bài và 5 bài tập ôn tập cuối chương.</p>
+<p class="markdown-unit revealed">Mỗi câu được trình bày theo cấu trúc:</p>
+<ol>
+<li class="markdown-unit revealed">Câu hỏi: Giữ nguyên nội dung và các ý nhỏ.</li>
+<li class="markdown-unit revealed">Trả lời: Đáp án chi tiết, rõ ràng, có giải thích kiến thức hóa học.</li>
+<li class="markdown-unit revealed">Hình ảnh minh họa: 3 hình cho mỗi câu, ưu tiên hình thí nghiệm, dụng cụ, hiện tượng và mô hình phản ứng hóa học.</li>
+</ol>
+<h1 class="markdown-unit revealed">I. CÂU HỎI GIỮA BÀI (IN-CHAPTER QUESTIONS)</h1>
+<h2 class="markdown-unit revealed">1. Phần C4.01: Phản ứng hóa học và phương trình (Chemical reactions and equations)</h2>
+<h3 class="markdown-unit revealed">Câu C4.01. Biến đổi vật lý và biến đổi hóa học</h3>
+<p class="markdown-unit revealed">Câu hỏi: Cho biết các biến đổi sau đây là biến đổi vật lý (physical) hay biến đổi hóa học (chemical):</p>
+<p class="markdown-unit revealed">Trả lời:</p>
+<table class="markdown-unit revealed">
+<thead>
+<tr>
+<th>Ý</th>
+<th>Hiện tượng</th>
+<th>Phân loại</th>
+<th>Giải thích</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a</td>
+<td>Nóng chảy của đá</td>
+<td>Vật lý</td>
+<td>Chỉ thay đổi trạng thái từ rắn sang lỏng, vẫn là H₂O.</td>
+</tr>
+<tr>
+<td>b</td>
+<td>Đốt cháy magie</td>
+<td>Hóa học</td>
+<td>Magie phản ứng với oxi tạo chất mới MgO.</td>
+</tr>
+<tr>
+<td>c</td>
+<td>Thăng hoa của đá khô</td>
+<td>Vật lý</td>
+<td>CO₂ chuyển từ rắn sang khí, không tạo chất mới.</td>
+</tr>
+<tr>
+<td>d</td>
+<td>Hòa tan đường vào nước</td>
+<td>Vật lý</td>
+<td>Đường phân tán trong nước, có thể thu hồi bằng bay hơi nước.</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit revealed">Ghi nhớ:</p>
+<ul>
+<li class="markdown-unit revealed">Biến đổi vật lý: Không tạo ra chất mới.</li>
+<li class="markdown-unit revealed">Biến đổi hóa học: Có chất mới được hình thành.</li>
+</ul>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/AKHq-6O3371SWEe-QSEZyNiiWfeN9R0l5w0Pajfp__J8_82BOtICI1NMpAuBqi51vQ4mDxEZ82UbuOjDjw7ny4yXZm8B243QO-SOYK0PCWyOgG9Y0kFHDjBc5lOFAiLW2vPhpAs9-SX_Ryg9r5Uss6Eput-TFD9qfSfElLFXSRI?purpose=inline" alt="Transformation physique et transformation chimique - myMaxicours"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">![5.3.2 Combustion - Changes Around Us: Phy - !<a href="https://images.openai.com/static-rsc-4/niQPXLHjnkLLKh2MFSG2-ujswnq7t--l15tZzkBT_3GFpNOq-rrAgv7kjqb4M8Vi-S1vom2SXSSIRen1fOay4Akplonw3p9ENyGuXNWzJDb7Q8j8p6tu7tLAptiPCFCavK9AnoA1C0XkqtDlnl5mrDBzb0hquAdvX9Y0gtkZdHM?purpose=inline">Teachoo]</a></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/qZPtKWriCT1Svywl7_FOCIuQHorbo4VoZXmyXbKShXYM2kaGJMj-lRUdqUJcp64yc7sDHlRAOt0cScR8E5vh7vSpwckz76a6Lqcbhgwca6tNs0bbhXbR7y2aymCUr9Ak1tpNapT4uNl8JdytFQOxgiYvV1vDvTsLIFyBoZJioSE?purpose=inline" alt="How Does Dry Ice Turn Into A Gas at Matthew Mendelsohn blog"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h3 class="markdown-unit revealed">Câu C4.02. Phản ứng tỏa nhiệt và thu nhiệt</h3>
+<p class="markdown-unit revealed">Câu hỏi: Cho biết các quá trình sau đây là tỏa nhiệt (exothermic) hay thu nhiệt (endothermic):</p>
+<p class="markdown-unit revealed">Trả lời:</p>
+<table class="markdown-unit revealed">
+<thead>
+<tr>
+<th>Ý</th>
+<th>Quá trình</th>
+<th>Phân loại</th>
+<th>Giải thích</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a</td>
+<td>Ngưng tụ hơi nước</td>
+<td>Tỏa nhiệt</td>
+<td>Hơi nước giải phóng nhiệt khi chuyển thành lỏng.</td>
+</tr>
+<tr>
+<td>b</td>
+<td>Đốt cháy magie</td>
+<td>Tỏa nhiệt</td>
+<td>Giải phóng nhiều nhiệt và ánh sáng.</td>
+</tr>
+<tr>
+<td>c</td>
+<td>Thêm H₂SO₄ đặc vào nước</td>
+<td>Tỏa nhiệt</td>
+<td>Quá trình hòa tan giải phóng nhiệt mạnh.</td>
+</tr>
+<tr>
+<td>d</td>
+<td>Bay hơi chất lỏng</td>
+<td>Thu nhiệt</td>
+<td>Chất lỏng hấp thụ nhiệt để chuyển thành khí.</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit revealed">Ghi nhớ:</p>
+<ul>
+<li class="markdown-unit revealed">Tỏa nhiệt: Nhiệt truyền từ hệ ra môi trường.</li>
+<li class="markdown-unit revealed">Thu nhiệt: Hệ hấp thụ nhiệt từ môi trường.</li>
+</ul>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/gNB4Yosnad8NdtL8ssakikzZHcrANzuDyEUxCezyYpWT48YPhvO9Cdt0ZFJa7EkcriZjAsoZSkpzwp9hQsaetOPooEKNT7Msdbpt1c9GJs3bJaPBxJYV-etv7MEIZobLBbtmOEIuAYl0xj4e0ajP_LjXdwvsQYxHD6o17gPoTMTRvS6Zk2jRxTiBOm2Z_RNp?purpose=inline" alt="Condensation explanation as water droplets formation on glass outline diagram"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/kka7sSviQ_9WFnz_FmY9pMNmketrmaRxM9futBfDqDqkZQTpeufPwqvLWjB31N5kj2BAPj30IrBePc4G-FE3KGjf2VXNqHXwp5eNdOHY80ZLnpkWn4X5t8bLRhzwD6lG809i3ptY3kQO7xd9VzOLBdwmXOCC4ThYntHgmijjLYM?purpose=inline" alt="Vi brenner magnesium - Naturfag (IM) - NDLA"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/PKK2vJjKscO3oiSEDG6ZFmj18QsC6izKa3S0GALjN9B5Q-ku4bHci-ppKQ1eLB1_utfb2I29mt4fwUM_mQ_PRW0N7-O2yfh8i82IIJaMqoLbQzaAkdxuf9AX-_LM0QGTBKn3vIEO7xV4besONMV60cu2oLcGzTUHRftKEtj0mhE?purpose=inline" alt="Сярна Киселина"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed">4</p>
+<h3 class="markdown-unit revealed">Câu C4.03. Dấu hiệu nhận biết phản ứng hóa học</h3>
+<p class="markdown-unit revealed">Câu hỏi: Dấu hiệu quan trọng nhất chứng tỏ một phản ứng hóa học đã xảy ra là gì?</p>
+<p class="markdown-unit revealed">Trả lời:</p>
+<p class="markdown-unit revealed">Dấu hiệu quan trọng nhất là sự hình thành chất mới có tính chất hóa học khác với chất ban đầu.</p>
+<p class="markdown-unit revealed">Một số dấu hiệu thường gặp:</p>
+<ul>
+<li class="markdown-unit revealed">Có khí thoát ra (sủi bọt).</li>
+<li class="markdown-unit revealed">Xuất hiện kết tủa.</li>
+<li class="markdown-unit revealed">Thay đổi màu sắc.</li>
+<li class="markdown-unit revealed">Phát sáng hoặc thay đổi nhiệt độ.</li>
+<li class="markdown-unit revealed">Xuất hiện mùi mới.</li>
+</ul>
+<p class="markdown-unit revealed">Lưu ý: Những dấu hiệu trên không phải lúc nào cũng chứng minh chắc chắn có phản ứng hóa học. Cần xác định có chất mới được tạo thành hay không.</p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/h5HiqdEEeTJTj-RO5spJTJe-wQFJASmZ8NNJflWF0GG1xYZARY11Kg8GEKv7-rrskK2k0ZohQ8Vl7RyE6DeasJJkXPBEiCLjiVqWBnS9Aqx6wEaItvi6SohRSkqeSB_ilTLF4opyfskhvJBPnbo2KK9ybq1gh_eszqRypR72pW0?purpose=inline" alt="PPT - Understanding the Periodic Table and Chemical Reactions PowerPoint Presentation - ID:1781391"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/ww0Oox7VlbGGgrXPud6gKuE5eRf8GHu5YX3o1yp1FHTaOEa3eze7IIS_IfkZQaHkAJo5YM4iBisJxjyWqyLCTiXHCH1gr3q5wDFpH2YdyDck7uC-7mkrKDqo2hJlrdAg6i6hn9SCWfDFxX9ma72jBybo0ekYIzrk7fXD9H98VxY?purpose=inline" alt="Reaktionsgleichungen | Chemie | SchuBu"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit revealed"><div class="image-wrapper markdown-unit revealed"><img src="https://images.openai.com/static-rsc-4/LLk0SQmEt_IueKHtCKNfez9eSSvDNVUNotWXKXAaHQjRkLsUqmXbgDY1uBlqZ_9Le73JMZvxwzN2gvFlWyW1ylenBs_SlA4wCEWzMV9cGG8jrdq9T8SQ6h2VllfcgoqbIGE8-xpprarKtnLN44fEh_OR2zBAo9lTRk7aqdZ-U5A?purpose=inline" alt="A rare iodine polymer discovery is key to starch-iodine mystery"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h2 class="markdown-unit revealed">2. Phần C4.02: Phương trình cho các phản ứng hóa học (Equations for chemical reactions)</h2>
+<h3 class="markdown-unit revealed">Câu C4.04. Viết phương trình chữ</h3>
+<p class="markdown-unit revealed">Câu hỏi: Viết phương trình chữ cho các phản ứng được mô tả dưới đây.</p>
+<p class="markdown-unit revealed">Trả lời:</p>
+<p class="markdown-unit revealed">a) Sắt bị gỉ:</p>
+<p class="markdown-unit revealed">Sắt + Oxi → Sắt(III) oxit</p>
+<p class="markdown-unit revealed">b) Phản ứng trung hòa:</p>
+<p class="markdown-unit active">Natri hydroxit + Axit sunfuric → Natri sunfat + Nước</p>
+<p class="markdown-unit">c) Natri phản ứng với nước:</p>
+<p class="markdown-unit">Natri + Nước → Natri hydroxit + Khí hiđro</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/igrZP_4mhKmtSWdzD_qtaUsNxEna04dRC1wp8i2X7DYDPhGmcz1O70BX573xwv3bXGn4YIpy-EU-jraqLt-SACWQuBkywHm_mGzBKnc0hI10opkChnZKK7jhIWnE-uBfwjlDvUcOrdP_VYdaZzBPKNsFMksAXUE3enxMX-rE2Zo?purpose=inline" alt="Corrosions Protection of Fasteners | Strong-Tie | Together we're helping build safer stronger structures"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/PszBr7g_H1wH8zlbtkix1_OmCXeTET8OzNnQA14xQ1sEKONC70tTALFIqvRs29vxTJyMJEcSIKfhz5xOa3FKU1Nmf9nFd1BwiiIk16JYCQA3Uiiy3znq7nJt0MNMLMydmd5QPhexoNw4612D-6SyLDAfwCm7ATsbS2KBuuLyF4M?purpose=inline" alt="Sulphuric Acid Added To Water by Science Photo Library"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/illRh2yl1S4GZRnqnRUEffRwuRGXmLSoppp-glJ4PQRpYOtzdOIkEcZCBlIvnSdHOAF5qSdmvebYwmt5kGBpHeeeOFzwJj0smkPvHIE74k0eBXI3ImolSDO9amvmZ_piXEccahWzb2FdjGMyfRs4aWh9SPFtXUiEfbU4B2IVMf4?purpose=inline" alt="Reactions of the Period 3 Elements - CIE A Level Chemistry"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h3 class="markdown-unit">Câu C4.05. Cân bằng phương trình hóa học</h3>
+<p class="markdown-unit">Câu hỏi: Chép lại và cân bằng các phương trình hóa học sau.</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Đồng phản ứng với oxi:</p>
+<p class="markdown-unit">2Cu + O₂ → 2CuO</p>
+<p class="markdown-unit">b) Tổng hợp amoniac:</p>
+<p class="markdown-unit">N₂ + 3H₂ ⇌ 2NH₃</p>
+<p class="markdown-unit">c) Natri phản ứng với oxi:</p>
+<p class="markdown-unit">4Na + O₂ → 2Na₂O</p>
+<p class="markdown-unit">d) Phản ứng trung hòa:</p>
+<p class="markdown-unit">2NaOH + H₂SO₄ → Na₂SO₄ + 2H₂O</p>
+<p class="markdown-unit">e) Nhôm phản ứng với clo:</p>
+<p class="markdown-unit">2Al + 3Cl₂ → 2AlCl₃</p>
+<p class="markdown-unit">f) Sắt phản ứng với hơi nước:</p>
+<p class="markdown-unit">3Fe + 4H₂O → Fe₃O₄ + 4H₂</p>
+<p class="markdown-unit">Giải thích: Khi cân bằng phương trình, số nguyên tử của mỗi nguyên tố ở hai vế phải bằng nhau. Chỉ thay đổi hệ số trước công thức hóa học, không thay đổi chỉ số trong công thức.</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/24vT-KUMSm6Y1Cun4r4blzUcULGFDMsl4x5WVF7SAVfzYfKTN5BDObCZYGi9g69Q9J0dog-_fKksep77vwN9bXjt7ZgjEZY591KNpVyME3k8E1SntsUSzCbQ9xnJ-Ia37NsaXrH1BuQZIYq6ggINMpQEABpUtvsPTzPqt9fFHXY?purpose=inline" alt="China dish containing copper power 1.2.5 Oxidation and Reduction Activity 1.11 Wire gauze -Tripod stand ? Heat a china dish containing about 1g copper powder (Fig. 1.10). ? What do you observe? Burner The surface of copper powder becomes coated with black copper(II) oxide. Why has this black substance formed? This is because oxygen is added to copper and copper oxide is formed. Figure 1.10 Oxidation of copper to copper oxide 2Cu + O2 Heat 2CuO (1.28) If hydrogen gas is passed over this heated material (CuO), the black"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/LSZxqBo8hfrBBFddH7jiVagKaYBFoJNx7y1eLGWiC_GnHzASiGOpKMxcISE0tKh0pyFvwlHHG4I9TQLLDsrsXfIlHAaGioRrBHkul5rKVGedwgBW12nfO-zMgIRoY2hnUkGMPhpH3nc1HF8dNAaOoYgJEGw3GHOneKn8PyZLJaQ?purpose=inline" alt="What Iron Catalyst Is Used In The Haber Process at Ernest Baker blog"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/i47D6LQKGLSUJe7ZJOtyPK16NfBzNV49-BfW5HlarZh7LFcyN7J5HK1bTN1UWStiY7A2YIbmZRvAjVSxw1mVzmZ5sMuIabODSgB8S5kQAyslyHYslyo75le0rrhb7FPRXTcb5wAVkEqkQKBPgfsmezZpeEL16UyewyY4AJuPJFY?purpose=inline" alt="Chem_1.8 The Alkali Metals | Teaching Resources"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h2 class="markdown-unit">3. Phần C4.03: Các loại phản ứng hóa học (Types of chemical reactions)</h2>
+<h3 class="markdown-unit">Câu C4.06. Phản ứng thế của halogen</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Clo phản ứng với dung dịch potassium bromide:</p>
+<p class="markdown-unit">Phương trình chữ:</p>
+<p class="markdown-unit">Clo + Kali bromua → Kali clorua + Brom</p>
+<p class="markdown-unit">Phương trình hóa học:</p>
+<p class="markdown-unit">Cl₂ + 2KBr → 2KCl + Br₂</p>
+<p class="markdown-unit">Hiện tượng: Dung dịch xuất hiện màu vàng cam hoặc nâu đỏ của brom.</p>
+<p class="markdown-unit">b) Dung dịch iot không phản ứng với potassium chloride vì:</p>
+<ul>
+<li class="markdown-unit">Clo hoạt động hóa học mạnh hơn brom và iot.</li>
+<li class="markdown-unit">Iot hoạt động yếu hơn clo.</li>
+<li class="markdown-unit">Iot không thể đẩy ion chloride (Cl⁻) ra khỏi hợp chất KCl.</li>
+</ul>
+<p class="markdown-unit">Quy luật hoạt động của halogen:</p>
+<p class="markdown-unit">F₂ &gt; Cl₂ &gt; Br₂ &gt; I₂</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/tTvDvJ7SaXE4FlptaoOO2TiP8tIi7Q8MqGZL-Cym2_R6aQMYuZUomTJ7jJ6syu6duMrqupKjQv9j9mW7qksnfuqq9eUWEILEPrnhbIeCDTgd0uos8GZQE8pjicPA6quvKqyLQKQgybUnilQsvcAQOTlsSXZH7Qig1xZJy8640J8?purpose=inline" alt="R3.2.3 Activity and Periodic Trends | IB Chemistry"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/8s1zySBGsR0R-oni3YJZ5-VFe81Wo5Xl8fUQhmqqN1je-WHgW3RY4GREZhn75V5U77SZJsaA8n5yMWNeCiSxZviBifo5AyGEVOTETXPO1ZC2v-ulhA9BGnvYlgQWd5SBI5SItR7BaYwCz5K_aoGL9l-p7YMZOlYcQi8vOe9T0lU?purpose=inline" alt="Groups in the periodic table Notes — Edexcel GCSE"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/aphDFycPefRXLslq9ipvjpbpWWv6s6eSv0EUiGGMKFkaRSD3mkkbMQCo3h0ERB-7GSEi8VbLPI0blrRk7owndSY5jtUR9CobDztmw_xO0gjpXuZAOiqXlSZ4iVKHhgpHrdTq4-tFkeC2RIFqjfhj9Xj8idqpcgcqI_Dj0u0G6jQ?purpose=inline" alt="Halogen Displacement Reactions | GCSE Chemistry Revision"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">8</p>
+<h3 class="markdown-unit">Câu C4.07. Phân loại phản ứng hóa học</h3>
+<p class="markdown-unit">Trả lời:</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Ý</th>
+<th>Phản ứng</th>
+<th>Loại phản ứng</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a</td>
+<td>Hexan + Oxi → CO₂ + H₂O</td>
+<td>Cháy (combustion)</td>
+</tr>
+<tr>
+<td>b</td>
+<td>CaCO₃ → CaO + CO₂</td>
+<td>Phân hủy (decomposition)</td>
+</tr>
+<tr>
+<td>c</td>
+<td>Mg + CuO → MgO + Cu</td>
+<td>Oxy hóa – khử (redox)</td>
+</tr>
+<tr>
+<td>d</td>
+<td>HCl + NaOH → NaCl + H₂O</td>
+<td>Trung hòa (neutralisation)</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Giải thích:</p>
+<ul>
+<li class="markdown-unit">a) Hexan cháy trong oxi, giải phóng năng lượng.</li>
+<li class="markdown-unit">b) Một hợp chất bị phân hủy thành hai chất đơn giản hơn.</li>
+<li class="markdown-unit">c) Magie nhường electron, ion đồng nhận electron.</li>
+<li class="markdown-unit">d) Axit phản ứng với bazơ tạo muối và nước.</li>
+</ul>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/eVTFkRcBLFahSRTEC4v7MKeWreZA_vHzDB5viB1jlgr5jbo1HrpMNLhFPGtEiSlh3FkTMmqS4M4ALHO72sCa1zKOBdwNCAPL3tqK8_3LHfFCLuAtXKXqDdDk4K28KBowIwuNk9pcnuyiMJ6jEnSj999d2VBaogtX22XhmNvqFp0?purpose=inline" alt="Hoření uhlovodíků › Chemie › Uč se online! ✍️ - Vše co potřebuješ do školy"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/YS819EFTyb6CSsfQ5Hcz3DdLqu7jhd8COeqkEi3VTQQirk4wcyuIqQyJCW0xZn3JIE-43Yjb0VqVWLFLCB_evFVlUUq_DiUG9SsHK_hfVCFfz3OYAlD5FlEdHt8ZWJuY28SM8bNGpKpMmbZ3tn6k9WUPn0o2rzUFeh1G1ynUyf0?purpose=inline" alt="This one thermal decomp | PPTX"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/-I8AVOhJwZs7ezFqBJTozgorYv5BanFslP0L8aEu133Ex8fLCLNYKcorUyHifMuM655d5HrORLjHOrX0IJ7DPhzSDD0GGB-ea4tk1e55J7c8fP28LtKbX7X11AU0pt6uCAkH-RAefeXksRuNo2QVK6W90PpBHFEwu42v6GVM14P_pqX3DTWWQDaBtgb-GdnX?purpose=inline" alt="Macro image of magnesium reacting with copper oxide"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">4</p>
+<h3 class="markdown-unit">Câu C4.08. Viết phương trình chữ và phương trình hóa học cân bằng</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Natri và nước:</p>
+<ul>
+<li class="markdown-unit">Phương trình chữ: Natri + Nước → Natri hydroxit + Hiđro.</li>
+<li class="markdown-unit">Phương trình hóa học:</li>
+</ul>
+<p class="markdown-unit">2Na + 2H₂O → 2NaOH + H₂</p>
+<p class="markdown-unit">b) Magie và hơi nước:</p>
+<ul>
+<li class="markdown-unit">Phương trình chữ: Magie + Hơi nước → Magie oxit + Hiđro.</li>
+<li class="markdown-unit">Phương trình hóa học:</li>
+</ul>
+<p class="markdown-unit">Mg + H₂O(g) → MgO + H₂</p>
+<p class="markdown-unit">c) Canxi và oxi:</p>
+<ul>
+<li class="markdown-unit">Phương trình chữ: Canxi + Oxi → Canxi oxit.</li>
+<li class="markdown-unit">Phương trình hóa học:</li>
+</ul>
+<p class="markdown-unit">2Ca + O₂ → 2CaO</p>
+<p class="markdown-unit">d) Brom và dung dịch potassium iodide:</p>
+<ul>
+<li class="markdown-unit">Phương trình chữ: Brom + Kali iodua → Kali bromua + Iot.</li>
+<li class="markdown-unit">Phương trình hóa học:</li>
+</ul>
+<p class="markdown-unit">Br₂ + 2KI → 2KBr + I₂</p>
+<p class="markdown-unit">e) Kẽm và dung dịch đồng(II) sunfat:</p>
+<ul>
+<li class="markdown-unit">Phương trình chữ: Kẽm + Đồng(II) sunfat → Kẽm sunfat + Đồng.</li>
+<li class="markdown-unit">Phương trình hóa học:</li>
+</ul>
+<p class="markdown-unit">Zn + CuSO₄ → ZnSO₄ + Cu</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/Wt3VUCEurFMgdfTMXpqwMVeiIBkQNmNzMr-cMnc_KV5Kza9yNjG7M06JLsnMd0D4WBEx0Kmkcak3m8ZoxDJ82tmSLbkjFpFlV1qwoUOjDISWZYr5W99VdTdOoFg6FqsinhijXYpZ1YZeBOQKPo9TMAYYQ9a9PoP6d2HnzN6kp6Y?purpose=inline" alt="Reaction of Sodium With Water - Sally Duncan"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/FfMsY6HOs-3onecOyXUrAEKwwdU4KWA-f3xFi6rlq3-H4klLVY9yGQkTP7kkxNexf09Lr0U_M5gji3fN7JpwLztiHnQfR-o5GM7cV7npUGDSJx05D9fJR1BKEIPDGRiWoAkVkgkll2wiiNpx-OQGd0nCJlQku8vDQ7GLJrHxfmI?purpose=inline" alt="Magnesium introduced to steam produces a bright flame"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/gcw5yn4QkQUXKz_0Si1VKGBxSmhE_Wvhqfx5AVFetKcnYYhioIWdPfQXBNgXJXb-4YqD6WOIcGWzGYr0jwDuEykNMv8hlJNtm2z__LPxKLyp_No7IZllNmUVb0U0OdF_dK04nE7nu45d3dlS3KvG_DeREIai0qsb-CKZgx1LdzQ?purpose=inline" alt="Barwienie płomienia palnika"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">4</p>
+<h2 class="markdown-unit">4. Phần C4.04: Phân tích sâu về phản ứng Redox</h2>
+<h3 class="markdown-unit">Câu C4.09. Ký hiệu trạng thái và phương trình ion thu gọn</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Ý nghĩa các ký hiệu:</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Ký hiệu</th>
+<th>Tiếng Anh</th>
+<th>Ý nghĩa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>(s)</td>
+<td>Solid</td>
+<td>Chất rắn</td>
+</tr>
+<tr>
+<td>(l)</td>
+<td>Liquid</td>
+<td>Chất lỏng</td>
+</tr>
+<tr>
+<td>(aq)</td>
+<td>Aqueous</td>
+<td>Chất tan trong nước</td>
+</tr>
+<tr>
+<td>(g)</td>
+<td>Gas</td>
+<td>Chất khí</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Áp dụng:</p>
+<p class="markdown-unit">Na₂CO₃(s) + 2HCl(aq) → 2NaCl(aq) + H₂O(l) + CO₂(g)</p>
+<ul>
+<li class="markdown-unit">Na₂CO₃: Natri cacbonat rắn.</li>
+<li class="markdown-unit">HCl: Axit clohydric trong dung dịch.</li>
+<li class="markdown-unit">NaCl: Natri clorua trong dung dịch.</li>
+<li class="markdown-unit">H₂O: Nước lỏng.</li>
+<li class="markdown-unit">CO₂: Khí cacbon đioxit.</li>
+</ul>
+<p class="markdown-unit">b) Phương trình ion thu gọn:</p>
+<p class="markdown-unit">i) Bạc nitrat + Natri clorua</p>
+<p class="markdown-unit">Ag⁺(aq) + Cl⁻(aq) → AgCl(s)</p>
+<p class="markdown-unit">ii) Natri sunfat + Bari nitrat</p>
+<p class="markdown-unit">Ba²⁺(aq) + SO₄²⁻(aq) → BaSO₄(s)</p>
+<p class="markdown-unit">iii) Axit clohydric + Potassium hydroxide</p>
+<p class="markdown-unit">H⁺(aq) + OH⁻(aq) → H₂O(l)</p>
+<p class="markdown-unit">iv) Axit clohydric + Đồng(II) cacbonat</p>
+<p class="markdown-unit">CuCO₃(s) + 2H⁺(aq) → Cu²⁺(aq) + H₂O(l) + CO₂(g)</p>
+<p class="markdown-unit">Ghi nhớ: Phương trình ion thu gọn chỉ giữ lại những ion hoặc chất thực sự tham gia phản ứng; loại bỏ các ion khán giả (spectator ions).</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/ww0Oox7VlbGGgrXPud6gKuE5eRf8GHu5YX3o1yp1FHTaOEa3eze7IIS_IfkZQaHkAJo5YM4iBisJxjyWqyLCTiXHCH1gr3q5wDFpH2YdyDck7uC-7mkrKDqo2hJlrdAg6i6hn9SCWfDFxX9ma72jBybo0ekYIzrk7fXD9H98VxY?purpose=inline" alt="Reaktionsgleichungen | Chemie | SchuBu"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/BCPfSvX9R7JyLy6KPxwtSMsgPkawnms-wpLW60l-yakrodKjSL0-vyBXsWqoT4Z5uiUsd23ClV61AeVTXWmvZa6aFw_yhVC1MIzJqB2hYPYs_PPljiuzsiLWanTcg6CyJQ05bwpD-6_95Wq8LYaSj4vFo8PEEDoJa8Uigko7HHg?purpose=inline" alt="PPT - Chemistry 100(02) Fall 2013 PowerPoint Presentation, free download - ID:3174535"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/vTvQoqP47ahqH0xqRxxxr9Dyun3EJ-wq0ByQPLy1vvnuWwD0jA0POh9N5238kZVvpcXxuIrzylsiyfdompfV1tgbmJDJ9dFn7UH4othNHKkukiI4qNVmfeAOioKSye7VossHTt6U50CqaLkwo_VzjgNzJkvyapJRdwU6QGSTJtA?purpose=inline" alt="PPT - Net Ionic Equations Continued! PowerPoint Presentation, free download - ID:4788785"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h3 class="markdown-unit">Câu C4.10. Định nghĩa oxy hóa và khử</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Đoạn phát biểu hoàn chỉnh:</p>
+<p class="markdown-unit">“Khử (reduction) là sự nhận electron; oxy hóa (oxidation) là sự mất electron. Trong phản ứng redox, chất oxy hóa nhận electron; chính chất oxy hóa bị khử trong phản ứng.”</p>
+<p class="markdown-unit">Ví dụ:</p>
+<p class="markdown-unit">Mg + Cu²⁺ → Mg²⁺ + Cu</p>
+<ul>
+<li class="markdown-unit">Mg → Mg²⁺ + 2e⁻: Magie mất electron, bị oxy hóa.</li>
+<li class="markdown-unit">Cu²⁺ + 2e⁻ → Cu: Ion đồng nhận electron, bị khử.</li>
+<li class="markdown-unit">Cu²⁺ là chất oxy hóa.</li>
+<li class="markdown-unit">Mg là chất khử.</li>
+</ul>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/hTXq4MMSu_hZvEAdX4xpoeoh5RAGVIGwJNeAlATcIQXF5VbWS0ydfKP6VkhXRSlFqqcyELsq2HUEXIOuN3bQDitWlgVFtNOr8p1FI3Q8m7vjGRQWrCsuxkOL2de4YSvOC7BQ5FfcSByH80pdfBRFMYX0ZEWTbE-SyJmA16e3MWw?purpose=inline" alt="AS Chemistry: Redox Reactions and Group 2 Elements - Owlcation"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/PK5cl6_roB6vIY5DHbMLRLHCZ3Iuvf2fI_J_7K6B7P4k_Z7x-sFnqwYhmatcLuXFAA2sQalfR17VaQYUtgJtg4h6W_5cGBWmDDv_bVc2m25VNk-AbkYrrHE-p6ilAjCWNcMHLiykxO-vB0tDXlqZA9uuFa5Svw1J6qzxGxykGRo?purpose=inline" alt="Identifying the products of chemical reactions | OCR Gateway C4 | revisechemistry.uk"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h2 class="markdown-unit">5. Phần C4.05: Điện phân (Electrolysis)</h2>
+<h3 class="markdown-unit">Câu C4.11. Điện phân chì(II) bromua nóng chảy</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Điện phân là quá trình sử dụng dòng điện một chiều để phân hủy hợp chất thành các chất đơn giản hơn.</p>
+<p class="markdown-unit">b) PbBr₂ rắn không dẫn điện vì các ion Pb²⁺ và Br⁻ bị giữ cố định trong mạng tinh thể, không thể di chuyển tự do.</p>
+<p class="markdown-unit">c) Hơi xuất hiện ở cực dương có màu nâu đỏ do khí bromine (Br₂).</p>
+<p class="markdown-unit">d) Thực hiện trong tủ hút vì bromine là khí độc, gây kích ứng mạnh đường hô hấp và mắt.</p>
+<p class="markdown-unit">e) Cực âm còn gọi là cathode (catot).</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/c3i4mMRMjkbfrj73ldZ-TepNddUXHxbc14tKSptigflXXgbUeuo9-pzvzg3-Xi0AsXkvwa-HArXsAWXUhWOgNA6-Ks06QMl-lldoEok7jLh7ahEX4v7jTgFCo8kuezYLdi4hIJzbAwxwlDp6wzv79kxzDx5m1fNJkMwfUYE3ZE0?purpose=inline" alt="Electrolysis of molten ionic compounds - Revision Guide | MathsGenie"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/KpYCyRQrslVrQpUxVy5PN78OdEpbwDHwelBxqfYHaOou_-mwacbJQIP5WErhGdxouAUdGVEapXe3aZR3LvdsKJrLw5WS_7ztV5a9r_klezNld6rlmVoKorSvzcLqYT4qYcln241ZyyxpwMolQOKUb1UNCpfirDKJoYDbDfwDjHY?purpose=inline" alt="Electrolysis - online presentation"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/W1VUZHVoom6Ta-X1YMD-4GfIrofTOhoREWd9R69uHn2PSt4GIhcdd3VYOxBeGp85gnaaiVArmCEtm_H8ySU1NF0XAlisNxTzBVcV4EYYJMxESuiOGFH0Nndvuii4aFmmC-CTZjBoHpYYqLQtuR3A1MpUBEKaHWxApP0LACVHqqw?purpose=inline" alt="Br₂ là gì ? Brom là gì và đặc điểm nhận dạng"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h3 class="markdown-unit">Câu C4.12. Mạ đồng một vật bằng kim loại</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Vật cần mạ được đặt ở cực âm (cathode).</p>
+<p class="markdown-unit">Tại đây, ion đồng nhận electron và tạo thành đồng kim loại bám lên bề mặt vật:</p>
+<p class="markdown-unit">Cu²⁺ + 2e⁻ → Cu</p>
+<p class="markdown-unit">b) Có thể sử dụng dung dịch đồng(II) sunfat (CuSO₄) làm chất điện phân.</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/nSZoG0HHTa9xYi5nczhAn6QLZ_i9fAbjH60yjz4VLRPIZAxa8FDew1IfvRafJIyrlj7oHRacfgawUuZtBhp_m4tUAw-iZpIYd6-Ux5ztcvzyQo0l8v3mAn2j7mQtX8vZY7SRbOh6gAKpV2dMUuZQ0qRpGESFwLhHt9o9rQTgqig?purpose=inline" alt="Electroplating With Copper Art Print by Science Photo Library - Science Photo Gallery"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/WeagSRMSVEmCETbdHG6rucbGOEUXKtz1qVnDH73GWXsObyhzVtQncHHa232fN8MBK8GD-tes7ypOY_4IHUduECjnF6HaEgqQkneegRJ6RulgI3IH-WyrdhvxrBC1GR3ZuO1sq0mtmvdk5sxF0Q2j5C49VP7nLj56jIcgIz0VUxI?purpose=inline" alt="Electrochemistry Explained: Diagrams &amp; Reactions | AI Art Generator | Easy-Peasy.AI"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/2GLX9PskX7o_pJDB_Oqa_Kjj_KUxnS5PEyYqAizxMR3h_zz_mBSsBUQzb68gwrEV-HbZNt0BOjS-cFxhrI1vNgJYFvvuj8A3eUmca6NH07DYQr9bYOrbln4y95f05LEF3GICfB73yHqAVFkQakcO1FQTv5ep4ROJg0baXySEo00?purpose=inline" alt="Diagram of shape dimensions"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">7</p>
+<h3 class="markdown-unit">Câu C4.13. Phản ứng tại các điện cực khi điện phân PbBr₂</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Phản ứng xảy ra tại cực dương:</p>
+<p class="markdown-unit">2Br⁻ → Br₂ + 2e⁻</p>
+<p class="markdown-unit">Ion bromide mất electron tạo thành bromine.</p>
+<p class="markdown-unit">b) Phản ứng tại cực âm:</p>
+<p class="markdown-unit">Pb²⁺ + 2e⁻ → Pb</p>
+<p class="markdown-unit">Đây là phản ứng khử vì ion Pb²⁺ nhận 2 electron để tạo thành nguyên tử chì.</p>
+<p class="markdown-unit">Ghi nhớ:</p>
+<ul>
+<li class="markdown-unit">Cathode (cực âm): Xảy ra quá trình khử.</li>
+<li class="markdown-unit">Anode (cực dương): Xảy ra quá trình oxy hóa.</li>
+</ul>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/ht40a13Ebd_-IOOLO15PMtO_sWRGhNWmX2IML_xedPGLKp7hbhhh4T0vhFruy6rUmR4GIRIDekI-LC8ocnjCxv7_SZZY9z_1b80pm5lmD2IoYrU1GDHJppdhDr1HEgLRs7-scksmf9LhrNtYEjqtvUZqb-xtwP8J6k3-ojpj3zA?purpose=inline" alt="Electrolysis of Molten Ionic Compounds | WJEC GCSE Chemistry Revision Notes 2016"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/KpYCyRQrslVrQpUxVy5PN78OdEpbwDHwelBxqfYHaOou_-mwacbJQIP5WErhGdxouAUdGVEapXe3aZR3LvdsKJrLw5WS_7ztV5a9r_klezNld6rlmVoKorSvzcLqYT4qYcln241ZyyxpwMolQOKUb1UNCpfirDKJoYDbDfwDjHY?purpose=inline" alt="Electrolysis - online presentation"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/-GNFS5ExSYHpcPpU9Qaaw_XFfwKY4FGdxTbZaCGE-b6yAlk_tRo4cN7kQXh6YAdNRtt9oOlT4cLRW_lDNk7vB0CyVpt7ImfYmsDXpMarELzylEt2xlB6k4UzC4OA555d73ESbsFmifke0PAQz2WUQA-ztJKRV9oyT6MykRBIIZ0?purpose=inline" alt="Electrolysis revision | PPT"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">7</p>
+<h3 class="markdown-unit">Câu C4.14. Dự đoán sản phẩm điện phân dung dịch</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a) Dung dịch bạc sunfat (Ag₂SO₄):</p>
+<ul>
+<li class="markdown-unit">Khí ở anode: O₂.</li>
+<li class="markdown-unit">Sản phẩm ở cathode: Ag.</li>
+<li class="markdown-unit">Chất còn lại trong dung dịch: H₂SO₄.</li>
+</ul>
+<p class="markdown-unit">Phương trình tại các điện cực:</p>
+<p class="markdown-unit">Cathode:</p>
+<p class="markdown-unit">Ag⁺ + e⁻ → Ag</p>
+<p class="markdown-unit">Anode:</p>
+<p class="markdown-unit">2H₂O → O₂ + 4H⁺ + 4e⁻</p>
+<p class="markdown-unit">b) Dung dịch sodium nitrate (NaNO₃):</p>
+<ul>
+<li class="markdown-unit">Khí ở anode: O₂.</li>
+<li class="markdown-unit">Sản phẩm ở cathode: H₂.</li>
+<li class="markdown-unit">Chất còn lại trong dung dịch: NaNO₃.</li>
+</ul>
+<p class="markdown-unit">Phương trình tại các điện cực:</p>
+<p class="markdown-unit">Cathode:</p>
+<p class="markdown-unit">2H₂O + 2e⁻ → H₂ + 2OH⁻</p>
+<p class="markdown-unit">Anode:</p>
+<p class="markdown-unit">2H₂O → O₂ + 4H⁺ + 4e⁻</p>
+<p class="markdown-unit">Giải thích: Na⁺ và NO₃⁻ không bị phóng điện trong điều kiện này. Nước bị điện phân, còn NaNO₃ vẫn tồn tại trong dung dịch.</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/GKUMvG-WF_a_G-AjUltqcDYb3HIAkjAY28ILuBkAZuwsx-XJ6NSIAJ8e2QLYVjRquWeA-e-bfxAzAteC-81zUuodpOw9YYZGCkBHrJ-D7blzuvgVZyU13UoC2arorFTl-6TXtvqjnoedBSsXxtOaz8R7yaVtQFAbVewuIHDJgGE?purpose=inline" alt="이공계 실험 | 전기 화학  |  전기 분해 | 의약품 연구 | IT"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/QhkpFs8-vDitw6O8UW8N7M3PQpiC0pxKIjAVIQ7jGVWd9omD55EzanXG2pm9TiJa_WN5Ws6dArOgbW-4LBHNNGCiKtk0CT4ytEETlG9nQVDF1jZTX6DMPUF8sdUNKtz6r2BQ2vCdSEOme7zrQWjZB-dhRkPlirXTrXIdM7Qva2M?purpose=inline" alt="electrolysis of different kind of solutions | PPT"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/OT8CoxC4CgOT94qRiBQor2to59TRTuIQcNNixNVcZkHYHrg9Qo_fQifTZ1AQ1B0HMzjcnE2GRS6KoacT8xig2vIrNCNqdld53fIVPsJw2mXXQeOZhp6lrls9WwYpORvLLiBIHunh1ItbmOjEd45Tt3vtWwYIYlJajh18YT4vs8E?purpose=inline" alt="Electrolysis of Aqueous Solutions | Cambridge (CIE) O Level Chemistry Revision Notes 2021"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h3 class="markdown-unit">Câu C4.15. Thiết bị mạ đồng</h3>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">a)</p>
+<p class="markdown-unit">i) Dải kim loại cần mạ là điện cực được nối với cực âm của nguồn điện (cathode). Không có sơ đồ X và Y đi kèm nên chưa thể xác định chính xác tên X hay Y.</p>
+<p class="markdown-unit">ii) Dải kim loại cần mạ là cathode (cực âm).</p>
+<p class="markdown-unit">b) Nếu thay điện cực đồng bằng than chì:</p>
+<ul>
+<li class="markdown-unit">Dung dịch CuSO₄ dần nhạt màu xanh.</li>
+<li class="markdown-unit">Ion Cu²⁺ bị khử thành đồng kim loại bám trên vật cần mạ.</li>
+<li class="markdown-unit">Than chì không bổ sung ion Cu²⁺ vào dung dịch nên nồng độ Cu²⁺ giảm.</li>
+</ul>
+<p class="markdown-unit">c) Đồ nhựa được phủ lớp than chì mỏng vì:</p>
+<ul>
+<li class="markdown-unit">Nhựa không dẫn điện.</li>
+<li class="markdown-unit">Than chì có khả năng dẫn điện.</li>
+<li class="markdown-unit">Lớp than chì tạo bề mặt dẫn điện để kim loại có thể được mạ lên.</li>
+</ul>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/Yv74nkhM5ZoTwMMUwnRiD1p2Rh0h21c290BdFH0d2wlrqHMdhnHNJavHBnBce4bhTkCLSblwLfTbT3-aFwQBNqpRtqhHBtm4XROKPOoBJPY_1tBG_dW4vZ32nf8OplGdfkhT9tLwUUDEQCW4ZELq-sNnKHE74FuUuG8fwgItdvE?purpose=inline" alt="Umicore MDS Successfully Installs Uyemura Thru-Cup EVF-YF9 Process"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/p6_dg13ZQqjj2lOmkG3M_JAD_x3qbNf_9L0ck-2sCJs-cawM6TFlwAaxmFThwpZ929773YT_bl3V0EkvxzVSz8TtJ1BWc_m61ejaQf_F2M2oxHtRPkPVWJIKFv7E4yqHcOZ_5jFAyUFNWx6Go5_s6FgVyiCo5QeGaO1jByhKltg?purpose=inline" alt="Electroplating on Plastic - Labelled diagram"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/2E6ZOCpoL-u5VyYghuwgDIjiuwELB2nNzigJu7vDF8RY_-gKplC0DmvFvekE-6Ellm3Jg73GI0bBOIDnu0I8H37xbIi5f5nfuAW-ChHpcLSyusfkRT_ICpbVfPwhk8yNv6u2d1q-tRac8DIczsbtQAU7N7_eukxux4l-RDE52Yk?purpose=inline" alt="3D Printed Plastic Carbon Paint Electroplating"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">7</p>
+<h1 class="markdown-unit">II. BÀI TẬP ÔN TẬP CUỐI CHƯƠNG 4 (END-OF-CHAPTER QUESTIONS)</h1>
+<h2 class="markdown-unit">Bài 1. Phân hủy nhiệt của muối cacbonat (Thermal decomposition)</h2>
+<p class="markdown-unit">Câu hỏi: Đun nóng bột đồng(II) cacbonat và kẽm cacbonat, quan sát sự thay đổi màu sắc và khí thoát ra.</p>
+<h3 class="markdown-unit">Trả lời</h3>
+<p class="markdown-unit">a) Bằng chứng cho thấy phản ứng hóa học đã xảy ra:</p>
+<ul>
+<li class="markdown-unit">CuCO₃ màu xanh chuyển thành chất rắn màu đen.</li>
+<li class="markdown-unit">ZnCO₃ màu trắng chuyển thành chất rắn màu vàng khi nóng.</li>
+<li class="markdown-unit">Cả hai trường hợp đều giải phóng khí làm đục nước vôi trong.</li>
+</ul>
+<p class="markdown-unit">b) Bằng chứng quan trọng và đáng tin cậy nhất:</p>
+<p class="markdown-unit">Sự hình thành chất khí CO₂ và chất rắn mới có tính chất khác chất ban đầu là bằng chứng rõ ràng cho phản ứng hóa học.</p>
+<p class="markdown-unit">Khí CO₂ làm đục nước vôi trong:</p>
+<p class="markdown-unit">CO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O</p>
+<p class="markdown-unit">c) Phương trình chữ:</p>
+<ul>
+<li class="markdown-unit">Đồng(II) cacbonat → Đồng(II) oxit + Cacbon đioxit.</li>
+<li class="markdown-unit">Kẽm cacbonat → Kẽm oxit + Cacbon đioxit.</li>
+</ul>
+<p class="markdown-unit">Phương trình hóa học:</p>
+<p class="markdown-unit">CuCO₃ <span><span class="katex"><span class="katex-mathml"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="1" style="font-size: 101.2%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-semantics><mjx-mrow><mjx-mover><mjx-over style="padding-bottom: 0.2em; padding-left: 0.993em;"><mjx-mpadded size="s"><mjx-block style="width: 1.433em; position: relative;"><mjx-rbox style="left: 0.3em; top: 0px; max-width: 1.433em;"><mjx-mi class="mjx-n"><mjx-c class="mjx-c394"></mjx-c></mjx-mi></mjx-rbox></mjx-block></mjx-mpadded></mjx-over><mjx-base><mjx-mo class="mjx-n"><mjx-stretchy-h class="mjx-c2192" style="width: 3em;"><mjx-ext><mjx-c></mjx-c></mjx-ext><mjx-end><mjx-c></mjx-c></mjx-end></mjx-stretchy-h></mjx-mo></mjx-base></mjx-mover></mjx-mrow></mjx-semantics></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mo stretchy="true" minsize="3.0em">→</mo><mpadded width="+0.6em" lspace="0.3em"><mi mathvariant="normal">Δ</mi></mpadded></mover></mrow><annotation encoding="application/x-tex">\xrightarrow{\Delta}</annotation></semantics></math></mjx-assistive-mml></mjx-container></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1.1113em; vertical-align: -0.011em;"></span><span class="mrel x-arrow"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.1003em;"><span class="" style="top: -3.322em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight x-arrow-pad"><span class="mord mtight"><span class="mord mtight">Δ</span></span></span></span><span class="svg-align" style="top: -2.689em;"><span class="pstrut" style="height: 2.7em;"></span><span class="hide-tail" style="height: 0.522em; min-width: 1.469em;"><svg width="400em" height="0.522em" viewBox="0 0 400000 522" preserveAspectRatio="xMaxYMin slice"><path d="M0 241v40h399891c-47.3 35.3-84 78-110 128
+-16.7 32-27.7 63.7-33 95 0 1.3-.2 2.7-.5 4-.3 1.3-.5 2.3-.5 3 0 7.3 6.7 11 20
+ 11 8 0 13.2-.8 15.5-2.5 2.3-1.7 4.2-5.5 5.5-11.5 2-13.3 5.7-27 11-41 14.7-44.7
+ 39-84.5 73-119.5s73.7-60.2 119-75.5c6-2 9-5.7 9-11s-3-9-9-11c-45.3-15.3-85
+-40.5-119-75.5s-58.3-74.8-73-119.5c-4.7-14-8.3-27.3-11-40-1.3-6.7-3.2-10.8-5.5
+-12.5-2.3-1.7-7.5-2.5-15.5-2.5-14 0-21 3.7-21 11 0 2 2 10.3 6 25 20.7 83.3 67
+ 151.7 139 205zm0 0v40h399900v-40z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.011em;"><span class=""></span></span></span></span></span></span></span></span></span> CuO + CO₂</p>
+<p class="markdown-unit">ZnCO₃ <span><span class="katex"><span class="katex-mathml"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="2" style="font-size: 101.2%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-semantics><mjx-mrow><mjx-mover><mjx-over style="padding-bottom: 0.2em; padding-left: 0.993em;"><mjx-mpadded size="s"><mjx-block style="width: 1.433em; position: relative;"><mjx-rbox style="left: 0.3em; top: 0px; max-width: 1.433em;"><mjx-mi class="mjx-n"><mjx-c class="mjx-c394"></mjx-c></mjx-mi></mjx-rbox></mjx-block></mjx-mpadded></mjx-over><mjx-base><mjx-mo class="mjx-n"><mjx-stretchy-h class="mjx-c2192" style="width: 3em;"><mjx-ext><mjx-c></mjx-c></mjx-ext><mjx-end><mjx-c></mjx-c></mjx-end></mjx-stretchy-h></mjx-mo></mjx-base></mjx-mover></mjx-mrow></mjx-semantics></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mo stretchy="true" minsize="3.0em">→</mo><mpadded width="+0.6em" lspace="0.3em"><mi mathvariant="normal">Δ</mi></mpadded></mover></mrow><annotation encoding="application/x-tex">\xrightarrow{\Delta}</annotation></semantics></math></mjx-assistive-mml></mjx-container></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1.1113em; vertical-align: -0.011em;"></span><span class="mrel x-arrow"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.1003em;"><span class="" style="top: -3.322em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight x-arrow-pad"><span class="mord mtight"><span class="mord mtight">Δ</span></span></span></span><span class="svg-align" style="top: -2.689em;"><span class="pstrut" style="height: 2.7em;"></span><span class="hide-tail" style="height: 0.522em; min-width: 1.469em;"><svg width="400em" height="0.522em" viewBox="0 0 400000 522" preserveAspectRatio="xMaxYMin slice"><path d="M0 241v40h399891c-47.3 35.3-84 78-110 128
+-16.7 32-27.7 63.7-33 95 0 1.3-.2 2.7-.5 4-.3 1.3-.5 2.3-.5 3 0 7.3 6.7 11 20
+ 11 8 0 13.2-.8 15.5-2.5 2.3-1.7 4.2-5.5 5.5-11.5 2-13.3 5.7-27 11-41 14.7-44.7
+ 39-84.5 73-119.5s73.7-60.2 119-75.5c6-2 9-5.7 9-11s-3-9-9-11c-45.3-15.3-85
+-40.5-119-75.5s-58.3-74.8-73-119.5c-4.7-14-8.3-27.3-11-40-1.3-6.7-3.2-10.8-5.5
+-12.5-2.3-1.7-7.5-2.5-15.5-2.5-14 0-21 3.7-21 11 0 2 2 10.3 6 25 20.7 83.3 67
+ 151.7 139 205zm0 0v40h399900v-40z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.011em;"><span class=""></span></span></span></span></span></span></span></span></span> ZnO + CO₂</p>
+<p class="markdown-unit">d) Đun nóng mạnh kẽm oxit rồi để nguội:</p>
+<ul>
+<li class="markdown-unit">Khi nóng: ZnO chuyển sang màu vàng.</li>
+<li class="markdown-unit">Khi nguội: ZnO trở lại màu trắng.</li>
+</ul>
+<p class="markdown-unit">e) Đây không được xem là phản ứng hóa học trong điều kiện thí nghiệm thông thường, vì ZnO vẫn là cùng một chất, không hình thành chất mới. Đây là sự thay đổi màu sắc thuận nghịch do nhiệt độ.</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/FCneNrXVNS-QnTDf4URcvk6TpyX6M8gRHw6ATNRNhsPGYu7MndT4x4Y6LYBDTpcd4fvABJQLfXwaLBoe8MJKAqv9WLKjayYYNsT2nyDuCYmBtmVCfjkNPm4QFIzS3YhesOO7dXwlXEx2eeTfuP6JP2SjfvijC7nVjvcrjhPxzWM?purpose=inline" alt="Copper Ii Oxide Decomposition at Annabelle Wang blog"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/v9IMiBn3tDZw1tHPs_yygysve7GtHnmLzhneyaLQ-QOGZhvtrMOHjCUG_6lPt6pjlnYNEDyAGwyl0CXyf-1wM2LSpRAilICZKLqFjhfeNFFDcHtEpozYPDRVF8UJ09PneiUt_myyPhmDLFuC3bYE0vYLM-gcmVhfeSmp57a5dM8?purpose=inline" alt="PPT - Calcium carbonate has the chemical formula, CaCO 3 PowerPoint Presentation - ID:5056546"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/9h8ookcDw_HjWVnmPfRvI4d9KuHRrynA6Y_vzSjujUleoG7Df6j5np7jET-setuLlAJ_adrZW_zjk3_rIaJJsORf-f0KDBoerNC7nichGMjkn_WQEVhxP_9bjfV6HcIS5ShF-MGr8TQQBRyajMBreWQJEARj7aa2g8K3bq6kmo4?purpose=inline" alt="Test for carbon dioxide - GCSE Chemistry Revision Guide | Maths Genie"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h2 class="markdown-unit">Bài 2. Phản ứng oxy hóa – khử (Redox reactions)</h2>
+<p class="markdown-unit">Câu hỏi: Magie đang cháy phản ứng với khí CO₂ theo phương trình:</p>
+<p class="markdown-unit">2Mg + CO₂ → 2MgO + C</p>
+<h3 class="markdown-unit">Trả lời</h3>
+<p class="markdown-unit">a) Quan sát chứng minh cacbon được tạo thành:</p>
+<p class="markdown-unit">Xuất hiện chất rắn màu đen là cacbon.</p>
+<p class="markdown-unit">b) Phương trình chữ:</p>
+<p class="markdown-unit">Magie + Cacbon đioxit → Magie oxit + Cacbon.</p>
+<p class="markdown-unit">c) Xác định chất bị khử và bị oxy hóa:</p>
+<p class="markdown-unit">i) Chất bị khử: CO₂.</p>
+<ul>
+<li class="markdown-unit">Cacbon trong CO₂ có số oxi hóa +4.</li>
+<li class="markdown-unit">Cacbon tự do có số oxi hóa 0.</li>
+<li class="markdown-unit">Cacbon nhận electron nên bị khử.</li>
+</ul>
+<p class="markdown-unit">ii) Chất bị oxy hóa: Mg.</p>
+<ul>
+<li class="markdown-unit">Mg có số oxi hóa 0.</li>
+<li class="markdown-unit">Mg trong MgO có số oxi hóa +2.</li>
+<li class="markdown-unit">Mg mất electron nên bị oxy hóa.</li>
+</ul>
+<p class="markdown-unit">Kết luận:</p>
+<ul>
+<li class="markdown-unit">Mg là chất khử.</li>
+<li class="markdown-unit">CO₂ là chất oxy hóa.</li>
+</ul>
+<p class="markdown-unit">d) MgO phản ứng với HCl:</p>
+<p class="markdown-unit">Phương trình hóa học:</p>
+<p class="markdown-unit">MgO + 2HCl → MgCl₂ + H₂O</p>
+<p class="markdown-unit">e) Phản ứng giữa Mg và ZnSO₄:</p>
+<p class="markdown-unit">i) Phương trình ion thu gọn:</p>
+<p class="markdown-unit">Mg + Zn²⁺ → Mg²⁺ + Zn</p>
+<p class="markdown-unit">ii) Giải thích:</p>
+<p class="markdown-unit">Magie nhường 2 electron:</p>
+<p class="markdown-unit">Mg → Mg²⁺ + 2e⁻</p>
+<p class="markdown-unit">Ion Zn²⁺ nhận 2 electron:</p>
+<p class="markdown-unit">Zn²⁺ + 2e⁻ → Zn</p>
+<p class="markdown-unit">Vì magie nhường electron nên magie là chất khử, đồng thời bị oxy hóa.</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/thqaYRmaVler6aE_urq44hQxQF0w0UcjCzU6F0PlqHfDgvyX6nrzaqSOHoMrHh5Xn3O_WmJRVe670hSpVT9rVrAsILONHeCIfRDt7z3cv0U6NNXYuKBAT1huibtRCwWC5aMIljQiIn7Ox9oNkMJxKF5GUqAuyTQHh2gFhaKiaEU?purpose=inline" alt="Reacción magnesio y CO2 | Currículum Nacional"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/BCSAcqL-Yo0z4LbcfFhW0Cspxagc89P6YhB2S05B2QLuYt8XpyozI7zx5vP3FNIpH9gEU3wWajYTl9ytUSvrIbmYArGxZLepLmF5l7vlv-FUSBBBgooiZVgrb2jjqfSOsz6KBKdrGVGyXkiy4bhPTHm2D4qm4ymeWpCzYXkC5_M?purpose=inline" alt="ロイロノート・スクール サポート - 中２　理科　化学反応式をマスターしよう　化学変化【授業案】和歌山大学教育学部附属中学校　矢野充博"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/fnVpl44d_Be9rJNJORJUPsiwum94yUAW5LaqYWqE1bCzzdztVIkNJNR1kS1UaJ81ba62yQhnkabEMc929xRcTgvfnIJKZd0f_EWTrr9liKZ4C9TxyZjkKnYkPCVl3R9V35UZQSb0Yl0-lo9xpPpghLSJoV8NTGcxZQYsywqliAs?purpose=inline" alt="PPT - Redoxireakciók PowerPoint Presentation, free download - ID:5978457"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">4</p>
+<h2 class="markdown-unit">Bài 3. Các phản ứng hình thành mưa axit (Acid rain)</h2>
+<p class="markdown-unit">Câu hỏi: Hai phương trình A và B biểu diễn các phản ứng tạo thành mưa axit:</p>
+<p class="markdown-unit">A: S + O₂ → SO₂</p>
+<p class="markdown-unit">B: SO₂ + O₃ → SO₃ + O₂</p>
+<h3 class="markdown-unit">Trả lời</h3>
+<p class="markdown-unit">a) Phương trình chữ của phản ứng A:</p>
+<p class="markdown-unit">Lưu huỳnh + Oxi → Lưu huỳnh đioxit.</p>
+<p class="markdown-unit">Đây là phản ứng đốt cháy lưu huỳnh trong oxi.</p>
+<p class="markdown-unit">b) Hai phát biểu đúng về phản ứng B:</p>
+<p class="markdown-unit">Đáp án: (2) và (3)</p>
+<ul>
+<li class="markdown-unit">(1) Sai: SO₂ không bị khử thành SO₃.</li>
+<li class="markdown-unit">(2) Đúng: SO₂ bị oxy hóa thành SO₃.</li>
+<li class="markdown-unit">(3) Đúng: O₃ đóng vai trò chất oxy hóa và bị khử.</li>
+<li class="markdown-unit">(4) Sai: O₃ không bị oxy hóa thành O₂.</li>
+</ul>
+<p class="markdown-unit">Giải thích bằng số oxi hóa:</p>
+<ul>
+<li class="markdown-unit">S: +4 trong SO₂ → +6 trong SO₃: Bị oxy hóa.</li>
+<li class="markdown-unit">O trong O₃: 0 → −2 trong SO₃: Bị khử.</li>
+</ul>
+<p class="markdown-unit">Lưu ý: Một phần oxi từ ozone được chuyển vào SO₃, phần còn lại tạo thành O₂.</p>
+<p class="markdown-unit">c) Phương trình tạo axit sunfuric:</p>
+<p class="markdown-unit">SO₃ + H₂O → H₂SO₄</p>
+<p class="markdown-unit">Mở rộng kiến thức:</p>
+<p class="markdown-unit">Mưa axit hình thành khi các oxit axit như SO₂, SO₃ hòa tan hoặc phản ứng với nước trong khí quyển, tạo thành các axit, đặc biệt là H₂SO₄.</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/nvGCgsRwA3YZQmP_gM9BQp9BEOvj4WvfdOQngN9bLvP7QDRMc0VaRV78iLJllLuqjrcZi6JFnm8CHP9hcxlXm_ZvOzAfHiF2w_8e2Jm1Bie9KamijPpb3HUphgslETn0ewnh5rVn23HGGMcIRXTa4eK_JKYKM8jARWS8ukw8tyA?purpose=inline" alt="Non-Metals | Properties and Structures | GCSE Chemistry"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/kjNjpa-jXFvynbaAxa__uuB1p5UbThXlhZ1CBWRFf0jxNe_OUTyc-fWcg8eqiMSrun1rrYelnvhurEEB_hQqlylA5jGTMft2gbhNWUW5krGEzODWDwDs_zk5LxYwzVBNsIQdlaxbrGfBVMAWCdZIYYKlW7TOZAf0TxphRk3EKmU?purpose=inline" alt="Notes for 8.3B Acid rain - IB | RevisionDojo"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/_UOI2PgH2W0eiTuqi7zbIMQqvKcGM7ISkC0TzCXr66MKzCPky-guOdHS7FodHJwFwt_gpeLCQinL_SVEdmY2uoyTVY4exAymfv5z9D41MzTFeESayn_XRJZacZ5g62vGKts2bdSNImCzcwKr3g5j0ualjoYABPwPokO8x2-fDfo?purpose=inline" alt="Notes for 8.3B Acid rain - IB | RevisionDojo"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h2 class="markdown-unit">Bài 4. Khả năng dẫn điện và điện phân hợp chất nóng chảy</h2>
+<h3 class="markdown-unit">Trả lời</h3>
+<p class="markdown-unit">a) Ba chất có khả năng dẫn điện:</p>
+<p class="markdown-unit">Đáp án</p>
+<ol>
+<li class="markdown-unit">Dung dịch natri clorua (NaCl).</li>
+<li class="markdown-unit">Đồng (Cu).</li>
+<li class="markdown-unit">Than chì (graphite).</li>
+</ol>
+<p class="markdown-unit">Giải thích:</p>
+<ul>
+<li class="markdown-unit">Dung dịch NaCl: Có các ion Na⁺ và Cl⁻ chuyển động tự do.</li>
+<li class="markdown-unit">Đồng: Có các electron tự do.</li>
+<li class="markdown-unit">Than chì: Có các electron delocalised (electron tự do trong hệ liên kết).</li>
+</ul>
+<p class="markdown-unit">Các chất không dẫn điện trong danh sách:</p>
+<ul>
+<li class="markdown-unit">Đồ gốm.</li>
+<li class="markdown-unit">Tinh thể NaCl ở trạng thái rắn.</li>
+<li class="markdown-unit">Lưu huỳnh.</li>
+</ul>
+<p class="markdown-unit">b) Tên gọi của chất không dẫn điện:</p>
+<p class="markdown-unit">Chất cách điện (insulator).</p>
+<p class="markdown-unit">Ví dụ: Nhựa, cao su, thủy tinh và đồ gốm khô.</p>
+<p class="markdown-unit">c) Điện phân kẽm clorua nóng chảy (ZnCl₂):</p>
+<p class="markdown-unit">i) Điện cực dương gọi là anode (anot).</p>
+<p class="markdown-unit">ii) Sản phẩm tạo thành:</p>
+<p class="markdown-unit">- Tại cathode (cực âm): Kẽm (Zn).</p>
+<p class="markdown-unit">Zn²⁺ + 2e⁻ → Zn</p>
+<p class="markdown-unit">- Tại anode (cực dương): Khí clo (Cl₂).</p>
+<p class="markdown-unit">2Cl⁻ → Cl₂ + 2e⁻</p>
+<p class="markdown-unit">Phương trình tổng quát:</p>
+<p class="markdown-unit">ZnCl₂(l) → Zn(l) + Cl₂(g)</p>
+<p class="markdown-unit">iii) Phi kim có thể dùng làm điện cực:</p>
+<p class="markdown-unit">Than chì (graphite) vì có khả năng dẫn điện và tương đối trơ về mặt hóa học trong điều kiện thích hợp.</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/VlXFcgKBa3GSyGakdcJkasd7sgFxXvig_WPq6JlFhipR2FXZPMnlcox9d2UEYkFG_LisbRtX9tT6NebeP5BhYJ-CPiqHsFgamsoS6l394YbotonjB5YQDzI4p3l-ADNkZIDIZNx81AIpyqXBc4cOJCElGFfGwM_eh8pshRV279s?purpose=inline" alt="Η αγωγιμότητα των διαλυμάτων των αλάτων | CHEMNOESIS"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/0XLIj6Vy0XQhlGaLGHGXqsWf21peD9LEmJimInkS2pVosN_AIiHom6iqBp52c_BAxpY7XbgpwWSk2dmtuEIAhWMsCNvm5ouKtbCD102y0pRP90cY1T2nE1Z-FwchpGeacCEv-Dm09B3CnxHaCpL4ycJqQXPfqOeDiSN3yZFaqvo?purpose=inline" alt="Industrial &amp; 3D Product Design Services | Fiverr"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/iOwVvs2XtU_PD_I418XRmEquDXoQ6GTldW_hkXoVS1dp5nAzScKp4ANzFVnliixXCx0NLDEmtmDr8OY6DDJnV6a5iI9PsM4KLi8V_aUjdQ-UDKw7_0R2dDR9uFHBRJVqb8zH4vUPoH5E7KQUbhLlk6Iz6rJwr5rnipMGgED3CQA?purpose=inline" alt="Electrolysis of molten zinc chloride | Demonstration | RSC Education"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">6</p>
+<h2 class="markdown-unit">Bài 5. Điện phân dung dịch natri clorua đậm đặc (Electrolysis of concentrated sodium chloride solution)</h2>
+<h3 class="markdown-unit">Trả lời</h3>
+<p class="markdown-unit">a) Vật liệu làm điện cực và lý do sử dụng:</p>
+<p class="markdown-unit">Thông thường sử dụng điện cực than chì hoặc điện cực titan phủ lớp oxit thích hợp trong thiết bị công nghiệp.</p>
+<p class="markdown-unit">Trong thí nghiệm ở trường học, có thể sử dụng than chì.</p>
+<p class="markdown-unit">Lý do:</p>
+<ul>
+<li class="markdown-unit">Dẫn điện tốt.</li>
+<li class="markdown-unit">Tương đối trơ về mặt hóa học.</li>
+<li class="markdown-unit">Không dễ bị tiêu hao trong điều kiện thí nghiệm thích hợp.</li>
+</ul>
+<p class="markdown-unit">b) Hiện tượng quan sát được:</p>
+<ul>
+<li class="markdown-unit">Có bọt khí xuất hiện ở cả hai điện cực.</li>
+<li class="markdown-unit">Tại cathode xuất hiện khí không màu là hiđro.</li>
+<li class="markdown-unit">Tại anode xuất hiện khí clo có màu vàng lục nhạt.</li>
+<li class="markdown-unit">Dung dịch sau điện phân có tính kiềm do hình thành NaOH.</li>
+</ul>
+<p class="markdown-unit">c) Sản phẩm tại mỗi điện cực:</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/mE_F7AxhFlQGO1Vb_xVdVzz18DyVaUc0FjDnxqNMreuxWMzqJ2eJs-TdfsKLrR7X8F944QoEM4KcgrnRRs9YcOwtX7SsTzvjdPCLr1ZqU-uWlJhmu1fmZrKmN5toTQgngf6Jd15g23vNGMo0xSiujr08HpDLs7EZQQ5jMDCjYIw?purpose=inline" alt="Electrolysis | AQA Required Practical | revisechemistry.uk"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Cathode (cực âm)</p>
+<p class="markdown-unit">Sản phẩm: Khí hiđro (H₂).</p>
+<p class="markdown-unit">2H₂O + 2e⁻ → H₂ + 2OH⁻</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/MgrzP52E6fhxECl0v9u_ZKrkYccw_NOMom1mu3jf7HUYMO40uJOu3DqNOjcWvgUryDUAxs5GbPiTvh124AW3UkJXDc5om6taG633p2qaUiDkW8gG1Rg0WonMpmw3sHCmUisl1LEqAWbDlIT3eFiA7P0Jf7iuGSIMBf-BjnrH598?purpose=inline" alt="Sodium Hydroxide: Membrane vs Diaphragm Grade - CORECHEM Inc."><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Anode (cực dương)</p>
+<p class="markdown-unit">Sản phẩm: Khí clo (Cl₂).</p>
+<p class="markdown-unit">2Cl⁻ → Cl₂ + 2e⁻</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/oM3thlVxc21LPvpvbu38gZeT7ERh2dUzMT03VmH3MwtpuWO6SgBb8dNnc1oYgoyoT34fG8mgDndkKfSDWZ-gWsF3BKgHcHGWoZBzgpGOJisJ2GE-Rk6bys3fcstPpA7U46iVghUuClp32EscIlEnZc66rIlxuCaxUU72cH8uwQHbElahcL1FhS1V_TFFbkhx?purpose=inline" alt="Sodium hydroxide in glass, chemical in the laboratory"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trong dung dịch</p>
+<p class="markdown-unit">Sản phẩm: Natri hydroxit (NaOH).</p>
+<p class="markdown-unit">Phương trình tổng quát:</p>
+<p class="markdown-unit">2NaCl(aq) + 2H₂O(l) → 2NaOH(aq) + H₂(g) + Cl₂(g)</p>
+<p class="markdown-unit">Ứng dụng công nghiệp:</p>
+<p class="markdown-unit">Điện phân dung dịch NaCl đậm đặc (brine electrolysis) được sử dụng để sản xuất:</p>
+<ul>
+<li class="markdown-unit">Clo: Sản xuất chất tẩy rửa, hóa chất khử trùng.</li>
+<li class="markdown-unit">Hiđro: Sản xuất amoniac và nhiều hóa chất khác.</li>
+<li class="markdown-unit">Natri hydroxit: Sản xuất xà phòng, giấy và hóa chất công nghiệp.</li>
+</ul>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/k5U_-JW4l3TBgkUYi_EBvwyRlxP5yJfJtn7DDTm6dE4FZQpkpmwSQVaxaNT7K05q7_0Z1pvhTturPLCJd5jJ0Ue8TEoMrZ1HMNV37eYz6F4XV-mlkow-OlcyWV8ynHdSDd8JnkWjwQJDFtaY7tYccibTpWDy5pqy1NuvGlmOAfI?purpose=inline" alt="Electrolysis of Concentrated NaCl (examples, answers, activities, experiment, videos)"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">![Electrolysis | Cambridge (CIE) O Level Chemistry Exam Questions &amp; Answers 2021 !<a href="https://images.openai.com/static-rsc-4/TRU-eOzvkpnkWf21L5pFo5tv-4hGZhYYUb-WyQ-YulKN7oJNTgyHLHaCPU7mzisO923JNlrGivLq_X3ygAzStuVPwtRlBlMTqsCtJZUwjIDFG1sB3jVoQ7nUHqVW2pCDAZ7QO-HCegj2VCQNJjypOuByyOh5SxAUCDihZYX2_eo?purpose=inline">PDF]</a></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/Y9wBgMhPMWeuipDJLmHdjbKQ8o0zy9k5A_l6SmRKnM4--ANHKOcTdAGKUaKQbo1ZL7UWNn4ujNeK1mzrF5gQ2D4N48E5idWjwf0_B-yyOwg_cMXwu3qVjkA8__VefmGfv4V-gULTDVeMS8FvQex0wMDfINBTSpOiRy7AjNPCzvQ?purpose=inline" alt="Caustic Soda Production Process-Sodium Hydroxide Production"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">4</p>
+<h2 class="markdown-unit">III. BẢNG TỔNG HỢP KIẾN THỨC TRỌNG TÂM</h2>
+<p class="markdown-unit">Bảng dưới đây giúp học sinh hệ thống lại những kiến thức quan trọng nhất của chương.</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Chủ đề</th>
+<th>Kiến thức cần nhớ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Biến đổi vật lý</td>
+<td>Không tạo chất mới.</td>
+</tr>
+<tr>
+<td>Biến đổi hóa học</td>
+<td>Có chất mới hình thành.</td>
+</tr>
+<tr>
+<td>Phản ứng tỏa nhiệt</td>
+<td>Giải phóng nhiệt ra môi trường.</td>
+</tr>
+<tr>
+<td>Phản ứng thu nhiệt</td>
+<td>Hấp thụ nhiệt từ môi trường.</td>
+</tr>
+<tr>
+<td>Phản ứng cháy</td>
+<td>Chất phản ứng với oxi, thường giải phóng nhiệt.</td>
+</tr>
+<tr>
+<td>Phản ứng phân hủy</td>
+<td>Một chất tạo thành nhiều chất.</td>
+</tr>
+<tr>
+<td>Phản ứng trung hòa</td>
+<td>Axit + Bazơ → Muối + Nước.</td>
+</tr>
+<tr>
+<td>Oxy hóa</td>
+<td>Mất electron.</td>
+</tr>
+<tr>
+<td>Khử</td>
+<td>Nhận electron.</td>
+</tr>
+<tr>
+<td>Chất oxy hóa</td>
+<td>Nhận electron và bị khử.</td>
+</tr>
+<tr>
+<td>Chất khử</td>
+<td>Nhường electron và bị oxy hóa.</td>
+</tr>
+<tr>
+<td>Điện phân</td>
+<td>Dùng dòng điện để phân hủy hợp chất.</td>
+</tr>
+<tr>
+<td>Cathode</td>
+<td>Cực âm, xảy ra sự khử.</td>
+</tr>
+<tr>
+<td>Anode</td>
+<td>Cực dương, xảy ra sự oxy hóa.</td>
+</tr>
+<tr>
+<td>Anion</td>
+<td>Ion âm, di chuyển về anode.</td>
+</tr>
+<tr>
+<td>Cation</td>
+<td>Ion dương, di chuyển về cathode.</td>
+</tr>
+</tbody></table>
+<h3 class="markdown-unit">Một số phương trình quan trọng cần ghi nhớ</h3>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Phản ứng</th>
+<th>Phương trình</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Magie cháy</td>
+<td>2Mg + O₂ → 2MgO</td>
+</tr>
+<tr>
+<td>Natri + nước</td>
+<td>2Na + 2H₂O → 2NaOH + H₂</td>
+</tr>
+<tr>
+<td>Đồng + oxi</td>
+<td>2Cu + O₂ → 2CuO</td>
+</tr>
+<tr>
+<td>Trung hòa</td>
+<td>HCl + NaOH → NaCl + H₂O</td>
+</tr>
+<tr>
+<td>Phân hủy CaCO₃</td>
+<td>CaCO₃ → CaO + CO₂</td>
+</tr>
+<tr>
+<td>Kẽm + đồng sunfat</td>
+<td>Zn + CuSO₄ → ZnSO₄ + Cu</td>
+</tr>
+<tr>
+<td>Tạo axit sunfuric</td>
+<td>SO₃ + H₂O → H₂SO₄</td>
+</tr>
+<tr>
+<td>Điện phân PbBr₂</td>
+<td>PbBr₂(l) → Pb + Br₂</td>
+</tr>
+<tr>
+<td>Điện phân ZnCl₂</td>
+<td>ZnCl₂(l) → Zn + Cl₂</td>
+</tr>
+<tr>
+<td>Điện phân nước muối</td>
+<td>2NaCl + 2H₂O → 2NaOH + H₂ + Cl₂</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Lưu ý an toàn khi sử dụng hình ảnh và tổ chức thí nghiệm</p>
+<p class="markdown-unit">Một số phản ứng trong chương sử dụng bromine, chlorine, kim loại kiềm và axit sulfuric đặc. Đây là các hóa chất hoặc quá trình nguy hiểm. Hình ảnh minh họa chỉ phục vụ học tập; không tự thực hiện các thí nghiệm này nếu không có giáo viên, thiết bị bảo hộ và hệ thống hút khí phù hợp.</p>
+<p class="markdown-unit">Kết quả: Bộ tài liệu đã bổ sung đáp án cho 20 câu/bài tập, giải thích các ý nhỏ và bố trí 3 hình minh họa cho từng câu, tương ứng khoảng 60 hình ảnh minh họa.</p>
+</div>
+        </main>
+    </div>
+
+    <footer>
+        <span class="author-info">Icarus - kienspvl@gmail.com - 097 463 8794</span>
+        <div id="progress-counter">
+            Mục: <input type="number" id="page-input" min="1" value="0" onkeydown="handlePageInputChange(event)" onblur="jumpToInputValue()" max="470"> / <span id="total-units-count">470</span>
+        </div>
+    </footer>
+
+    <!-- LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG -->
+    <div id="image-lightbox" onclick="closeLightboxOnBg(event)" style="display: none;">
+        <button class="lightbox-close-btn" onclick="closeLightbox(event)" title="Thoát Lightbox (Esc)">✕</button>
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image" onclick="event.stopPropagation()">
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div id="lightbox-counter" class="lightbox-counter">0 / 0</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="import-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập hoặc Chỉnh Sửa Bài Giảng</h3>
+            <textarea id="import-text" placeholder="Dán văn bản Markdown hoặc Import file Word vào đây..."></textarea>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <label class="btn">
+                        📄 Chọn File .txt / .md
+                        <input type="file" accept=".txt,.md" onchange="handleFileImport(event)">
+                    </label>
+                    <label class="btn" style="border-color: #22c55e;">
+                        📘 Import từ File Word (.docx)
+                        <input type="file" accept=".docx" onchange="handleWordImport(event)">
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="closeImportModal()">Hủy</button>
+                    <button onclick="processImport()" style="background-color: var(--accent-color); color: #fff;">Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SAVE AS HTML -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>💾 Lưu Bài Giảng Dưới Dạng HTML</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-color);">Nhập tên file HTML muốn lưu:</label>
+                <input type="text" id="save-filename-input" placeholder="Tên file..." onkeydown="if(event.key==='Enter') executeSaveAsHtml()">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeSaveModal()">Hủy</button>
+                <button onclick="executeSaveAsHtml()" style="background-color: var(--accent-color); color: #fff;">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Lịch Sử Bài Giảng Dưới LocalStorage</h3>
+                <button onclick="clearAllHistory()" style="background-color: #ef4444; color: #fff;">🗑️ Xóa Tất Cả</button>
+            </div>
+            <div id="history-container" class="history-list"></div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+    <div id="update-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🚀 Lịch Sử Cập Nhật Chương Trình (Changelog v3.11)</h3>
+            <div class="history-list" style="max-height: 400px; padding-right: 8px;">
+                <div class="changelog-item">
+                    <span class="changelog-version">v3.11</span><span class="changelog-date">(Cập nhật mới)</span>
+                    <ul class="changelog-list">
+                        <li><strong>Tải dữ liệu đang ngậm khi Import:</strong> Khi bấm nút Import, nếu file đang chứa sẵn dữ liệu (ngậm dữ liệu), nội dung sẽ tự động xuất hiện trong ô nhập liệu để xem hoặc copy.</li>
+                        <li><strong>Thêm nút In (Print):</strong> Nút "In" hỗ trợ xuất/in nhanh riêng phần bài giảng, tự động ẩn giao diện, thanh điều khiển và mục lục khi in.</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeUpdateModal()">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ô NGẬM DỮ LIỆU MARKDOWN GỐC -->
+    <script id="embedded-data" type="application/json">"# CHƯƠNG C4: CÁC PHẢN ỨNG HÓA HỌC (CHEMICAL REACTIONS)\n\nDưới đây là bản bổ sung đáp án và hình ảnh minh họa cho toàn bộ 15 câu hỏi giữa bài và 5 bài tập ôn tập cuối chương.\n\nMỗi câu được trình bày theo cấu trúc:\n\n1. Câu hỏi: Giữ nguyên nội dung và các ý nhỏ.\n2. Trả lời: Đáp án chi tiết, rõ ràng, có giải thích kiến thức hóa học.\n3. Hình ảnh minh họa: 3 hình cho mỗi câu, ưu tiên hình thí nghiệm, dụng cụ, hiện tượng và mô hình phản ứng hóa học.\n\n# I. CÂU HỎI GIỮA BÀI (IN-CHAPTER QUESTIONS)\n\n## 1. Phần C4.01: Phản ứng hóa học và phương trình (Chemical reactions and equations)\n\n### Câu C4.01. Biến đổi vật lý và biến đổi hóa học\n\nCâu hỏi: Cho biết các biến đổi sau đây là biến đổi vật lý (physical) hay biến đổi hóa học (chemical):\n\nTrả lời:\n\n| Ý | Hiện tượng             | Phân loại | Giải thích                                                   |\n| - | ---------------------- | --------- | ------------------------------------------------------------ |\n| a | Nóng chảy của đá       | Vật lý    | Chỉ thay đổi trạng thái từ rắn sang lỏng, vẫn là H₂O.        |\n| b | Đốt cháy magie         | Hóa học   | Magie phản ứng với oxi tạo chất mới MgO.                     |\n| c | Thăng hoa của đá khô   | Vật lý    | CO₂ chuyển từ rắn sang khí, không tạo chất mới.              |\n| d | Hòa tan đường vào nước | Vật lý    | Đường phân tán trong nước, có thể thu hồi bằng bay hơi nước. |\n\nGhi nhớ:\n\n- Biến đổi vật lý: Không tạo ra chất mới.\n- Biến đổi hóa học: Có chất mới được hình thành.\n\n![Transformation physique et transformation chimique - myMaxicours](https://images.openai.com/static-rsc-4/AKHq-6O3371SWEe-QSEZyNiiWfeN9R0l5w0Pajfp__J8_82BOtICI1NMpAuBqi51vQ4mDxEZ82UbuOjDjw7ny4yXZm8B243QO-SOYK0PCWyOgG9Y0kFHDjBc5lOFAiLW2vPhpAs9-SX_Ryg9r5Uss6Eput-TFD9qfSfElLFXSRI?purpose=inline)\n\n![5.3.2 Combustion - Changes Around Us: Phy - \\![Teachoo\\]](https://images.openai.com/static-rsc-4/niQPXLHjnkLLKh2MFSG2-ujswnq7t--l15tZzkBT_3GFpNOq-rrAgv7kjqb4M8Vi-S1vom2SXSSIRen1fOay4Akplonw3p9ENyGuXNWzJDb7Q8j8p6tu7tLAptiPCFCavK9AnoA1C0XkqtDlnl5mrDBzb0hquAdvX9Y0gtkZdHM?purpose=inline)\n\n![How Does Dry Ice Turn Into A Gas at Matthew Mendelsohn blog](https://images.openai.com/static-rsc-4/qZPtKWriCT1Svywl7_FOCIuQHorbo4VoZXmyXbKShXYM2kaGJMj-lRUdqUJcp64yc7sDHlRAOt0cScR8E5vh7vSpwckz76a6Lqcbhgwca6tNs0bbhXbR7y2aymCUr9Ak1tpNapT4uNl8JdytFQOxgiYvV1vDvTsLIFyBoZJioSE?purpose=inline)\n\n### Câu C4.02. Phản ứng tỏa nhiệt và thu nhiệt\n\nCâu hỏi: Cho biết các quá trình sau đây là tỏa nhiệt (exothermic) hay thu nhiệt (endothermic):\n\nTrả lời:\n\n| Ý | Quá trình               | Phân loại | Giải thích                                       |\n| - | ----------------------- | --------- | ------------------------------------------------ |\n| a | Ngưng tụ hơi nước       | Tỏa nhiệt | Hơi nước giải phóng nhiệt khi chuyển thành lỏng. |\n| b | Đốt cháy magie          | Tỏa nhiệt | Giải phóng nhiều nhiệt và ánh sáng.              |\n| c | Thêm H₂SO₄ đặc vào nước | Tỏa nhiệt | Quá trình hòa tan giải phóng nhiệt mạnh.         |\n| d | Bay hơi chất lỏng       | Thu nhiệt | Chất lỏng hấp thụ nhiệt để chuyển thành khí.     |\n\nGhi nhớ:\n\n- Tỏa nhiệt: Nhiệt truyền từ hệ ra môi trường.\n- Thu nhiệt: Hệ hấp thụ nhiệt từ môi trường.\n\n![Condensation explanation as water droplets formation on glass outline diagram](https://images.openai.com/static-rsc-4/gNB4Yosnad8NdtL8ssakikzZHcrANzuDyEUxCezyYpWT48YPhvO9Cdt0ZFJa7EkcriZjAsoZSkpzwp9hQsaetOPooEKNT7Msdbpt1c9GJs3bJaPBxJYV-etv7MEIZobLBbtmOEIuAYl0xj4e0ajP_LjXdwvsQYxHD6o17gPoTMTRvS6Zk2jRxTiBOm2Z_RNp?purpose=inline)\n\n![Vi brenner magnesium - Naturfag (IM) - NDLA](https://images.openai.com/static-rsc-4/kka7sSviQ_9WFnz_FmY9pMNmketrmaRxM9futBfDqDqkZQTpeufPwqvLWjB31N5kj2BAPj30IrBePc4G-FE3KGjf2VXNqHXwp5eNdOHY80ZLnpkWn4X5t8bLRhzwD6lG809i3ptY3kQO7xd9VzOLBdwmXOCC4ThYntHgmijjLYM?purpose=inline)\n\n![Сярна Киселина](https://images.openai.com/static-rsc-4/PKK2vJjKscO3oiSEDG6ZFmj18QsC6izKa3S0GALjN9B5Q-ku4bHci-ppKQ1eLB1_utfb2I29mt4fwUM_mQ_PRW0N7-O2yfh8i82IIJaMqoLbQzaAkdxuf9AX-_LM0QGTBKn3vIEO7xV4besONMV60cu2oLcGzTUHRftKEtj0mhE?purpose=inline)\n\n4\n\n### Câu C4.03. Dấu hiệu nhận biết phản ứng hóa học\n\nCâu hỏi: Dấu hiệu quan trọng nhất chứng tỏ một phản ứng hóa học đã xảy ra là gì?\n\nTrả lời:\n\nDấu hiệu quan trọng nhất là sự hình thành chất mới có tính chất hóa học khác với chất ban đầu.\n\nMột số dấu hiệu thường gặp:\n\n- Có khí thoát ra (sủi bọt).\n- Xuất hiện kết tủa.\n- Thay đổi màu sắc.\n- Phát sáng hoặc thay đổi nhiệt độ.\n- Xuất hiện mùi mới.\n\nLưu ý: Những dấu hiệu trên không phải lúc nào cũng chứng minh chắc chắn có phản ứng hóa học. Cần xác định có chất mới được tạo thành hay không.\n\n![PPT - Understanding the Periodic Table and Chemical Reactions PowerPoint Presentation - ID:1781391](https://images.openai.com/static-rsc-4/h5HiqdEEeTJTj-RO5spJTJe-wQFJASmZ8NNJflWF0GG1xYZARY11Kg8GEKv7-rrskK2k0ZohQ8Vl7RyE6DeasJJkXPBEiCLjiVqWBnS9Aqx6wEaItvi6SohRSkqeSB_ilTLF4opyfskhvJBPnbo2KK9ybq1gh_eszqRypR72pW0?purpose=inline)\n\n![Reaktionsgleichungen | Chemie | SchuBu](https://images.openai.com/static-rsc-4/ww0Oox7VlbGGgrXPud6gKuE5eRf8GHu5YX3o1yp1FHTaOEa3eze7IIS_IfkZQaHkAJo5YM4iBisJxjyWqyLCTiXHCH1gr3q5wDFpH2YdyDck7uC-7mkrKDqo2hJlrdAg6i6hn9SCWfDFxX9ma72jBybo0ekYIzrk7fXD9H98VxY?purpose=inline)\n\n![A rare iodine polymer discovery is key to starch-iodine mystery](https://images.openai.com/static-rsc-4/LLk0SQmEt_IueKHtCKNfez9eSSvDNVUNotWXKXAaHQjRkLsUqmXbgDY1uBlqZ_9Le73JMZvxwzN2gvFlWyW1ylenBs_SlA4wCEWzMV9cGG8jrdq9T8SQ6h2VllfcgoqbIGE8-xpprarKtnLN44fEh_OR2zBAo9lTRk7aqdZ-U5A?purpose=inline)\n\n## 2. Phần C4.02: Phương trình cho các phản ứng hóa học (Equations for chemical reactions)\n\n### Câu C4.04. Viết phương trình chữ\n\nCâu hỏi: Viết phương trình chữ cho các phản ứng được mô tả dưới đây.\n\nTrả lời:\n\na) Sắt bị gỉ:\n\nSắt + Oxi → Sắt(III) oxit\n\nb) Phản ứng trung hòa:\n\nNatri hydroxit + Axit sunfuric → Natri sunfat + Nước\n\nc) Natri phản ứng với nước:\n\nNatri + Nước → Natri hydroxit + Khí hiđro\n\n![Corrosions Protection of Fasteners | Strong-Tie | Together we're helping build safer stronger structures](https://images.openai.com/static-rsc-4/igrZP_4mhKmtSWdzD_qtaUsNxEna04dRC1wp8i2X7DYDPhGmcz1O70BX573xwv3bXGn4YIpy-EU-jraqLt-SACWQuBkywHm_mGzBKnc0hI10opkChnZKK7jhIWnE-uBfwjlDvUcOrdP_VYdaZzBPKNsFMksAXUE3enxMX-rE2Zo?purpose=inline)\n\n![Sulphuric Acid Added To Water by Science Photo Library](https://images.openai.com/static-rsc-4/PszBr7g_H1wH8zlbtkix1_OmCXeTET8OzNnQA14xQ1sEKONC70tTALFIqvRs29vxTJyMJEcSIKfhz5xOa3FKU1Nmf9nFd1BwiiIk16JYCQA3Uiiy3znq7nJt0MNMLMydmd5QPhexoNw4612D-6SyLDAfwCm7ATsbS2KBuuLyF4M?purpose=inline)\n\n![Reactions of the Period 3 Elements - CIE A Level Chemistry](https://images.openai.com/static-rsc-4/illRh2yl1S4GZRnqnRUEffRwuRGXmLSoppp-glJ4PQRpYOtzdOIkEcZCBlIvnSdHOAF5qSdmvebYwmt5kGBpHeeeOFzwJj0smkPvHIE74k0eBXI3ImolSDO9amvmZ_piXEccahWzb2FdjGMyfRs4aWh9SPFtXUiEfbU4B2IVMf4?purpose=inline)\n\n### Câu C4.05. Cân bằng phương trình hóa học\n\nCâu hỏi: Chép lại và cân bằng các phương trình hóa học sau.\n\nTrả lời:\n\na) Đồng phản ứng với oxi:\n\n2Cu + O₂ → 2CuO\n\nb) Tổng hợp amoniac:\n\nN₂ + 3H₂ ⇌ 2NH₃\n\nc) Natri phản ứng với oxi:\n\n4Na + O₂ → 2Na₂O\n\nd) Phản ứng trung hòa:\n\n2NaOH + H₂SO₄ → Na₂SO₄ + 2H₂O\n\ne) Nhôm phản ứng với clo:\n\n2Al + 3Cl₂ → 2AlCl₃\n\nf) Sắt phản ứng với hơi nước:\n\n3Fe + 4H₂O → Fe₃O₄ + 4H₂\n\nGiải thích: Khi cân bằng phương trình, số nguyên tử của mỗi nguyên tố ở hai vế phải bằng nhau. Chỉ thay đổi hệ số trước công thức hóa học, không thay đổi chỉ số trong công thức.\n\n![China dish containing copper power 1.2.5 Oxidation and Reduction Activity 1.11 Wire gauze -Tripod stand ? Heat a china dish containing about 1g copper powder (Fig. 1.10). ? What do you observe? Burner The surface of copper powder becomes coated with black copper(II) oxide. Why has this black substance formed? This is because oxygen is added to copper and copper oxide is formed. Figure 1.10 Oxidation of copper to copper oxide 2Cu + O2 Heat 2CuO (1.28) If hydrogen gas is passed over this heated material (CuO), the black](https://images.openai.com/static-rsc-4/24vT-KUMSm6Y1Cun4r4blzUcULGFDMsl4x5WVF7SAVfzYfKTN5BDObCZYGi9g69Q9J0dog-_fKksep77vwN9bXjt7ZgjEZY591KNpVyME3k8E1SntsUSzCbQ9xnJ-Ia37NsaXrH1BuQZIYq6ggINMpQEABpUtvsPTzPqt9fFHXY?purpose=inline)\n\n![What Iron Catalyst Is Used In The Haber Process at Ernest Baker blog](https://images.openai.com/static-rsc-4/LSZxqBo8hfrBBFddH7jiVagKaYBFoJNx7y1eLGWiC_GnHzASiGOpKMxcISE0tKh0pyFvwlHHG4I9TQLLDsrsXfIlHAaGioRrBHkul5rKVGedwgBW12nfO-zMgIRoY2hnUkGMPhpH3nc1HF8dNAaOoYgJEGw3GHOneKn8PyZLJaQ?purpose=inline)\n\n![Chem_1.8 The Alkali Metals | Teaching Resources](https://images.openai.com/static-rsc-4/i47D6LQKGLSUJe7ZJOtyPK16NfBzNV49-BfW5HlarZh7LFcyN7J5HK1bTN1UWStiY7A2YIbmZRvAjVSxw1mVzmZ5sMuIabODSgB8S5kQAyslyHYslyo75le0rrhb7FPRXTcb5wAVkEqkQKBPgfsmezZpeEL16UyewyY4AJuPJFY?purpose=inline)\n\n## 3. Phần C4.03: Các loại phản ứng hóa học (Types of chemical reactions)\n\n### Câu C4.06. Phản ứng thế của halogen\n\nTrả lời:\n\na) Clo phản ứng với dung dịch potassium bromide:\n\nPhương trình chữ:\n\nClo + Kali bromua → Kali clorua + Brom\n\nPhương trình hóa học:\n\nCl₂ + 2KBr → 2KCl + Br₂\n\nHiện tượng: Dung dịch xuất hiện màu vàng cam hoặc nâu đỏ của brom.\n\nb) Dung dịch iot không phản ứng với potassium chloride vì:\n\n- Clo hoạt động hóa học mạnh hơn brom và iot.\n- Iot hoạt động yếu hơn clo.\n- Iot không thể đẩy ion chloride (Cl⁻) ra khỏi hợp chất KCl.\n\nQuy luật hoạt động của halogen:\n\nF₂ > Cl₂ > Br₂ > I₂\n\n![R3.2.3 Activity and Periodic Trends | IB Chemistry](https://images.openai.com/static-rsc-4/tTvDvJ7SaXE4FlptaoOO2TiP8tIi7Q8MqGZL-Cym2_R6aQMYuZUomTJ7jJ6syu6duMrqupKjQv9j9mW7qksnfuqq9eUWEILEPrnhbIeCDTgd0uos8GZQE8pjicPA6quvKqyLQKQgybUnilQsvcAQOTlsSXZH7Qig1xZJy8640J8?purpose=inline)\n\n![Groups in the periodic table Notes — Edexcel GCSE](https://images.openai.com/static-rsc-4/8s1zySBGsR0R-oni3YJZ5-VFe81Wo5Xl8fUQhmqqN1je-WHgW3RY4GREZhn75V5U77SZJsaA8n5yMWNeCiSxZviBifo5AyGEVOTETXPO1ZC2v-ulhA9BGnvYlgQWd5SBI5SItR7BaYwCz5K_aoGL9l-p7YMZOlYcQi8vOe9T0lU?purpose=inline)\n\n![Halogen Displacement Reactions | GCSE Chemistry Revision](https://images.openai.com/static-rsc-4/aphDFycPefRXLslq9ipvjpbpWWv6s6eSv0EUiGGMKFkaRSD3mkkbMQCo3h0ERB-7GSEi8VbLPI0blrRk7owndSY5jtUR9CobDztmw_xO0gjpXuZAOiqXlSZ4iVKHhgpHrdTq4-tFkeC2RIFqjfhj9Xj8idqpcgcqI_Dj0u0G6jQ?purpose=inline)\n\n8\n\n### Câu C4.07. Phân loại phản ứng hóa học\n\nTrả lời:\n\n| Ý | Phản ứng                | Loại phản ứng              |\n| - | ----------------------- | -------------------------- |\n| a | Hexan + Oxi → CO₂ + H₂O | Cháy (combustion)          |\n| b | CaCO₃ → CaO + CO₂       | Phân hủy (decomposition)   |\n| c | Mg + CuO → MgO + Cu     | Oxy hóa – khử (redox)      |\n| d | HCl + NaOH → NaCl + H₂O | Trung hòa (neutralisation) |\n\nGiải thích:\n\n- a) Hexan cháy trong oxi, giải phóng năng lượng.\n- b) Một hợp chất bị phân hủy thành hai chất đơn giản hơn.\n- c) Magie nhường electron, ion đồng nhận electron.\n- d) Axit phản ứng với bazơ tạo muối và nước.\n\n![Hoření uhlovodíků › Chemie › Uč se online! ✍️ - Vše co potřebuješ do školy](https://images.openai.com/static-rsc-4/eVTFkRcBLFahSRTEC4v7MKeWreZA_vHzDB5viB1jlgr5jbo1HrpMNLhFPGtEiSlh3FkTMmqS4M4ALHO72sCa1zKOBdwNCAPL3tqK8_3LHfFCLuAtXKXqDdDk4K28KBowIwuNk9pcnuyiMJ6jEnSj999d2VBaogtX22XhmNvqFp0?purpose=inline)\n\n![This one thermal decomp | PPTX](https://images.openai.com/static-rsc-4/YS819EFTyb6CSsfQ5Hcz3DdLqu7jhd8COeqkEi3VTQQirk4wcyuIqQyJCW0xZn3JIE-43Yjb0VqVWLFLCB_evFVlUUq_DiUG9SsHK_hfVCFfz3OYAlD5FlEdHt8ZWJuY28SM8bNGpKpMmbZ3tn6k9WUPn0o2rzUFeh1G1ynUyf0?purpose=inline)\n\n![Macro image of magnesium reacting with copper oxide](https://images.openai.com/static-rsc-4/-I8AVOhJwZs7ezFqBJTozgorYv5BanFslP0L8aEu133Ex8fLCLNYKcorUyHifMuM655d5HrORLjHOrX0IJ7DPhzSDD0GGB-ea4tk1e55J7c8fP28LtKbX7X11AU0pt6uCAkH-RAefeXksRuNo2QVK6W90PpBHFEwu42v6GVM14P_pqX3DTWWQDaBtgb-GdnX?purpose=inline)\n\n4\n\n### Câu C4.08. Viết phương trình chữ và phương trình hóa học cân bằng\n\nTrả lời:\n\na) Natri và nước:\n\n- Phương trình chữ: Natri + Nước → Natri hydroxit + Hiđro.\n- Phương trình hóa học:\n\n2Na + 2H₂O → 2NaOH + H₂\n\nb) Magie và hơi nước:\n\n- Phương trình chữ: Magie + Hơi nước → Magie oxit + Hiđro.\n- Phương trình hóa học:\n\nMg + H₂O(g) → MgO + H₂\n\nc) Canxi và oxi:\n\n- Phương trình chữ: Canxi + Oxi → Canxi oxit.\n- Phương trình hóa học:\n\n2Ca + O₂ → 2CaO\n\nd) Brom và dung dịch potassium iodide:\n\n- Phương trình chữ: Brom + Kali iodua → Kali bromua + Iot.\n- Phương trình hóa học:\n\nBr₂ + 2KI → 2KBr + I₂\n\ne) Kẽm và dung dịch đồng(II) sunfat:\n\n- Phương trình chữ: Kẽm + Đồng(II) sunfat → Kẽm sunfat + Đồng.\n- Phương trình hóa học:\n\nZn + CuSO₄ → ZnSO₄ + Cu\n\n![Reaction of Sodium With Water - Sally Duncan](https://images.openai.com/static-rsc-4/Wt3VUCEurFMgdfTMXpqwMVeiIBkQNmNzMr-cMnc_KV5Kza9yNjG7M06JLsnMd0D4WBEx0Kmkcak3m8ZoxDJ82tmSLbkjFpFlV1qwoUOjDISWZYr5W99VdTdOoFg6FqsinhijXYpZ1YZeBOQKPo9TMAYYQ9a9PoP6d2HnzN6kp6Y?purpose=inline)\n\n![Magnesium introduced to steam produces a bright flame](https://images.openai.com/static-rsc-4/FfMsY6HOs-3onecOyXUrAEKwwdU4KWA-f3xFi6rlq3-H4klLVY9yGQkTP7kkxNexf09Lr0U_M5gji3fN7JpwLztiHnQfR-o5GM7cV7npUGDSJx05D9fJR1BKEIPDGRiWoAkVkgkll2wiiNpx-OQGd0nCJlQku8vDQ7GLJrHxfmI?purpose=inline)\n\n![Barwienie płomienia palnika](https://images.openai.com/static-rsc-4/gcw5yn4QkQUXKz_0Si1VKGBxSmhE_Wvhqfx5AVFetKcnYYhioIWdPfQXBNgXJXb-4YqD6WOIcGWzGYr0jwDuEykNMv8hlJNtm2z__LPxKLyp_No7IZllNmUVb0U0OdF_dK04nE7nu45d3dlS3KvG_DeREIai0qsb-CKZgx1LdzQ?purpose=inline)\n\n4\n\n## 4. Phần C4.04: Phân tích sâu về phản ứng Redox\n\n### Câu C4.09. Ký hiệu trạng thái và phương trình ion thu gọn\n\nTrả lời:\n\na) Ý nghĩa các ký hiệu:\n\n| Ký hiệu | Tiếng Anh | Ý nghĩa             |\n| ------- | --------- | ------------------- |\n| (s)     | Solid     | Chất rắn            |\n| (l)     | Liquid    | Chất lỏng           |\n| (aq)    | Aqueous   | Chất tan trong nước |\n| (g)     | Gas       | Chất khí            |\n\nÁp dụng:\n\nNa₂CO₃(s) + 2HCl(aq) → 2NaCl(aq) + H₂O(l) + CO₂(g)\n\n- Na₂CO₃: Natri cacbonat rắn.\n- HCl: Axit clohydric trong dung dịch.\n- NaCl: Natri clorua trong dung dịch.\n- H₂O: Nước lỏng.\n- CO₂: Khí cacbon đioxit.\n\nb) Phương trình ion thu gọn:\n\ni) Bạc nitrat + Natri clorua\n\nAg⁺(aq) + Cl⁻(aq) → AgCl(s)\n\nii) Natri sunfat + Bari nitrat\n\nBa²⁺(aq) + SO₄²⁻(aq) → BaSO₄(s)\n\niii) Axit clohydric + Potassium hydroxide\n\nH⁺(aq) + OH⁻(aq) → H₂O(l)\n\niv) Axit clohydric + Đồng(II) cacbonat\n\nCuCO₃(s) + 2H⁺(aq) → Cu²⁺(aq) + H₂O(l) + CO₂(g)\n\nGhi nhớ: Phương trình ion thu gọn chỉ giữ lại những ion hoặc chất thực sự tham gia phản ứng; loại bỏ các ion khán giả (spectator ions).\n\n![Reaktionsgleichungen | Chemie | SchuBu](https://images.openai.com/static-rsc-4/ww0Oox7VlbGGgrXPud6gKuE5eRf8GHu5YX3o1yp1FHTaOEa3eze7IIS_IfkZQaHkAJo5YM4iBisJxjyWqyLCTiXHCH1gr3q5wDFpH2YdyDck7uC-7mkrKDqo2hJlrdAg6i6hn9SCWfDFxX9ma72jBybo0ekYIzrk7fXD9H98VxY?purpose=inline)\n\n![PPT - Chemistry 100(02) Fall 2013 PowerPoint Presentation, free download - ID:3174535](https://images.openai.com/static-rsc-4/BCPfSvX9R7JyLy6KPxwtSMsgPkawnms-wpLW60l-yakrodKjSL0-vyBXsWqoT4Z5uiUsd23ClV61AeVTXWmvZa6aFw_yhVC1MIzJqB2hYPYs_PPljiuzsiLWanTcg6CyJQ05bwpD-6_95Wq8LYaSj4vFo8PEEDoJa8Uigko7HHg?purpose=inline)\n\n![PPT - Net Ionic Equations Continued! PowerPoint Presentation, free download - ID:4788785](https://images.openai.com/static-rsc-4/vTvQoqP47ahqH0xqRxxxr9Dyun3EJ-wq0ByQPLy1vvnuWwD0jA0POh9N5238kZVvpcXxuIrzylsiyfdompfV1tgbmJDJ9dFn7UH4othNHKkukiI4qNVmfeAOioKSye7VossHTt6U50CqaLkwo_VzjgNzJkvyapJRdwU6QGSTJtA?purpose=inline)\n\n### Câu C4.10. Định nghĩa oxy hóa và khử\n\nTrả lời:\n\nĐoạn phát biểu hoàn chỉnh:\n\n“Khử (reduction) là sự nhận electron; oxy hóa (oxidation) là sự mất electron. Trong phản ứng redox, chất oxy hóa nhận electron; chính chất oxy hóa bị khử trong phản ứng.”\n\nVí dụ:\n\nMg + Cu²⁺ → Mg²⁺ + Cu\n\n- Mg → Mg²⁺ + 2e⁻: Magie mất electron, bị oxy hóa.\n- Cu²⁺ + 2e⁻ → Cu: Ion đồng nhận electron, bị khử.\n- Cu²⁺ là chất oxy hóa.\n- Mg là chất khử.\n\n![AS Chemistry: Redox Reactions and Group 2 Elements - Owlcation](https://images.openai.com/static-rsc-4/hTXq4MMSu_hZvEAdX4xpoeoh5RAGVIGwJNeAlATcIQXF5VbWS0ydfKP6VkhXRSlFqqcyELsq2HUEXIOuN3bQDitWlgVFtNOr8p1FI3Q8m7vjGRQWrCsuxkOL2de4YSvOC7BQ5FfcSByH80pdfBRFMYX0ZEWTbE-SyJmA16e3MWw?purpose=inline)\n\n![Identifying the products of chemical reactions | OCR Gateway C4 | revisechemistry.uk](https://images.openai.com/static-rsc-4/PK5cl6_roB6vIY5DHbMLRLHCZ3Iuvf2fI_J_7K6B7P4k_Z7x-sFnqwYhmatcLuXFAA2sQalfR17VaQYUtgJtg4h6W_5cGBWmDDv_bVc2m25VNk-AbkYrrHE-p6ilAjCWNcMHLiykxO-vB0tDXlqZA9uuFa5Svw1J6qzxGxykGRo?purpose=inline)\n\n## 5. Phần C4.05: Điện phân (Electrolysis)\n\n### Câu C4.11. Điện phân chì(II) bromua nóng chảy\n\nTrả lời:\n\na) Điện phân là quá trình sử dụng dòng điện một chiều để phân hủy hợp chất thành các chất đơn giản hơn.\n\nb) PbBr₂ rắn không dẫn điện vì các ion Pb²⁺ và Br⁻ bị giữ cố định trong mạng tinh thể, không thể di chuyển tự do.\n\nc) Hơi xuất hiện ở cực dương có màu nâu đỏ do khí bromine (Br₂).\n\nd) Thực hiện trong tủ hút vì bromine là khí độc, gây kích ứng mạnh đường hô hấp và mắt.\n\ne) Cực âm còn gọi là cathode (catot).\n\n![Electrolysis of molten ionic compounds - Revision Guide | MathsGenie](https://images.openai.com/static-rsc-4/c3i4mMRMjkbfrj73ldZ-TepNddUXHxbc14tKSptigflXXgbUeuo9-pzvzg3-Xi0AsXkvwa-HArXsAWXUhWOgNA6-Ks06QMl-lldoEok7jLh7ahEX4v7jTgFCo8kuezYLdi4hIJzbAwxwlDp6wzv79kxzDx5m1fNJkMwfUYE3ZE0?purpose=inline)\n\n![Electrolysis - online presentation](https://images.openai.com/static-rsc-4/KpYCyRQrslVrQpUxVy5PN78OdEpbwDHwelBxqfYHaOou_-mwacbJQIP5WErhGdxouAUdGVEapXe3aZR3LvdsKJrLw5WS_7ztV5a9r_klezNld6rlmVoKorSvzcLqYT4qYcln241ZyyxpwMolQOKUb1UNCpfirDKJoYDbDfwDjHY?purpose=inline)\n\n![Br₂ là gì ? Brom là gì và đặc điểm nhận dạng](https://images.openai.com/static-rsc-4/W1VUZHVoom6Ta-X1YMD-4GfIrofTOhoREWd9R69uHn2PSt4GIhcdd3VYOxBeGp85gnaaiVArmCEtm_H8ySU1NF0XAlisNxTzBVcV4EYYJMxESuiOGFH0Nndvuii4aFmmC-CTZjBoHpYYqLQtuR3A1MpUBEKaHWxApP0LACVHqqw?purpose=inline)\n\n### Câu C4.12. Mạ đồng một vật bằng kim loại\n\nTrả lời:\n\na) Vật cần mạ được đặt ở cực âm (cathode).\n\nTại đây, ion đồng nhận electron và tạo thành đồng kim loại bám lên bề mặt vật:\n\nCu²⁺ + 2e⁻ → Cu\n\nb) Có thể sử dụng dung dịch đồng(II) sunfat (CuSO₄) làm chất điện phân.\n\n![Electroplating With Copper Art Print by Science Photo Library - Science Photo Gallery](https://images.openai.com/static-rsc-4/nSZoG0HHTa9xYi5nczhAn6QLZ_i9fAbjH60yjz4VLRPIZAxa8FDew1IfvRafJIyrlj7oHRacfgawUuZtBhp_m4tUAw-iZpIYd6-Ux5ztcvzyQo0l8v3mAn2j7mQtX8vZY7SRbOh6gAKpV2dMUuZQ0qRpGESFwLhHt9o9rQTgqig?purpose=inline)\n\n![Electrochemistry Explained: Diagrams & Reactions | AI Art Generator | Easy-Peasy.AI](https://images.openai.com/static-rsc-4/WeagSRMSVEmCETbdHG6rucbGOEUXKtz1qVnDH73GWXsObyhzVtQncHHa232fN8MBK8GD-tes7ypOY_4IHUduECjnF6HaEgqQkneegRJ6RulgI3IH-WyrdhvxrBC1GR3ZuO1sq0mtmvdk5sxF0Q2j5C49VP7nLj56jIcgIz0VUxI?purpose=inline)\n\n![Diagram of shape dimensions](https://images.openai.com/static-rsc-4/2GLX9PskX7o_pJDB_Oqa_Kjj_KUxnS5PEyYqAizxMR3h_zz_mBSsBUQzb68gwrEV-HbZNt0BOjS-cFxhrI1vNgJYFvvuj8A3eUmca6NH07DYQr9bYOrbln4y95f05LEF3GICfB73yHqAVFkQakcO1FQTv5ep4ROJg0baXySEo00?purpose=inline)\n\n7\n\n### Câu C4.13. Phản ứng tại các điện cực khi điện phân PbBr₂\n\nTrả lời:\n\na) Phản ứng xảy ra tại cực dương:\n\n2Br⁻ → Br₂ + 2e⁻\n\nIon bromide mất electron tạo thành bromine.\n\nb) Phản ứng tại cực âm:\n\nPb²⁺ + 2e⁻ → Pb\n\nĐây là phản ứng khử vì ion Pb²⁺ nhận 2 electron để tạo thành nguyên tử chì.\n\nGhi nhớ:\n\n- Cathode (cực âm): Xảy ra quá trình khử.\n- Anode (cực dương): Xảy ra quá trình oxy hóa.\n\n![Electrolysis of Molten Ionic Compounds | WJEC GCSE Chemistry Revision Notes 2016](https://images.openai.com/static-rsc-4/ht40a13Ebd_-IOOLO15PMtO_sWRGhNWmX2IML_xedPGLKp7hbhhh4T0vhFruy6rUmR4GIRIDekI-LC8ocnjCxv7_SZZY9z_1b80pm5lmD2IoYrU1GDHJppdhDr1HEgLRs7-scksmf9LhrNtYEjqtvUZqb-xtwP8J6k3-ojpj3zA?purpose=inline)\n\n![Electrolysis - online presentation](https://images.openai.com/static-rsc-4/KpYCyRQrslVrQpUxVy5PN78OdEpbwDHwelBxqfYHaOou_-mwacbJQIP5WErhGdxouAUdGVEapXe3aZR3LvdsKJrLw5WS_7ztV5a9r_klezNld6rlmVoKorSvzcLqYT4qYcln241ZyyxpwMolQOKUb1UNCpfirDKJoYDbDfwDjHY?purpose=inline)\n\n![Electrolysis revision | PPT](https://images.openai.com/static-rsc-4/-GNFS5ExSYHpcPpU9Qaaw_XFfwKY4FGdxTbZaCGE-b6yAlk_tRo4cN7kQXh6YAdNRtt9oOlT4cLRW_lDNk7vB0CyVpt7ImfYmsDXpMarELzylEt2xlB6k4UzC4OA555d73ESbsFmifke0PAQz2WUQA-ztJKRV9oyT6MykRBIIZ0?purpose=inline)\n\n7\n\n### Câu C4.14. Dự đoán sản phẩm điện phân dung dịch\n\nTrả lời:\n\na) Dung dịch bạc sunfat (Ag₂SO₄):\n\n- Khí ở anode: O₂.\n- Sản phẩm ở cathode: Ag.\n- Chất còn lại trong dung dịch: H₂SO₄.\n\nPhương trình tại các điện cực:\n\nCathode:\n\nAg⁺ + e⁻ → Ag\n\nAnode:\n\n2H₂O → O₂ + 4H⁺ + 4e⁻\n\nb) Dung dịch sodium nitrate (NaNO₃):\n\n- Khí ở anode: O₂.\n- Sản phẩm ở cathode: H₂.\n- Chất còn lại trong dung dịch: NaNO₃.\n\nPhương trình tại các điện cực:\n\nCathode:\n\n2H₂O + 2e⁻ → H₂ + 2OH⁻\n\nAnode:\n\n2H₂O → O₂ + 4H⁺ + 4e⁻\n\nGiải thích: Na⁺ và NO₃⁻ không bị phóng điện trong điều kiện này. Nước bị điện phân, còn NaNO₃ vẫn tồn tại trong dung dịch.\n\n![이공계 실험 | 전기 화학  |  전기 분해 | 의약품 연구 | IT](https://images.openai.com/static-rsc-4/GKUMvG-WF_a_G-AjUltqcDYb3HIAkjAY28ILuBkAZuwsx-XJ6NSIAJ8e2QLYVjRquWeA-e-bfxAzAteC-81zUuodpOw9YYZGCkBHrJ-D7blzuvgVZyU13UoC2arorFTl-6TXtvqjnoedBSsXxtOaz8R7yaVtQFAbVewuIHDJgGE?purpose=inline)\n\n![electrolysis of different kind of solutions | PPT](https://images.openai.com/static-rsc-4/QhkpFs8-vDitw6O8UW8N7M3PQpiC0pxKIjAVIQ7jGVWd9omD55EzanXG2pm9TiJa_WN5Ws6dArOgbW-4LBHNNGCiKtk0CT4ytEETlG9nQVDF1jZTX6DMPUF8sdUNKtz6r2BQ2vCdSEOme7zrQWjZB-dhRkPlirXTrXIdM7Qva2M?purpose=inline)\n\n![Electrolysis of Aqueous Solutions | Cambridge (CIE) O Level Chemistry Revision Notes 2021](https://images.openai.com/static-rsc-4/OT8CoxC4CgOT94qRiBQor2to59TRTuIQcNNixNVcZkHYHrg9Qo_fQifTZ1AQ1B0HMzjcnE2GRS6KoacT8xig2vIrNCNqdld53fIVPsJw2mXXQeOZhp6lrls9WwYpORvLLiBIHunh1ItbmOjEd45Tt3vtWwYIYlJajh18YT4vs8E?purpose=inline)\n\n### Câu C4.15. Thiết bị mạ đồng\n\nTrả lời:\n\na)\n\ni) Dải kim loại cần mạ là điện cực được nối với cực âm của nguồn điện (cathode). Không có sơ đồ X và Y đi kèm nên chưa thể xác định chính xác tên X hay Y.\n\nii) Dải kim loại cần mạ là cathode (cực âm).\n\nb) Nếu thay điện cực đồng bằng than chì:\n\n- Dung dịch CuSO₄ dần nhạt màu xanh.\n- Ion Cu²⁺ bị khử thành đồng kim loại bám trên vật cần mạ.\n- Than chì không bổ sung ion Cu²⁺ vào dung dịch nên nồng độ Cu²⁺ giảm.\n\nc) Đồ nhựa được phủ lớp than chì mỏng vì:\n\n- Nhựa không dẫn điện.\n- Than chì có khả năng dẫn điện.\n- Lớp than chì tạo bề mặt dẫn điện để kim loại có thể được mạ lên.\n\n![Umicore MDS Successfully Installs Uyemura Thru-Cup EVF-YF9 Process](https://images.openai.com/static-rsc-4/Yv74nkhM5ZoTwMMUwnRiD1p2Rh0h21c290BdFH0d2wlrqHMdhnHNJavHBnBce4bhTkCLSblwLfTbT3-aFwQBNqpRtqhHBtm4XROKPOoBJPY_1tBG_dW4vZ32nf8OplGdfkhT9tLwUUDEQCW4ZELq-sNnKHE74FuUuG8fwgItdvE?purpose=inline)\n\n![Electroplating on Plastic - Labelled diagram](https://images.openai.com/static-rsc-4/p6_dg13ZQqjj2lOmkG3M_JAD_x3qbNf_9L0ck-2sCJs-cawM6TFlwAaxmFThwpZ929773YT_bl3V0EkvxzVSz8TtJ1BWc_m61ejaQf_F2M2oxHtRPkPVWJIKFv7E4yqHcOZ_5jFAyUFNWx6Go5_s6FgVyiCo5QeGaO1jByhKltg?purpose=inline)\n\n![3D Printed Plastic Carbon Paint Electroplating](https://images.openai.com/static-rsc-4/2E6ZOCpoL-u5VyYghuwgDIjiuwELB2nNzigJu7vDF8RY_-gKplC0DmvFvekE-6Ellm3Jg73GI0bBOIDnu0I8H37xbIi5f5nfuAW-ChHpcLSyusfkRT_ICpbVfPwhk8yNv6u2d1q-tRac8DIczsbtQAU7N7_eukxux4l-RDE52Yk?purpose=inline)\n\n7\n\n# II. BÀI TẬP ÔN TẬP CUỐI CHƯƠNG 4 (END-OF-CHAPTER QUESTIONS)\n\n## Bài 1. Phân hủy nhiệt của muối cacbonat (Thermal decomposition)\n\nCâu hỏi: Đun nóng bột đồng(II) cacbonat và kẽm cacbonat, quan sát sự thay đổi màu sắc và khí thoát ra.\n\n### Trả lời\n\na) Bằng chứng cho thấy phản ứng hóa học đã xảy ra:\n\n- CuCO₃ màu xanh chuyển thành chất rắn màu đen.\n- ZnCO₃ màu trắng chuyển thành chất rắn màu vàng khi nóng.\n- Cả hai trường hợp đều giải phóng khí làm đục nước vôi trong.\n\nb) Bằng chứng quan trọng và đáng tin cậy nhất:\n\nSự hình thành chất khí CO₂ và chất rắn mới có tính chất khác chất ban đầu là bằng chứng rõ ràng cho phản ứng hóa học.\n\nKhí CO₂ làm đục nước vôi trong:\n\nCO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O\n\nc) Phương trình chữ:\n\n- Đồng(II) cacbonat → Đồng(II) oxit + Cacbon đioxit.\n- Kẽm cacbonat → Kẽm oxit + Cacbon đioxit.\n\nPhương trình hóa học:\n\nCuCO₃ \\\\(\\xrightarrow{\\Delta}\\\\) CuO + CO₂\n\nZnCO₃ \\\\(\\xrightarrow{\\Delta}\\\\) ZnO + CO₂\n\nd) Đun nóng mạnh kẽm oxit rồi để nguội:\n\n- Khi nóng: ZnO chuyển sang màu vàng.\n- Khi nguội: ZnO trở lại màu trắng.\n\ne) Đây không được xem là phản ứng hóa học trong điều kiện thí nghiệm thông thường, vì ZnO vẫn là cùng một chất, không hình thành chất mới. Đây là sự thay đổi màu sắc thuận nghịch do nhiệt độ.\n\n![Copper Ii Oxide Decomposition at Annabelle Wang blog](https://images.openai.com/static-rsc-4/FCneNrXVNS-QnTDf4URcvk6TpyX6M8gRHw6ATNRNhsPGYu7MndT4x4Y6LYBDTpcd4fvABJQLfXwaLBoe8MJKAqv9WLKjayYYNsT2nyDuCYmBtmVCfjkNPm4QFIzS3YhesOO7dXwlXEx2eeTfuP6JP2SjfvijC7nVjvcrjhPxzWM?purpose=inline)\n\n![PPT - Calcium carbonate has the chemical formula, CaCO 3 PowerPoint Presentation - ID:5056546](https://images.openai.com/static-rsc-4/v9IMiBn3tDZw1tHPs_yygysve7GtHnmLzhneyaLQ-QOGZhvtrMOHjCUG_6lPt6pjlnYNEDyAGwyl0CXyf-1wM2LSpRAilICZKLqFjhfeNFFDcHtEpozYPDRVF8UJ09PneiUt_myyPhmDLFuC3bYE0vYLM-gcmVhfeSmp57a5dM8?purpose=inline)\n\n![Test for carbon dioxide - GCSE Chemistry Revision Guide | Maths Genie](https://images.openai.com/static-rsc-4/9h8ookcDw_HjWVnmPfRvI4d9KuHRrynA6Y_vzSjujUleoG7Df6j5np7jET-setuLlAJ_adrZW_zjk3_rIaJJsORf-f0KDBoerNC7nichGMjkn_WQEVhxP_9bjfV6HcIS5ShF-MGr8TQQBRyajMBreWQJEARj7aa2g8K3bq6kmo4?purpose=inline)\n\n## Bài 2. Phản ứng oxy hóa – khử (Redox reactions)\n\nCâu hỏi: Magie đang cháy phản ứng với khí CO₂ theo phương trình:\n\n2Mg + CO₂ → 2MgO + C\n\n### Trả lời\n\na) Quan sát chứng minh cacbon được tạo thành:\n\nXuất hiện chất rắn màu đen là cacbon.\n\nb) Phương trình chữ:\n\nMagie + Cacbon đioxit → Magie oxit + Cacbon.\n\nc) Xác định chất bị khử và bị oxy hóa:\n\ni) Chất bị khử: CO₂.\n\n- Cacbon trong CO₂ có số oxi hóa +4.\n- Cacbon tự do có số oxi hóa 0.\n- Cacbon nhận electron nên bị khử.\n\nii) Chất bị oxy hóa: Mg.\n\n- Mg có số oxi hóa 0.\n- Mg trong MgO có số oxi hóa +2.\n- Mg mất electron nên bị oxy hóa.\n\nKết luận:\n\n- Mg là chất khử.\n- CO₂ là chất oxy hóa.\n\nd) MgO phản ứng với HCl:\n\nPhương trình hóa học:\n\nMgO + 2HCl → MgCl₂ + H₂O\n\ne) Phản ứng giữa Mg và ZnSO₄:\n\ni) Phương trình ion thu gọn:\n\nMg + Zn²⁺ → Mg²⁺ + Zn\n\nii) Giải thích:\n\nMagie nhường 2 electron:\n\nMg → Mg²⁺ + 2e⁻\n\nIon Zn²⁺ nhận 2 electron:\n\nZn²⁺ + 2e⁻ → Zn\n\nVì magie nhường electron nên magie là chất khử, đồng thời bị oxy hóa.\n\n![Reacción magnesio y CO2 | Currículum Nacional](https://images.openai.com/static-rsc-4/thqaYRmaVler6aE_urq44hQxQF0w0UcjCzU6F0PlqHfDgvyX6nrzaqSOHoMrHh5Xn3O_WmJRVe670hSpVT9rVrAsILONHeCIfRDt7z3cv0U6NNXYuKBAT1huibtRCwWC5aMIljQiIn7Ox9oNkMJxKF5GUqAuyTQHh2gFhaKiaEU?purpose=inline)\n\n![ロイロノート・スクール サポート - 中２　理科　化学反応式をマスターしよう　化学変化【授業案】和歌山大学教育学部附属中学校　矢野充博](https://images.openai.com/static-rsc-4/BCSAcqL-Yo0z4LbcfFhW0Cspxagc89P6YhB2S05B2QLuYt8XpyozI7zx5vP3FNIpH9gEU3wWajYTl9ytUSvrIbmYArGxZLepLmF5l7vlv-FUSBBBgooiZVgrb2jjqfSOsz6KBKdrGVGyXkiy4bhPTHm2D4qm4ymeWpCzYXkC5_M?purpose=inline)\n\n![PPT - Redoxireakciók PowerPoint Presentation, free download - ID:5978457](https://images.openai.com/static-rsc-4/fnVpl44d_Be9rJNJORJUPsiwum94yUAW5LaqYWqE1bCzzdztVIkNJNR1kS1UaJ81ba62yQhnkabEMc929xRcTgvfnIJKZd0f_EWTrr9liKZ4C9TxyZjkKnYkPCVl3R9V35UZQSb0Yl0-lo9xpPpghLSJoV8NTGcxZQYsywqliAs?purpose=inline)\n\n4\n\n## Bài 3. Các phản ứng hình thành mưa axit (Acid rain)\n\nCâu hỏi: Hai phương trình A và B biểu diễn các phản ứng tạo thành mưa axit:\n\nA: S + O₂ → SO₂\n\nB: SO₂ + O₃ → SO₃ + O₂\n\n### Trả lời\n\na) Phương trình chữ của phản ứng A:\n\nLưu huỳnh + Oxi → Lưu huỳnh đioxit.\n\nĐây là phản ứng đốt cháy lưu huỳnh trong oxi.\n\nb) Hai phát biểu đúng về phản ứng B:\n\nĐáp án: (2) và (3)\n\n- (1) Sai: SO₂ không bị khử thành SO₃.\n- (2) Đúng: SO₂ bị oxy hóa thành SO₃.\n- (3) Đúng: O₃ đóng vai trò chất oxy hóa và bị khử.\n- (4) Sai: O₃ không bị oxy hóa thành O₂.\n\nGiải thích bằng số oxi hóa:\n\n- S: +4 trong SO₂ → +6 trong SO₃: Bị oxy hóa.\n- O trong O₃: 0 → −2 trong SO₃: Bị khử.\n\nLưu ý: Một phần oxi từ ozone được chuyển vào SO₃, phần còn lại tạo thành O₂.\n\nc) Phương trình tạo axit sunfuric:\n\nSO₃ + H₂O → H₂SO₄\n\nMở rộng kiến thức:\n\nMưa axit hình thành khi các oxit axit như SO₂, SO₃ hòa tan hoặc phản ứng với nước trong khí quyển, tạo thành các axit, đặc biệt là H₂SO₄.\n\n![Non-Metals | Properties and Structures | GCSE Chemistry](https://images.openai.com/static-rsc-4/nvGCgsRwA3YZQmP_gM9BQp9BEOvj4WvfdOQngN9bLvP7QDRMc0VaRV78iLJllLuqjrcZi6JFnm8CHP9hcxlXm_ZvOzAfHiF2w_8e2Jm1Bie9KamijPpb3HUphgslETn0ewnh5rVn23HGGMcIRXTa4eK_JKYKM8jARWS8ukw8tyA?purpose=inline)\n\n![Notes for 8.3B Acid rain - IB | RevisionDojo](https://images.openai.com/static-rsc-4/kjNjpa-jXFvynbaAxa__uuB1p5UbThXlhZ1CBWRFf0jxNe_OUTyc-fWcg8eqiMSrun1rrYelnvhurEEB_hQqlylA5jGTMft2gbhNWUW5krGEzODWDwDs_zk5LxYwzVBNsIQdlaxbrGfBVMAWCdZIYYKlW7TOZAf0TxphRk3EKmU?purpose=inline)\n\n![Notes for 8.3B Acid rain - IB | RevisionDojo](https://images.openai.com/static-rsc-4/_UOI2PgH2W0eiTuqi7zbIMQqvKcGM7ISkC0TzCXr66MKzCPky-guOdHS7FodHJwFwt_gpeLCQinL_SVEdmY2uoyTVY4exAymfv5z9D41MzTFeESayn_XRJZacZ5g62vGKts2bdSNImCzcwKr3g5j0ualjoYABPwPokO8x2-fDfo?purpose=inline)\n\n## Bài 4. Khả năng dẫn điện và điện phân hợp chất nóng chảy\n\n### Trả lời\n\na) Ba chất có khả năng dẫn điện:\n\nĐáp án\n\n1. Dung dịch natri clorua (NaCl).\n2. Đồng (Cu).\n3. Than chì (graphite).\n\nGiải thích:\n\n- Dung dịch NaCl: Có các ion Na⁺ và Cl⁻ chuyển động tự do.\n- Đồng: Có các electron tự do.\n- Than chì: Có các electron delocalised (electron tự do trong hệ liên kết).\n\nCác chất không dẫn điện trong danh sách:\n\n- Đồ gốm.\n- Tinh thể NaCl ở trạng thái rắn.\n- Lưu huỳnh.\n\nb) Tên gọi của chất không dẫn điện:\n\nChất cách điện (insulator).\n\nVí dụ: Nhựa, cao su, thủy tinh và đồ gốm khô.\n\nc) Điện phân kẽm clorua nóng chảy (ZnCl₂):\n\ni) Điện cực dương gọi là anode (anot).\n\nii) Sản phẩm tạo thành:\n\n\\- Tại cathode (cực âm): Kẽm (Zn).\n\nZn²⁺ + 2e⁻ → Zn\n\n\\- Tại anode (cực dương): Khí clo (Cl₂).\n\n2Cl⁻ → Cl₂ + 2e⁻\n\nPhương trình tổng quát:\n\nZnCl₂(l) → Zn(l) + Cl₂(g)\n\niii) Phi kim có thể dùng làm điện cực:\n\nThan chì (graphite) vì có khả năng dẫn điện và tương đối trơ về mặt hóa học trong điều kiện thích hợp.\n\n![Η αγωγιμότητα των διαλυμάτων των αλάτων | CHEMNOESIS](https://images.openai.com/static-rsc-4/VlXFcgKBa3GSyGakdcJkasd7sgFxXvig_WPq6JlFhipR2FXZPMnlcox9d2UEYkFG_LisbRtX9tT6NebeP5BhYJ-CPiqHsFgamsoS6l394YbotonjB5YQDzI4p3l-ADNkZIDIZNx81AIpyqXBc4cOJCElGFfGwM_eh8pshRV279s?purpose=inline)\n\n![Industrial & 3D Product Design Services | Fiverr](https://images.openai.com/static-rsc-4/0XLIj6Vy0XQhlGaLGHGXqsWf21peD9LEmJimInkS2pVosN_AIiHom6iqBp52c_BAxpY7XbgpwWSk2dmtuEIAhWMsCNvm5ouKtbCD102y0pRP90cY1T2nE1Z-FwchpGeacCEv-Dm09B3CnxHaCpL4ycJqQXPfqOeDiSN3yZFaqvo?purpose=inline)\n\n![Electrolysis of molten zinc chloride | Demonstration | RSC Education](https://images.openai.com/static-rsc-4/iOwVvs2XtU_PD_I418XRmEquDXoQ6GTldW_hkXoVS1dp5nAzScKp4ANzFVnliixXCx0NLDEmtmDr8OY6DDJnV6a5iI9PsM4KLi8V_aUjdQ-UDKw7_0R2dDR9uFHBRJVqb8zH4vUPoH5E7KQUbhLlk6Iz6rJwr5rnipMGgED3CQA?purpose=inline)\n\n6\n\n## Bài 5. Điện phân dung dịch natri clorua đậm đặc (Electrolysis of concentrated sodium chloride solution)\n\n### Trả lời\n\na) Vật liệu làm điện cực và lý do sử dụng:\n\nThông thường sử dụng điện cực than chì hoặc điện cực titan phủ lớp oxit thích hợp trong thiết bị công nghiệp.\n\nTrong thí nghiệm ở trường học, có thể sử dụng than chì.\n\nLý do:\n\n- Dẫn điện tốt.\n- Tương đối trơ về mặt hóa học.\n- Không dễ bị tiêu hao trong điều kiện thí nghiệm thích hợp.\n\nb) Hiện tượng quan sát được:\n\n- Có bọt khí xuất hiện ở cả hai điện cực.\n- Tại cathode xuất hiện khí không màu là hiđro.\n- Tại anode xuất hiện khí clo có màu vàng lục nhạt.\n- Dung dịch sau điện phân có tính kiềm do hình thành NaOH.\n\nc) Sản phẩm tại mỗi điện cực:\n\n![Electrolysis | AQA Required Practical | revisechemistry.uk](https://images.openai.com/static-rsc-4/mE_F7AxhFlQGO1Vb_xVdVzz18DyVaUc0FjDnxqNMreuxWMzqJ2eJs-TdfsKLrR7X8F944QoEM4KcgrnRRs9YcOwtX7SsTzvjdPCLr1ZqU-uWlJhmu1fmZrKmN5toTQgngf6Jd15g23vNGMo0xSiujr08HpDLs7EZQQ5jMDCjYIw?purpose=inline)\n\nCathode (cực âm)\n\nSản phẩm: Khí hiđro (H₂).\n\n2H₂O + 2e⁻ → H₂ + 2OH⁻\n\n![Sodium Hydroxide: Membrane vs Diaphragm Grade - CORECHEM Inc.](https://images.openai.com/static-rsc-4/MgrzP52E6fhxECl0v9u_ZKrkYccw_NOMom1mu3jf7HUYMO40uJOu3DqNOjcWvgUryDUAxs5GbPiTvh124AW3UkJXDc5om6taG633p2qaUiDkW8gG1Rg0WonMpmw3sHCmUisl1LEqAWbDlIT3eFiA7P0Jf7iuGSIMBf-BjnrH598?purpose=inline)\n\nAnode (cực dương)\n\nSản phẩm: Khí clo (Cl₂).\n\n2Cl⁻ → Cl₂ + 2e⁻\n\n![Sodium hydroxide in glass, chemical in the laboratory](https://images.openai.com/static-rsc-4/oM3thlVxc21LPvpvbu38gZeT7ERh2dUzMT03VmH3MwtpuWO6SgBb8dNnc1oYgoyoT34fG8mgDndkKfSDWZ-gWsF3BKgHcHGWoZBzgpGOJisJ2GE-Rk6bys3fcstPpA7U46iVghUuClp32EscIlEnZc66rIlxuCaxUU72cH8uwQHbElahcL1FhS1V_TFFbkhx?purpose=inline)\n\nTrong dung dịch\n\nSản phẩm: Natri hydroxit (NaOH).\n\nPhương trình tổng quát:\n\n2NaCl(aq) + 2H₂O(l) → 2NaOH(aq) + H₂(g) + Cl₂(g)\n\nỨng dụng công nghiệp:\n\nĐiện phân dung dịch NaCl đậm đặc (brine electrolysis) được sử dụng để sản xuất:\n\n- Clo: Sản xuất chất tẩy rửa, hóa chất khử trùng.\n- Hiđro: Sản xuất amoniac và nhiều hóa chất khác.\n- Natri hydroxit: Sản xuất xà phòng, giấy và hóa chất công nghiệp.\n\n![Electrolysis of Concentrated NaCl (examples, answers, activities, experiment, videos)](https://images.openai.com/static-rsc-4/k5U_-JW4l3TBgkUYi_EBvwyRlxP5yJfJtn7DDTm6dE4FZQpkpmwSQVaxaNT7K05q7_0Z1pvhTturPLCJd5jJ0Ue8TEoMrZ1HMNV37eYz6F4XV-mlkow-OlcyWV8ynHdSDd8JnkWjwQJDFtaY7tYccibTpWDy5pqy1NuvGlmOAfI?purpose=inline)\n\n![Electrolysis | Cambridge (CIE) O Level Chemistry Exam Questions & Answers 2021 \\![PDF\\]](https://images.openai.com/static-rsc-4/TRU-eOzvkpnkWf21L5pFo5tv-4hGZhYYUb-WyQ-YulKN7oJNTgyHLHaCPU7mzisO923JNlrGivLq_X3ygAzStuVPwtRlBlMTqsCtJZUwjIDFG1sB3jVoQ7nUHqVW2pCDAZ7QO-HCegj2VCQNJjypOuByyOh5SxAUCDihZYX2_eo?purpose=inline)\n\n![Caustic Soda Production Process-Sodium Hydroxide Production](https://images.openai.com/static-rsc-4/Y9wBgMhPMWeuipDJLmHdjbKQ8o0zy9k5A_l6SmRKnM4--ANHKOcTdAGKUaKQbo1ZL7UWNn4ujNeK1mzrF5gQ2D4N48E5idWjwf0_B-yyOwg_cMXwu3qVjkA8__VefmGfv4V-gULTDVeMS8FvQex0wMDfINBTSpOiRy7AjNPCzvQ?purpose=inline)\n\n4\n\n## III. BẢNG TỔNG HỢP KIẾN THỨC TRỌNG TÂM\n\nBảng dưới đây giúp học sinh hệ thống lại những kiến thức quan trọng nhất của chương.\n\n| Chủ đề             | Kiến thức cần nhớ                               |\n| ------------------ | ----------------------------------------------- |\n| Biến đổi vật lý    | Không tạo chất mới.                             |\n| Biến đổi hóa học   | Có chất mới hình thành.                         |\n| Phản ứng tỏa nhiệt | Giải phóng nhiệt ra môi trường.                 |\n| Phản ứng thu nhiệt | Hấp thụ nhiệt từ môi trường.                    |\n| Phản ứng cháy      | Chất phản ứng với oxi, thường giải phóng nhiệt. |\n| Phản ứng phân hủy  | Một chất tạo thành nhiều chất.                  |\n| Phản ứng trung hòa | Axit + Bazơ → Muối + Nước.                      |\n| Oxy hóa            | Mất electron.                                   |\n| Khử                | Nhận electron.                                  |\n| Chất oxy hóa       | Nhận electron và bị khử.                        |\n| Chất khử           | Nhường electron và bị oxy hóa.                  |\n| Điện phân          | Dùng dòng điện để phân hủy hợp chất.            |\n| Cathode            | Cực âm, xảy ra sự khử.                          |\n| Anode              | Cực dương, xảy ra sự oxy hóa.                   |\n| Anion              | Ion âm, di chuyển về anode.                     |\n| Cation             | Ion dương, di chuyển về cathode.                |\n\n### Một số phương trình quan trọng cần ghi nhớ\n\n| Phản ứng            | Phương trình                    |\n| ------------------- | ------------------------------- |\n| Magie cháy          | 2Mg + O₂ → 2MgO                 |\n| Natri + nước        | 2Na + 2H₂O → 2NaOH + H₂         |\n| Đồng + oxi          | 2Cu + O₂ → 2CuO                 |\n| Trung hòa           | HCl + NaOH → NaCl + H₂O         |\n| Phân hủy CaCO₃      | CaCO₃ → CaO + CO₂               |\n| Kẽm + đồng sunfat   | Zn + CuSO₄ → ZnSO₄ + Cu         |\n| Tạo axit sunfuric   | SO₃ + H₂O → H₂SO₄               |\n| Điện phân PbBr₂     | PbBr₂(l) → Pb + Br₂             |\n| Điện phân ZnCl₂     | ZnCl₂(l) → Zn + Cl₂             |\n| Điện phân nước muối | 2NaCl + 2H₂O → 2NaOH + H₂ + Cl₂ |\n\nLưu ý an toàn khi sử dụng hình ảnh và tổ chức thí nghiệm\n\nMột số phản ứng trong chương sử dụng bromine, chlorine, kim loại kiềm và axit sulfuric đặc. Đây là các hóa chất hoặc quá trình nguy hiểm. Hình ảnh minh họa chỉ phục vụ học tập; không tự thực hiện các thí nghiệm này nếu không có giáo viên, thiết bị bảo hộ và hệ thống hút khí phù hợp.\n\nKết quả: Bộ tài liệu đã bổ sung đáp án cho 20 câu/bài tập, giải thích các ý nhỏ và bố trí 3 hình minh họa cho từng câu, tương ứng khoảng 60 hình ảnh minh họa."</script>
+
+    <script>
+        let units = [];
+        let allImages = [];
+        let currentImageIndex = -1;
+        let isLightboxOpen = false;
+        
+        let imageUndoStack = [];
+        let imageRedoStack = [];
+
+        let currentUnitIndex = -1;
+        let fontSize = 20;
+        let isMuted = false;
+        let speechRate = 1;
+        let synth = window.speechSynthesis;
+        let rawContent = "";
+        let lastSavedFilename = "BaiGiang_Complete.html";
+        
+        let isAutoplay = false;
+        let selectedText = "";
+        let selectedNodeParent = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            let loadedMarkdown = "";
+            const embeddedDataElem = document.getElementById('embedded-data');
+            
+            if (embeddedDataElem) {
+                try {
+                    const parsed = JSON.parse(embeddedDataElem.textContent.trim());
+                    if (parsed && typeof parsed === 'string' && parsed.length > 0) {
+                        loadedMarkdown = parsed;
+                    }
+                } catch(e) {}
+            }
+
+            if (!loadedMarkdown) {
+                const lastContent = localStorage.getItem('current_lecture');
+                if (lastContent) {
+                    loadedMarkdown = lastContent;
+                }
+            }
+
+            if (loadedMarkdown) {
+                parseAndBuildDocument(loadedMarkdown);
+            }
+
+            const savedName = localStorage.getItem('last_saved_filename');
+            if (savedName) lastSavedFilename = savedName;
+
+            document.addEventListener('mouseup', handleTextSelection);
+        });
+
+        function saveStateForUndo() {
+            imageUndoStack.push(rawContent);
+            imageRedoStack = [];
+        }
+
+        function handleUndo() {
+            if (imageUndoStack.length > 0) {
+                imageRedoStack.push(rawContent);
+                rawContent = imageUndoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã hoàn tác (Ctrl+Z)!");
+            } else {
+                showToast("Không còn thao tác để hoàn tác!");
+            }
+        }
+
+        function handleRedo() {
+            if (imageRedoStack.length > 0) {
+                imageUndoStack.push(rawContent);
+                rawContent = imageRedoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã làm lại (Ctrl+Y)!");
+            } else {
+                showToast("Không còn thao tác để làm lại!");
+            }
+        }
+
+        function handleTextSelection(e) {
+            const popup = document.getElementById('selection-popup');
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+
+            if (popup.contains(e.target)) return;
+
+            if (text.length > 0 && document.getElementById('lecture-paper').contains(selection.anchorNode)) {
+                selectedText = text;
+                let node = selection.anchorNode;
+                while (node && node.nodeType !== 1) {
+                    node = node.parentNode;
+                }
+                selectedNodeParent = node.closest('p, li, h1, h2, h3, h4, blockquote') || node;
+
+                document.getElementById('popup-img-url').value = '';
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                popup.style.left = `${Math.max(10, rect.left + window.scrollX - 50)}px`;
+                popup.style.display = 'flex';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+
+        function searchImageSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function searchGifSelected() {
+            if (selectedText) {
+                window.open(`https://tenor.com/search/${encodeURIComponent(selectedText)}-gifs`, '_blank');
+            }
+        }
+
+        function searchGoogleSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function autoInsertImageFromPopup(inputEl) {
+            const url = inputEl.value.trim();
+            if (!url) return;
+
+            if (/^(http|https):\/\/[^ "]+$/i.test(url) || url.startsWith('data:image')) {
+                saveStateForUndo();
+                const imageMarkdown = `\n\n![${selectedText || 'Hình ảnh'}](${url})\n\n`;
+
+                if (selectedText && rawContent.includes(selectedText)) {
+                    const index = rawContent.indexOf(selectedText);
+                    const endOfLine = rawContent.indexOf('\n', index);
+                    const insertPos = endOfLine !== -1 ? endOfLine : index + selectedText.length;
+                    rawContent = rawContent.slice(0, insertPos) + imageMarkdown + rawContent.slice(insertPos);
+                } else {
+                    rawContent += imageMarkdown;
+                }
+
+                parseAndBuildDocument(rawContent);
+                showToast("Đã chèn ảnh tự động! (Ctrl+Z để hoàn tác, Ctrl+Y để làm lại)");
+                inputEl.value = '';
+                document.getElementById('selection-popup').style.display = 'none';
+            }
+        }
+
+        function toggleAutoplay(toggle) {
+            isAutoplay = toggle.checked;
+            if (isAutoplay) showToast("Đã bật Autoplay (Tự động chuyển đoạn)");
+            else showToast("Đã tắt Autoplay");
+        }
+
+        function toggleTheme(toggle) {
+            if (toggle.checked) document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+        }
+
+        function toggleExpandMode(toggle) {
+            if (toggle.checked) {
+                document.body.classList.add('mode-expand');
+                showToast("Đã bật chế độ Expand (Hiện tất cả)");
+            } else {
+                document.body.classList.remove('mode-expand');
+                showToast("Đã tắt chế độ Expand");
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function toggleSlideshow() {
+            document.body.classList.toggle('slideshow-mode');
+            const isSlideshow = document.body.classList.contains('slideshow-mode');
+            if (isSlideshow) {
+                showToast("Đã bật chế độ Slide Show (Ấn Esc để thoát)");
+            }
+        }
+
+        function printLecture() {
+            window.print();
+        }
+
+        function openUpdateModal() { document.getElementById('update-modal').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('update-modal').style.display = 'none'; }
+
+        function openLightbox(imgSrc) {
+            allImages = Array.from(document.querySelectorAll('#lecture-paper img'));
+            currentImageIndex = allImages.findIndex(img => img.src === imgSrc);
+            if (currentImageIndex === -1 && allImages.length > 0) currentImageIndex = 0;
+
+            updateLightboxContent();
+            document.getElementById('image-lightbox').style.display = 'flex';
+            isLightboxOpen = true;
+        }
+
+        function updateLightboxContent() {
+            if (allImages.length === 0 || currentImageIndex < 0) return;
+            const img = document.getElementById('lightbox-img');
+            img.src = allImages[currentImageIndex].src;
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${allImages.length}`;
+        }
+
+        function nextImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function prevImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function closeLightbox(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('image-lightbox').style.display = 'none';
+            isLightboxOpen = false;
+        }
+
+        function closeLightboxOnBg(event) {
+            if (event.target.id === 'image-lightbox') {
+                closeLightbox();
+            }
+        }
+
+        function deleteImageBySrc(src) {
+            saveStateForUndo();
+
+            const escapedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const markdownImgRegex = new RegExp(`!\\[[^\\]]*\\]\\(${escapedSrc}\\)`, 'g');
+            const htmlImgRegex = new RegExp(`<img[^>]*src=["']${escapedSrc}["'][^>]*>`, 'gi');
+
+            let newContent = rawContent.replace(markdownImgRegex, '').replace(htmlImgRegex, '');
+
+            if (newContent !== rawContent) {
+                rawContent = newContent;
+                parseAndBuildDocument(rawContent);
+                showToast("Đã xóa ảnh thành công! (Ctrl+Z để hoàn tác)");
+            } else {
+                const allImgs = Array.from(document.querySelectorAll('#lecture-paper img'));
+                const targetImg = allImgs.find(i => i.src === src);
+                if (targetImg) {
+                    const altText = targetImg.alt || '';
+                    const fallbackRegex = new RegExp(`!\\[${altText}\\]\\([^\\)]+\\)`, 'g');
+                    rawContent = rawContent.replace(fallbackRegex, '');
+                    parseAndBuildDocument(rawContent);
+                    showToast("Đã xóa ảnh thành công!");
+                }
+            }
+        }
+
+        function autoAddMarkdownHeaders(text) {
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+/i.test(trimmed)) {
+                    return '# ' + trimmed;
+                } else if (/^\d+\.\s+/.test(trimmed)) {
+                    return '## ' + trimmed;
+                } else if (/^([A-Z]\.|[a-z]\))\s+/.test(trimmed)) {
+                    return '### ' + trimmed;
+                }
+                return line;
+            });
+            return processedLines.join('\n');
+        }
+
+        function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                const options = {
+                    convertImage: mammoth.images.imgElement(function(image) {
+                        return image.read("base64").then(function(imageBuffer) {
+                            return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                        });
+                    })
+                };
+
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer}, options).then(function(result) {
+                    const html = result.value;
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    turndownService.addRule('keepImages', {
+                        filter: 'img',
+                        replacement: function (content, node) {
+                            return `\n\n![image](${node.getAttribute('src')})\n\n`;
+                        }
+                    });
+
+                    let markdown = turndownService.turndown(html);
+                    markdown = autoAddMarkdownHeaders(markdown);
+                    document.getElementById('import-text').value = markdown;
+                    processImport();
+                    showToast("Đã đọc xong file Word!");
+                }).catch(function(err) {
+                    showToast("Lỗi khi đọc file Word: " + err.message);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndBuildDocument(markdownText) {
+            rawContent = markdownText;
+            localStorage.setItem('current_lecture', markdownText);
+            saveToHistory(markdownText);
+
+            const container = document.getElementById('lecture-paper');
+            container.innerHTML = marked.parse(markdownText);
+
+            container.querySelectorAll('img').forEach(img => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'image-wrapper';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'img-delete-btn';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = 'Xóa ảnh này khỏi bài giảng';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteImageBySrc(img.src);
+                };
+
+                img.parentNode.insertBefore(wrapper, img);
+                wrapper.appendChild(img);
+                wrapper.appendChild(deleteBtn);
+
+                img.onclick = (e) => {
+                    e.stopPropagation();
+                    openLightbox(img.src);
+                };
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([container]).catch((err) => console.log('MathJax error:', err));
+            }
+
+            reindexUnits();
+            generateTOC();
+            updateCounter();
+        }
+
+        function reindexUnits() {
+            const container = document.getElementById('lecture-paper');
+            units = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, table, .image-wrapper, hr'));
+            
+            units = units.filter(el => {
+                if (el.classList.contains('image-wrapper')) {
+                    return true;
+                }
+                return !el.parentElement.closest('blockquote, table');
+            });
+
+            units.forEach((unit, idx) => {
+                unit.classList.add('markdown-unit');
+                
+                if (!unit.classList.contains('image-wrapper')) {
+                    unit.onclick = (e) => {
+                        if (window.getSelection().toString().trim().length > 0) return;
+                        jumpToUnit(idx);
+                    };
+                }
+
+                if (idx < currentUnitIndex) {
+                    unit.classList.add('revealed');
+                } else if (idx === currentUnitIndex) {
+                    unit.classList.add('active');
+                }
+            });
+        }
+
+        function generateTOC() {
+            const tocContainer = document.getElementById('toc-container');
+            tocContainer.innerHTML = '';
+
+            const headings = units.filter(unit => ['H1', 'H2', 'H3', 'H4'].includes(unit.tagName));
+
+            if (headings.length === 0) {
+                tocContainer.innerHTML = '<li style="font-size: 13px; color: var(--text-color); padding: 8px;">Không tìm thấy mục lục tiêu đề.</li>';
+                return;
+            }
+
+            headings.forEach((heading) => {
+                const level = heading.tagName.substring(1);
+                const li = document.createElement('li');
+                li.className = `toc-item level-${level}`;
+                li.innerText = heading.innerText || heading.textContent;
+                li.dataset.unitIndex = units.indexOf(heading);
+                
+                li.onclick = () => {
+                    const targetIndex = units.indexOf(heading);
+                    if (targetIndex !== -1) {
+                        jumpToUnit(targetIndex);
+                    }
+                };
+
+                tocContainer.appendChild(li);
+            });
+        }
+
+        function highlightTOCForCurrentUnit() {
+            if (currentUnitIndex < 0 || units.length === 0) return;
+
+            let closestHeadingIndex = -1;
+            for (let i = currentUnitIndex; i >= 0; i--) {
+                if (['H1', 'H2', 'H3', 'H4'].includes(units[i].tagName)) {
+                    closestHeadingIndex = i;
+                    break;
+                }
+            }
+
+            const tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(item => {
+                item.classList.remove('active-toc');
+                if (closestHeadingIndex !== -1 && parseInt(item.dataset.unitIndex) === closestHeadingIndex) {
+                    item.classList.add('active-toc');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function jumpToUnit(index) {
+            if (index < 0 || index >= units.length) return;
+            
+            units.forEach((u, idx) => {
+                u.classList.remove('active');
+                if (idx < index) {
+                    u.classList.add('revealed');
+                } else {
+                    u.classList.remove('revealed');
+                }
+            });
+
+            currentUnitIndex = index;
+            const targetEl = units[currentUnitIndex];
+            targetEl.classList.add('active');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(targetEl);
+        }
+
+        function handlePageInputChange(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        }
+
+        function jumpToInputValue() {
+            const inputEl = document.getElementById('page-input');
+            let val = parseInt(inputEl.value) - 1;
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val >= units.length) val = units.length - 1;
+            jumpToUnit(val);
+        }
+
+        function showNextSentence() {
+            if (units.length === 0) return;
+            if (currentUnitIndex < units.length - 1) {
+                if (currentUnitIndex >= 0) {
+                    units[currentUnitIndex].classList.remove('active');
+                    units[currentUnitIndex].classList.add('revealed');
+                }
+                currentUnitIndex++;
+                const activeEl = units[currentUnitIndex];
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateCounter();
+                highlightTOCForCurrentUnit();
+                speakUnit(activeEl);
+            }
+        }
+
+        function showPrevSentence() {
+            if (units.length === 0 || currentUnitIndex <= 0) return;
+            const activeEl = units[currentUnitIndex];
+            activeEl.classList.remove('active', 'revealed');
+
+            currentUnitIndex--;
+            const prevEl = units[currentUnitIndex];
+            prevEl.classList.remove('revealed');
+            prevEl.classList.add('active');
+            prevEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(prevEl);
+        }
+
+        function replayCurrentSentence() {
+            if (currentUnitIndex >= 0 && currentUnitIndex < units.length) {
+                speakUnit(units[currentUnitIndex]);
+            }
+        }
+
+        /* PHÍM TẮT ĐIỀU HƯỚNG, SPACE (BẬT/TẮT LIGHTBOX) & UNDO/REDO */
+        document.addEventListener('keydown', (e) => {
+            const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+
+            if ((e.ctrlKey || e.metaKey) && !isInputActive) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    handleUndo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    handleRedo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'p') {
+                    e.preventDefault();
+                    printLecture();
+                    return;
+                }
+            }
+
+            if (isInputActive) return;
+
+            if (isLightboxOpen) {
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    closeLightbox();
+                } else if (e.key === 'ArrowRight') {
+                    nextImage();
+                } else if (e.key === 'ArrowLeft') {
+                    prevImage();
+                }
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (document.getElementById('save-modal').style.display === 'flex') {
+                    closeSaveModal();
+                    return;
+                }
+                if (document.getElementById('update-modal').style.display === 'flex') {
+                    closeUpdateModal();
+                    return;
+                }
+                if (document.body.classList.contains('slideshow-mode')) {
+                    toggleSlideshow();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                const updateModal = document.getElementById('update-modal');
+                if (updateModal.style.display === 'flex') closeUpdateModal();
+                else openUpdateModal();
+                return;
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                const activeEl = units[currentUnitIndex];
+                if (activeEl && activeEl.classList.contains('image-wrapper')) {
+                    const img = activeEl.querySelector('img');
+                    if (img) {
+                        openLightbox(img.src);
+                    }
+                } else {
+                    replayCurrentSentence();
+                }
+            } else if (e.key === 'ArrowRight') {
+                showNextSentence();
+            } else if (e.key === 'ArrowLeft') {
+                showPrevSentence();
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(2);
+            } else if (e.key === '-') {
+                changeFontSize(-2);
+            }
+        });
+
+        function saveToHistory(text) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            if (history.length === 0 || history[0].content !== text) {
+                const title = text.slice(0, 40).replace(/[#*]/g, '').trim() + '...';
+                history.unshift({ id: Date.now(), title: title, content: text, date: new Date().toLocaleDateString('vi-VN') });
+                if (history.length > 20) history.pop();
+                localStorage.setItem('lecture_history', JSON.stringify(history));
+            }
+        }
+
+        function openHistoryModal() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px;">Lịch sử trống.</div>';
+            } else {
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size: 12px; color: var(--text-color);">${item.date}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="loadHistoryItem(${item.id})">Mở</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background:#ef4444; color:#fff;">Xóa</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+
+        function loadHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            const found = history.find(item => item.id === id);
+            if (found) {
+                parseAndBuildDocument(found.content);
+                closeHistoryModal();
+                showNextSentence();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('lecture_history', JSON.stringify(history));
+            openHistoryModal();
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem('lecture_history');
+            openHistoryModal();
+            showToast("Đã xóa toàn bộ lịch sử!");
+        }
+
+        function openImportModal() {
+            let contentToLoad = rawContent;
+            if (!contentToLoad) {
+                const embeddedElem = document.getElementById('embedded-data');
+                if (embeddedElem) {
+                    try {
+                        contentToLoad = JSON.parse(embeddedElem.textContent.trim());
+                    } catch(e) {}
+                }
+            }
+            document.getElementById('import-text').value = contentToLoad || "";
+            document.getElementById('import-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('import-text').focus();
+            }, 50);
+        }
+
+        function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            if (text.trim()) {
+                parseAndBuildDocument(text);
+                closeImportModal();
+                showNextSentence();
+                showToast("Đã import thành công bài giảng!");
+            }
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById('import-text').value = e.target.result;
+                processImport();
+                showToast("Đã đọc xong file văn bản!");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('prompt-topic').value.trim() || '[TÊN CHỦ ĐỀ CỦA BẠN]';
+            const btn = document.getElementById('btn-copy-prompt');
+            const promptTemplate = `Hãy tạo một bài giảng chi tiết khoảng 1000 từ về chủ đề: "${topic}". 
+Yêu cầu:
+1. ĐÁNH SỐ VÀ PHÂN CẤP CÁC MỤC BÀI GIẢNG THEO THỨ TỰ CỤ THỂ:
+   - Cấp 1 dùng: I. II. III...
+   - Cấp 2 dùng: 1. 2. 3...
+   - Cấp 3 dùng: a) b) c)...
+2. THÊM TỪ KHÓA TIẾNG ANH TƯƠNG ỨNG CHO CÁC KHÁI NIỆM/TỪ KHÓA/NỘI DUNG QUAN TRỌNG VÀ ĐẶT TRONG DẤU NGOẠC ĐƠN ().
+3. Sử dụng định dạng Markdown đầy đủ: in đậm (**từ khóa**), in nghiêng (*chú thích*), danh sách (*).
+4. Thêm link ảnh minh họa dạng Markdown ![mô tả ảnh](https://url-anh.com) nếu phù hợp.
+5. Công thức toán học và phản ứng hóa học dùng chuẩn LaTeX bọc trong dấu $ (ví dụ $CaCO_3$) hoặc \\[...\\] / \\(...\\).
+6. Các url ảnh được cấp phía trên, đặt các url ảnh đó vào nội dung tương ứng (đặt dưới tiêu đề, nhưng trên nội dung), tất cả các url ảnh đều phải được gắn vào các nội dung phù hợp.
+7. Gửi tôi markdown nhưng dạng plain text để tôi copy.`;
+
+            navigator.clipboard.writeText(promptTemplate).then(() => {
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✅ Đã Copy!';
+                btn.classList.add('active');
+                showToast(`Đã copy Prompt AI cho chủ đề: ${topic}`);
+                
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.classList.remove('active');
+                }, 2000);
+            });
+        }
+
+        function speakUnit(element) {
+            if (!synth) return;
+            synth.cancel();
+            if (isMuted) return;
+
+            if (element.classList.contains('image-wrapper') || element.tagName.toLowerCase() === 'hr') {
+                if (isAutoplay) setTimeout(showNextSentence, 1000);
+                return;
+            }
+
+            const textToSpeak = element.innerText || element.textContent;
+            if (!textToSpeak.trim()) {
+                if (isAutoplay) setTimeout(showNextSentence, 500);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechRate;
+            
+            utterance.onend = () => {
+                if (isAutoplay) {
+                    setTimeout(showNextSentence, 600);
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('btn-mute');
+            if (isMuted) {
+                btn.classList.add('active');
+                if (synth) synth.cancel();
+            } else {
+                btn.classList.remove('active');
+                replayCurrentSentence();
+            }
+        }
+
+        function updateRate(val) { speechRate = parseFloat(val); replayCurrentSentence(); }
+        function changeFontSize(delta) { fontSize = Math.max(14, Math.min(50, fontSize + delta)); document.documentElement.style.setProperty('--font-size', fontSize + 'px'); }
+        
+        function updateCounter() { 
+            const pageInput = document.getElementById('page-input');
+            const totalUnitsCount = document.getElementById('total-units-count');
+            pageInput.value = currentUnitIndex + 1;
+            pageInput.max = units.length;
+            totalUnitsCount.innerText = units.length;
+        }
+
+        function openSaveModal() {
+            if (!rawContent) return showToast("Chưa có nội dung để lưu!");
+            const saveModal = document.getElementById('save-modal');
+            const filenameInput = document.getElementById('save-filename-input');
+            
+            filenameInput.value = lastSavedFilename;
+            saveModal.style.display = 'flex';
+            
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 50);
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').style.display = 'none';
+        }
+
+        function executeSaveAsHtml() {
+            const inputEl = document.getElementById('save-filename-input');
+            let filename = inputEl.value.trim();
+            if (!filename) filename = "BaiGiang_Complete.html";
+            if (!filename.toLowerCase().endsWith('.html') && !filename.toLowerCase().endsWith('.htm')) {
+                filename += '.html';
+            }
+
+            lastSavedFilename = filename;
+            localStorage.setItem('last_saved_filename', filename);
+            closeSaveModal();
+
+            let clonedDoc = document.documentElement.cloneNode(true);
+
+            let embeddedScript = clonedDoc.querySelector('#embedded-data');
+            if (embeddedScript) {
+                embeddedScript.textContent = JSON.stringify(rawContent);
+            }
+
+            let saveModalClone = clonedDoc.querySelector('#save-modal');
+            if (saveModalClone) saveModalClone.style.display = 'none';
+
+            let updateModalClone = clonedDoc.querySelector('#update-modal');
+            if (updateModalClone) updateModalClone.style.display = 'none';
+
+            let importModalClone = clonedDoc.querySelector('#import-modal');
+            if (importModalClone) importModalClone.style.display = 'none';
+
+            let historyModalClone = clonedDoc.querySelector('#history-modal');
+            if (historyModalClone) historyModalClone.style.display = 'none';
+
+            let popupClone = clonedDoc.querySelector('#selection-popup');
+            if (popupClone) popupClone.style.display = 'none';
+
+            let lightboxClone = clonedDoc.querySelector('#image-lightbox');
+            if (lightboxClone) lightboxClone.style.display = 'none';
+
+            clonedDoc.classList.remove('slideshow-mode');
+
+            const fullHtmlContent = "<!DOCTYPE html>\n" + clonedDoc.outerHTML;
+            const blob = new Blob([fullHtmlContent], { type: 'text/html;charset=utf-8' });
+            const link = document.appendLink ? document.appendLink : document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Đã lưu file thành công: ${filename}`);
+        }
+    </script>
+
+</body></html>
