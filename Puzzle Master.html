@@ -1,0 +1,474 @@
+﻿<!DOCTYPE html>
+
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle Master - Play Mode (P)</title>
+    <style>
+        :root {
+            --primary: #1e3a8a; --accent: #10b981; --bg: #0f172a;
+            --card: #ffffff; --puzzle-color: #1e293b;
+            --btn-tools: #4f46e5; --btn-danger: #e11d48;
+            --sidebar-bg: #f8fafc;
+        }
+
+        body, html { margin: 0; padding: 0; height: 100vh; overflow: hidden; background-color: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; justify-content: center; align-items: center; }
+
+        /* Setup Screen Layout */
+        #setup-screen { width: 95%; max-width: 1100px; height: 88vh; background: var(--card); border-radius: 16px; display: flex; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; }
+        
+        .setup-sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 15px; }
+        .setup-sidebar h3 { font-size: 0.9rem; color: var(--primary); margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .storage-info { font-size: 0.7rem; color: #64748b; font-weight: normal; }
+        .history-list { flex: 1; overflow-y: auto; margin-top: 10px; }
+        .history-item { background: white; padding: 8px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #ddd; font-size: 0.8rem; cursor: pointer; position: relative; transition: 0.2s; }
+        .history-item:hover { border-color: var(--primary); background: #f1f5f9; }
+        .history-actions { position: absolute; top: 2px; right: 5px; display: flex; gap: 8px; }
+        .action-btn { cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
+        .edit-btn { color: var(--btn-tools); }
+        .delete-btn { color: #e11d48; }
+        
+        .setup-main { flex: 1; padding: 25px 30px; display: flex; flex-direction: column; text-align: center; overflow-y: auto; }
+        textarea { width: 100%; flex: 1; min-height: 120px; margin: 10px 0; padding: 12px; font-family: monospace; border: 2px solid #ddd; border-radius: 8px; resize: none; outline: none; box-sizing: border-box; font-size: 0.9rem; }
+        .setup-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; margin-top: 10px; }
+        
+        /* AI Prompt Generator Box */
+        .prompt-gen-box { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 10px; text-align: left; }
+        .prompt-gen-box label { font-size: 0.85rem; font-weight: bold; color: var(--primary); display: block; margin-bottom: 5px; }
+        .prompt-row { display: flex; gap: 10px; }
+        .prompt-row input { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; outline: none; }
+
+        /* Custom Modal (Popup) */
+        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .custom-modal { background: white; padding: 25px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 1.5rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; }
+        .modal-body { margin-bottom: 20px; color: #334155; line-height: 1.5; }
+        .modal-footer { display: flex; gap: 10px; justify-content: center; }
+        .modal-input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+
+        /* Game Screen */
+        #game-screen { display: none; width: 98vw; height: 95vh; flex-direction: column; background: var(--card); border-radius: 16px; overflow: hidden; }
+        .header { height: 45px; padding: 0 40px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        
+        .slide-container { flex: 1; display: flex; padding: 15px; gap: 20px; overflow: hidden; min-height: 0; }
+        .content-left { flex: 1.2; display: flex; flex-direction: column; justify-content: space-between; height: 100%; overflow: hidden; }
+        .question-title { font-size: 2.2rem; font-weight: bold; color: var(--primary); border-bottom: 3px solid #e2e8f0; padding-bottom: 5px; margin: 0; flex-shrink: 0; }
+        
+        .hints-wrapper { display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: center; overflow: hidden; }
+        .hint-box { background: #f1f5f9; padding: 12px 18px; border-radius: 10px; border-left: 8px solid var(--primary); cursor: pointer; display: flex; align-items: center; overflow: hidden; }
+        .hint-label { font-weight: bold; color: var(--primary); margin-right: 15px; min-width: 40px; font-size: 1.6rem; flex-shrink: 0; }
+        .hint-text { color: #334155; font-size: 4.5vh; filter: blur(10px); transition: 0.3s; user-select: none; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hint-box.revealed .hint-text { filter: blur(0); user-select: text; white-space: normal; }
+
+        .answer-zone { background: #e2e8f0; padding: 12px; border-radius: 12px; text-align: center; flex-shrink: 0; }
+        input[type="text"] { width: 85%; padding: 10px; font-size: 2.0rem; border: 3px solid #cbd5e1; border-radius: 8px; text-align: center; outline: none; background: white; margin-bottom: 8px; }
+
+        .char-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+        .char-box { width: 35px; height: 40px; border: 2px solid var(--primary); background: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; border-radius: 4px; cursor: pointer; color: transparent; transition: 0.2s; user-select: none; }
+        .char-box.revealed { color: var(--primary); background: #fef08a; border-color: #eab308; }
+
+        .content-right { flex: 1.4; background: #000; border-radius: 12px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .content-right img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .puzzle-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); z-index: 10; }
+        .puzzle-piece { background-color: var(--puzzle-color); border: 1px solid #475569; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 3.5rem; font-weight: bold; transition: 0.4s; }
+        .puzzle-piece.hidden { opacity: 0; pointer-events: none; transform: scale(0.98); }
+
+        .footer { height: 60px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 20px; flex-shrink: 0; }
+        .footer-left { display: flex; gap: 10px; }
+        .footer-right { display: flex; justify-content: flex-end; }
+        .footer-center { display: flex; align-items: center; gap: 10px; }
+
+        .btn-footer { padding: 8px 15px; font-size: 0.85rem; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-blue { background: var(--btn-tools); }
+        .btn-red { background: var(--btn-danger); }
+        .btn-nav { background: var(--primary); padding: 8px 12px; }
+
+        .dot { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: #cbd5e1; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        .dot.active { background: var(--primary); color: white; }
+        .dot.correct { background: var(--accent) !important; color: white; }
+
+        .slide { display: none; width: 100%; height: 100%; }
+        .slide.active { display: flex; }
+        
+        .author-tag { font-size: 0.85rem; color: #64748b; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="setup-screen">
+    <div class="setup-sidebar">
+        <h3>LỊCH SỬ <span class="storage-info" id="storage-usage">0.00/5.00MB</span></h3>
+        <div id="history-list" class="history-list"></div>
+    </div>
+    <div class="setup-main">
+        <h2 style="color: var(--primary); margin: 0 0 5px 0;">NHẬP DỮ LIỆU CÂU HỎI</h2>
+        <p style="font-size: 0.8rem; color: #666; margin: 0 0 10px 0;">Phím tắt: <b>(P)</b> Bắt đầu | <b>Ctrl + S</b> Lưu file | <b>Mũi tên Trái/Phải</b> Chuyển câu</p>
+        
+        <!-- Ô lấy Prompt AI -->
+        <div class="prompt-gen-box">
+            <label>🤖 Tạo Prompt lấy dữ liệu từ AI:</label>
+            <div class="prompt-row">
+                <input type="text" id="ai-topic-input" placeholder="Nhập chủ đề (VD: Các nguyên tố hóa học, Lịch sử Việt Nam...)" onkeydown="if(event.key==='Enter') copyPrompt()">
+                <button class="btn-footer btn-blue" onclick="copyPrompt()">📋 Copy Prompt</button>
+            </div>
+        </div>
+
+        <textarea id="data-input" placeholder="Từ khóa [Tab] Gợi ý a [Tab] Gợi ý b [Tab] Gợi ý c [Tab] Link ảnh" onkeydown="beep(400,'sine',0.02)"></textarea>
+
+        <div class="setup-buttons">
+            <button class="btn-footer btn-blue" style="background:#64748b; height: 45px; font-size: 0.95rem;" onclick="beep(600,'sine',0.05); saveStandalone()">💾 Save as HTML (Ctrl+S)</button>
+            <button class="btn-footer btn-blue" style="background:var(--accent); height: 45px; font-size: 0.95rem;" onclick="beep(800,'sine',0.1); startGame()">▶ BẮT ĐẦU CHƠI (P)</button>
+        </div>
+        <div class="author-tag">Author: Icarus - kienspvl@gmail.com - 097.463.87.94</div>
+    </div>
+</div>
+
+<div id="game-screen">
+    <div class="header">
+        <div id="timer">⏱️ 00:00</div>
+        <div style="font-size: 0.8rem; color: #cbd5e1;">Author: Icarus - kienspvl@gmail.com - 097.463.87.94</div>
+        <h2 style="margin:0; letter-spacing: 2px; font-size: 1.2rem;">PUZZLE MASTER</h2>
+        <div id="score">Điểm: 0</div>
+    </div>
+    <div id="main-display" style="flex:1; overflow:hidden;"></div>
+    <div class="footer">
+        <div class="footer-left">
+            <button class="btn-footer btn-blue" onclick="revealAllHints()">Gợi ý (H)</button>
+            <button class="btn-footer btn-blue" onclick="revealAllPieces()">Mở ảnh (O)</button>
+        </div>
+        <div class="footer-center">
+            <button class="btn-footer btn-nav" onclick="move(-1)">❮</button>
+            <div id="pagination" style="display:flex; gap:5px;"></div>
+            <button class="btn-footer btn-nav" onclick="move(1)">❯</button>
+        </div>
+        <div class="footer-right">
+            <button class="btn-footer btn-red" onclick="showAnswer()">Đáp án (S)</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-overlay">
+    <div class="custom-modal">
+        <div id="modal-title" class="modal-title">Thông báo</div>
+        <div id="modal-content" class="modal-body">Nội dung thông báo ở đây...</div>
+        <div id="modal-footer" class="modal-footer">
+            <button class="btn-footer btn-blue" onclick="closeModal()">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* DỮ LIỆU ĐƯỢC NHÚNG */
+    const EMBEDDED_DATA = ``; 
+
+    let species = []; let current = 0; let score = 0; let time = 0; let solved = [];
+    let isGaming = false; let timerInterval;
+
+    const aCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(f, t, d) {
+        const o = aCtx.createOscillator(); const g = aCtx.createGain();
+        o.type = t; o.frequency.value = f; o.connect(g); g.connect(aCtx.destination);
+        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, aCtx.currentTime + d); o.stop(aCtx.currentTime + d);
+    }
+
+    // Modal System
+    function showPopup(title, body, buttons = null) {
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-content').innerHTML = body;
+        const footer = document.getElementById('modal-footer');
+        footer.innerHTML = '';
+        if (buttons) {
+            buttons.forEach(btn => {
+                const b = document.createElement('button');
+                b.className = `btn-footer ${btn.class || 'btn-blue'}`;
+                b.innerText = btn.text;
+                b.onclick = () => { beep(500, 'sine', 0.05); btn.action(); closeModal(); };
+                footer.appendChild(b);
+            });
+        } else {
+            footer.innerHTML = '<button class="btn-footer btn-blue" onclick="closeModal()">OK</button>';
+        }
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+
+    // Copy Prompt Functionality
+    function copyPrompt() {
+        const topic = document.getElementById('ai-topic-input').value.trim() || "chủ đề bất kỳ";
+        const promptText = `Hãy tạo cho tôi danh sách câu hỏi theo định dạng bảng hoặc các dòng phân tách bằng phím Tab (\\t) để làm trò chơi ô chữ. 
+Chủ đề yêu cầu: ${topic}
+Cấu trúc mỗi dòng bắt buộc gồm 5 thành phần cách nhau bởi phím Tab:
+Từ khóa [TAB] Gợi ý a [TAB] Gợi ý b [TAB] Gợi ý c [TAB] Link ảnh minh họa trên Unsplash hoặc ảnh online
+
+Ví dụ mẫu:
+Hà Nội\tThủ đô nước ta\tThành phố vì hòa bình\tNằm ở miền Bắc\thttps://images.unsplash.com/...
+
+Hãy cung cấp khoảng 5-10 câu hỏi chuẩn xác, không kèm thêm chữ giải thích dài dòng để tôi có thể copy thẳng vào ứng dụng.`;
+
+        navigator.clipboard.writeText(promptText).then(() => {
+            beep(700, 'sine', 0.1);
+            showPopup("Thành công", "Đã copy prompt vào bộ nhớ tạm! Bạn hãy dán vào ChatGPT hoặc Gemini để lấy dữ liệu.");
+        }).catch(err => {
+            showPopup("Lỗi", "Không thể copy prompt tự động.");
+        });
+    }
+
+    // History & Storage
+    function getStorageSizeInMB() {
+        let _lsTotal = 0, _xLen, _x;
+        for (_x in localStorage) {
+            if (!localStorage.hasOwnProperty(_x)) continue;
+            _xLen = ((localStorage[_x].length + _x.length) * 2);
+            _lsTotal += _xLen;
+        }
+        return (_lsTotal / (1024 * 1024)).toFixed(2);
+    }
+
+    function updateStorageInfo() {
+        const used = getStorageSizeInMB();
+        document.getElementById('storage-usage').innerText = `${used}/5.00MB`;
+    }
+
+    function saveToHistory(data) {
+        if (!data || data.trim().length < 5) return;
+        let history = JSON.parse(localStorage.getItem('puzzle_history') || '[]');
+        const existingIndex = history.findIndex(h => h.content === data);
+        if (existingIndex !== -1) return;
+
+        const preview = data.split('\n')[0].split('\t')[0] || "Dữ liệu mới";
+        const entry = { id: Date.now(), title: preview, content: data, time: new Date().toLocaleString() };
+        history = [entry, ...history].slice(0, 20);
+        localStorage.setItem('puzzle_history', JSON.stringify(history));
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        const history = JSON.parse(localStorage.getItem('puzzle_history') || '[]');
+        list.innerHTML = history.length ? '' : '<p style="font-size:0.7rem; color:#999; text-align:center;">Chưa có lịch sử</p>';
+        history.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div style="padding-right: 45px;">
+                    <strong>${item.title}</strong><br><small style="color:#888">${item.time}</small>
+                </div>
+                <div class="history-actions">
+                    <span class="action-btn edit-btn" onclick="renameHistory(event, ${item.id})">✎</span>
+                    <span class="action-btn delete-btn" onclick="deleteHistory(event, ${item.id})">×</span>
+                </div>`;
+            div.onclick = () => { beep(400, 'sine', 0.05); document.getElementById('data-input').value = item.content; };
+            list.appendChild(div);
+        });
+        updateStorageInfo();
+    }
+
+    function renameHistory(e, id) {
+        e.stopPropagation(); beep(500, 'sine', 0.05);
+        const history = JSON.parse(localStorage.getItem('puzzle_history') || '[]');
+        const item = history.find(h => h.id === id);
+        showPopup("Đổi tên", `<input type="text" id="rename-input" class="modal-input" value="${item.title}" onkeydown="beep(400,'sine',0.02)">`, [
+            { text: "Lưu", action: () => {
+                const newName = document.getElementById('rename-input').value;
+                if(newName) { item.title = newName; localStorage.setItem('puzzle_history', JSON.stringify(history)); renderHistory(); }
+            }},
+            { text: "Hủy", class: "btn-red", action: () => {} }
+        ]);
+    }
+
+    function deleteHistory(e, id) {
+        e.stopPropagation(); beep(300, 'sawtooth', 0.1);
+        showPopup("Xác nhận", "Bạn có chắc chắn muốn xóa file này khỏi lịch sử?", [
+            { text: "Xóa", class: "btn-red", action: () => {
+                let history = JSON.parse(localStorage.getItem('puzzle_history') || '[]');
+                history = history.filter(h => h.id !== id);
+                localStorage.setItem('puzzle_history', JSON.stringify(history));
+                renderHistory();
+            }},
+            { text: "Hủy", action: () => {} }
+        ]);
+    }
+
+    // Key Events
+    window.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveStandalone(); return; }
+        if (!isGaming) {
+            if ((e.key === 'p' || e.key === 'P') && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') startGame();
+            return;
+        }
+        
+        // Hỗ trợ dùng phím Mũi tên Trái / Phải để chuyển câu hỏi khi chơi
+        if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }
+
+        if (document.activeElement.tagName !== 'INPUT') {
+            if (e.key === 'Tab') { e.preventDefault(); move(e.shiftKey ? -1 : 1); beep(500, 'sine', 0.1); }
+            if (e.key === 'h' || e.key === 'H') revealAllHints();
+            if (e.key === 'o' || e.key === 'O') revealAllPieces();
+            if (e.key === 's' || e.key === 'S') showAnswer();
+            if (e.key === 'a' || e.key === 'A') { const b = document.querySelector(`#s-${current} .hint-box[data-id="0"]`); if(b) b.click(); }
+            if (e.key === 'b' || e.key === 'B') { const b = document.querySelector(`#s-${current} .hint-box[data-id="1"]`); if(b) b.click(); }
+            if (e.key === 'c' || e.key === 'C') { const b = document.querySelector(`#s-${current} .hint-box[data-id="2"]`); if(b) b.click(); }
+            if (e.key >= '1' && e.key <= '6') {
+                const pieces = document.querySelectorAll(`#s-${current} .puzzle-piece`);
+                const idx = parseInt(e.key) - 1;
+                if (pieces[idx]) pieces[idx].click();
+            }
+        }
+    });
+
+    function startGame(customData = null) {
+        const rawData = customData || document.getElementById('data-input').value.trim();
+        if (!rawData) { 
+            if(!customData) showPopup("Lỗi", "Vui lòng nhập dữ liệu câu hỏi!");
+            return; 
+        }
+        
+        saveToHistory(rawData);
+        species = rawData.split('\n').filter(l => l.trim()).map(line => {
+            const p = line.split('\t');
+            return { kw: p[0]?.trim(), g1: p[1]?.trim(), g2: p[2]?.trim(), g3: p[3]?.trim(), img: p[4]?.trim() };
+        });
+        solved = new Array(species.length).fill(false);
+        current = 0; score = 0; time = 0;
+        document.getElementById('score').innerText = `Điểm: 0`;
+        renderGame();
+        
+        // Chuyển màn hình
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+        isGaming = true;
+        
+        if(timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            time++;
+            let m = Math.floor(time/60).toString().padStart(2,'0'), s = (time%60).toString().padStart(2,'0');
+            document.getElementById('timer').innerText = `⏱️ ${m}:${s}`;
+        }, 1000);
+    }
+
+    function renderGame() {
+        const display = document.getElementById('main-display');
+        const pagination = document.getElementById('pagination');
+        display.innerHTML = ''; pagination.innerHTML = '';
+        species.forEach((s, i) => {
+            const slide = document.createElement('div');
+            slide.className = `slide ${i === 0 ? 'active' : ''}`;
+            slide.id = `s-${i}`;
+            let pzHtml = '<div class="puzzle-overlay">';
+            for(let j=1; j<=6; j++) pzHtml += `<div class="puzzle-piece" onclick="this.classList.add('hidden'); beep(600,'sine',0.1)">${j}</div>`;
+            pzHtml += '</div>';
+
+            let charBoxes = '<div class="char-container">';
+            (s.kw || "").split('').forEach(char => {
+                if(char === " ") charBoxes += '<div style="width:15px;"></div>';
+                else charBoxes += `<div class="char-box" onclick="this.classList.add('revealed'); beep(300,'sine',0.05)">${char.toUpperCase()}</div>`;
+            });
+            charBoxes += '</div>';
+
+            slide.innerHTML = `
+                <div class="slide-container">
+                    <div class="content-left">
+                        <div class="question-title">Câu ${i+1}</div>
+                        <div class="hints-wrapper">
+                            <div class="hint-box" data-id="0" onclick="this.classList.add('revealed'); beep(200,'sine',0.05)">
+                                <span class="hint-label">a)</span><span class="hint-text">${s.g1}</span>
+                            </div>
+                            <div class="hint-box" data-id="1" onclick="this.classList.add('revealed'); beep(200,'sine',0.05)">
+                                <span class="hint-label">b)</span><span class="hint-text">${s.g2}</span>
+                            </div>
+                            <div class="hint-box" data-id="2" onclick="this.classList.add('revealed'); beep(200,'sine',0.05)">
+                                <span class="hint-label">c)</span><span class="hint-text">${s.g3}</span>
+                            </div>
+                        </div>
+                        <div class="answer-zone">
+                            <input type="text" id="in-${i}" placeholder="nhập đáp án" onkeydown="beep(400,'sine',0.02)" onkeyup="if(event.key==='Enter') check(${i}, true)">
+                            ${charBoxes}
+                            <div id="fb-${i}" style="margin-top:5px; font-weight:bold; height:20px; font-size:1.1rem;"></div>
+                        </div>
+                    </div>
+                    <div class="content-right"><img src="${s.img}" alt="Ảnh">${pzHtml}</div>
+                </div>`;
+            display.appendChild(slide);
+            const dot = document.createElement('div');
+            dot.className = `dot ${i === 0 ? 'active' : ''}`; dot.id = `d-${i}`; dot.innerText = i + 1;
+            dot.onclick = () => { beep(500, 'sine', 0.05); jump(i); };
+            pagination.appendChild(dot);
+        });
+    }
+
+    function check(i, isSelfAnswered) {
+        const val = document.getElementById(`in-${i}`).value.trim().toLowerCase();
+        const correct = (species[i].kw || "").toLowerCase();
+        
+        if (!solved[i] && val === correct) {
+            document.getElementById(`fb-${i}`).innerText = "CHÍNH XÁC! 🎉"; document.getElementById(`fb-${i}`).style.color = "green";
+            if(isSelfAnswered) { score += 1; document.getElementById('score').innerText = `Điểm: ${score}`; }
+            solved[i] = true; document.getElementById(`in-${i}`).disabled = true;
+            document.getElementById(`d-${i}`).classList.add('correct');
+            revealAllHints(); revealAllPieces(); beep(900, 'triangle', 0.3);
+            document.querySelectorAll(`#s-${i} .char-box`).forEach(box => box.classList.add('revealed'));
+            if (solved.every(v => v === true)) finishGame();
+        } else if (!solved[i] && isSelfAnswered) {
+            document.getElementById(`fb-${i}`).innerText = "THỬ LẠI NHÉ!"; document.getElementById(`fb-${i}`).style.color = "red"; beep(150, 'sawtooth', 0.2);
+        }
+    }
+
+    function finishGame() {
+        clearInterval(timerInterval); beep(1000, 'sine', 0.5);
+        let m = Math.floor(time/60), s = time%60;
+        showPopup("CHÚC MỪNG!", `<div style="font-size: 1.2rem; text-align: left;"><p>🏆 <b>Hoàn thành trò chơi!</b></p><p>⭐ Tổng điểm: <b>${score}</b></p><p>⏱️ Thời gian: <b>${m} phút ${s} giây</b></p></div>`, [
+            { text: "Xem lại", action: () => {} },
+            { text: "Về Setup", class: "btn-red", action: () => {
+                document.getElementById('game-screen').style.display = 'none';
+                document.getElementById('setup-screen').style.display = 'flex';
+                isGaming = false;
+            }}
+        ]);
+    }
+
+    function jump(i) {
+        document.querySelectorAll('.slide, .dot').forEach(el => el.classList.remove('active'));
+        const s = document.getElementById(`s-${i}`); if(s) s.classList.add('active');
+        const d = document.getElementById(`d-${i}`); if(d) d.classList.add('active');
+        current = i;
+    }
+    function move(n) { beep(500, 'sine', 0.05); jump((current + n + species.length) % species.length); }
+    function revealAllHints() { beep(400, 'sine', 0.1); document.querySelectorAll(`#s-${current} .hint-box`).forEach(b => b.classList.add('revealed')); }
+    function revealAllPieces() { beep(400, 'sine', 0.1); document.querySelectorAll(`#s-${current} .puzzle-piece`).forEach(p => p.classList.add('hidden')); }
+    function showAnswer() { 
+        beep(300, 'sine', 0.1);
+        document.getElementById(`in-${current}`).value = species[current].kw; 
+        check(current, false);
+        document.querySelectorAll(`#s-${current} .char-box`).forEach(box => box.classList.add('revealed'));
+    }
+
+    function saveStandalone() {
+        const data = document.getElementById('data-input').value.trim();
+        if(!data) { showPopup("Lỗi", "Không có dữ liệu để lưu!"); return; }
+        
+        let htmlContent = document.documentElement.outerHTML;
+        const escapedData = data.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+        const regex = /const EMBEDDED_DATA = `[\s\S]*?`;/;
+        const newHtml = htmlContent.replace(regex, "const EMBEDDED_DATA = `" + escapedData + "`;");
+        
+        const blob = new Blob([newHtml], { type: 'text/html' });
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = 'PuzzleMaster_Export.html'; 
+        a.click();
+    }
+    
+    window.onload = () => { 
+        renderHistory();
+        if (EMBEDDED_DATA && EMBEDDED_DATA.length > 10) {
+            document.getElementById('setup-screen').style.display = 'none';
+            startGame(EMBEDDED_DATA);
+        }
+    };
+</script>
+</body>
+</html>
