@@ -1,0 +1,2712 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Đọc Bài Giảng Markdown &amp; Word Chuyên Nghiệp v3.11</title>
+    <!-- MarkedJS: Chuyển Markdown sang HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Mammoth.js: Đọc file .docx Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js: Chuyển HTML từ Word sang Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    
+    <!-- KaTeX: Render Toán LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- MathJax v3 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['[', ']']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            },
+            startup: {
+                pageReady: function () {
+                    return MathJax.startup.defaultPageReady().then(function () {
+                        // Đảm bảo sau khi MathJax render xong, các khối toán học hiển thị chuẩn căn giữa
+                    });
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --header-bg: #020617;
+            --card-bg: #1e293b;
+            --text-color: #94a3b8;
+            --text-active: #f8fafc;
+            --border-color: #334155;
+            --accent-color: #38bdf8;
+            --highlight-bg: rgba(56, 189, 248, 0.12);
+            --sidebar-width: 280px;
+            --font-size: 20px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #475569;
+            --text-active: #0f172a;
+            --border-color: #cbd5e1;
+            --accent-color: #0284c7;
+            --highlight-bg: rgba(2, 132, 199, 0.12);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 8px 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .controls-group { 
+            display: flex; 
+            gap: 6px; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+
+        button, label.btn {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover, label.btn:hover { border-color: var(--accent-color); }
+        button.active { background-color: var(--accent-color); color: #fff; }
+
+        input[type="text"], input[type="number"], select {
+            background-color: var(--card-bg);
+            color: var(--text-active);
+            border: 1px solid var(--border-color);
+            padding: 5px 8px; border-radius: 6px; font-size: 13px;
+        }
+
+        .toggle-switch-wrapper { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-active); }
+        .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .toggle-switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* Ép hiển thị công thức MathJax chuẩn giữa màn hình */
+        mjx-container[jax="CHTML"][display="true"] {
+            display: block !important;
+            text-align: center !important;
+            margin: 1em 0 !important;
+        }
+
+        #selection-popup {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            max-width: 380px;
+        }
+        #selection-popup button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #selection-popup input[type="text"] {
+            width: 150px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 5;
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        #sidebar.open { margin-left: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; font-weight: bold; color: var(--text-active);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item {
+            padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            cursor: pointer; font-size: 14px; color: var(--text-color);
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-item:hover { background-color: var(--card-bg); color: var(--text-active); }
+        .toc-item.active-toc {
+            background-color: var(--highlight-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            border-left: 3px solid var(--accent-color);
+        }
+        .toc-item.level-1 { font-weight: bold; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; }
+        .toc-item.level-3 { padding-left: 30px; font-style: italic; }
+        .toc-item.level-4 { padding-left: 40px; opacity: 0.8; }
+
+        main {
+            flex: 1; overflow-y: auto;
+            padding: 30px 20px 150px 20px;
+            scroll-behavior: smooth;
+        }
+
+        #lecture-paper {
+            max-width: 850px; margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            font-size: var(--font-size); line-height: 1.8;
+            transition: font-size 0.2s ease, background-color 0.3s;
+        }
+
+        #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4 { 
+            color: var(--accent-color); 
+            margin-top: 1.2em; margin-bottom: 0.5em; 
+            line-height: 1.4;
+        }
+        #lecture-paper p { margin: 0.8em 0; color: inherit; }
+        #lecture-paper ul, #lecture-paper ol { padding-left: 28px; margin: 0.8em 0; }
+        #lecture-paper li { margin-bottom: 6px; }
+        #lecture-paper strong { color: var(--accent-color); font-weight: 700; }
+        
+        #lecture-paper blockquote {
+            margin: 1em 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        #lecture-paper blockquote p { margin: 0.4em 0; }
+
+        #lecture-paper hr {
+            border: none;
+            border-top: 2px dashed var(--border-color);
+            margin: 2em 0;
+        }
+
+        /* KHUNG CHỨA HÌNH ẢNH TRONG BÀI GIẢNG (CĂN GIỮA & HOVER XÓA) */
+        .image-wrapper {
+            position: relative;
+            display: block;
+            margin: 16px auto;
+            width: fit-content;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        #lecture-paper img {
+            max-width: 100%; height: auto; max-height: 400px;
+            object-fit: contain; border-radius: 8px;
+            margin: 0 auto; display: block; cursor: zoom-in;
+            border: 1px solid var(--border-color);
+        }
+
+        .img-delete-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .image-wrapper:hover .img-delete-btn {
+            opacity: 1;
+        }
+
+        .img-delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        #lecture-paper table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        #lecture-paper th, #lecture-paper td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+        #lecture-paper th { background-color: var(--highlight-bg); }
+
+        .markdown-unit {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            border-radius: 6px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .markdown-unit.revealed {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+
+        li.markdown-unit.revealed, li.markdown-unit.active {
+            display: list-item !important;
+        }
+
+        .markdown-unit.active {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        hr.markdown-unit.active {
+            border-top-color: var(--accent-color);
+            box-shadow: none;
+            background-color: transparent;
+        }
+
+        body.mode-expand .markdown-unit {
+            display: block !important;
+            opacity: 1 !important;
+            color: var(--text-active);
+        }
+        body.mode-expand li.markdown-unit {
+            display: list-item !important;
+        }
+        body.mode-expand .markdown-unit.active {
+            background-color: var(--highlight-bg);
+            box-shadow: -4px 0 0 var(--accent-color);
+        }
+
+        footer {
+            background-color: var(--header-bg); 
+            padding: 10px 20px; display: flex; 
+            justify-content: center; align-items: center;
+            position: relative; border-top: 1px solid var(--border-color); 
+            font-size: 14px; color: var(--text-color); z-index: 10;
+        }
+
+        .author-info { font-weight: 600; color: var(--accent-color); text-align: center; }
+        #progress-counter { 
+            position: absolute; right: 20px; font-size: 13px; 
+            display: flex; align-items: center; gap: 4px;
+        }
+        #page-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg); padding: 24px; border-radius: 12px;
+            width: 85%; max-width: 800px; display: flex; flex-direction: column; gap: 15px;
+            border: 1px solid var(--border-color); max-height: 90vh;
+        }
+
+        textarea {
+            width: 100%; height: 350px; background: var(--bg-color);
+            color: var(--text-active); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 8px; font-family: monospace; resize: vertical;
+        }
+
+        input[type="file"] { display: none; }
+
+        .history-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-color); padding: 10px 14px; border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .changelog-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .changelog-item:last-child { border-bottom: none; }
+        .changelog-version { font-weight: bold; color: var(--accent-color); font-size: 16px; }
+        .changelog-date { font-size: 12px; color: var(--text-color); margin-left: 8px; }
+        .changelog-list { margin: 6px 0 0 20px; padding: 0; font-size: 14px; line-height: 1.6; }
+
+        /* LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG */
+        #image-lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92); z-index: 200;
+            justify-content: center; align-items: center; user-select: none;
+            cursor: pointer;
+        }
+
+        #image-lightbox img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            cursor: default;
+        }
+
+        .lightbox-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 220;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .lightbox-close-btn:hover {
+            background: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15); color: #fff;
+            border: none; padding: 16px 20px; font-size: 24px; cursor: pointer;
+            border-radius: 50%; transition: background 0.2s; z-index: 210;
+        }
+        .lightbox-nav:hover { background: var(--accent-color); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-size: 14px;
+            pointer-events: none;
+        }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast {
+            background-color: var(--card-bg); color: var(--text-active); border: 1px solid var(--accent-color);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        body.slideshow-mode header, body.slideshow-mode footer, body.slideshow-mode #sidebar { display: none !important; }
+        body.slideshow-mode main { padding: 40px 20px; }
+        #exit-slideshow-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 99;
+            background: rgba(0,0,0,0.6); color: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;
+        }
+        #exit-slideshow-btn:hover { background: var(--accent-color); color: #fff; }
+        body.slideshow-mode #exit-slideshow-btn { display: block; }
+
+        /* CẤU HÌNH IN (PRINT STYLES) - CHỈ IN NỘI DUNG BÀI GIẢNG */
+        @media print {
+            header, footer, #sidebar, .modal, #selection-popup, #image-lightbox, #toast-container, #exit-slideshow-btn, .img-delete-btn {
+                display: none !important;
+            }
+            body, .app-container, main {
+                background: #fff !important;
+                color: #000 !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #lecture-paper {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #000 !important;
+                background: #fff !important;
+            }
+            .markdown-unit {
+                display: block !important;
+                opacity: 1 !important;
+                color: #000 !important;
+                background: none !important;
+                box-shadow: none !important;
+            }
+            li.markdown-unit {
+                display: list-item !important;
+            }
+            #lecture-paper h1, #lecture-paper h2, #lecture-paper h3, #lecture-paper h4, #lecture-paper strong {
+                color: #000 !important;
+            }
+            #lecture-paper img {
+                max-height: 500px !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+</style></head>
+<body class="mode-expand">
+
+    <header>
+        <div class="controls-group">
+            <button onclick="toggleSidebar()" title="Ẩn/Hiện Mục lục">☰</button>
+            <button onclick="openImportModal()">📥 Import</button>
+            <button onclick="printLecture()" title="In chỉ nội dung bài giảng">🖨️ In</button>
+            <button onclick="openHistoryModal()">📜 History</button>
+            <button onclick="openSaveModal()">💾 Save as</button>
+            <button onclick="openUpdateModal()" title="Xem lịch sử cập nhật (Phím tắt U)">🚀 U</button>
+            <button onclick="toggleSlideshow()" style="background-color: var(--accent-color); color: #fff;">📺 Slide</button>
+            
+            <div class="toggle-switch-wrapper" style="margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                <span title="Chế độ Mở Rộng / Hiện tất cả">📖 Expand</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="expand-toggle" checked="" onchange="toggleExpandMode(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 6px;">
+                <span title="Tự động đọc đoạn tiếp theo">▶️ Autoplay</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoplay-toggle" onchange="toggleAutoplay(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-switch-wrapper" style="margin-left: 4px;">
+                <span>🌙</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="theme-toggle" checked="" onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+                <span>☀️</span>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button id="btn-mute" onclick="toggleMute()" title="Âm thanh">🔊</button>
+            <select id="rate-select" onchange="updateRate(this.value)">
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="controls-group">
+            <input type="text" id="prompt-topic" placeholder="Chủ đề..." style="width: 110px;">
+            <button id="btn-copy-prompt" onclick="copyPrompt()">📋 Copy Prompt</button>
+        </div>
+    </header>
+
+    <!-- POPUP KHI BÔI ĐEN CHỮ -->
+    <div id="selection-popup" style="display: none;">
+        <button onclick="searchImageSelected()" title="Tìm kiếm hình ảnh">🔍 Ảnh</button>
+        <button onclick="searchGifSelected()" title="Tìm kiếm GIF">🎞️ GIF</button>
+        <button onclick="searchGoogleSelected()" title="Tìm kiếm trên Google">🌐 Google</button>
+        <input type="text" id="popup-img-url" placeholder="Nhập/Dán URL ảnh..." oninput="autoInsertImageFromPopup(this)" onchange="autoInsertImageFromPopup(this)">
+    </div>
+
+    <div class="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <span>📑 Mục Lục</span>
+                <button onclick="toggleSidebar()" style="padding: 2px 6px; font-size: 12px;">✕</button>
+            </div>
+            <div class="sidebar-content">
+                <ul id="toc-container" class="toc-list"><li class="toc-item level-1" data-unit-index="1">TUYỂN TẬP CÂU HỎI VÀ BÀI TẬP CHƯƠNG C1: TRÁI ĐẤT (PLANET EARTH)</li><li class="toc-item level-1" data-unit-index="9">I. CÂU HỎI GIỮA BÀI (IN-CHAPTER QUESTIONS)</li><li class="toc-item level-2" data-unit-index="10">Câu C1.01. Những khí nào đóng góp nhiều nhất vào sự hình thành mưa axit?</li><li class="toc-item level-2" data-unit-index="22">Câu C1.02. Các khí gây ra mưa axit đi vào khí quyển bằng cách nào?</li><li class="toc-item level-2" data-unit-index="35">Câu C1.03. Những tác hại do mưa axit gây ra là gì?</li><li class="toc-item level-2" data-unit-index="48">Câu C1.04. Sương khói quang hóa (Photochemical smog) là gì? Vì sao nó gây hại?</li><li class="toc-item level-2" data-unit-index="64">Câu C1.05. Khí carbon monoxide (CO) ngăn cản máu vận chuyển oxygen như thế nào?</li><li class="toc-item level-2" data-unit-index="76">Câu C1.06. Vì sao bóng đèn dây tóc được bơm đầy khí argon?</li><li class="toc-item level-2" data-unit-index="85">Câu C1.07. Hiệu ứng nhà kính (Greenhouse effect) là gì?</li><li class="toc-item level-2" data-unit-index="100">Câu C1.08. Bộ chuyển đổi xúc tác (Catalytic converter) làm nhiệm vụ gì đối với khí thải ô tô?</li><li class="toc-item level-2" data-unit-index="115">Câu C1.09. Vì sao nước được lọc trước khi thực hiện các bước xử lý hóa học tiếp theo?</li><li class="toc-item level-2" data-unit-index="129">Câu C1.10. Vì sao chlorine được thêm vào nước trong quy trình xử lý nước sinh hoạt?</li><li class="toc-item level-2" data-unit-index="140">Câu C1.11. Vì sao chưng cất nước biển là phương pháp đắt tiền để sản xuất nước uống?</li><li class="toc-item level-2" data-unit-index="154">Câu C1.12. Điều gì làm cho một quặng kim loại khác biệt so với các loại đá thông thường?</li><li class="toc-item level-2" data-unit-index="164">Câu C1.13. Sự khác biệt giữa vôi sống (Quicklime) và vôi tôi (Slaked lime) là gì?</li><li class="toc-item level-2" data-unit-index="177">Câu C1.14. Điều gì làm cho một chất khí trở thành khí nhà kính?</li><li class="toc-item level-1" data-unit-index="189">II. CÂU HỎI BÀI TẬP THỰC HÀNH (ACTIVITY C1.02 QUESTIONS)</li><li class="toc-item level-2" data-unit-index="198">Câu A1. Có bằng chứng thực nghiệm nào cho thấy nước biển là hỗn hợp gồm nhiều loại muối?</li><li class="toc-item level-2" data-unit-index="202">Câu A2. Khí nào có khả năng đã thoát ra khi thêm hydrochloric acid loãng (HCl) vào phần chất rắn thu được đầu tiên?</li><li class="toc-item level-2" data-unit-index="208">Câu A3. Điều này cho biết thông tin gì về bản chất và danh tính của phần chất rắn ban đầu?</li><li class="toc-item level-2" data-unit-index="215">Câu A4. Dựa vào độ tan của sodium chloride (NaCl) và calcium sulfate (CaSO₄), hãy dự đoán danh tính chất rắn cuối cùng còn lại ở cuối thí nghiệm.</li><li class="toc-item level-1" data-unit-index="224">III. BÀI TẬP ÔN TẬP CUỐI CHƯƠNG 1 (END-OF-CHAPTER QUESTIONS)</li><li class="toc-item level-1" data-unit-index="225">BÀI 1. THÀNH PHẦN CỦA KHÔNG KHÍ VÀ MƯA AXIT</li><li class="toc-item level-2" data-unit-index="232">a) Thành phần của không khí</li><li class="toc-item level-2" data-unit-index="240">b) Sự hình thành nitrogen oxides trong cơn giông</li><li class="toc-item level-1" data-unit-index="259">BÀI 2. NƯỚC, Ô NHIỄM KHÔNG KHÍ VÀ XỬ LÝ NƯỚC</li><li class="toc-item level-2" data-unit-index="267">a) Mô tả một phép thử hóa học để nhận biết nước. Nêu phép thử và hiện tượng.</li><li class="toc-item level-2" data-unit-index="276">b) Nêu một ứng dụng của nước trong công nghiệp.</li><li class="toc-item level-2" data-unit-index="285">c) Nước là một dung môi tốt. Bạn hiểu thế nào về thuật ngữ dung môi (solvent)?</li><li class="toc-item level-2" data-unit-index="293">d) Hơi nước trong khí quyển phản ứng với sulfur dioxide (SO₂) tạo thành mưa axit.</li><li class="toc-item level-2" data-unit-index="313">e) Nước từ sông hồ có thể được xử lý để làm nước uống an toàn. Mô tả hai bước trong quy trình xử lý nước và giải thích mục đích.</li><li class="toc-item level-2" data-unit-index="322">f) Nước được tạo thành khi hydrogen cháy trong không khí. Nêu phần trăm oxygen có trong không khí.</li><li class="toc-item level-1" data-unit-index="328">BÀI 3. KHÍ QUYỂN CỦA MỘT HÀNH TINH MỚI</li><li class="toc-item level-2" data-unit-index="338">a) Hàm lượng của 3 khí đầu tiên khác như thế nào so với hàm lượng của chúng trên Trái Đất?</li><li class="toc-item level-2" data-unit-index="344">b) Những vấn đề gì có thể xảy ra trên bề mặt hành tinh do sự có mặt của hai khí cuối cùng trong danh sách?</li><li class="toc-item level-2" data-unit-index="355">c) Nêu một phép thử để chứng minh sự có mặt của nước trong giọt nước ngưng tụ trên cửa kính vào ngày lạnh.</li><li class="toc-item level-2" data-unit-index="372">d) Khí ô nhiễm nào trong khí quyển có hiệu ứng tương tự đối với khí hậu như carbon dioxide?</li><li class="toc-item level-2" data-unit-index="382">e) Sulfur dioxide không có trong không khí tinh khiết trên Trái Đất. Quá trình nào có thể làm khí này đi vào khí quyển Trái Đất?</li><li class="toc-item level-2" data-unit-index="396">f) Vôi có thể được dùng để loại bỏ sulfur dioxide khỏi khí thải. Tên gọi của quá trình loại bỏ này là gì?</li><li class="toc-item level-2" data-unit-index="413">g) Vôi sống được sản xuất từ đá vôi như thế nào? Viết phương trình chữ cho phản ứng.</li><li class="toc-item level-1" data-unit-index="432">IV. BẢNG TỔNG HỢP KIẾN THỨC TRỌNG TÂM CHƯƠNG C1</li><li class="toc-item level-2" data-unit-index="434">V. CÁC PHƯƠNG TRÌNH HÓA HỌC CẦN GHI NHỚ</li><li class="toc-item level-2" data-unit-index="436">VI. NHỮNG THUẬT NGỮ TIẾNG ANH QUAN TRỌNG</li></ul>
+            </div>
+        </aside>
+
+        <button id="exit-slideshow-btn" onclick="toggleSlideshow()">✖ Thoát Slide Show (Esc)</button>
+
+        <main id="main-scroll">
+            <div id="lecture-paper"><p class="markdown-unit active">chèn nội dung sau đây vào file html này giùm tôi, lưu ý không lược bỏ, không làm cắt mất các ảnh minh họa tôi có ở dưới đây:</p>
+<h1 class="markdown-unit">TUYỂN TẬP CÂU HỎI VÀ BÀI TẬP CHƯƠNG C1: TRÁI ĐẤT (PLANET EARTH)</h1>
+<p class="markdown-unit">Môn Khoa học tự nhiên / Chemistry – Earth Science | Hệ thống câu hỏi kèm đáp án và giải thích</p>
+<p class="markdown-unit">Tài liệu được biên soạn lại theo hướng ôn tập và tự học, bao gồm:</p>
+<ul>
+<li class="markdown-unit">Giữ đầy đủ hệ thống câu hỏi gốc.</li>
+<li class="markdown-unit">Bổ sung đáp án và giải thích cho từng câu hỏi, từng ý nhỏ.</li>
+<li class="markdown-unit">Bổ sung hình ảnh minh họa theo từng chủ đề, mỗi bài tập lớn có 3 hình ảnh.</li>
+<li class="markdown-unit">Sử dụng thuật ngữ tiếng Anh trong ngoặc để học sinh làm quen với tài liệu quốc tế.</li>
+<li class="markdown-unit">Trình bày phương trình hóa học, công thức và đơn vị rõ ràng.</li>
+</ul>
+<h1 class="markdown-unit">I. CÂU HỎI GIỮA BÀI (IN-CHAPTER QUESTIONS)</h1>
+<h2 class="markdown-unit">Câu C1.01. Những khí nào đóng góp nhiều nhất vào sự hình thành mưa axit?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/kjNjpa-jXFvynbaAxa__uuB1p5UbThXlhZ1CBWRFf0jxNe_OUTyc-fWcg8eqiMSrun1rrYelnvhurEEB_hQqlylA5jGTMft2gbhNWUW5krGEzODWDwDs_zk5LxYwzVBNsIQdlaxbrGfBVMAWCdZIYYKlW7TOZAf0TxphRk3EKmU?purpose=inline" alt="Notes for 8.3B Acid rain - IB | RevisionDojo"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/fhYzdNm9GTu7zfr7E0hLuSZuw3QobS5RqNxUpfE_MlyYD8fCzrqBKxH8Y0LjgJYY7dWngU4JfIhZ2mnytYI8cJKqcHzcSZXx4YXgLAp2cTqcxKlXG9B7ZOraajNoirpYpGCzxtRj1D9PE3lctjnTHWW-OnM3XXDUy3Kn_9YmeFQ?purpose=inline" alt="Candeias Bahia : A Chuva Acida Que é Causada Pelos Gases Poluentes"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/XjQQZ_ttHNuFNhZg8B6TnpUZELuIBQKsaTSB_8SsH1ws2RdGBaAkhVslGASRRJ4cGpqPSVgbovSKwEaw2KI87NNffNSNxIB8QUAMlZgUESTMkbag5wpU4EnOE83yNPoL3hGwT2KwFD0vy_FSq1y95d7oLiLVd_zt30q8RW8xEcaxhExt56OY_EMx2_aqWEC7?purpose=inline" alt="Fir forest damaged by acid rain, Most, Czech Republic"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Hai khí chính gây ra mưa axit là:</p>
+<ul>
+<li class="markdown-unit">Lưu huỳnh dioxide (SO₂).</li>
+<li class="markdown-unit">Nitrogen oxides (NOₓ), chủ yếu là nitrogen dioxide (NO₂).</li>
+</ul>
+<p class="markdown-unit">Các khí này phản ứng với hơi nước và oxi trong khí quyển, tạo thành các axit như sulfuric acid (H₂SO₄) và nitric acid (HNO₃). Khi hòa tan vào nước mưa, chúng làm giảm pH của nước mưa.</p>
+<h2 class="markdown-unit">Câu C1.02. Các khí gây ra mưa axit đi vào khí quyển bằng cách nào?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/LfF0nYYELG-mjTz-M5cy15rgF7yeWVVvUzY8O3cB6TNQrIpU5l5YL935yX5gSjpaYYSWHb6gEOp_GDYKNhuHZ9U4GSaUpZ2DddhCMWAot_7wDeZu1TYPfOrGh37ZuIC02juchbxodaOTvbvVVeuywTFn3pc8chSSdHxuoOdrCxo?purpose=inline" alt="The US Environmental Protection Agency’s Acid Rain Program"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/fnVcVSwBUA67VQ7vui-ovSQek3mqn12uhUaJ7qaX3B02Mbdxb6B6QDCCfIt7XCPi-02DRTGKx4P0w13AxH4nFHQTlHfb3E7Vo-Pi0XLRwAvzkIf8wwiDMwcnN5FYQQWm1aToVHbtxbjdstrwItVseFugxYF66PcW0VTiqWUE_dI?purpose=inline" alt="Giữa động cơ xăng và động cơ diesel: Loại nào gây ô nhiễm môi trường hơn?"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/VZiUu4a_-zfx57rqk417dXxz-fwEn0QvVqR7wk-C0KIhXTOZxi4VcaYKm5FtLZE5669VvfW46HNC9PcwxrDQPLII66zCHD0nZHNIYGClwNkSUyZquClLout9jEsEbrZn8DcSxXirytvTXunr7znZ6Rv3J0PN0n0nNgwuoWkguGo?purpose=inline" alt="What Is Sulfur Dioxide (SO2)?"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Các khí SO₂ và NOₓ đi vào khí quyển từ nhiều nguồn:</p>
+<ul>
+<li class="markdown-unit">Đốt nhiên liệu hóa thạch (than đá, dầu mỏ) trong nhà máy điện và công nghiệp.</li>
+<li class="markdown-unit">Khí thải động cơ phương tiện giao thông.</li>
+<li class="markdown-unit">Hoạt động luyện kim, đốt nhiên liệu trong sản xuất.</li>
+<li class="markdown-unit">Núi lửa phun trào cũng giải phóng SO₂ tự nhiên.</li>
+</ul>
+<h2 class="markdown-unit">Câu C1.03. Những tác hại do mưa axit gây ra là gì?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/XjQQZ_ttHNuFNhZg8B6TnpUZELuIBQKsaTSB_8SsH1ws2RdGBaAkhVslGASRRJ4cGpqPSVgbovSKwEaw2KI87NNffNSNxIB8QUAMlZgUESTMkbag5wpU4EnOE83yNPoL3hGwT2KwFD0vy_FSq1y95d7oLiLVd_zt30q8RW8xEcaxhExt56OY_EMx2_aqWEC7?purpose=inline" alt="Fir forest damaged by acid rain, Most, Czech Republic"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/NYkPt2fATruCb5eAwXPgOjOsqG-Hit41mGLM2NtxJ4FkurVTC_GwW0ENi5qqVi4xArIC-M3q7A2soOiQ7N7CbOF-uEpbfVPQ5QMLdSp2oLP5fi8_3Rk0qfUzfgnUxkiszykZDU-E71_zo9XHF_GjOIRk_8VxNqNSIv-q4XUlSIEIKo0wVUfGVs9gYgffaLPo?purpose=inline" alt="Weathered Limestone Wall of Historic Building"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/DHD-s7ML_tESeMzDkoZf1_xkdRipt9IpmIgWhPIjlzLm6ucvsLwpSfI-UFg7rxlE9UdJv4e-NKEOhYMic2fbfd3TgPZ8F0PSdEaRsnnXOGjosnFuRr4NmvQwFKnTprX-ZmT1cROIz1-qUwb8sh78YhY3MA8ZRzmKR61a_MObePY?purpose=inline" alt="Surt vatten leder till fiskdöd i Larsmosjön | Österbotten | Svenska Yle"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Mưa axit gây ra các tác hại:</p>
+<ol>
+<li class="markdown-unit">Đối với thực vật: Làm tổn thương lá, giảm khả năng quang hợp, làm đất mất chất dinh dưỡng.</li>
+<li class="markdown-unit">Đối với sinh vật thủy sinh: Làm giảm pH của ao hồ, sông suối, gây chết cá và nhiều sinh vật.</li>
+<li class="markdown-unit">Đối với công trình: Ăn mòn kim loại và phá hủy đá vôi, đá cẩm thạch trong các công trình kiến trúc.</li>
+<li class="markdown-unit">Đối với con người: Các chất ô nhiễm liên quan có thể gây kích ứng và làm trầm trọng thêm bệnh hô hấp.</li>
+</ol>
+<h2 class="markdown-unit">Câu C1.04. Sương khói quang hóa (Photochemical smog) là gì? Vì sao nó gây hại?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/V7a-WfCikcTtFByESUS-iUvXeV6WEu9yq3Kj7usC31LAh0xyP4GPdAQXlT-cUAhBtJ1sqHQfDOGSLhWfo49fMSz8DoKV5GQ_ChREckJYmLmpOQMcINqpWw8wMHd785sa7g5U9l6WI37CPBSWFIAuObx76Rr-YqlYZos5kOm5LJ4?purpose=inline" alt="Heat Smog: What It Is, Health Risks, and How to Protect Yourself"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/janxximhCDlwgPZYtn7qxeyS6xQGLtMR-DUleWe7SyrbNjA51j4y0H6bHvb0ejV1xoiZu-595XHLvoGR7isC_L17unbNUu8gDHUaUGNB-DlLNZkDtPKj4emIYBUtFIFyk-0LDxXIO3Udyk7c90-obRJcalDEpw8WtB2gLfLzQds?purpose=inline" alt="What Is Photochemical Smog?"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/GYcNKScw-4jKtM11xtCHjezeYc57nGquE49lrXkjNAn4h1lnjsWVcILl-OaFOhl8G2nagsBBB8T9aVFSsvRJ92JSTwlwjtqCELCaN2dMnC79o0xEf71KuI3-YcuWaNtkj6NGRnV0mVf2h8WTIcPTGHLw5BOCHsJiG_cyxGzAu4g?purpose=inline" alt="Dr. Emily Fischer | NASA Earthdata"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">5</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Sương khói quang hóa là hỗn hợp các chất ô nhiễm hình thành khi ánh sáng Mặt Trời tác động lên nitrogen oxides (NOₓ) và các hợp chất hữu cơ dễ bay hơi (VOCs).</p>
+<p class="markdown-unit">Sản phẩm có thể bao gồm ozone tầng đối lưu (O₃), các chất oxy hóa và peroxyacetyl nitrate (PAN).</p>
+<p class="markdown-unit">Tác hại:</p>
+<ul>
+<li class="markdown-unit">Gây kích ứng mắt và đường hô hấp.</li>
+<li class="markdown-unit">Làm trầm trọng thêm bệnh hen suyễn.</li>
+<li class="markdown-unit">Gây tổn thương lá cây, ảnh hưởng đến cây trồng.</li>
+<li class="markdown-unit">Làm giảm tầm nhìn và chất lượng không khí.</li>
+</ul>
+<h2 class="markdown-unit">Câu C1.05. Khí carbon monoxide (CO) ngăn cản máu vận chuyển oxygen như thế nào?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/h-BMIXCwTRHHh_PPklVkSg_bx3LzZTY9FOiQTCh_pjZAxN7kr1tOzeQsvavk6-Fkji0plVoYy-9jjfG8SXDV0sZB59TDyIWiDiREFkSMVLiJZU_-gHx1GLTcYygayvtvucrIrhGI75AJV-7f1utLIWK-N4-A73ajhb8rfCqJW38?purpose=inline" alt="PPT - How to Identify Safety Hazards in Your Home PowerPoint Presentation - ID:3508319"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/_t0YmEG4r1lj2hrrTkw2OfjAfdwE3LbWPCqaTATyItSvoh1xyPqUayd9V8fiKaqW1cbEKCOkmJ4S3onFtrw-3BBLQsB42vM5ryy88olzO-4SR4Kc0J8tOWAA47Hnd1T0JtKp_Oj8SDgJjLzJy9bng_ITAqKlCX5e2M1sP0hJR1K1DTjPWt3QbJOcHInD3idV?purpose=inline" alt="Carboxyhemoglobin. Joining the hemoglobin carbon monoxide. The inability to transport oxygen. Carbon monoxide poisoning. Infographics. Vector illustration"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/3MpmRGpAy4S4YZfI4JNGQH8Q8qCRfjdlQu4LX8a9N8buqyFzCAhtkDbACJhTyDt2SVay_1_wtZNSOjP8JF03hSdOGXB6-KnGlNO3E3QBHMlUDjpDdjLaegp8L3Y-79Zp65MS0Voly4bGvV5NifMijnvTzl70Lcg1quLllOh0PZy0cdY13H-7V_CbokJg3cPY?purpose=inline" alt="Hemoglobin Oxygen Transport Mechanism in Red Blood Cells Medical Infographic. Oxygen Binding and Release by Hemoglobin Molecules in Human Blood Illustration"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">4</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Carbon monoxide (CO) liên kết với hemoglobin trong hồng cầu tạo thành carboxyhemoglobin.</p>
+<p class="markdown-unit">CO có khả năng liên kết với hemoglobin mạnh hơn oxygen rất nhiều, khiến hemoglobin không thể vận chuyển đủ O₂ đến các tế bào.</p>
+<p class="markdown-unit">Hậu quả: Cơ thể bị thiếu oxygen, gây đau đầu, chóng mặt, bất tỉnh và có thể tử vong.</p>
+<h2 class="markdown-unit">Câu C1.06. Vì sao bóng đèn dây tóc được bơm đầy khí argon?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/Q2YW1aFg2icX6M1bJeE8B1nnnfjkoeRaPDp7hmJohFO-Uqd1_H328BezSDIzS4_UlIOxV159lep4PF7F-rQaOyOlhDy-_k7ZqDjnFHkzWS5b4RDsu1CRJK__WVG_K1BMfJiDQQ7NM9VmDlBYgP3cdc1r6mFsS2OpqeikMaBE628?purpose=inline" alt="Incandescent Filament Bulb"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Argon là khí hiếm, rất ít phản ứng hóa học.</p>
+<p class="markdown-unit">Argon được sử dụng trong bóng đèn dây tóc vì:</p>
+<ul>
+<li class="markdown-unit">Ngăn tungsten (vonfram) ở dây tóc phản ứng với oxygen.</li>
+<li class="markdown-unit">Hạn chế sự bay hơi của tungsten.</li>
+<li class="markdown-unit">Giúp dây tóc bền hơn và kéo dài tuổi thọ bóng đèn.</li>
+</ul>
+<h2 class="markdown-unit">Câu C1.07. Hiệu ứng nhà kính (Greenhouse effect) là gì?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/pDV--EC5qIje0BEA1yIwX7TMq8RT6YKvrQefh0w72xNtKqTIlDOY17r6-dhSRus6w2yAw-07CczS7l3KoZcEam6QV3C-em_Y0jiKEI8tvME-fnCzFTK_UGwR0uDHLqroiQjabs3wTH4XcxTdiidRPT7iX-WGVtZW3JE6GptE_6U?purpose=inline" alt="File:Earth's greenhouse effect (US EPA, 2012).png - Wikimedia Commons"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/fmldLtPr_8_Px7xcDnlBKOygKlFuEms6OM6W84UwgoTsit6KTd1a38V1L3hYj-tZh4PeURIX0kTYeGZVBD7t8vd1ZB4RLcu1mZBd0XXopVRDHStfgQl5QLVX8Cujb2zNrcFYQTZIFVKDUCMQU79UTw_61RLtQTy5h0rsUWPhX0U?purpose=inline" alt="Global Warming: Definition, Causes, Effects, Diagram"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/MLKWwKxlghTa7H9n2fwftnkBjfTZM-ey35riEM0DjPlIJhva4LH0YghUBgHElAoW_jSmd1cWdqF4lcBMcv5qYP9hdyDMbraPs_djWnbpF24wunzmkd3sYEUi5TnCdXc9iD_c5KdxVOFVQb3UnLccwCp8inRqwAICF74tslG0WF0?purpose=inline" alt="Could Earth's 'evil twin' Venus carry a dire warning about climate change? | Space"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Hiệu ứng nhà kính là hiện tượng một số khí trong khí quyển hấp thụ và phát xạ lại bức xạ hồng ngoại do bề mặt Trái Đất phát ra, khiến nhiệt bị giữ lại trong hệ thống khí quyển – bề mặt.</p>
+<p class="markdown-unit">Các khí nhà kính quan trọng gồm:</p>
+<ul>
+<li class="markdown-unit">Carbon dioxide (CO₂).</li>
+<li class="markdown-unit">Methane (CH₄).</li>
+<li class="markdown-unit">Water vapour (H₂O).</li>
+<li class="markdown-unit">Nitrous oxide (N₂O).</li>
+</ul>
+<p class="markdown-unit">Hiệu ứng nhà kính tự nhiên giúp Trái Đất duy trì nhiệt độ phù hợp cho sự sống. Tuy nhiên, sự gia tăng khí nhà kính do hoạt động con người làm tăng sự nóng lên toàn cầu.</p>
+<h2 class="markdown-unit">Câu C1.08. Bộ chuyển đổi xúc tác (Catalytic converter) làm nhiệm vụ gì đối với khí thải ô tô?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/UvjrqXkNKkP-TOq1fSndmTSg20XZJnSBkstXDyJYKD_ESE86q59XH3h_QdHeCUO8o9C7DVEHQ0FDvc6CkFfKKIaFN_c27NNPFhdLQbVHS2xkCbVASdCNslvzSSHAFhJkxHF2IfsSfovn4deWteLSv8l-b98Lx5fGhhik34TZnnk?purpose=inline" alt="Inside the catalytic converter with EEC - Garage Wire"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/3bR2jxRdg1oYPmT5JXIVeNO7Ut0SYijT169QYjJqoXShdfDWHrEwpMvgqPbhd7QOwJV4I1AzgPD327nLcE7HePDUiDBnKeYjJ6QyU4a4N8HgcLe1GYz-tDLc2IuSgRuLe0rCRv2AY4llx4bY-9IlxrERvkjRXxpyiqqV6yX1aQI?purpose=inline" alt="Frontiers | Sustainable synthesis of La0.8Sr0.2Co0.9Fe0.1O3-δ catalyst using hibiscus flower extract and its performance evaluation for automotive HC and CO exhaust emission control"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/kifcDnNu0Qj77K4nVh2c619KzS8CCzXSmeGhGKVdlnVlSW-nUSKBumdNLkQpTAjSLfzo-tehjNSwNvgdFid4u66Yqj1pXM_XKNj0ia2gj7d_xIG9Kfz9VvnpiC3l023RAgnv7AtILvh0ZHOG3LFa6rfN1l_maK8WOYUOjTj3LeA?purpose=inline" alt="Engine emission control by Three way catalytic converter"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">6</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Bộ chuyển đổi xúc tác giúp biến đổi các khí thải độc hại thành những chất ít độc hại hơn.</p>
+<p class="markdown-unit">Ba phản ứng chính:</p>
+<ul>
+<li class="markdown-unit">CO được oxi hóa thành CO₂.</li>
+<li class="markdown-unit">Các hydrocarbon chưa cháy hết được oxi hóa thành CO₂ và H₂O.</li>
+<li class="markdown-unit">NOₓ được khử thành nitrogen (N₂).</li>
+</ul>
+<p class="markdown-unit">Nhờ đó, lượng khí ô nhiễm thải ra môi trường giảm đáng kể.</p>
+<h2 class="markdown-unit">Câu C1.09. Vì sao nước được lọc trước khi thực hiện các bước xử lý hóa học tiếp theo?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/6ky5C_h7h6-MMEIFBe3VHqSkKTd6hqEp0ZG1w0tfoGaFnZQqNuWN-h6HvbhhoxD2g_pKzjqN7mg7OG6F_icBB3SmTbGKhLFoS4NGgQV5hEaz0GBaDCSXQ2W6ngbDkHQQ7KK6SoondahGvQxTXROHzWzyg4BKO6542jxe3wY-BDg?purpose=inline" alt="index"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/ePSwRaOUwKw7XoYeQGLwJ_4C0fUPcDnQ2ukjSQsCXpze5mcKKNySi9NNiozNJyK0dVKykY3CNDGNhpz42UtD9CplXiL4Tf4ZIeIH4O-lWUHMXzUWLodPx3uo1gxxkuUgZN7U_fmu6BUlTuftzyUJO_4YZ7uPD9J5t0q985laXzg?purpose=inline" alt="Water Media Filter Manufacturer, Supplier, Exporter"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/j9JHUImo35uMwX8DA5zkL0N1MlEhah0mxgwZh2HzCfy_-aFJ9jcZ6fB5JBEFGf9nAbxGtzjO6KsnrQhB5yUcJydk5L2n3J7qlS7ENxf8HoJ1DbunLeIq57fiz2ZEVuaTMGKvytpBkSCM0W-DCf2ezjWlXs2UV0yOiKH0aj0LMms?purpose=inline" alt="Whole Home Reverse Osmosis System | Blue Logic Water"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">6</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Lọc nước giúp loại bỏ các chất rắn không tan như:</p>
+<ul>
+<li class="markdown-unit">Cát, đất và bùn.</li>
+<li class="markdown-unit">Các hạt lơ lửng.</li>
+<li class="markdown-unit">Một số tạp chất cơ học.</li>
+</ul>
+<p class="markdown-unit">Việc lọc trước giúp nước trong hơn, giảm lượng tạp chất và hỗ trợ các bước xử lý tiếp theo hoạt động hiệu quả.</p>
+<h2 class="markdown-unit">Câu C1.10. Vì sao chlorine được thêm vào nước trong quy trình xử lý nước sinh hoạt?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/KZrTeabo-t65Pfe-bJBSSV2JgkGekQ173a32TFp0IrsYIK1Byotxwo8tyOtOLvgipCOHu6XoQ9whFiBy0FprMyN6eDMVQJ0Pz7DV3Clwt133fd0W5Qfnm0OPCErZx2mHBKEdnZx6ePUSg3pFDo1lfBVEXnUMHNOZ93y_RINkRko?purpose=inline" alt="化学の泉 │ 卒業生便り │ 明治応用化学会"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/8RrAdVuaokOHh7dVRZ-YfCNNy57QolNf2_iQ87z39Vct-0KrAmwiVoqNd5y-tal724mFn7UXRiPq2MdxFV_OJOWGQOirpqd1izwxYGZrWBWZjTtf9k3Da8L_lemMBHxc9kuS-kajesbcFlZUtiKi9g9NLhRCkvxFUWa-2XArVtg?purpose=inline" alt="Turbidity/Chlorine SMART Sensor for Water Treatment Plant | Yokogawa Electric Korea Co., Ltd."><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/6KpyJYtOlRqkiUpnbgEJnA97z4vXvqQ_8_KPAoICXO5QFZPnA9WSn9WSbMUa09i7JMsTBsAYhykW7MJ7sODrZEnzu96sMnrxjfRQzW3sm7ueT-yet-64f0_gHN6Xbx0NvZRRPbRRw2XeGc_O-56ebJB7Gh3srmLuFbpJA-5U2_g?purpose=inline" alt="PPT - Water Treatment Basics PowerPoint Presentation, free download - ID:3356319"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">4</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Chlorine (clo) được thêm vào nước để khử trùng, tiêu diệt hoặc bất hoạt nhiều loại vi khuẩn, virus và vi sinh vật gây bệnh.</p>
+<p class="markdown-unit">Đây là bước quan trọng nhằm đảm bảo nước an toàn về mặt vi sinh khi cung cấp cho người dân.</p>
+<h2 class="markdown-unit">Câu C1.11. Vì sao chưng cất nước biển là phương pháp đắt tiền để sản xuất nước uống?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/QlDXqUsIftfHTdAsOjQmhIu0cSo3fE1aSCdnGOAlSldZB2yr0mnrlPlBLeryAE1pf9Dnkpx0WZIfIxg9qcEDKtpJRBPAJ6uiwDi9iE6RKeMox9Ag-vJ2LjW526uO51fOnm9aBnnaNFJEpUgMsOiypmRCp_fruI7mJ2fe1PP6Sdw?purpose=inline" alt="Single stage desalination systems"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/jra1mi95XuEls93F1BB-o92Vz2g83vzFZni5HwR1fIhmW8GDId3uG-u5XGryJoX4oz2iNw7C0h660Kic1v06CUASTDcXaY1yVTVZj3XmyCdEOdvYzkxv8lNhjEuZhouPWgIYbAAo8pKCFzHO5-GqDpTtp6UaxKcd9yhIiaKDEGw?purpose=inline" alt="EtihadWE secures AED 1.046 billion agreement for Fujairah seawater desalination facility"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/0QMZ8WUMlSMo_IiHjVCjjVvrafCELWeols2HFWrzksZjgsVZU5ExA2wN7iyg5aty3NjuBZ_xCBCRoiwhyepcBZUBN7c6htvYKoDBrXegq5XvtiY0ciyOXr_dO5Dw3BBgYGr_vGwQqbBSEndyOZHb5t_5reSYxa1luksWB131BeI?purpose=inline" alt="Parameters Affecting the Efficiency of Solar Stills—Recent Review"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">6</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Chưng cất nước biển cần:</p>
+<ol>
+<li class="markdown-unit">Đun nóng nước biển để biến nước thành hơi.</li>
+<li class="markdown-unit">Tách hơi nước khỏi muối và các chất hòa tan.</li>
+<li class="markdown-unit">Làm lạnh hơi nước để ngưng tụ thành nước lỏng.</li>
+</ol>
+<p class="markdown-unit">Quá trình này tiêu tốn nhiều năng lượng, thiết bị và chi phí vận hành nên khá đắt tiền.</p>
+<h2 class="markdown-unit">Câu C1.12. Điều gì làm cho một quặng kim loại khác biệt so với các loại đá thông thường?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/pNJblzR1F-ur-_ktY7TC0h4jvRkQEgMJX9IRyU0PfyIscG2x7TjMvPlcBcKakyqliPP3_divmscV3T7I8IiNeUVKSclVn96ucSq1c6ZLLcGNnIAD0joNLpN0azrp2vk6c7XbZUSf5EKP6YfBpkCEbGDaT5-TzbLclB4Dkt2Esw0?purpose=inline" alt="2.95" kidney="" ore="" (botryoidal="" hematite)="" -="" morocco="" (#367205)="" for="" sale="" fossilera.com"=""><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/T6HO0xINvxbUV3-3V0foyLBgBcLmGnrRtmB_w2SORrAhpAEVnmG-aLHCtIaAtla7RiY45d5XVr_m9ugxp2bihLYQpGutjLWWG1pKJV2DH04DwDQ6VqNTRMsuj9MSdAcM6mpfve1Eg9AM2AUF7L4PG05kN7WMLA8ju0ctx6jqSFc?purpose=inline" alt="Bauxite - Minerals For Sale - #1506782"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/hmC7Ng6oEMU2EYShOUJbRWh6u9AqDd5x597MMSMWe_gozk-UR_VTAjWBZzBgaX1FJK9BkWTov3fv2Y3MrpC_lv_SGb_M9UZoyeZ7v1d5sR68122BFnA2d94Iu-Kj5drI34v1P9D469Rd2RX3Vwb6zo1ca1POWiQl8cIzB4CNvqs?purpose=inline" alt="Malachite: Properties, Facts and Photos"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Quặng (ore) là loại đá hoặc khoáng vật chứa kim loại hay hợp chất kim loại với hàm lượng đủ lớn để có thể khai thác và thu hồi kim loại một cách có hiệu quả kinh tế.</p>
+<p class="markdown-unit">Không phải mọi loại đá chứa kim loại đều được coi là quặng.</p>
+<h2 class="markdown-unit">Câu C1.13. Sự khác biệt giữa vôi sống (Quicklime) và vôi tôi (Slaked lime) là gì?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/GY02jwJPhvRDs8czF7jOsFm5_fdXdOxMX3x_DeA1SaDQQdSaK9O6WhrKoJOho0ZewGo98H-9RfutVCWaUtprlTKJYFiVw1QHyIn6X9hKbkutV_LKZ646LvYoTqyqiRARjWgksnDnuq7UqpFm2xifDC18GVijvxKwyzKw4ixfHB0?purpose=inline" alt="Hochwertiges, hochweißes Branntkalkpulver mit geringer Verunreinigung und schneller Reaktivität CAS 1305-78-8 vom chinesischen Hersteller Hongyu Calcium"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/9DRwzNZ3wV_AHIbLMqcrytqaCn7F1e3ClTVR59DZrksXOOsdDTci0Er_LK8EgEAT-KtpxqoqqjsqIia-bx28WKIGag2FrwEnwUAkAOnNaY06GKvgOXznS5qe9YMjXAm4fVa12lsMBOLaAzngOD9yTixJrXmW3FxmHULqzSB0OC8?purpose=inline" alt="Hydrated Lime 460g-1lb / Calcium Hydroxide / Kalkwasser / Slaked Lime FOOD GRADE  | eBay"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/jAVjgLc9KAgetozDKQjowMGdQtA7rQyfp9VaxL7Ynp3dPJ5jLfixeyLO4Yz2AtBsxr2nAjL_e5GgshiXQFd3FptQmjmYAwUSjZn8qobZL-KDwMPDEpEc_KPpZNupeoudM8TVUmoWjj1qU2OczT0PMrkSEiafHTdWKjbyUAu4DeU?purpose=inline" alt="what is combination reaction?​ - Brainly.in"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">4</p>
+<p class="markdown-unit">Trả lời:</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>Vôi sống</th>
+<th>Vôi tôi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tên hóa học</td>
+<td>Calcium oxide</td>
+<td>Calcium hydroxide</td>
+</tr>
+<tr>
+<td>Công thức</td>
+<td>CaO</td>
+<td>Ca(OH)₂</td>
+</tr>
+<tr>
+<td>Trạng thái</td>
+<td>Chất rắn màu trắng</td>
+<td>Chất rắn màu trắng</td>
+</tr>
+<tr>
+<td>Điều chế</td>
+<td>Nung đá vôi</td>
+<td>Cho vôi sống tác dụng với nước</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Phương trình phản ứng:</p>
+<p class="markdown-unit">CaO + H₂O → Ca(OH)₂</p>
+<p class="markdown-unit">Phản ứng tỏa nhiều nhiệt.</p>
+<h2 class="markdown-unit">Câu C1.14. Điều gì làm cho một chất khí trở thành khí nhà kính?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/wM4N2IKRoWyeKeFlVdGTqy9Y9KoXxyQxqgMZiS78DPSuVMe1lFznNKs1086BDC3WRgjJjAIjCGr8-xDBpF5kAvI8eBt8w10uD8Sicjc1A6f6cMAaEHiO84-jMf1IHwWvM5ZrPAW4TpN6xrrJqsj6uugM7nO6igDRO9G7Zgo9XPk?purpose=inline" alt="What If We Did Not Have Greenhouse Gases? » ScienceABC"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/aFzhw_AUui2e-b-_VVFbkvE9dSPSwzbqRJhRuxTw2m_0k_Z7mkAncW292XW5T6foEgN2hwHlj82oJa9GbKYfjy53Oe-FTQLDOtXypa-gIn0twwiva8UQ2H14jY7YnMdxJD9KsfR3NedYwjhTvM5JYa1Gw23gmY7bPgl2_3WJTl8?purpose=inline" alt="PPT - Greenhouse Gases PowerPoint Presentation, free download - ID:1884383"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/qb_8c5OP6mULcV4VDmoYKroNLYticsF94MYr6Qwr_gKPHdCb88Ts_M63UG-e2RVTsklSnkBWw3fLIfquhjAlw-3agc1_YxPBmjon5vXlFNpxTXj-S8d4Kxz-wdaPZXYuZC0ibWevX5N-FmFNUQL47x7-Xry4rVhVOpK5RFA_y10?purpose=inline" alt="PPT - The Greenhouse Effect PowerPoint Presentation, free download - ID:3767036"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">7</p>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Một chất khí được gọi là khí nhà kính khi nó có khả năng hấp thụ bức xạ hồng ngoại ở những bước sóng phù hợp và phát xạ lại năng lượng đó.</p>
+<p class="markdown-unit">Các khí như CO₂, CH₄, H₂O và N₂O có khả năng này.</p>
+<p class="markdown-unit">Lưu ý: Không phải tất cả các khí trong khí quyển đều là khí nhà kính. Nitrogen (N₂) và oxygen (O₂) không hấp thụ bức xạ hồng ngoại đáng kể theo cơ chế này.</p>
+<h1 class="markdown-unit">II. CÂU HỎI BÀI TẬP THỰC HÀNH (ACTIVITY C1.02 QUESTIONS)</h1>
+<p class="markdown-unit">Chủ đề: Tách muối từ nước biển – Separation of salts from seawater</p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/noeYkB5MnYKbZlf-gLwOBAXjKmsz4aiyH7bPmiYP_JrI70hsl9Q7x3csJDZOEqHQ7zEdQJFPdtP27nFtHaMXUgAVjDlvbb9C41ukcbpjzWELvmQ61xwPB3FUXsWDNymH__P9Hbae9oCTvzk-EPTi5YYz8C3v_HiOHLOc_FiPjHY?purpose=inline" alt="Chemistry Ch3 (26/11/2009) | PPT"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/RY4EQnyyV_xJlvTbpmAty74bRyIsJZ60Y1COmKN1HwDPC8LVBPPRQgldeqrIGSQZDK7h5SgCKED9-ZJyXNZbG2A3Ow0mwPCCcgdL02FqoS_bz3TGzC3G7fejs4P9Na5l6zxeUFYN_pTTxogb4TIUykMTXFlWVHmFWuIoQeBVeQQ?purpose=inline" alt="Separating salts from seawater | Class experiment | RSC Education"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">![��T��Web�t�H�g�T�!<a href="https://images.openai.com/static-rsc-4/wCZ4UXOTHJ773PVYcUjQ4BaQNb_nZ16j0TpoYMYzU1CJz-akTgJwRYdJjEgv97z3HSKQ69zrFJIy1_l9DOcgbWXj4lpog4OzpSA8RS83H3EHjKF0WViqdbL0oe62PcUFdRWfCOOldJ4gqPrU9-5NwGjS8dtSiNhkxcL2pX9uYbI?purpose=inline">�x�C���</a></p>
+<p class="markdown-unit">4</p>
+<p class="markdown-unit">Trong thí nghiệm, nước biển được cô đặc và làm bay hơi dần để thu các chất rắn hòa tan. Các chất muối khác nhau có độ tan khác nhau nên kết tinh ở những giai đoạn khác nhau.</p>
+<h2 class="markdown-unit">Câu A1. Có bằng chứng thực nghiệm nào cho thấy nước biển là hỗn hợp gồm nhiều loại muối?</h2>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Khi cô đặc và làm bay hơi nước biển, người ta thu được các chất rắn có đặc điểm khác nhau, kết tinh ở những thời điểm khác nhau.</p>
+<p class="markdown-unit">Điều này chứng tỏ nước biển chứa nhiều loại muối hòa tan chứ không phải chỉ có một loại muối duy nhất.</p>
+<h2 class="markdown-unit">Câu A2. Khí nào có khả năng đã thoát ra khi thêm hydrochloric acid loãng (HCl) vào phần chất rắn thu được đầu tiên?</h2>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Khí carbon dioxide (CO₂) có thể được giải phóng nếu phần chất rắn ban đầu chứa muối carbonate, chẳng hạn calcium carbonate (CaCO₃).</p>
+<p class="markdown-unit">Phương trình hóa học:</p>
+<p class="markdown-unit">CaCO₃ + 2HCl → CaCl₂ + CO₂↑ + H₂O</p>
+<p class="markdown-unit">Dấu hiệu nhận biết: Có bọt khí không màu thoát ra. Khí CO₂ làm đục nước vôi trong.</p>
+<h2 class="markdown-unit">Câu A3. Điều này cho biết thông tin gì về bản chất và danh tính của phần chất rắn ban đầu?</h2>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Điều đó cho thấy phần chất rắn ban đầu có chứa muối carbonate.</p>
+<p class="markdown-unit">Nếu xác định được khí thoát ra là CO₂ bằng cách dẫn qua nước vôi trong và thấy nước vôi bị vẩn đục, có thể kết luận mẫu chứa carbonate.</p>
+<p class="markdown-unit">Ví dụ: Calcium carbonate (CaCO₃).</p>
+<p class="markdown-unit">Phương trình nhận biết:</p>
+<p class="markdown-unit">CO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O</p>
+<h2 class="markdown-unit">Câu A4. Dựa vào độ tan của sodium chloride (NaCl) và calcium sulfate (CaSO₄), hãy dự đoán danh tính chất rắn cuối cùng còn lại ở cuối thí nghiệm.</h2>
+<p class="markdown-unit">Trả lời:</p>
+<p class="markdown-unit">Chất rắn cuối cùng có khả năng là calcium sulfate (CaSO₄).</p>
+<p class="markdown-unit">Giải thích:</p>
+<ul>
+<li class="markdown-unit">NaCl tan khá tốt trong nước.</li>
+<li class="markdown-unit">CaSO₄ ít tan hơn NaCl.</li>
+<li class="markdown-unit">Khi nước biển bay hơi, các chất ít tan có thể kết tinh trước hoặc còn lại trong phần cặn cuối cùng tùy điều kiện thí nghiệm.</li>
+</ul>
+<p class="markdown-unit">Vì vậy, CaSO₄ có thể được thu lại ở phần chất rắn cuối cùng.</p>
+<p class="markdown-unit">Lưu ý: Kết luận này phụ thuộc vào trình tự cô đặc, nhiệt độ và cách thu các phần kết tinh trong thí nghiệm.</p>
+<h1 class="markdown-unit">III. BÀI TẬP ÔN TẬP CUỐI CHƯƠNG 1 (END-OF-CHAPTER QUESTIONS)</h1>
+<h1 class="markdown-unit">BÀI 1. THÀNH PHẦN CỦA KHÔNG KHÍ VÀ MƯA AXIT</h1>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/QMHdXdCV7LDlmXG_xas5XT7os7sPWNJY_rQuPOsQtbZEgGhVYV8kx2StW64kwrvL0oW1OO9mFvXdsdKvuYa95qo5gFi3QsDk_yrc_laESpl1tRX8QlTsRPUufdb2Cyr0NrVD4q3D0iergr-cjuyE6bMgEUj7t4YXgyBdulFRXx0?purpose=inline" alt="Atmospheric Composition - EarthScience"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/l4wxOGbcdsIrEDctLnvZddzbBcKiTj4BK6qwA74vU9QBKUU5aqNtj2-gh2oYdheEOSOdjjEVL0R4nA1JLwsiNz-C_FNUGwpVhxZBM_-DYLwhSLNk_Pe0AzVCSSJ2thELtARIRlsQXPlENtZ4NWaf5zIuipn_lopDfQIRB-3sEew?purpose=inline" alt="PPT - Nitrogen and its Compound PowerPoint Presentation, free download - ID:6164367"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/wAZKVuZ9BM5Z2YZpIO0fDwpRsJzSdjLeqKuvZkFCd4sS481v-4XuyUHVXvGNOebam__Mx2c73b-qkDi1l1uOv66N0svOQUfU06IDyX65S4WKaMP1B8_1v5R5zh_MBwtN6Z5pYGviq2Z5fmuSPvbSyr13dx0DBvBjPMFpBNKrKtE?purpose=inline" alt="Causes of acid rain | Media Library | Integration and Application Network"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<h2 class="markdown-unit">a) Thành phần của không khí</h2>
+<p class="markdown-unit">i) Hoàn thành biểu đồ bằng cách điền tỷ lệ phần trăm của nitrogen, oxygen và các khí khác trong không khí chưa ô nhiễm.</p>
+<p class="markdown-unit">Đáp án:</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Thành phần</th>
+<th>Tỷ lệ thể tích xấp xỉ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nitrogen (N₂)</td>
+<td>78%</td>
+</tr>
+<tr>
+<td>Oxygen (O₂)</td>
+<td>21%</td>
+</tr>
+<tr>
+<td>Các khí khác</td>
+<td>1%</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Trong nhóm khí khác có argon, carbon dioxide, neon và một lượng nhỏ các khí khác.</p>
+<p class="markdown-unit">ii) Nêu tên một khí khác tồn tại trong không khí chưa ô nhiễm.</p>
+<p class="markdown-unit">Đáp án: Argon (Ar).</p>
+<p class="markdown-unit">Các đáp án khác có thể chấp nhận: carbon dioxide (CO₂), neon (Ne), helium (He).</p>
+<h2 class="markdown-unit">b) Sự hình thành nitrogen oxides trong cơn giông</h2>
+<p class="markdown-unit">i) Viết phương trình hóa học cân bằng cho sự tạo thành nitric oxide (NO) trong cơn giông sấm sét.</p>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">N₂ + O₂ <span><span class="katex"><span class="katex-mathml"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="0" style="font-size: 101.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-semantics><mjx-mrow><mjx-mover><mjx-over style="padding-bottom: 0.192em; padding-left: 0.353em;"><mjx-mpadded size="s"><mjx-block style="width: 3.244em; position: relative;"><mjx-rbox style="left: 0.3em; top: 0px; max-width: 3.244em;"><mjx-mrow><mjx-mtext class="mjx-n"><mjx-c class="mjx-c74"></mjx-c><mjx-c class="mjx-c69"></mjx-c><mjx-c class="mjx-c61"></mjx-c><mjx-c class="mjx-cA0"></mjx-c><mjx-c class="mjx-c73"></mjx-c></mjx-mtext><mjx-mover><mjx-over style="padding-bottom: 0.105em; padding-left: 0.222em; margin-bottom: -0.505em;"><mjx-mo class="mjx-n" style="width: 0px; margin-left: -0.25em;"><mjx-c class="mjx-c2CA"></mjx-c></mjx-mo></mjx-over><mjx-base><mjx-mtext class="mjx-n"><mjx-c class="mjx-c65"></mjx-c></mjx-mtext></mjx-base></mjx-mover><mjx-mtext class="mjx-n"><mjx-c class="mjx-c74"></mjx-c></mjx-mtext></mjx-mrow></mjx-rbox></mjx-block></mjx-mpadded></mjx-over><mjx-base><mjx-mo class="mjx-n"><mjx-stretchy-h class="mjx-c2192" style="width: 3em;"><mjx-ext><mjx-c></mjx-c></mjx-ext><mjx-end><mjx-c></mjx-c></mjx-end></mjx-stretchy-h></mjx-mo></mjx-base></mjx-mover></mjx-mrow></mjx-semantics></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mo stretchy="true" minsize="3.0em">→</mo><mpadded width="+0.6em" lspace="0.3em"><mrow><mtext>tia&nbsp;s</mtext><mover accent="true"><mtext>e</mtext><mo>ˊ</mo></mover><mtext>t</mtext></mrow></mpadded></mover></mrow><annotation encoding="application/x-tex">\xrightarrow{\text{tia sét}}</annotation></semantics></math></mjx-assistive-mml></mjx-container></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1.1191em; vertical-align: -0.011em;"></span><span class="mrel x-arrow"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.1081em;"><span class="" style="top: -3.322em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight x-arrow-pad"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">tia&nbsp;s</span><span class="mord accent mtight"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height: 0.6944em;"><span class="" style="top: -2.7em;"><span class="pstrut" style="height: 2.7em;"></span><span class="mord mtight">e</span></span><span class="" style="top: -2.7em;"><span class="pstrut" style="height: 2.7em;"></span><span class="accent-body" style="left: -0.25em;"><span class="mord mtight">ˊ</span></span></span></span></span></span></span><span class="mord mtight">t</span></span></span></span></span><span class="svg-align" style="top: -2.689em;"><span class="pstrut" style="height: 2.7em;"></span><span class="hide-tail" style="height: 0.522em; min-width: 1.469em;"><svg width="400em" height="0.522em" viewBox="0 0 400000 522" preserveAspectRatio="xMaxYMin slice"><path d="M0 241v40h399891c-47.3 35.3-84 78-110 128
+-16.7 32-27.7 63.7-33 95 0 1.3-.2 2.7-.5 4-.3 1.3-.5 2.3-.5 3 0 7.3 6.7 11 20
+ 11 8 0 13.2-.8 15.5-2.5 2.3-1.7 4.2-5.5 5.5-11.5 2-13.3 5.7-27 11-41 14.7-44.7
+ 39-84.5 73-119.5s73.7-60.2 119-75.5c6-2 9-5.7 9-11s-3-9-9-11c-45.3-15.3-85
+-40.5-119-75.5s-58.3-74.8-73-119.5c-4.7-14-8.3-27.3-11-40-1.3-6.7-3.2-10.8-5.5
+-12.5-2.3-1.7-7.5-2.5-15.5-2.5-14 0-21 3.7-21 11 0 2 2 10.3 6 25 20.7 83.3 67
+ 151.7 139 205zm0 0v40h399900v-40z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.011em;"><span class=""></span></span></span></span></span></span></span></span></span> 2NO</p>
+<p class="markdown-unit">Giải thích:</p>
+<p class="markdown-unit">Năng lượng rất lớn từ tia sét giúp nitrogen và oxygen trong không khí phản ứng với nhau, tạo thành nitric oxide (NO).</p>
+<p class="markdown-unit">Sau đó, NO tiếp tục phản ứng với oxygen:</p>
+<p class="markdown-unit">2NO + O₂ → 2NO₂</p>
+<p class="markdown-unit">Tạo thành nitrogen dioxide (NO₂).</p>
+<p class="markdown-unit">ii) Dựa vào kết quả thí nghiệm pH, học sinh có thể rút ra kết luận gì? Nêu tên hợp chất mới được tạo thành trong cơn bão.</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Mẫu nước</th>
+<th>Giá trị pH</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nước tinh khiết</td>
+<td>7</td>
+</tr>
+<tr>
+<td>Nước mưa khi không có bão</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Nước mưa trong cơn giông</td>
+<td>4</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Đáp án:</p>
+<ul>
+<li class="markdown-unit">Nước mưa có tính axit vì pH nhỏ hơn 7.</li>
+<li class="markdown-unit">Nước mưa trong cơn giông có tính axit mạnh hơn nước mưa thông thường vì pH giảm từ 5 xuống 4.</li>
+<li class="markdown-unit">Nguyên nhân là trong cơn giông, tia sét tạo điều kiện hình thành NO và NO₂. NO₂ hòa tan, phản ứng với nước và oxygen tạo ra các axit.</li>
+</ul>
+<p class="markdown-unit">Hợp chất axit được tạo thành là nitric acid (HNO₃).</p>
+<p class="markdown-unit">Phương trình tổng quát:</p>
+<p class="markdown-unit">4NO₂ + O₂ + 2H₂O → 4HNO₃</p>
+<p class="markdown-unit">Lưu ý: Nước mưa thông thường cũng có tính axit nhẹ do CO₂ hòa tan tạo carbonic acid (H₂CO₃). Vì vậy, không nên kết luận toàn bộ độ axit của nước mưa đều do NO₂ gây ra.</p>
+<h1 class="markdown-unit">BÀI 2. NƯỚC, Ô NHIỄM KHÔNG KHÍ VÀ XỬ LÝ NƯỚC</h1>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/7ZWa5RF5JkGCKHTVCxzeZdp8ZB1UknBWi43dDvLpxpbTWqxsxORcQkZ7jU3o4arDP8qT5OQcM1RYHtwv7MB67IBlGB6nzs71sTwEZN-hlqy_YyYoVcnwfytagJZ9YjaD12ZdehQOOMaiz1qlwUUL8IW-cqqnMHVSCwnohMdKWe8?purpose=inline" alt="Water cycle: Continuous movement of water through evaporation, condensation, and precipitation | Gamatrain"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/DLeUlYTmrdWUJq3rTODWoCkHHKi8ygW4kPji8k99GTwFy5AkPGJ_ynzSDWteurLaDZVxlgHY6vmAsLBU3Pm6b4hI2HkseebZejv_aOplzJ1bSGYrxU-hT5m0YwckhvDz0v6eb0LvRYdMEqvwAbW5tRG4RZquVBPxpX7rg2Ncvrw?purpose=inline" alt="PPT - Water Treatment PowerPoint Presentation, free download - ID:1426890"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/GDoPWAQhTkvJt3WqVyCxz-TVRIqQiKMJlGJVNQVQkSYMNswZzy0lDzhotSU4Wj6mBQj6rGzjPCwhZTLRR6insvdFqORUbX2JAZd_aZwnVLhGwNq1j4uLwzktYDzbrnh1u88uScTOp0qZRAunhMuHHD0EQWHnSJB5BzRFTmI222I?purpose=inline" alt="Formation Of Acid Rain – IB ESS Revision Notes"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">7</p>
+<h2 class="markdown-unit">a) Mô tả một phép thử hóa học để nhận biết nước. Nêu phép thử và hiện tượng.</h2>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Sử dụng copper(II) sulfate khan (CuSO₄) màu trắng.</p>
+<ul>
+<li class="markdown-unit">Nhỏ vài giọt nước vào copper(II) sulfate khan.</li>
+<li class="markdown-unit">Chất rắn màu trắng chuyển sang màu xanh lam.</li>
+</ul>
+<p class="markdown-unit">Phương trình:</p>
+<p class="markdown-unit">CuSO₄ + 5H₂O → CuSO₄·5H₂O</p>
+<p class="markdown-unit">Sản phẩm là copper(II) sulfate ngậm 5 phân tử nước.</p>
+<p class="markdown-unit">Phép thử khác: Dùng giấy cobalt chloride khan màu xanh, giấy chuyển sang màu hồng khi tiếp xúc với nước.</p>
+<h2 class="markdown-unit">b) Nêu một ứng dụng của nước trong công nghiệp.</h2>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Một số ứng dụng của nước:</p>
+<ul>
+<li class="markdown-unit">Làm mát máy móc và thiết bị công nghiệp.</li>
+<li class="markdown-unit">Làm dung môi hòa tan các chất.</li>
+<li class="markdown-unit">Sản xuất hơi nước để vận hành tua-bin.</li>
+<li class="markdown-unit">Rửa nguyên liệu và sản phẩm.</li>
+<li class="markdown-unit">Tham gia vào các phản ứng hóa học.</li>
+</ul>
+<p class="markdown-unit">Ví dụ: Nước được sử dụng để làm mát trong các nhà máy nhiệt điện.</p>
+<h2 class="markdown-unit">c) Nước là một dung môi tốt. Bạn hiểu thế nào về thuật ngữ dung môi (solvent)?</h2>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Dung môi là chất có khả năng hòa tan một chất khác để tạo thành dung dịch.</p>
+<p class="markdown-unit">Ví dụ:</p>
+<ul>
+<li class="markdown-unit">Nước là dung môi.</li>
+<li class="markdown-unit">Muối ăn là chất tan.</li>
+<li class="markdown-unit">Nước muối là dung dịch thu được.</li>
+</ul>
+<p class="markdown-unit">Nước hòa tan được nhiều chất ion và chất phân cực nên được gọi là dung môi phổ biến.</p>
+<h2 class="markdown-unit">d) Hơi nước trong khí quyển phản ứng với sulfur dioxide (SO₂) tạo thành mưa axit.</h2>
+<p class="markdown-unit">i) Nêu một nguồn phát thải khí sulfur dioxide.</p>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Nhà máy nhiệt điện đốt than đá chứa sulfur.</p>
+<p class="markdown-unit">Khi sulfur cháy:</p>
+<p class="markdown-unit">S + O₂ → SO₂</p>
+<p class="markdown-unit">Các nguồn khác: hoạt động luyện kim, đốt dầu chứa sulfur và núi lửa phun trào.</p>
+<p class="markdown-unit">ii) Nêu hai tác hại của mưa axit.</p>
+<p class="markdown-unit">Đáp án:</p>
+<ol>
+<li class="markdown-unit">Làm giảm pH của ao hồ, sông suối, gây hại cho cá và sinh vật thủy sinh.</li>
+<li class="markdown-unit">Ăn mòn công trình xây dựng, đặc biệt là các công trình làm từ đá vôi và đá marble.</li>
+</ol>
+<p class="markdown-unit">Các tác hại khác: làm đất mất chất dinh dưỡng, gây tổn thương thực vật.</p>
+<p class="markdown-unit">iii) Tính khối lượng phân tử tương đối (Mᵣ) của sulfur dioxide (SO₂).</p>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Nguyên tử khối tương đối:</p>
+<ul>
+<li class="markdown-unit">S = 32.</li>
+<li class="markdown-unit">O = 16.</li>
+</ul>
+<p class="markdown-unit">Ta có:</p>
+<p class="markdown-unit">Mᵣ(SO₂) = 32 + 2 × 16</p>
+<p class="markdown-unit">Đáp án: 64</p>
+<h2 class="markdown-unit">e) Nước từ sông hồ có thể được xử lý để làm nước uống an toàn. Mô tả hai bước trong quy trình xử lý nước và giải thích mục đích.</h2>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Bước 1. Lọc (Filtration)</p>
+<ul>
+<li class="markdown-unit">Cho nước đi qua các lớp cát, sỏi và vật liệu lọc.</li>
+<li class="markdown-unit">Loại bỏ cặn bẩn, đất, cát và các hạt rắn lơ lửng.</li>
+</ul>
+<p class="markdown-unit">Bước 2. Khử trùng bằng chlorine (Chlorination)</p>
+<ul>
+<li class="markdown-unit">Bổ sung một lượng chlorine được kiểm soát.</li>
+<li class="markdown-unit">Tiêu diệt hoặc bất hoạt các vi sinh vật gây bệnh.</li>
+</ul>
+<p class="markdown-unit">Lưu ý: Trong hệ thống xử lý nước thực tế còn có các bước như keo tụ, tạo bông, lắng, điều chỉnh pH và kiểm soát chất lượng trước khi phân phối.</p>
+<h2 class="markdown-unit">f) Nước được tạo thành khi hydrogen cháy trong không khí. Nêu phần trăm oxygen có trong không khí.</h2>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Oxygen chiếm khoảng 21% thể tích không khí.</p>
+<p class="markdown-unit">Phương trình phản ứng:</p>
+<p class="markdown-unit">2H₂ + O₂ → 2H₂O</p>
+<p class="markdown-unit">Đây là phản ứng cháy của hydrogen trong oxygen, tạo ra nước.</p>
+<h1 class="markdown-unit">BÀI 3. KHÍ QUYỂN CỦA MỘT HÀNH TINH MỚI</h1>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/ZHYuIkMv8Hmrgg0gyt5zXDUgNI0ntvQxEC6clGHKsz1xZW2jHBB-4aaU9W_yPL1SSV4gp99hjNQTQxoqbtxLi4F-qSe5LxvpxBXoBvxNr-1vJcQXfza759Ku1K8OFBcrsXGL-qDJU5HweteMTnwu3vM462O6XuizdFuNlI7d8Uw?purpose=inline" alt="Water in the Universe: Water, Water Everywhere - Hydrogen"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">![Saurer Regen • Entstehung, Formel und Gegenmaßnahmen · !<a href="https://images.openai.com/static-rsc-4/-LTDinA1o6dRKmuoAcGM63XnuzmH5Z9gfF-sv6dxVoKRJJYbENnG_SyiCFaukDWH0GF9spcvGg6uv3z_MzGQQ_-zzRK4JS_RlF1Yu6zMAl2MV17VTT9SlHLXkkV6JHJLYvyNojskbnlXCqmgtE2xtvpNM5L0WY_VvU5zk4_cCiQ?purpose=inline">mit Video]</a></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/OF3PAVveGFT8niDCrrqAXsZoNYuhP9AmPB0oJtHrj1Xzry0_dBkUM6w32zdcDoQZf6ZksVF7eYXqQ20KZgKBiGMeFQ7bcAYKWxIF-3zhNfL3kwAo8wdysOtpLJLvVGICcog3rUx7FMWaEMZdo4qcq47YqTK-yEazcWaDjQHBzPQ?purpose=inline" alt="Carbon levels could be used to detect water-rich, oceanic exoplanets | BBC Sky at Night Magazine"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">5</p>
+<p class="markdown-unit">Một hành tinh giống Trái Đất mới được phát hiện có thành phần khí quyển:</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Thành phần</th>
+<th>Tỷ lệ phần trăm</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Oxygen (O₂)</td>
+<td>15%</td>
+</tr>
+<tr>
+<td>Nitrogen (N₂)</td>
+<td>60%</td>
+</tr>
+<tr>
+<td>Carbon dioxide (CO₂)</td>
+<td>15%</td>
+</tr>
+<tr>
+<td>Water vapour (H₂O)</td>
+<td>10%</td>
+</tr>
+<tr>
+<td>Sulfur dioxide (SO₂)</td>
+<td>2%</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Lưu ý: Tổng các tỷ lệ trên bằng 102%, không phải 100%. Có thể đề bài đã có sai số hoặc nhầm lẫn khi cung cấp dữ liệu. Tuy nhiên, vẫn có thể sử dụng các số liệu để so sánh từng thành phần.</p>
+<h2 class="markdown-unit">a) Hàm lượng của 3 khí đầu tiên khác như thế nào so với hàm lượng của chúng trên Trái Đất?</h2>
+<p class="markdown-unit">Đáp án:</p>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Khí</th>
+<th>Hành tinh mới</th>
+<th>Trái Đất</th>
+<th>So sánh</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Oxygen (O₂)</td>
+<td>15%</td>
+<td>21%</td>
+<td>Thấp hơn</td>
+</tr>
+<tr>
+<td>Nitrogen (N₂)</td>
+<td>60%</td>
+<td>78%</td>
+<td>Thấp hơn</td>
+</tr>
+<tr>
+<td>Carbon dioxide (CO₂)</td>
+<td>15%</td>
+<td>0,04%</td>
+<td>Cao hơn rất nhiều</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Giải thích:</p>
+<p class="markdown-unit">Hành tinh mới có hàm lượng oxygen và nitrogen thấp hơn Trái Đất, nhưng hàm lượng carbon dioxide cao hơn rất nhiều.</p>
+<p class="markdown-unit">Điều này có thể dẫn đến sự khác biệt lớn về khí hậu và khả năng duy trì sự sống.</p>
+<h2 class="markdown-unit">b) Những vấn đề gì có thể xảy ra trên bề mặt hành tinh do sự có mặt của hai khí cuối cùng trong danh sách?</h2>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Hai khí cuối cùng là water vapour (H₂O) và sulfur dioxide (SO₂).</p>
+<p class="markdown-unit">1. Water vapour (H₂O):</p>
+<ul>
+<li class="markdown-unit">Là khí nhà kính, góp phần giữ nhiệt trong khí quyển.</li>
+<li class="markdown-unit">Có thể tạo mây và mưa khi ngưng tụ.</li>
+<li class="markdown-unit">Hàm lượng hơi nước lớn có thể làm tăng độ ẩm và ảnh hưởng đến khí hậu.</li>
+</ul>
+<p class="markdown-unit">2. Sulfur dioxide (SO₂):</p>
+<ul>
+<li class="markdown-unit">Hòa tan trong nước tạo môi trường axit.</li>
+<li class="markdown-unit">Có thể hình thành mưa axit.</li>
+<li class="markdown-unit">Gây hại cho thực vật, sinh vật thủy sinh và công trình xây dựng.</li>
+</ul>
+<h2 class="markdown-unit">c) Nêu một phép thử để chứng minh sự có mặt của nước trong giọt nước ngưng tụ trên cửa kính vào ngày lạnh.</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/-H-DD4NtGEy9qcF8NftrHn1PnQ6Ni7nh6nqcNklLfsH0HYTgvpsCQUPEUbg-BNwBoGAO3TEsLMjU8RtZyfXYv99QpJsWm68djLkLftmLjndCNLDeb-Fpr1q7WRkxvqvGcjf6-GcKYBxGc7iEg7syCIbUP-6oopItwWngQn3Q0C4?purpose=inline" alt="Condensation in buildings: How to ensure good ventilation"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/H2R1I4saGZNgxvB6A7NujGLct-bHwNoKrl7cUtEUu2KM1tXQAVUELSYGTeFm5ipzg2zB2ps6X9ovD_1UfrSeIk47LJQ_LDUKIA-enWe7qK-H6eyiS0HDRILvKA3ePZIQeHyFA4ZMmnRZ-ENX07wZNA-f-K72SOR2K8F94pNxcb4?purpose=inline" alt="PPT - Les propriétés de l’eau PowerPoint Presentation, free download - ID:4953664"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/RfAg3ePwjz1Zo8LO9HZb1pLP3AOcFq8eaVoaDBmTR5zavGBIg_cbXdUftUs8203zD0TiSCpEYPd1kbgrgdyq1zUAbj9HbbpmGNJ_fF_C4vCTuBjAqwXuA3lUHozdMRpT7vTEwximoG9_FgrrIlxFHiN-bg3SO7Kh2BzBZ4heKqU?purpose=inline" alt="The Cobalt Chloride Test For Water by Martyn F. Chillmaid / Science Photo Library"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Sử dụng copper(II) sulfate khan (CuSO₄).</p>
+<p class="markdown-unit">Cách tiến hành:</p>
+<ol>
+<li class="markdown-unit">Lấy một ít copper(II) sulfate khan màu trắng.</li>
+<li class="markdown-unit">Nhỏ giọt nước ngưng tụ trên cửa kính vào chất này.</li>
+<li class="markdown-unit">Quan sát sự thay đổi màu sắc.</li>
+</ol>
+<p class="markdown-unit">Hiện tượng: Chất rắn màu trắng chuyển sang màu xanh lam.</p>
+<p class="markdown-unit">Kết luận: Có nước trong giọt nước ngưng tụ.</p>
+<p class="markdown-unit">Phương trình:</p>
+<p class="markdown-unit">CuSO₄ + 5H₂O → CuSO₄·5H₂O</p>
+<h2 class="markdown-unit">d) Khí ô nhiễm nào trong khí quyển có hiệu ứng tương tự đối với khí hậu như carbon dioxide?</h2>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Methane (CH₄).</p>
+<p class="markdown-unit">Giải thích:</p>
+<p class="markdown-unit">Methane là một khí nhà kính mạnh, có khả năng hấp thụ bức xạ hồng ngoại và góp phần làm Trái Đất nóng lên.</p>
+<p class="markdown-unit">Các nguồn phát thải methane gồm:</p>
+<ul>
+<li class="markdown-unit">Chăn nuôi gia súc.</li>
+<li class="markdown-unit">Ruộng lúa nước.</li>
+<li class="markdown-unit">Bãi chôn lấp rác.</li>
+<li class="markdown-unit">Khai thác dầu mỏ và khí tự nhiên.</li>
+</ul>
+<h2 class="markdown-unit">e) Sulfur dioxide không có trong không khí tinh khiết trên Trái Đất. Quá trình nào có thể làm khí này đi vào khí quyển Trái Đất?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/LfF0nYYELG-mjTz-M5cy15rgF7yeWVVvUzY8O3cB6TNQrIpU5l5YL935yX5gSjpaYYSWHb6gEOp_GDYKNhuHZ9U4GSaUpZ2DddhCMWAot_7wDeZu1TYPfOrGh37ZuIC02juchbxodaOTvbvVVeuywTFn3pc8chSSdHxuoOdrCxo?purpose=inline" alt="The US Environmental Protection Agency’s Acid Rain Program"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/VZiUu4a_-zfx57rqk417dXxz-fwEn0QvVqR7wk-C0KIhXTOZxi4VcaYKm5FtLZE5669VvfW46HNC9PcwxrDQPLII66zCHD0nZHNIYGClwNkSUyZquClLout9jEsEbrZn8DcSxXirytvTXunr7znZ6Rv3J0PN0n0nNgwuoWkguGo?purpose=inline" alt="What Is Sulfur Dioxide (SO2)?"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/lzNioij8tLUSKU-bkzSLHukUn8Xn2y8L0kVA7EEEudaBO2urSoIk9qYsE_aIAxa2Po78zhRi2iaNE47qxIke7c_Enrf2Faq3rNkH1KBHPCz7HpCDygq9ER9r7x3lltkTDF_G8Hgq3bcoxgGlKkPXKgtWOOLC6jRdQdKslC4ecNs?purpose=inline" alt="Schweiz - Glencore-Xstrata und die Asthma-Toten von Mufulira - News - SRF"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Sulfur dioxide có thể đi vào khí quyển thông qua:</p>
+<ol>
+<li class="markdown-unit">Đốt nhiên liệu hóa thạch chứa sulfur như than đá và dầu mỏ.</li>
+<li class="markdown-unit">Hoạt động luyện quặng và luyện kim.</li>
+<li class="markdown-unit">Núi lửa phun trào.</li>
+</ol>
+<p class="markdown-unit">Ví dụ phản ứng đốt sulfur:</p>
+<p class="markdown-unit">S + O₂ → SO₂</p>
+<h2 class="markdown-unit">f) Vôi có thể được dùng để loại bỏ sulfur dioxide khỏi khí thải. Tên gọi của quá trình loại bỏ này là gì?</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/genz8_to2IVI79Fdr5gB6tQFF-nMM9t1mn25EHx-KmHsAfyaHDDyaJGFuv75rGZOemgq7EJ8kft0x791VncAljMF4i8hU9qs2A07j8fu-imHiT1Z-T7gpnHyQWSswnrz6WslEtOPKLzoJp3XYN9V_XAw2H1OZQUKEQSBbLRdieE?purpose=inline" alt="Sulfur dioxide (SO2) là một chất khí không màu, mùi hắc, độc và là một trong những tác nhân hàng đầu gây mưa acid. (a) Viết phương trình hóa học chứng minh SO2 là một trong các tác nhân gây m"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/Xk5Et-kDXxm7scwwUNv6RtuSglwiXPX54GfM_TYIpmMFj71HAiyjsu9iWM5grdm2U1_JBvu7vQhKUHQJS2neYUOASdby0E3t7nTz-G_p8DQFf7rLr7jx53-1buDcmvOaA4e8jms4A5MpasWBkM3zu900QVVCVe2bvVG0s684Tc8?purpose=inline" alt="China Flue Gas Desulfurization Spray Towers FGD Wet Desulfurizing Scrubber Process Plants | Xinjieyuan"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/BcThdjuWNlApdHGOhWdB7uTSl78I_YmscJgRkySISS4tlA6R4iKqBkOylaP9iGLYYwhAceIvNz6e07NNJmQYS0yLkx2bSo3KOJ9ZK5MPomk_SjO0ZZPzXZ8wSsVJHxS_gzyUQLrFOSYDdfNiCTAilXO081bvzv7LRKFBWRTrzts?purpose=inline" alt="Nghiên cứu, thiết kế, chế tạo và vận hành hệ thống FGD"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">5</p>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Quá trình này được gọi là Flue Gas Desulfurization (FGD) – khử lưu huỳnh trong khí thải.</p>
+<p class="markdown-unit">Đây là phương pháp xử lý khí thải bằng chất hấp thụ có tính kiềm như đá vôi hoặc vôi.</p>
+<p class="markdown-unit">Ví dụ phản ứng:</p>
+<p class="markdown-unit">CaO + SO₂ → CaSO₃</p>
+<p class="markdown-unit">Calcium oxide phản ứng với sulfur dioxide tạo calcium sulfite.</p>
+<p class="markdown-unit">Trong điều kiện có oxygen:</p>
+<p class="markdown-unit">2CaSO₃ + O₂ → 2CaSO₄</p>
+<p class="markdown-unit">Sản phẩm cuối cùng có thể là calcium sulfate.</p>
+<h2 class="markdown-unit">g) Vôi sống được sản xuất từ đá vôi như thế nào? Viết phương trình chữ cho phản ứng.</h2>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/a2-vY7QovjYrlc9UEVZjFH6OAC2nys3tRuACvARFyV6YXqKZOn0zZveIaDJTj01ihg9IdsJqAMaxTKlrHl2Vbh7RYpE99JR7uMjj-ok6bCcQIPg0gjxMCdMfrnnLnBdoNxcivErbwgSGJrnq4VYm_-gCK3rt8NikSU2qKxYN5Vg?purpose=inline" alt="Maa-varad Eestis, nende kaevandamine ja kasutamine I – Opiq"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/NtWTCogEh7AAUdeIVo-fPkW3f13TB99_kuMxU1x-lHaGj6wCuvaPxLGVQlnCkMXEIGdvSNm6dlFrgp9Mc7OLn8yYRT3lKuOHYFVR_9pvwBiMmTX8xdpUOdzULXDoxI2lHD08pgZHsYGgqpyJ9YqaNyfAlIYG7ismxILIkop1E0Y?purpose=inline" alt="Planta De Fabricación De Cal Horno De Cal Viva Para La Venta, alta calidad Planta De Fabricación De Cal Horno De Cal Viva Para La Venta en bossgoo.com"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit"><div class="image-wrapper markdown-unit"><img src="https://images.openai.com/static-rsc-4/uEbFYcY2sLcXqhxgEJtjZAWqEZcDvMi_4b17po5hYaRHip8-7oXt6K4Nl6Mtb-uXiAQEsEMHNQh21BsMWakgQ57o9BwqlUyRPsZtajSE_jMQ2fSNnXI3m0o6d2w9jd3O__E-mkv-DiyKHRd-ks2foNMRYs2ac2j3vbnFGJ_RsEA?purpose=inline" alt="PPT - LIME PowerPoint Presentation, free download - ID:759394"><button class="img-delete-btn" title="Xóa ảnh này khỏi bài giảng">✕</button></div></p>
+<p class="markdown-unit">5</p>
+<p class="markdown-unit">Đáp án:</p>
+<p class="markdown-unit">Vôi sống (quicklime – CaO) được sản xuất bằng cách nung đá vôi (limestone – CaCO₃) ở nhiệt độ cao trong lò nung.</p>
+<p class="markdown-unit">Quá trình này gọi là nhiệt phân (thermal decomposition).</p>
+<p class="markdown-unit">Phương trình chữ:</p>
+<p class="markdown-unit">Calcium carbonate → Calcium oxide + Carbon dioxide</p>
+<p class="markdown-unit">Phương trình hóa học:</p>
+<p class="markdown-unit">CaCO₃ <span><span class="katex"><span class="katex-mathml"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="1" style="font-size: 101.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-semantics><mjx-mrow><mjx-mover><mjx-over style="padding-bottom: 0.111em;"><mjx-mpadded size="s"><mjx-block style="width: 5.753em; position: relative;"><mjx-rbox style="left: 0.3em; top: 0px; max-width: 5.753em;"><mjx-mtext class="mjx-n"><mjx-c class="mjx-c6E"></mjx-c><mjx-c class="mjx-c68"></mjx-c><mjx-c class="mjx-c69"></mjx-c><mjx-utext variant="normal" style="font-size: 98.9%; padding: 0.758em 0px 0.202em; font-family: MJXZERO, serif;">ệ</mjx-utext><mjx-c class="mjx-c74"></mjx-c><mjx-c class="mjx-cA0"></mjx-c><mjx-utext variant="normal" style="font-size: 98.9%; padding: 0.758em 0px 0.202em; font-family: MJXZERO, serif;">đ</mjx-utext><mjx-utext variant="normal" style="font-size: 98.9%; padding: 0.758em 0px 0.202em; font-family: MJXZERO, serif;">ộ</mjx-utext><mjx-c class="mjx-cA0"></mjx-c><mjx-c class="mjx-c63"></mjx-c><mjx-c class="mjx-c61"></mjx-c><mjx-c class="mjx-c6F"></mjx-c></mjx-mtext></mjx-rbox></mjx-block></mjx-mpadded></mjx-over><mjx-base><mjx-mo class="mjx-n"><mjx-stretchy-h class="mjx-c2192" style="width: 4.068em;"><mjx-ext><mjx-c></mjx-c></mjx-ext><mjx-end><mjx-c></mjx-c></mjx-end></mjx-stretchy-h></mjx-mo></mjx-base></mjx-mover></mjx-mrow></mjx-semantics></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mo stretchy="true" minsize="3.0em">→</mo><mpadded width="+0.6em" lspace="0.3em"><mtext>nhiệt&nbsp;độ&nbsp;cao</mtext></mpadded></mover></mrow><annotation encoding="application/x-tex">\xrightarrow{\text{nhiệt độ cao}}</annotation></semantics></math></mjx-assistive-mml></mjx-container></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1.1191em; vertical-align: -0.011em;"></span><span class="mrel x-arrow"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.1081em;"><span class="" style="top: -3.322em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight x-arrow-pad"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">nhiệt&nbsp;</span><span class="mord latin_fallback mtight">đ</span><span class="mord mtight">ộ&nbsp;cao</span></span></span></span></span><span class="svg-align" style="top: -2.689em;"><span class="pstrut" style="height: 2.7em;"></span><span class="hide-tail" style="height: 0.522em; min-width: 1.469em;"><svg width="400em" height="0.522em" viewBox="0 0 400000 522" preserveAspectRatio="xMaxYMin slice"><path d="M0 241v40h399891c-47.3 35.3-84 78-110 128
+-16.7 32-27.7 63.7-33 95 0 1.3-.2 2.7-.5 4-.3 1.3-.5 2.3-.5 3 0 7.3 6.7 11 20
+ 11 8 0 13.2-.8 15.5-2.5 2.3-1.7 4.2-5.5 5.5-11.5 2-13.3 5.7-27 11-41 14.7-44.7
+ 39-84.5 73-119.5s73.7-60.2 119-75.5c6-2 9-5.7 9-11s-3-9-9-11c-45.3-15.3-85
+-40.5-119-75.5s-58.3-74.8-73-119.5c-4.7-14-8.3-27.3-11-40-1.3-6.7-3.2-10.8-5.5
+-12.5-2.3-1.7-7.5-2.5-15.5-2.5-14 0-21 3.7-21 11 0 2 2 10.3 6 25 20.7 83.3 67
+ 151.7 139 205zm0 0v40h399900v-40z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.011em;"><span class=""></span></span></span></span></span></span></span></span></span> CaO + CO₂↑</p>
+<p class="markdown-unit">Giải thích:</p>
+<ul>
+<li class="markdown-unit">CaCO₃: Đá vôi.</li>
+<li class="markdown-unit">CaO: Vôi sống.</li>
+<li class="markdown-unit">CO₂: Khí carbon dioxide thoát ra.</li>
+</ul>
+<h1 class="markdown-unit">IV. BẢNG TỔNG HỢP KIẾN THỨC TRỌNG TÂM CHƯƠNG C1</h1>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>Chủ đề</th>
+<th>Kiến thức cần nhớ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Không khí</td>
+<td>N₂: 78%; O₂: 21%; khí khác: khoảng 1%</td>
+</tr>
+<tr>
+<td>Mưa axit</td>
+<td>Chủ yếu do SO₂ và NOₓ</td>
+</tr>
+<tr>
+<td>Sương khói quang hóa</td>
+<td>NOₓ + VOCs + ánh sáng Mặt Trời</td>
+</tr>
+<tr>
+<td>Khí CO</td>
+<td>Liên kết với hemoglobin, cản trở vận chuyển O₂</td>
+</tr>
+<tr>
+<td>Argon</td>
+<td>Khí trơ, bảo vệ dây tóc bóng đèn</td>
+</tr>
+<tr>
+<td>Hiệu ứng nhà kính</td>
+<td>Khí nhà kính hấp thụ và phát xạ bức xạ hồng ngoại</td>
+</tr>
+<tr>
+<td>Khí nhà kính</td>
+<td>CO₂, CH₄, H₂O, N₂O</td>
+</tr>
+<tr>
+<td>Xử lý khí thải</td>
+<td>Catalytic converter, FGD</td>
+</tr>
+<tr>
+<td>Xử lý nước</td>
+<td>Lọc, lắng, khử trùng bằng chlorine</td>
+</tr>
+<tr>
+<td>Chưng cất</td>
+<td>Bay hơi rồi ngưng tụ để tách nước khỏi muối</td>
+</tr>
+<tr>
+<td>Quặng</td>
+<td>Đá hoặc khoáng vật chứa kim loại có giá trị khai thác kinh tế</td>
+</tr>
+<tr>
+<td>Vôi sống</td>
+<td>CaO</td>
+</tr>
+<tr>
+<td>Vôi tôi</td>
+<td>Ca(OH)₂</td>
+</tr>
+<tr>
+<td>Đá vôi</td>
+<td>CaCO₃</td>
+</tr>
+</tbody></table>
+<h2 class="markdown-unit">V. CÁC PHƯƠNG TRÌNH HÓA HỌC CẦN GHI NHỚ</h2>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>STT</th>
+<th>Phương trình</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>S + O₂ → SO₂</td>
+</tr>
+<tr>
+<td>2</td>
+<td>N₂ + O₂ → 2NO</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2NO + O₂ → 2NO₂</td>
+</tr>
+<tr>
+<td>4</td>
+<td>4NO₂ + O₂ + 2H₂O → 4HNO₃</td>
+</tr>
+<tr>
+<td>5</td>
+<td>CaCO₃ + 2HCl → CaCl₂ + CO₂ + H₂O</td>
+</tr>
+<tr>
+<td>6</td>
+<td>CO₂ + Ca(OH)₂ → CaCO₃ + H₂O</td>
+</tr>
+<tr>
+<td>7</td>
+<td>CaCO₃ → CaO + CO₂</td>
+</tr>
+<tr>
+<td>8</td>
+<td>CaO + H₂O → Ca(OH)₂</td>
+</tr>
+<tr>
+<td>9</td>
+<td>CaO + SO₂ → CaSO₃</td>
+</tr>
+<tr>
+<td>10</td>
+<td>2H₂ + O₂ → 2H₂O</td>
+</tr>
+<tr>
+<td>11</td>
+<td>CuSO₄ + 5H₂O → CuSO₄·5H₂O</td>
+</tr>
+</tbody></table>
+<h2 class="markdown-unit">VI. NHỮNG THUẬT NGỮ TIẾNG ANH QUAN TRỌNG</h2>
+<table class="markdown-unit">
+<thead>
+<tr>
+<th>English</th>
+<th>Tiếng Việt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Atmosphere</td>
+<td>Khí quyển</td>
+</tr>
+<tr>
+<td>Acid rain</td>
+<td>Mưa axit</td>
+</tr>
+<tr>
+<td>Photochemical smog</td>
+<td>Sương khói quang hóa</td>
+</tr>
+<tr>
+<td>Greenhouse effect</td>
+<td>Hiệu ứng nhà kính</td>
+</tr>
+<tr>
+<td>Greenhouse gas</td>
+<td>Khí nhà kính</td>
+</tr>
+<tr>
+<td>Global warming</td>
+<td>Sự nóng lên toàn cầu</td>
+</tr>
+<tr>
+<td>Carbon monoxide</td>
+<td>Cacbon monoxit</td>
+</tr>
+<tr>
+<td>Carbon dioxide</td>
+<td>Cacbon dioxide</td>
+</tr>
+<tr>
+<td>Sulfur dioxide</td>
+<td>Lưu huỳnh dioxide</td>
+</tr>
+<tr>
+<td>Nitrogen dioxide</td>
+<td>Nitrogen dioxide</td>
+</tr>
+<tr>
+<td>Water treatment</td>
+<td>Xử lý nước</td>
+</tr>
+<tr>
+<td>Filtration</td>
+<td>Lọc</td>
+</tr>
+<tr>
+<td>Chlorination</td>
+<td>Khử trùng bằng clo</td>
+</tr>
+<tr>
+<td>Distillation</td>
+<td>Chưng cất</td>
+</tr>
+<tr>
+<td>Desalination</td>
+<td>Khử muối</td>
+</tr>
+<tr>
+<td>Ore</td>
+<td>Quặng</td>
+</tr>
+<tr>
+<td>Limestone</td>
+<td>Đá vôi</td>
+</tr>
+<tr>
+<td>Quicklime</td>
+<td>Vôi sống</td>
+</tr>
+<tr>
+<td>Slaked lime</td>
+<td>Vôi tôi</td>
+</tr>
+<tr>
+<td>Thermal decomposition</td>
+<td>Nhiệt phân</td>
+</tr>
+<tr>
+<td>Catalytic converter</td>
+<td>Bộ chuyển đổi xúc tác</td>
+</tr>
+<tr>
+<td>Desulfurization</td>
+<td>Khử lưu huỳnh</td>
+</tr>
+</tbody></table>
+<p class="markdown-unit">Gợi ý sử dụng tài liệu: Có thể dùng phần I và II để kiểm tra kiến thức trong bài, phần III để luyện tập cuối chương và phần IV–VI để học sinh hệ thống hóa kiến thức trước khi kiểm tra.</p>
+</div>
+        </main>
+    </div>
+
+    <footer>
+        <span class="author-info">Icarus - kienspvl@gmail.com - 097 463 8794</span>
+        <div id="progress-counter">
+            Mục: <input type="number" id="page-input" min="1" value="0" onkeydown="handlePageInputChange(event)" onblur="jumpToInputValue()" max="439"> / <span id="total-units-count">439</span>
+        </div>
+    </footer>
+
+    <!-- LIGHTBOX FULL MÀN HÌNH + NÚT X ĐÓNG -->
+    <div id="image-lightbox" onclick="closeLightboxOnBg(event)" style="display: none;">
+        <button class="lightbox-close-btn" onclick="closeLightbox(event)" title="Thoát Lightbox (Esc)">✕</button>
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <img id="lightbox-img" src="" alt="Zoomed Image" onclick="event.stopPropagation()">
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div id="lightbox-counter" class="lightbox-counter">0 / 0</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="import-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập hoặc Chỉnh Sửa Bài Giảng</h3>
+            <textarea id="import-text" placeholder="Dán văn bản Markdown hoặc Import file Word vào đây..."></textarea>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <label class="btn">
+                        📄 Chọn File .txt / .md
+                        <input type="file" accept=".txt,.md" onchange="handleFileImport(event)">
+                    </label>
+                    <label class="btn" style="border-color: #22c55e;">
+                        📘 Import từ File Word (.docx)
+                        <input type="file" accept=".docx" onchange="handleWordImport(event)">
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="closeImportModal()">Hủy</button>
+                    <button onclick="processImport()" style="background-color: var(--accent-color); color: #fff;">Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SAVE AS HTML -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>💾 Lưu Bài Giảng Dưới Dạng HTML</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-color);">Nhập tên file HTML muốn lưu:</label>
+                <input type="text" id="save-filename-input" placeholder="Tên file..." onkeydown="if(event.key==='Enter') executeSaveAsHtml()">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeSaveModal()">Hủy</button>
+                <button onclick="executeSaveAsHtml()" style="background-color: var(--accent-color); color: #fff;">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Lịch Sử Bài Giảng Dưới LocalStorage</h3>
+                <button onclick="clearAllHistory()" style="background-color: #ef4444; color: #fff;">🗑️ Xóa Tất Cả</button>
+            </div>
+            <div id="history-container" class="history-list"></div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+    <div id="update-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🚀 Lịch Sử Cập Nhật Chương Trình (Changelog v3.11)</h3>
+            <div class="history-list" style="max-height: 400px; padding-right: 8px;">
+                <div class="changelog-item">
+                    <span class="changelog-version">v3.11</span><span class="changelog-date">(Cập nhật mới)</span>
+                    <ul class="changelog-list">
+                        <li><strong>Tải dữ liệu đang ngậm khi Import:</strong> Khi bấm nút Import, nếu file đang chứa sẵn dữ liệu (ngậm dữ liệu), nội dung sẽ tự động xuất hiện trong ô nhập liệu để xem hoặc copy.</li>
+                        <li><strong>Thêm nút In (Print):</strong> Nút "In" hỗ trợ xuất/in nhanh riêng phần bài giảng, tự động ẩn giao diện, thanh điều khiển và mục lục khi in.</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button onclick="closeUpdateModal()">Đóng (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ô NGẬM DỮ LIỆU MARKDOWN GỐC -->
+    <script id="embedded-data" type="application/json">"chèn nội dung sau đây vào file html này giùm tôi, lưu ý không lược bỏ, không làm cắt mất các ảnh minh họa tôi có ở dưới đây:\n# TUYỂN TẬP CÂU HỎI VÀ BÀI TẬP CHƯƠNG C1: TRÁI ĐẤT (PLANET EARTH)\n\nMôn Khoa học tự nhiên / Chemistry – Earth Science | Hệ thống câu hỏi kèm đáp án và giải thích\n\nTài liệu được biên soạn lại theo hướng ôn tập và tự học, bao gồm:\n\n- Giữ đầy đủ hệ thống câu hỏi gốc.\n- Bổ sung đáp án và giải thích cho từng câu hỏi, từng ý nhỏ.\n- Bổ sung hình ảnh minh họa theo từng chủ đề, mỗi bài tập lớn có 3 hình ảnh.\n- Sử dụng thuật ngữ tiếng Anh trong ngoặc để học sinh làm quen với tài liệu quốc tế.\n- Trình bày phương trình hóa học, công thức và đơn vị rõ ràng.\n\n# I. CÂU HỎI GIỮA BÀI (IN-CHAPTER QUESTIONS)\n\n## Câu C1.01. Những khí nào đóng góp nhiều nhất vào sự hình thành mưa axit?\n\n![Notes for 8.3B Acid rain - IB | RevisionDojo](https://images.openai.com/static-rsc-4/kjNjpa-jXFvynbaAxa__uuB1p5UbThXlhZ1CBWRFf0jxNe_OUTyc-fWcg8eqiMSrun1rrYelnvhurEEB_hQqlylA5jGTMft2gbhNWUW5krGEzODWDwDs_zk5LxYwzVBNsIQdlaxbrGfBVMAWCdZIYYKlW7TOZAf0TxphRk3EKmU?purpose=inline)\n\n![Candeias Bahia : A Chuva Acida Que é Causada Pelos Gases Poluentes](https://images.openai.com/static-rsc-4/fhYzdNm9GTu7zfr7E0hLuSZuw3QobS5RqNxUpfE_MlyYD8fCzrqBKxH8Y0LjgJYY7dWngU4JfIhZ2mnytYI8cJKqcHzcSZXx4YXgLAp2cTqcxKlXG9B7ZOraajNoirpYpGCzxtRj1D9PE3lctjnTHWW-OnM3XXDUy3Kn_9YmeFQ?purpose=inline)\n\n![Fir forest damaged by acid rain, Most, Czech Republic](https://images.openai.com/static-rsc-4/XjQQZ_ttHNuFNhZg8B6TnpUZELuIBQKsaTSB_8SsH1ws2RdGBaAkhVslGASRRJ4cGpqPSVgbovSKwEaw2KI87NNffNSNxIB8QUAMlZgUESTMkbag5wpU4EnOE83yNPoL3hGwT2KwFD0vy_FSq1y95d7oLiLVd_zt30q8RW8xEcaxhExt56OY_EMx2_aqWEC7?purpose=inline)\n\nTrả lời:\n\nHai khí chính gây ra mưa axit là:\n\n- Lưu huỳnh dioxide (SO₂).\n- Nitrogen oxides (NOₓ), chủ yếu là nitrogen dioxide (NO₂).\n\nCác khí này phản ứng với hơi nước và oxi trong khí quyển, tạo thành các axit như sulfuric acid (H₂SO₄) và nitric acid (HNO₃). Khi hòa tan vào nước mưa, chúng làm giảm pH của nước mưa.\n\n## Câu C1.02. Các khí gây ra mưa axit đi vào khí quyển bằng cách nào?\n\n![The US Environmental Protection Agency’s Acid Rain Program](https://images.openai.com/static-rsc-4/LfF0nYYELG-mjTz-M5cy15rgF7yeWVVvUzY8O3cB6TNQrIpU5l5YL935yX5gSjpaYYSWHb6gEOp_GDYKNhuHZ9U4GSaUpZ2DddhCMWAot_7wDeZu1TYPfOrGh37ZuIC02juchbxodaOTvbvVVeuywTFn3pc8chSSdHxuoOdrCxo?purpose=inline)\n\n![Giữa động cơ xăng và động cơ diesel: Loại nào gây ô nhiễm môi trường hơn?](https://images.openai.com/static-rsc-4/fnVcVSwBUA67VQ7vui-ovSQek3mqn12uhUaJ7qaX3B02Mbdxb6B6QDCCfIt7XCPi-02DRTGKx4P0w13AxH4nFHQTlHfb3E7Vo-Pi0XLRwAvzkIf8wwiDMwcnN5FYQQWm1aToVHbtxbjdstrwItVseFugxYF66PcW0VTiqWUE_dI?purpose=inline)\n\n![What Is Sulfur Dioxide (SO2)?](https://images.openai.com/static-rsc-4/VZiUu4a_-zfx57rqk417dXxz-fwEn0QvVqR7wk-C0KIhXTOZxi4VcaYKm5FtLZE5669VvfW46HNC9PcwxrDQPLII66zCHD0nZHNIYGClwNkSUyZquClLout9jEsEbrZn8DcSxXirytvTXunr7znZ6Rv3J0PN0n0nNgwuoWkguGo?purpose=inline)\n\nTrả lời:\n\nCác khí SO₂ và NOₓ đi vào khí quyển từ nhiều nguồn:\n\n- Đốt nhiên liệu hóa thạch (than đá, dầu mỏ) trong nhà máy điện và công nghiệp.\n- Khí thải động cơ phương tiện giao thông.\n- Hoạt động luyện kim, đốt nhiên liệu trong sản xuất.\n- Núi lửa phun trào cũng giải phóng SO₂ tự nhiên.\n\n## Câu C1.03. Những tác hại do mưa axit gây ra là gì?\n\n![Fir forest damaged by acid rain, Most, Czech Republic](https://images.openai.com/static-rsc-4/XjQQZ_ttHNuFNhZg8B6TnpUZELuIBQKsaTSB_8SsH1ws2RdGBaAkhVslGASRRJ4cGpqPSVgbovSKwEaw2KI87NNffNSNxIB8QUAMlZgUESTMkbag5wpU4EnOE83yNPoL3hGwT2KwFD0vy_FSq1y95d7oLiLVd_zt30q8RW8xEcaxhExt56OY_EMx2_aqWEC7?purpose=inline)\n\n![Weathered Limestone Wall of Historic Building](https://images.openai.com/static-rsc-4/NYkPt2fATruCb5eAwXPgOjOsqG-Hit41mGLM2NtxJ4FkurVTC_GwW0ENi5qqVi4xArIC-M3q7A2soOiQ7N7CbOF-uEpbfVPQ5QMLdSp2oLP5fi8_3Rk0qfUzfgnUxkiszykZDU-E71_zo9XHF_GjOIRk_8VxNqNSIv-q4XUlSIEIKo0wVUfGVs9gYgffaLPo?purpose=inline)\n\n![Surt vatten leder till fiskdöd i Larsmosjön | Österbotten | Svenska Yle](https://images.openai.com/static-rsc-4/DHD-s7ML_tESeMzDkoZf1_xkdRipt9IpmIgWhPIjlzLm6ucvsLwpSfI-UFg7rxlE9UdJv4e-NKEOhYMic2fbfd3TgPZ8F0PSdEaRsnnXOGjosnFuRr4NmvQwFKnTprX-ZmT1cROIz1-qUwb8sh78YhY3MA8ZRzmKR61a_MObePY?purpose=inline)\n\nTrả lời:\n\nMưa axit gây ra các tác hại:\n\n1. Đối với thực vật: Làm tổn thương lá, giảm khả năng quang hợp, làm đất mất chất dinh dưỡng.\n2. Đối với sinh vật thủy sinh: Làm giảm pH của ao hồ, sông suối, gây chết cá và nhiều sinh vật.\n3. Đối với công trình: Ăn mòn kim loại và phá hủy đá vôi, đá cẩm thạch trong các công trình kiến trúc.\n4. Đối với con người: Các chất ô nhiễm liên quan có thể gây kích ứng và làm trầm trọng thêm bệnh hô hấp.\n\n## Câu C1.04. Sương khói quang hóa (Photochemical smog) là gì? Vì sao nó gây hại?\n\n![Heat Smog: What It Is, Health Risks, and How to Protect Yourself](https://images.openai.com/static-rsc-4/V7a-WfCikcTtFByESUS-iUvXeV6WEu9yq3Kj7usC31LAh0xyP4GPdAQXlT-cUAhBtJ1sqHQfDOGSLhWfo49fMSz8DoKV5GQ_ChREckJYmLmpOQMcINqpWw8wMHd785sa7g5U9l6WI37CPBSWFIAuObx76Rr-YqlYZos5kOm5LJ4?purpose=inline)\n\n![What Is Photochemical Smog?](https://images.openai.com/static-rsc-4/janxximhCDlwgPZYtn7qxeyS6xQGLtMR-DUleWe7SyrbNjA51j4y0H6bHvb0ejV1xoiZu-595XHLvoGR7isC_L17unbNUu8gDHUaUGNB-DlLNZkDtPKj4emIYBUtFIFyk-0LDxXIO3Udyk7c90-obRJcalDEpw8WtB2gLfLzQds?purpose=inline)\n\n![Dr. Emily Fischer | NASA Earthdata](https://images.openai.com/static-rsc-4/GYcNKScw-4jKtM11xtCHjezeYc57nGquE49lrXkjNAn4h1lnjsWVcILl-OaFOhl8G2nagsBBB8T9aVFSsvRJ92JSTwlwjtqCELCaN2dMnC79o0xEf71KuI3-YcuWaNtkj6NGRnV0mVf2h8WTIcPTGHLw5BOCHsJiG_cyxGzAu4g?purpose=inline)\n\n5\n\nTrả lời:\n\nSương khói quang hóa là hỗn hợp các chất ô nhiễm hình thành khi ánh sáng Mặt Trời tác động lên nitrogen oxides (NOₓ) và các hợp chất hữu cơ dễ bay hơi (VOCs).\n\nSản phẩm có thể bao gồm ozone tầng đối lưu (O₃), các chất oxy hóa và peroxyacetyl nitrate (PAN).\n\nTác hại:\n\n- Gây kích ứng mắt và đường hô hấp.\n- Làm trầm trọng thêm bệnh hen suyễn.\n- Gây tổn thương lá cây, ảnh hưởng đến cây trồng.\n- Làm giảm tầm nhìn và chất lượng không khí.\n\n## Câu C1.05. Khí carbon monoxide (CO) ngăn cản máu vận chuyển oxygen như thế nào?\n\n![PPT - How to Identify Safety Hazards in Your Home PowerPoint Presentation - ID:3508319](https://images.openai.com/static-rsc-4/h-BMIXCwTRHHh_PPklVkSg_bx3LzZTY9FOiQTCh_pjZAxN7kr1tOzeQsvavk6-Fkji0plVoYy-9jjfG8SXDV0sZB59TDyIWiDiREFkSMVLiJZU_-gHx1GLTcYygayvtvucrIrhGI75AJV-7f1utLIWK-N4-A73ajhb8rfCqJW38?purpose=inline)\n\n![Carboxyhemoglobin. Joining the hemoglobin carbon monoxide. The inability to transport oxygen. Carbon monoxide poisoning. Infographics. Vector illustration](https://images.openai.com/static-rsc-4/_t0YmEG4r1lj2hrrTkw2OfjAfdwE3LbWPCqaTATyItSvoh1xyPqUayd9V8fiKaqW1cbEKCOkmJ4S3onFtrw-3BBLQsB42vM5ryy88olzO-4SR4Kc0J8tOWAA47Hnd1T0JtKp_Oj8SDgJjLzJy9bng_ITAqKlCX5e2M1sP0hJR1K1DTjPWt3QbJOcHInD3idV?purpose=inline)\n\n![Hemoglobin Oxygen Transport Mechanism in Red Blood Cells Medical Infographic. Oxygen Binding and Release by Hemoglobin Molecules in Human Blood Illustration](https://images.openai.com/static-rsc-4/3MpmRGpAy4S4YZfI4JNGQH8Q8qCRfjdlQu4LX8a9N8buqyFzCAhtkDbACJhTyDt2SVay_1_wtZNSOjP8JF03hSdOGXB6-KnGlNO3E3QBHMlUDjpDdjLaegp8L3Y-79Zp65MS0Voly4bGvV5NifMijnvTzl70Lcg1quLllOh0PZy0cdY13H-7V_CbokJg3cPY?purpose=inline)\n\n4\n\nTrả lời:\n\nCarbon monoxide (CO) liên kết với hemoglobin trong hồng cầu tạo thành carboxyhemoglobin.\n\nCO có khả năng liên kết với hemoglobin mạnh hơn oxygen rất nhiều, khiến hemoglobin không thể vận chuyển đủ O₂ đến các tế bào.\n\nHậu quả: Cơ thể bị thiếu oxygen, gây đau đầu, chóng mặt, bất tỉnh và có thể tử vong.\n\n## Câu C1.06. Vì sao bóng đèn dây tóc được bơm đầy khí argon?\n\n![Incandescent Filament Bulb](https://images.openai.com/static-rsc-4/Q2YW1aFg2icX6M1bJeE8B1nnnfjkoeRaPDp7hmJohFO-Uqd1_H328BezSDIzS4_UlIOxV159lep4PF7F-rQaOyOlhDy-_k7ZqDjnFHkzWS5b4RDsu1CRJK__WVG_K1BMfJiDQQ7NM9VmDlBYgP3cdc1r6mFsS2OpqeikMaBE628?purpose=inline)\n\nTrả lời:\n\nArgon là khí hiếm, rất ít phản ứng hóa học.\n\nArgon được sử dụng trong bóng đèn dây tóc vì:\n\n- Ngăn tungsten (vonfram) ở dây tóc phản ứng với oxygen.\n- Hạn chế sự bay hơi của tungsten.\n- Giúp dây tóc bền hơn và kéo dài tuổi thọ bóng đèn.\n\n## Câu C1.07. Hiệu ứng nhà kính (Greenhouse effect) là gì?\n\n![File:Earth's greenhouse effect (US EPA, 2012).png - Wikimedia Commons](https://images.openai.com/static-rsc-4/pDV--EC5qIje0BEA1yIwX7TMq8RT6YKvrQefh0w72xNtKqTIlDOY17r6-dhSRus6w2yAw-07CczS7l3KoZcEam6QV3C-em_Y0jiKEI8tvME-fnCzFTK_UGwR0uDHLqroiQjabs3wTH4XcxTdiidRPT7iX-WGVtZW3JE6GptE_6U?purpose=inline)\n\n![Global Warming: Definition, Causes, Effects, Diagram](https://images.openai.com/static-rsc-4/fmldLtPr_8_Px7xcDnlBKOygKlFuEms6OM6W84UwgoTsit6KTd1a38V1L3hYj-tZh4PeURIX0kTYeGZVBD7t8vd1ZB4RLcu1mZBd0XXopVRDHStfgQl5QLVX8Cujb2zNrcFYQTZIFVKDUCMQU79UTw_61RLtQTy5h0rsUWPhX0U?purpose=inline)\n\n![Could Earth's 'evil twin' Venus carry a dire warning about climate change? | Space](https://images.openai.com/static-rsc-4/MLKWwKxlghTa7H9n2fwftnkBjfTZM-ey35riEM0DjPlIJhva4LH0YghUBgHElAoW_jSmd1cWdqF4lcBMcv5qYP9hdyDMbraPs_djWnbpF24wunzmkd3sYEUi5TnCdXc9iD_c5KdxVOFVQb3UnLccwCp8inRqwAICF74tslG0WF0?purpose=inline)\n\nTrả lời:\n\nHiệu ứng nhà kính là hiện tượng một số khí trong khí quyển hấp thụ và phát xạ lại bức xạ hồng ngoại do bề mặt Trái Đất phát ra, khiến nhiệt bị giữ lại trong hệ thống khí quyển – bề mặt.\n\nCác khí nhà kính quan trọng gồm:\n\n- Carbon dioxide (CO₂).\n- Methane (CH₄).\n- Water vapour (H₂O).\n- Nitrous oxide (N₂O).\n\nHiệu ứng nhà kính tự nhiên giúp Trái Đất duy trì nhiệt độ phù hợp cho sự sống. Tuy nhiên, sự gia tăng khí nhà kính do hoạt động con người làm tăng sự nóng lên toàn cầu.\n\n## Câu C1.08. Bộ chuyển đổi xúc tác (Catalytic converter) làm nhiệm vụ gì đối với khí thải ô tô?\n\n![Inside the catalytic converter with EEC - Garage Wire](https://images.openai.com/static-rsc-4/UvjrqXkNKkP-TOq1fSndmTSg20XZJnSBkstXDyJYKD_ESE86q59XH3h_QdHeCUO8o9C7DVEHQ0FDvc6CkFfKKIaFN_c27NNPFhdLQbVHS2xkCbVASdCNslvzSSHAFhJkxHF2IfsSfovn4deWteLSv8l-b98Lx5fGhhik34TZnnk?purpose=inline)\n\n![Frontiers | Sustainable synthesis of La0.8Sr0.2Co0.9Fe0.1O3-δ catalyst using hibiscus flower extract and its performance evaluation for automotive HC and CO exhaust emission control](https://images.openai.com/static-rsc-4/3bR2jxRdg1oYPmT5JXIVeNO7Ut0SYijT169QYjJqoXShdfDWHrEwpMvgqPbhd7QOwJV4I1AzgPD327nLcE7HePDUiDBnKeYjJ6QyU4a4N8HgcLe1GYz-tDLc2IuSgRuLe0rCRv2AY4llx4bY-9IlxrERvkjRXxpyiqqV6yX1aQI?purpose=inline)\n\n![Engine emission control by Three way catalytic converter](https://images.openai.com/static-rsc-4/kifcDnNu0Qj77K4nVh2c619KzS8CCzXSmeGhGKVdlnVlSW-nUSKBumdNLkQpTAjSLfzo-tehjNSwNvgdFid4u66Yqj1pXM_XKNj0ia2gj7d_xIG9Kfz9VvnpiC3l023RAgnv7AtILvh0ZHOG3LFa6rfN1l_maK8WOYUOjTj3LeA?purpose=inline)\n\n6\n\nTrả lời:\n\nBộ chuyển đổi xúc tác giúp biến đổi các khí thải độc hại thành những chất ít độc hại hơn.\n\nBa phản ứng chính:\n\n- CO được oxi hóa thành CO₂.\n- Các hydrocarbon chưa cháy hết được oxi hóa thành CO₂ và H₂O.\n- NOₓ được khử thành nitrogen (N₂).\n\nNhờ đó, lượng khí ô nhiễm thải ra môi trường giảm đáng kể.\n\n## Câu C1.09. Vì sao nước được lọc trước khi thực hiện các bước xử lý hóa học tiếp theo?\n\n![index](https://images.openai.com/static-rsc-4/6ky5C_h7h6-MMEIFBe3VHqSkKTd6hqEp0ZG1w0tfoGaFnZQqNuWN-h6HvbhhoxD2g_pKzjqN7mg7OG6F_icBB3SmTbGKhLFoS4NGgQV5hEaz0GBaDCSXQ2W6ngbDkHQQ7KK6SoondahGvQxTXROHzWzyg4BKO6542jxe3wY-BDg?purpose=inline)\n\n![Water Media Filter Manufacturer, Supplier, Exporter](https://images.openai.com/static-rsc-4/ePSwRaOUwKw7XoYeQGLwJ_4C0fUPcDnQ2ukjSQsCXpze5mcKKNySi9NNiozNJyK0dVKykY3CNDGNhpz42UtD9CplXiL4Tf4ZIeIH4O-lWUHMXzUWLodPx3uo1gxxkuUgZN7U_fmu6BUlTuftzyUJO_4YZ7uPD9J5t0q985laXzg?purpose=inline)\n\n![Whole Home Reverse Osmosis System | Blue Logic Water](https://images.openai.com/static-rsc-4/j9JHUImo35uMwX8DA5zkL0N1MlEhah0mxgwZh2HzCfy_-aFJ9jcZ6fB5JBEFGf9nAbxGtzjO6KsnrQhB5yUcJydk5L2n3J7qlS7ENxf8HoJ1DbunLeIq57fiz2ZEVuaTMGKvytpBkSCM0W-DCf2ezjWlXs2UV0yOiKH0aj0LMms?purpose=inline)\n\n6\n\nTrả lời:\n\nLọc nước giúp loại bỏ các chất rắn không tan như:\n\n- Cát, đất và bùn.\n- Các hạt lơ lửng.\n- Một số tạp chất cơ học.\n\nViệc lọc trước giúp nước trong hơn, giảm lượng tạp chất và hỗ trợ các bước xử lý tiếp theo hoạt động hiệu quả.\n\n## Câu C1.10. Vì sao chlorine được thêm vào nước trong quy trình xử lý nước sinh hoạt?\n\n![化学の泉 │ 卒業生便り │ 明治応用化学会](https://images.openai.com/static-rsc-4/KZrTeabo-t65Pfe-bJBSSV2JgkGekQ173a32TFp0IrsYIK1Byotxwo8tyOtOLvgipCOHu6XoQ9whFiBy0FprMyN6eDMVQJ0Pz7DV3Clwt133fd0W5Qfnm0OPCErZx2mHBKEdnZx6ePUSg3pFDo1lfBVEXnUMHNOZ93y_RINkRko?purpose=inline)\n\n![Turbidity/Chlorine SMART Sensor for Water Treatment Plant | Yokogawa Electric Korea Co., Ltd.](https://images.openai.com/static-rsc-4/8RrAdVuaokOHh7dVRZ-YfCNNy57QolNf2_iQ87z39Vct-0KrAmwiVoqNd5y-tal724mFn7UXRiPq2MdxFV_OJOWGQOirpqd1izwxYGZrWBWZjTtf9k3Da8L_lemMBHxc9kuS-kajesbcFlZUtiKi9g9NLhRCkvxFUWa-2XArVtg?purpose=inline)\n\n![PPT - Water Treatment Basics PowerPoint Presentation, free download - ID:3356319](https://images.openai.com/static-rsc-4/6KpyJYtOlRqkiUpnbgEJnA97z4vXvqQ_8_KPAoICXO5QFZPnA9WSn9WSbMUa09i7JMsTBsAYhykW7MJ7sODrZEnzu96sMnrxjfRQzW3sm7ueT-yet-64f0_gHN6Xbx0NvZRRPbRRw2XeGc_O-56ebJB7Gh3srmLuFbpJA-5U2_g?purpose=inline)\n\n4\n\nTrả lời:\n\nChlorine (clo) được thêm vào nước để khử trùng, tiêu diệt hoặc bất hoạt nhiều loại vi khuẩn, virus và vi sinh vật gây bệnh.\n\nĐây là bước quan trọng nhằm đảm bảo nước an toàn về mặt vi sinh khi cung cấp cho người dân.\n\n## Câu C1.11. Vì sao chưng cất nước biển là phương pháp đắt tiền để sản xuất nước uống?\n\n![Single stage desalination systems](https://images.openai.com/static-rsc-4/QlDXqUsIftfHTdAsOjQmhIu0cSo3fE1aSCdnGOAlSldZB2yr0mnrlPlBLeryAE1pf9Dnkpx0WZIfIxg9qcEDKtpJRBPAJ6uiwDi9iE6RKeMox9Ag-vJ2LjW526uO51fOnm9aBnnaNFJEpUgMsOiypmRCp_fruI7mJ2fe1PP6Sdw?purpose=inline)\n\n![EtihadWE secures AED 1.046 billion agreement for Fujairah seawater desalination facility](https://images.openai.com/static-rsc-4/jra1mi95XuEls93F1BB-o92Vz2g83vzFZni5HwR1fIhmW8GDId3uG-u5XGryJoX4oz2iNw7C0h660Kic1v06CUASTDcXaY1yVTVZj3XmyCdEOdvYzkxv8lNhjEuZhouPWgIYbAAo8pKCFzHO5-GqDpTtp6UaxKcd9yhIiaKDEGw?purpose=inline)\n\n![Parameters Affecting the Efficiency of Solar Stills—Recent Review](https://images.openai.com/static-rsc-4/0QMZ8WUMlSMo_IiHjVCjjVvrafCELWeols2HFWrzksZjgsVZU5ExA2wN7iyg5aty3NjuBZ_xCBCRoiwhyepcBZUBN7c6htvYKoDBrXegq5XvtiY0ciyOXr_dO5Dw3BBgYGr_vGwQqbBSEndyOZHb5t_5reSYxa1luksWB131BeI?purpose=inline)\n\n6\n\nTrả lời:\n\nChưng cất nước biển cần:\n\n1. Đun nóng nước biển để biến nước thành hơi.\n2. Tách hơi nước khỏi muối và các chất hòa tan.\n3. Làm lạnh hơi nước để ngưng tụ thành nước lỏng.\n\nQuá trình này tiêu tốn nhiều năng lượng, thiết bị và chi phí vận hành nên khá đắt tiền.\n\n## Câu C1.12. Điều gì làm cho một quặng kim loại khác biệt so với các loại đá thông thường?\n\n![2.95\" Kidney Ore (Botryoidal Hematite) - Morocco (#367205) For Sale - FossilEra.com](https://images.openai.com/static-rsc-4/pNJblzR1F-ur-_ktY7TC0h4jvRkQEgMJX9IRyU0PfyIscG2x7TjMvPlcBcKakyqliPP3_divmscV3T7I8IiNeUVKSclVn96ucSq1c6ZLLcGNnIAD0joNLpN0azrp2vk6c7XbZUSf5EKP6YfBpkCEbGDaT5-TzbLclB4Dkt2Esw0?purpose=inline)\n\n![Bauxite - Minerals For Sale - #1506782](https://images.openai.com/static-rsc-4/T6HO0xINvxbUV3-3V0foyLBgBcLmGnrRtmB_w2SORrAhpAEVnmG-aLHCtIaAtla7RiY45d5XVr_m9ugxp2bihLYQpGutjLWWG1pKJV2DH04DwDQ6VqNTRMsuj9MSdAcM6mpfve1Eg9AM2AUF7L4PG05kN7WMLA8ju0ctx6jqSFc?purpose=inline)\n\n![Malachite: Properties, Facts and Photos](https://images.openai.com/static-rsc-4/hmC7Ng6oEMU2EYShOUJbRWh6u9AqDd5x597MMSMWe_gozk-UR_VTAjWBZzBgaX1FJK9BkWTov3fv2Y3MrpC_lv_SGb_M9UZoyeZ7v1d5sR68122BFnA2d94Iu-Kj5drI34v1P9D469Rd2RX3Vwb6zo1ca1POWiQl8cIzB4CNvqs?purpose=inline)\n\nTrả lời:\n\nQuặng (ore) là loại đá hoặc khoáng vật chứa kim loại hay hợp chất kim loại với hàm lượng đủ lớn để có thể khai thác và thu hồi kim loại một cách có hiệu quả kinh tế.\n\nKhông phải mọi loại đá chứa kim loại đều được coi là quặng.\n\n## Câu C1.13. Sự khác biệt giữa vôi sống (Quicklime) và vôi tôi (Slaked lime) là gì?\n\n![Hochwertiges, hochweißes Branntkalkpulver mit geringer Verunreinigung und schneller Reaktivität CAS 1305-78-8 vom chinesischen Hersteller Hongyu Calcium](https://images.openai.com/static-rsc-4/GY02jwJPhvRDs8czF7jOsFm5_fdXdOxMX3x_DeA1SaDQQdSaK9O6WhrKoJOho0ZewGo98H-9RfutVCWaUtprlTKJYFiVw1QHyIn6X9hKbkutV_LKZ646LvYoTqyqiRARjWgksnDnuq7UqpFm2xifDC18GVijvxKwyzKw4ixfHB0?purpose=inline)\n\n![Hydrated Lime 460g-1lb / Calcium Hydroxide / Kalkwasser / Slaked Lime FOOD GRADE  | eBay](https://images.openai.com/static-rsc-4/9DRwzNZ3wV_AHIbLMqcrytqaCn7F1e3ClTVR59DZrksXOOsdDTci0Er_LK8EgEAT-KtpxqoqqjsqIia-bx28WKIGag2FrwEnwUAkAOnNaY06GKvgOXznS5qe9YMjXAm4fVa12lsMBOLaAzngOD9yTixJrXmW3FxmHULqzSB0OC8?purpose=inline)\n\n![what is combination reaction?​ - Brainly.in](https://images.openai.com/static-rsc-4/jAVjgLc9KAgetozDKQjowMGdQtA7rQyfp9VaxL7Ynp3dPJ5jLfixeyLO4Yz2AtBsxr2nAjL_e5GgshiXQFd3FptQmjmYAwUSjZn8qobZL-KDwMPDEpEc_KPpZNupeoudM8TVUmoWjj1qU2OczT0PMrkSEiafHTdWKjbyUAu4DeU?purpose=inline)\n\n4\n\nTrả lời:\n\n| Tiêu chí    | Vôi sống           | Vôi tôi                        |\n| ----------- | ------------------ | ------------------------------ |\n| Tên hóa học | Calcium oxide      | Calcium hydroxide              |\n| Công thức   | CaO                | Ca(OH)₂                        |\n| Trạng thái  | Chất rắn màu trắng | Chất rắn màu trắng             |\n| Điều chế    | Nung đá vôi        | Cho vôi sống tác dụng với nước |\n\nPhương trình phản ứng:\n\nCaO + H₂O → Ca(OH)₂\n\nPhản ứng tỏa nhiều nhiệt.\n\n## Câu C1.14. Điều gì làm cho một chất khí trở thành khí nhà kính?\n\n![What If We Did Not Have Greenhouse Gases? » ScienceABC](https://images.openai.com/static-rsc-4/wM4N2IKRoWyeKeFlVdGTqy9Y9KoXxyQxqgMZiS78DPSuVMe1lFznNKs1086BDC3WRgjJjAIjCGr8-xDBpF5kAvI8eBt8w10uD8Sicjc1A6f6cMAaEHiO84-jMf1IHwWvM5ZrPAW4TpN6xrrJqsj6uugM7nO6igDRO9G7Zgo9XPk?purpose=inline)\n\n![PPT - Greenhouse Gases PowerPoint Presentation, free download - ID:1884383](https://images.openai.com/static-rsc-4/aFzhw_AUui2e-b-_VVFbkvE9dSPSwzbqRJhRuxTw2m_0k_Z7mkAncW292XW5T6foEgN2hwHlj82oJa9GbKYfjy53Oe-FTQLDOtXypa-gIn0twwiva8UQ2H14jY7YnMdxJD9KsfR3NedYwjhTvM5JYa1Gw23gmY7bPgl2_3WJTl8?purpose=inline)\n\n![PPT - The Greenhouse Effect PowerPoint Presentation, free download - ID:3767036](https://images.openai.com/static-rsc-4/qb_8c5OP6mULcV4VDmoYKroNLYticsF94MYr6Qwr_gKPHdCb88Ts_M63UG-e2RVTsklSnkBWw3fLIfquhjAlw-3agc1_YxPBmjon5vXlFNpxTXj-S8d4Kxz-wdaPZXYuZC0ibWevX5N-FmFNUQL47x7-Xry4rVhVOpK5RFA_y10?purpose=inline)\n\n7\n\nTrả lời:\n\nMột chất khí được gọi là khí nhà kính khi nó có khả năng hấp thụ bức xạ hồng ngoại ở những bước sóng phù hợp và phát xạ lại năng lượng đó.\n\nCác khí như CO₂, CH₄, H₂O và N₂O có khả năng này.\n\nLưu ý: Không phải tất cả các khí trong khí quyển đều là khí nhà kính. Nitrogen (N₂) và oxygen (O₂) không hấp thụ bức xạ hồng ngoại đáng kể theo cơ chế này.\n\n# II. CÂU HỎI BÀI TẬP THỰC HÀNH (ACTIVITY C1.02 QUESTIONS)\n\nChủ đề: Tách muối từ nước biển – Separation of salts from seawater\n\n![Chemistry Ch3 (26/11/2009) | PPT](https://images.openai.com/static-rsc-4/noeYkB5MnYKbZlf-gLwOBAXjKmsz4aiyH7bPmiYP_JrI70hsl9Q7x3csJDZOEqHQ7zEdQJFPdtP27nFtHaMXUgAVjDlvbb9C41ukcbpjzWELvmQ61xwPB3FUXsWDNymH__P9Hbae9oCTvzk-EPTi5YYz8C3v_HiOHLOc_FiPjHY?purpose=inline)\n\n![Separating salts from seawater | Class experiment | RSC Education](https://images.openai.com/static-rsc-4/RY4EQnyyV_xJlvTbpmAty74bRyIsJZ60Y1COmKN1HwDPC8LVBPPRQgldeqrIGSQZDK7h5SgCKED9-ZJyXNZbG2A3Ow0mwPCCcgdL02FqoS_bz3TGzC3G7fejs4P9Na5l6zxeUFYN_pTTxogb4TIUykMTXFlWVHmFWuIoQeBVeQQ?purpose=inline)\n\n![��T��Web�t�H�g�T�\\![�x�C���](https://images.openai.com/static-rsc-4/wCZ4UXOTHJ773PVYcUjQ4BaQNb_nZ16j0TpoYMYzU1CJz-akTgJwRYdJjEgv97z3HSKQ69zrFJIy1_l9DOcgbWXj4lpog4OzpSA8RS83H3EHjKF0WViqdbL0oe62PcUFdRWfCOOldJ4gqPrU9-5NwGjS8dtSiNhkxcL2pX9uYbI?purpose=inline)\n\n4\n\nTrong thí nghiệm, nước biển được cô đặc và làm bay hơi dần để thu các chất rắn hòa tan. Các chất muối khác nhau có độ tan khác nhau nên kết tinh ở những giai đoạn khác nhau.\n\n## Câu A1. Có bằng chứng thực nghiệm nào cho thấy nước biển là hỗn hợp gồm nhiều loại muối?\n\nTrả lời:\n\nKhi cô đặc và làm bay hơi nước biển, người ta thu được các chất rắn có đặc điểm khác nhau, kết tinh ở những thời điểm khác nhau.\n\nĐiều này chứng tỏ nước biển chứa nhiều loại muối hòa tan chứ không phải chỉ có một loại muối duy nhất.\n\n## Câu A2. Khí nào có khả năng đã thoát ra khi thêm hydrochloric acid loãng (HCl) vào phần chất rắn thu được đầu tiên?\n\nTrả lời:\n\nKhí carbon dioxide (CO₂) có thể được giải phóng nếu phần chất rắn ban đầu chứa muối carbonate, chẳng hạn calcium carbonate (CaCO₃).\n\nPhương trình hóa học:\n\nCaCO₃ + 2HCl → CaCl₂ + CO₂↑ + H₂O\n\nDấu hiệu nhận biết: Có bọt khí không màu thoát ra. Khí CO₂ làm đục nước vôi trong.\n\n## Câu A3. Điều này cho biết thông tin gì về bản chất và danh tính của phần chất rắn ban đầu?\n\nTrả lời:\n\nĐiều đó cho thấy phần chất rắn ban đầu có chứa muối carbonate.\n\nNếu xác định được khí thoát ra là CO₂ bằng cách dẫn qua nước vôi trong và thấy nước vôi bị vẩn đục, có thể kết luận mẫu chứa carbonate.\n\nVí dụ: Calcium carbonate (CaCO₃).\n\nPhương trình nhận biết:\n\nCO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O\n\n## Câu A4. Dựa vào độ tan của sodium chloride (NaCl) và calcium sulfate (CaSO₄), hãy dự đoán danh tính chất rắn cuối cùng còn lại ở cuối thí nghiệm.\n\nTrả lời:\n\nChất rắn cuối cùng có khả năng là calcium sulfate (CaSO₄).\n\nGiải thích:\n\n- NaCl tan khá tốt trong nước.\n- CaSO₄ ít tan hơn NaCl.\n- Khi nước biển bay hơi, các chất ít tan có thể kết tinh trước hoặc còn lại trong phần cặn cuối cùng tùy điều kiện thí nghiệm.\n\nVì vậy, CaSO₄ có thể được thu lại ở phần chất rắn cuối cùng.\n\nLưu ý: Kết luận này phụ thuộc vào trình tự cô đặc, nhiệt độ và cách thu các phần kết tinh trong thí nghiệm.\n\n# III. BÀI TẬP ÔN TẬP CUỐI CHƯƠNG 1 (END-OF-CHAPTER QUESTIONS)\n\n# BÀI 1. THÀNH PHẦN CỦA KHÔNG KHÍ VÀ MƯA AXIT\n\n![Atmospheric Composition - EarthScience](https://images.openai.com/static-rsc-4/QMHdXdCV7LDlmXG_xas5XT7os7sPWNJY_rQuPOsQtbZEgGhVYV8kx2StW64kwrvL0oW1OO9mFvXdsdKvuYa95qo5gFi3QsDk_yrc_laESpl1tRX8QlTsRPUufdb2Cyr0NrVD4q3D0iergr-cjuyE6bMgEUj7t4YXgyBdulFRXx0?purpose=inline)\n\n![PPT - Nitrogen and its Compound PowerPoint Presentation, free download - ID:6164367](https://images.openai.com/static-rsc-4/l4wxOGbcdsIrEDctLnvZddzbBcKiTj4BK6qwA74vU9QBKUU5aqNtj2-gh2oYdheEOSOdjjEVL0R4nA1JLwsiNz-C_FNUGwpVhxZBM_-DYLwhSLNk_Pe0AzVCSSJ2thELtARIRlsQXPlENtZ4NWaf5zIuipn_lopDfQIRB-3sEew?purpose=inline)\n\n![Causes of acid rain | Media Library | Integration and Application Network](https://images.openai.com/static-rsc-4/wAZKVuZ9BM5Z2YZpIO0fDwpRsJzSdjLeqKuvZkFCd4sS481v-4XuyUHVXvGNOebam__Mx2c73b-qkDi1l1uOv66N0svOQUfU06IDyX65S4WKaMP1B8_1v5R5zh_MBwtN6Z5pYGviq2Z5fmuSPvbSyr13dx0DBvBjPMFpBNKrKtE?purpose=inline)\n\n## a) Thành phần của không khí\n\ni) Hoàn thành biểu đồ bằng cách điền tỷ lệ phần trăm của nitrogen, oxygen và các khí khác trong không khí chưa ô nhiễm.\n\nĐáp án:\n\n| Thành phần    | Tỷ lệ thể tích xấp xỉ |\n| ------------- | --------------------- |\n| Nitrogen (N₂) | 78%                   |\n| Oxygen (O₂)   | 21%                   |\n| Các khí khác  | 1%                    |\n\nTrong nhóm khí khác có argon, carbon dioxide, neon và một lượng nhỏ các khí khác.\n\nii) Nêu tên một khí khác tồn tại trong không khí chưa ô nhiễm.\n\nĐáp án: Argon (Ar).\n\nCác đáp án khác có thể chấp nhận: carbon dioxide (CO₂), neon (Ne), helium (He).\n\n## b) Sự hình thành nitrogen oxides trong cơn giông\n\ni) Viết phương trình hóa học cân bằng cho sự tạo thành nitric oxide (NO) trong cơn giông sấm sét.\n\nĐáp án:\n\nN₂ + O₂ \\\\(\\xrightarrow{\\text{tia sét}}\\\\) 2NO\n\nGiải thích:\n\nNăng lượng rất lớn từ tia sét giúp nitrogen và oxygen trong không khí phản ứng với nhau, tạo thành nitric oxide (NO).\n\nSau đó, NO tiếp tục phản ứng với oxygen:\n\n2NO + O₂ → 2NO₂\n\nTạo thành nitrogen dioxide (NO₂).\n\nii) Dựa vào kết quả thí nghiệm pH, học sinh có thể rút ra kết luận gì? Nêu tên hợp chất mới được tạo thành trong cơn bão.\n\n| Mẫu nước                  | Giá trị pH |\n| ------------------------- | ---------- |\n| Nước tinh khiết           | 7          |\n| Nước mưa khi không có bão | 5          |\n| Nước mưa trong cơn giông  | 4          |\n\nĐáp án:\n\n- Nước mưa có tính axit vì pH nhỏ hơn 7.\n- Nước mưa trong cơn giông có tính axit mạnh hơn nước mưa thông thường vì pH giảm từ 5 xuống 4.\n- Nguyên nhân là trong cơn giông, tia sét tạo điều kiện hình thành NO và NO₂. NO₂ hòa tan, phản ứng với nước và oxygen tạo ra các axit.\n\nHợp chất axit được tạo thành là nitric acid (HNO₃).\n\nPhương trình tổng quát:\n\n4NO₂ + O₂ + 2H₂O → 4HNO₃\n\nLưu ý: Nước mưa thông thường cũng có tính axit nhẹ do CO₂ hòa tan tạo carbonic acid (H₂CO₃). Vì vậy, không nên kết luận toàn bộ độ axit của nước mưa đều do NO₂ gây ra.\n\n# BÀI 2. NƯỚC, Ô NHIỄM KHÔNG KHÍ VÀ XỬ LÝ NƯỚC\n\n![Water cycle: Continuous movement of water through evaporation, condensation, and precipitation | Gamatrain](https://images.openai.com/static-rsc-4/7ZWa5RF5JkGCKHTVCxzeZdp8ZB1UknBWi43dDvLpxpbTWqxsxORcQkZ7jU3o4arDP8qT5OQcM1RYHtwv7MB67IBlGB6nzs71sTwEZN-hlqy_YyYoVcnwfytagJZ9YjaD12ZdehQOOMaiz1qlwUUL8IW-cqqnMHVSCwnohMdKWe8?purpose=inline)\n\n![PPT - Water Treatment PowerPoint Presentation, free download - ID:1426890](https://images.openai.com/static-rsc-4/DLeUlYTmrdWUJq3rTODWoCkHHKi8ygW4kPji8k99GTwFy5AkPGJ_ynzSDWteurLaDZVxlgHY6vmAsLBU3Pm6b4hI2HkseebZejv_aOplzJ1bSGYrxU-hT5m0YwckhvDz0v6eb0LvRYdMEqvwAbW5tRG4RZquVBPxpX7rg2Ncvrw?purpose=inline)\n\n![Formation Of Acid Rain – IB ESS Revision Notes](https://images.openai.com/static-rsc-4/GDoPWAQhTkvJt3WqVyCxz-TVRIqQiKMJlGJVNQVQkSYMNswZzy0lDzhotSU4Wj6mBQj6rGzjPCwhZTLRR6insvdFqORUbX2JAZd_aZwnVLhGwNq1j4uLwzktYDzbrnh1u88uScTOp0qZRAunhMuHHD0EQWHnSJB5BzRFTmI222I?purpose=inline)\n\n7\n\n## a) Mô tả một phép thử hóa học để nhận biết nước. Nêu phép thử và hiện tượng.\n\nĐáp án:\n\nSử dụng copper(II) sulfate khan (CuSO₄) màu trắng.\n\n- Nhỏ vài giọt nước vào copper(II) sulfate khan.\n- Chất rắn màu trắng chuyển sang màu xanh lam.\n\nPhương trình:\n\nCuSO₄ + 5H₂O → CuSO₄·5H₂O\n\nSản phẩm là copper(II) sulfate ngậm 5 phân tử nước.\n\nPhép thử khác: Dùng giấy cobalt chloride khan màu xanh, giấy chuyển sang màu hồng khi tiếp xúc với nước.\n\n## b) Nêu một ứng dụng của nước trong công nghiệp.\n\nĐáp án:\n\nMột số ứng dụng của nước:\n\n- Làm mát máy móc và thiết bị công nghiệp.\n- Làm dung môi hòa tan các chất.\n- Sản xuất hơi nước để vận hành tua-bin.\n- Rửa nguyên liệu và sản phẩm.\n- Tham gia vào các phản ứng hóa học.\n\nVí dụ: Nước được sử dụng để làm mát trong các nhà máy nhiệt điện.\n\n## c) Nước là một dung môi tốt. Bạn hiểu thế nào về thuật ngữ dung môi (solvent)?\n\nĐáp án:\n\nDung môi là chất có khả năng hòa tan một chất khác để tạo thành dung dịch.\n\nVí dụ:\n\n- Nước là dung môi.\n- Muối ăn là chất tan.\n- Nước muối là dung dịch thu được.\n\nNước hòa tan được nhiều chất ion và chất phân cực nên được gọi là dung môi phổ biến.\n\n## d) Hơi nước trong khí quyển phản ứng với sulfur dioxide (SO₂) tạo thành mưa axit.\n\ni) Nêu một nguồn phát thải khí sulfur dioxide.\n\nĐáp án:\n\nNhà máy nhiệt điện đốt than đá chứa sulfur.\n\nKhi sulfur cháy:\n\nS + O₂ → SO₂\n\nCác nguồn khác: hoạt động luyện kim, đốt dầu chứa sulfur và núi lửa phun trào.\n\nii) Nêu hai tác hại của mưa axit.\n\nĐáp án:\n\n1. Làm giảm pH của ao hồ, sông suối, gây hại cho cá và sinh vật thủy sinh.\n2. Ăn mòn công trình xây dựng, đặc biệt là các công trình làm từ đá vôi và đá marble.\n\nCác tác hại khác: làm đất mất chất dinh dưỡng, gây tổn thương thực vật.\n\niii) Tính khối lượng phân tử tương đối (Mᵣ) của sulfur dioxide (SO₂).\n\nĐáp án:\n\nNguyên tử khối tương đối:\n\n- S = 32.\n- O = 16.\n\nTa có:\n\nMᵣ(SO₂) = 32 + 2 × 16\n\nĐáp án: 64\n\n## e) Nước từ sông hồ có thể được xử lý để làm nước uống an toàn. Mô tả hai bước trong quy trình xử lý nước và giải thích mục đích.\n\nĐáp án:\n\nBước 1. Lọc (Filtration)\n\n- Cho nước đi qua các lớp cát, sỏi và vật liệu lọc.\n- Loại bỏ cặn bẩn, đất, cát và các hạt rắn lơ lửng.\n\nBước 2. Khử trùng bằng chlorine (Chlorination)\n\n- Bổ sung một lượng chlorine được kiểm soát.\n- Tiêu diệt hoặc bất hoạt các vi sinh vật gây bệnh.\n\nLưu ý: Trong hệ thống xử lý nước thực tế còn có các bước như keo tụ, tạo bông, lắng, điều chỉnh pH và kiểm soát chất lượng trước khi phân phối.\n\n## f) Nước được tạo thành khi hydrogen cháy trong không khí. Nêu phần trăm oxygen có trong không khí.\n\nĐáp án:\n\nOxygen chiếm khoảng 21% thể tích không khí.\n\nPhương trình phản ứng:\n\n2H₂ + O₂ → 2H₂O\n\nĐây là phản ứng cháy của hydrogen trong oxygen, tạo ra nước.\n\n# BÀI 3. KHÍ QUYỂN CỦA MỘT HÀNH TINH MỚI\n\n![Water in the Universe: Water, Water Everywhere - Hydrogen](https://images.openai.com/static-rsc-4/ZHYuIkMv8Hmrgg0gyt5zXDUgNI0ntvQxEC6clGHKsz1xZW2jHBB-4aaU9W_yPL1SSV4gp99hjNQTQxoqbtxLi4F-qSe5LxvpxBXoBvxNr-1vJcQXfza759Ku1K8OFBcrsXGL-qDJU5HweteMTnwu3vM462O6XuizdFuNlI7d8Uw?purpose=inline)\n\n![Saurer Regen • Entstehung, Formel und Gegenmaßnahmen · \\![mit Video\\]](https://images.openai.com/static-rsc-4/-LTDinA1o6dRKmuoAcGM63XnuzmH5Z9gfF-sv6dxVoKRJJYbENnG_SyiCFaukDWH0GF9spcvGg6uv3z_MzGQQ_-zzRK4JS_RlF1Yu6zMAl2MV17VTT9SlHLXkkV6JHJLYvyNojskbnlXCqmgtE2xtvpNM5L0WY_VvU5zk4_cCiQ?purpose=inline)\n\n![Carbon levels could be used to detect water-rich, oceanic exoplanets | BBC Sky at Night Magazine](https://images.openai.com/static-rsc-4/OF3PAVveGFT8niDCrrqAXsZoNYuhP9AmPB0oJtHrj1Xzry0_dBkUM6w32zdcDoQZf6ZksVF7eYXqQ20KZgKBiGMeFQ7bcAYKWxIF-3zhNfL3kwAo8wdysOtpLJLvVGICcog3rUx7FMWaEMZdo4qcq47YqTK-yEazcWaDjQHBzPQ?purpose=inline)\n\n5\n\nMột hành tinh giống Trái Đất mới được phát hiện có thành phần khí quyển:\n\n| Thành phần           | Tỷ lệ phần trăm |\n| -------------------- | --------------- |\n| Oxygen (O₂)          | 15%             |\n| Nitrogen (N₂)        | 60%             |\n| Carbon dioxide (CO₂) | 15%             |\n| Water vapour (H₂O)   | 10%             |\n| Sulfur dioxide (SO₂) | 2%              |\n\nLưu ý: Tổng các tỷ lệ trên bằng 102%, không phải 100%. Có thể đề bài đã có sai số hoặc nhầm lẫn khi cung cấp dữ liệu. Tuy nhiên, vẫn có thể sử dụng các số liệu để so sánh từng thành phần.\n\n## a) Hàm lượng của 3 khí đầu tiên khác như thế nào so với hàm lượng của chúng trên Trái Đất?\n\nĐáp án:\n\n| Khí                  | Hành tinh mới | Trái Đất | So sánh           |\n| -------------------- | ------------- | -------- | ----------------- |\n| Oxygen (O₂)          | 15%           | 21%      | Thấp hơn          |\n| Nitrogen (N₂)        | 60%           | 78%      | Thấp hơn          |\n| Carbon dioxide (CO₂) | 15%           | 0,04%    | Cao hơn rất nhiều |\n\nGiải thích:\n\nHành tinh mới có hàm lượng oxygen và nitrogen thấp hơn Trái Đất, nhưng hàm lượng carbon dioxide cao hơn rất nhiều.\n\nĐiều này có thể dẫn đến sự khác biệt lớn về khí hậu và khả năng duy trì sự sống.\n\n## b) Những vấn đề gì có thể xảy ra trên bề mặt hành tinh do sự có mặt của hai khí cuối cùng trong danh sách?\n\nĐáp án:\n\nHai khí cuối cùng là water vapour (H₂O) và sulfur dioxide (SO₂).\n\n1\\. Water vapour (H₂O):\n\n- Là khí nhà kính, góp phần giữ nhiệt trong khí quyển.\n- Có thể tạo mây và mưa khi ngưng tụ.\n- Hàm lượng hơi nước lớn có thể làm tăng độ ẩm và ảnh hưởng đến khí hậu.\n\n2\\. Sulfur dioxide (SO₂):\n\n- Hòa tan trong nước tạo môi trường axit.\n- Có thể hình thành mưa axit.\n- Gây hại cho thực vật, sinh vật thủy sinh và công trình xây dựng.\n\n## c) Nêu một phép thử để chứng minh sự có mặt của nước trong giọt nước ngưng tụ trên cửa kính vào ngày lạnh.\n\n![Condensation in buildings: How to ensure good ventilation](https://images.openai.com/static-rsc-4/-H-DD4NtGEy9qcF8NftrHn1PnQ6Ni7nh6nqcNklLfsH0HYTgvpsCQUPEUbg-BNwBoGAO3TEsLMjU8RtZyfXYv99QpJsWm68djLkLftmLjndCNLDeb-Fpr1q7WRkxvqvGcjf6-GcKYBxGc7iEg7syCIbUP-6oopItwWngQn3Q0C4?purpose=inline)\n\n![PPT - Les propriétés de l’eau PowerPoint Presentation, free download - ID:4953664](https://images.openai.com/static-rsc-4/H2R1I4saGZNgxvB6A7NujGLct-bHwNoKrl7cUtEUu2KM1tXQAVUELSYGTeFm5ipzg2zB2ps6X9ovD_1UfrSeIk47LJQ_LDUKIA-enWe7qK-H6eyiS0HDRILvKA3ePZIQeHyFA4ZMmnRZ-ENX07wZNA-f-K72SOR2K8F94pNxcb4?purpose=inline)\n\n![The Cobalt Chloride Test For Water by Martyn F. Chillmaid / Science Photo Library](https://images.openai.com/static-rsc-4/RfAg3ePwjz1Zo8LO9HZb1pLP3AOcFq8eaVoaDBmTR5zavGBIg_cbXdUftUs8203zD0TiSCpEYPd1kbgrgdyq1zUAbj9HbbpmGNJ_fF_C4vCTuBjAqwXuA3lUHozdMRpT7vTEwximoG9_FgrrIlxFHiN-bg3SO7Kh2BzBZ4heKqU?purpose=inline)\n\nĐáp án:\n\nSử dụng copper(II) sulfate khan (CuSO₄).\n\nCách tiến hành:\n\n1. Lấy một ít copper(II) sulfate khan màu trắng.\n2. Nhỏ giọt nước ngưng tụ trên cửa kính vào chất này.\n3. Quan sát sự thay đổi màu sắc.\n\nHiện tượng: Chất rắn màu trắng chuyển sang màu xanh lam.\n\nKết luận: Có nước trong giọt nước ngưng tụ.\n\nPhương trình:\n\nCuSO₄ + 5H₂O → CuSO₄·5H₂O\n\n## d) Khí ô nhiễm nào trong khí quyển có hiệu ứng tương tự đối với khí hậu như carbon dioxide?\n\nĐáp án:\n\nMethane (CH₄).\n\nGiải thích:\n\nMethane là một khí nhà kính mạnh, có khả năng hấp thụ bức xạ hồng ngoại và góp phần làm Trái Đất nóng lên.\n\nCác nguồn phát thải methane gồm:\n\n- Chăn nuôi gia súc.\n- Ruộng lúa nước.\n- Bãi chôn lấp rác.\n- Khai thác dầu mỏ và khí tự nhiên.\n\n## e) Sulfur dioxide không có trong không khí tinh khiết trên Trái Đất. Quá trình nào có thể làm khí này đi vào khí quyển Trái Đất?\n\n![The US Environmental Protection Agency’s Acid Rain Program](https://images.openai.com/static-rsc-4/LfF0nYYELG-mjTz-M5cy15rgF7yeWVVvUzY8O3cB6TNQrIpU5l5YL935yX5gSjpaYYSWHb6gEOp_GDYKNhuHZ9U4GSaUpZ2DddhCMWAot_7wDeZu1TYPfOrGh37ZuIC02juchbxodaOTvbvVVeuywTFn3pc8chSSdHxuoOdrCxo?purpose=inline)\n\n![What Is Sulfur Dioxide (SO2)?](https://images.openai.com/static-rsc-4/VZiUu4a_-zfx57rqk417dXxz-fwEn0QvVqR7wk-C0KIhXTOZxi4VcaYKm5FtLZE5669VvfW46HNC9PcwxrDQPLII66zCHD0nZHNIYGClwNkSUyZquClLout9jEsEbrZn8DcSxXirytvTXunr7znZ6Rv3J0PN0n0nNgwuoWkguGo?purpose=inline)\n\n![Schweiz - Glencore-Xstrata und die Asthma-Toten von Mufulira - News - SRF](https://images.openai.com/static-rsc-4/lzNioij8tLUSKU-bkzSLHukUn8Xn2y8L0kVA7EEEudaBO2urSoIk9qYsE_aIAxa2Po78zhRi2iaNE47qxIke7c_Enrf2Faq3rNkH1KBHPCz7HpCDygq9ER9r7x3lltkTDF_G8Hgq3bcoxgGlKkPXKgtWOOLC6jRdQdKslC4ecNs?purpose=inline)\n\nĐáp án:\n\nSulfur dioxide có thể đi vào khí quyển thông qua:\n\n1. Đốt nhiên liệu hóa thạch chứa sulfur như than đá và dầu mỏ.\n2. Hoạt động luyện quặng và luyện kim.\n3. Núi lửa phun trào.\n\nVí dụ phản ứng đốt sulfur:\n\nS + O₂ → SO₂\n\n## f) Vôi có thể được dùng để loại bỏ sulfur dioxide khỏi khí thải. Tên gọi của quá trình loại bỏ này là gì?\n\n![Sulfur dioxide (SO2) là một chất khí không màu, mùi hắc, độc và là một trong những tác nhân hàng đầu gây mưa acid. (a) Viết phương trình hóa học chứng minh SO2 là một trong các tác nhân gây m](https://images.openai.com/static-rsc-4/genz8_to2IVI79Fdr5gB6tQFF-nMM9t1mn25EHx-KmHsAfyaHDDyaJGFuv75rGZOemgq7EJ8kft0x791VncAljMF4i8hU9qs2A07j8fu-imHiT1Z-T7gpnHyQWSswnrz6WslEtOPKLzoJp3XYN9V_XAw2H1OZQUKEQSBbLRdieE?purpose=inline)\n\n![China Flue Gas Desulfurization Spray Towers FGD Wet Desulfurizing Scrubber Process Plants | Xinjieyuan](https://images.openai.com/static-rsc-4/Xk5Et-kDXxm7scwwUNv6RtuSglwiXPX54GfM_TYIpmMFj71HAiyjsu9iWM5grdm2U1_JBvu7vQhKUHQJS2neYUOASdby0E3t7nTz-G_p8DQFf7rLr7jx53-1buDcmvOaA4e8jms4A5MpasWBkM3zu900QVVCVe2bvVG0s684Tc8?purpose=inline)\n\n![Nghiên cứu, thiết kế, chế tạo và vận hành hệ thống FGD](https://images.openai.com/static-rsc-4/BcThdjuWNlApdHGOhWdB7uTSl78I_YmscJgRkySISS4tlA6R4iKqBkOylaP9iGLYYwhAceIvNz6e07NNJmQYS0yLkx2bSo3KOJ9ZK5MPomk_SjO0ZZPzXZ8wSsVJHxS_gzyUQLrFOSYDdfNiCTAilXO081bvzv7LRKFBWRTrzts?purpose=inline)\n\n5\n\nĐáp án:\n\nQuá trình này được gọi là Flue Gas Desulfurization (FGD) – khử lưu huỳnh trong khí thải.\n\nĐây là phương pháp xử lý khí thải bằng chất hấp thụ có tính kiềm như đá vôi hoặc vôi.\n\nVí dụ phản ứng:\n\nCaO + SO₂ → CaSO₃\n\nCalcium oxide phản ứng với sulfur dioxide tạo calcium sulfite.\n\nTrong điều kiện có oxygen:\n\n2CaSO₃ + O₂ → 2CaSO₄\n\nSản phẩm cuối cùng có thể là calcium sulfate.\n\n## g) Vôi sống được sản xuất từ đá vôi như thế nào? Viết phương trình chữ cho phản ứng.\n\n![Maa-varad Eestis, nende kaevandamine ja kasutamine I – Opiq](https://images.openai.com/static-rsc-4/a2-vY7QovjYrlc9UEVZjFH6OAC2nys3tRuACvARFyV6YXqKZOn0zZveIaDJTj01ihg9IdsJqAMaxTKlrHl2Vbh7RYpE99JR7uMjj-ok6bCcQIPg0gjxMCdMfrnnLnBdoNxcivErbwgSGJrnq4VYm_-gCK3rt8NikSU2qKxYN5Vg?purpose=inline)\n\n![Planta De Fabricación De Cal Horno De Cal Viva Para La Venta, alta calidad Planta De Fabricación De Cal Horno De Cal Viva Para La Venta en bossgoo.com](https://images.openai.com/static-rsc-4/NtWTCogEh7AAUdeIVo-fPkW3f13TB99_kuMxU1x-lHaGj6wCuvaPxLGVQlnCkMXEIGdvSNm6dlFrgp9Mc7OLn8yYRT3lKuOHYFVR_9pvwBiMmTX8xdpUOdzULXDoxI2lHD08pgZHsYGgqpyJ9YqaNyfAlIYG7ismxILIkop1E0Y?purpose=inline)\n\n![PPT - LIME PowerPoint Presentation, free download - ID:759394](https://images.openai.com/static-rsc-4/uEbFYcY2sLcXqhxgEJtjZAWqEZcDvMi_4b17po5hYaRHip8-7oXt6K4Nl6Mtb-uXiAQEsEMHNQh21BsMWakgQ57o9BwqlUyRPsZtajSE_jMQ2fSNnXI3m0o6d2w9jd3O__E-mkv-DiyKHRd-ks2foNMRYs2ac2j3vbnFGJ_RsEA?purpose=inline)\n\n5\n\nĐáp án:\n\nVôi sống (quicklime – CaO) được sản xuất bằng cách nung đá vôi (limestone – CaCO₃) ở nhiệt độ cao trong lò nung.\n\nQuá trình này gọi là nhiệt phân (thermal decomposition).\n\nPhương trình chữ:\n\nCalcium carbonate → Calcium oxide + Carbon dioxide\n\nPhương trình hóa học:\n\nCaCO₃ \\\\(\\xrightarrow{\\text{nhiệt độ cao}}\\\\) CaO + CO₂↑\n\nGiải thích:\n\n- CaCO₃: Đá vôi.\n- CaO: Vôi sống.\n- CO₂: Khí carbon dioxide thoát ra.\n\n# IV. BẢNG TỔNG HỢP KIẾN THỨC TRỌNG TÂM CHƯƠNG C1\n\n| Chủ đề               | Kiến thức cần nhớ                                             |\n| -------------------- | ------------------------------------------------------------- |\n| Không khí            | N₂: 78%; O₂: 21%; khí khác: khoảng 1%                         |\n| Mưa axit             | Chủ yếu do SO₂ và NOₓ                                         |\n| Sương khói quang hóa | NOₓ + VOCs + ánh sáng Mặt Trời                                |\n| Khí CO               | Liên kết với hemoglobin, cản trở vận chuyển O₂                |\n| Argon                | Khí trơ, bảo vệ dây tóc bóng đèn                              |\n| Hiệu ứng nhà kính    | Khí nhà kính hấp thụ và phát xạ bức xạ hồng ngoại             |\n| Khí nhà kính         | CO₂, CH₄, H₂O, N₂O                                            |\n| Xử lý khí thải       | Catalytic converter, FGD                                      |\n| Xử lý nước           | Lọc, lắng, khử trùng bằng chlorine                            |\n| Chưng cất            | Bay hơi rồi ngưng tụ để tách nước khỏi muối                   |\n| Quặng                | Đá hoặc khoáng vật chứa kim loại có giá trị khai thác kinh tế |\n| Vôi sống             | CaO                                                           |\n| Vôi tôi              | Ca(OH)₂                                                       |\n| Đá vôi               | CaCO₃                                                         |\n\n## V. CÁC PHƯƠNG TRÌNH HÓA HỌC CẦN GHI NHỚ\n\n| STT | Phương trình                     |\n| --- | -------------------------------- |\n| 1   | S + O₂ → SO₂                     |\n| 2   | N₂ + O₂ → 2NO                    |\n| 3   | 2NO + O₂ → 2NO₂                  |\n| 4   | 4NO₂ + O₂ + 2H₂O → 4HNO₃         |\n| 5   | CaCO₃ + 2HCl → CaCl₂ + CO₂ + H₂O |\n| 6   | CO₂ + Ca(OH)₂ → CaCO₃ + H₂O      |\n| 7   | CaCO₃ → CaO + CO₂                |\n| 8   | CaO + H₂O → Ca(OH)₂              |\n| 9   | CaO + SO₂ → CaSO₃                |\n| 10  | 2H₂ + O₂ → 2H₂O                  |\n| 11  | CuSO₄ + 5H₂O → CuSO₄·5H₂O        |\n\n## VI. NHỮNG THUẬT NGỮ TIẾNG ANH QUAN TRỌNG\n\n| English               | Tiếng Việt            |\n| --------------------- | --------------------- |\n| Atmosphere            | Khí quyển             |\n| Acid rain             | Mưa axit              |\n| Photochemical smog    | Sương khói quang hóa  |\n| Greenhouse effect     | Hiệu ứng nhà kính     |\n| Greenhouse gas        | Khí nhà kính          |\n| Global warming        | Sự nóng lên toàn cầu  |\n| Carbon monoxide       | Cacbon monoxit        |\n| Carbon dioxide        | Cacbon dioxide        |\n| Sulfur dioxide        | Lưu huỳnh dioxide     |\n| Nitrogen dioxide      | Nitrogen dioxide      |\n| Water treatment       | Xử lý nước            |\n| Filtration            | Lọc                   |\n| Chlorination          | Khử trùng bằng clo    |\n| Distillation          | Chưng cất             |\n| Desalination          | Khử muối              |\n| Ore                   | Quặng                 |\n| Limestone             | Đá vôi                |\n| Quicklime             | Vôi sống              |\n| Slaked lime           | Vôi tôi               |\n| Thermal decomposition | Nhiệt phân            |\n| Catalytic converter   | Bộ chuyển đổi xúc tác |\n| Desulfurization       | Khử lưu huỳnh         |\n\nGợi ý sử dụng tài liệu: Có thể dùng phần I và II để kiểm tra kiến thức trong bài, phần III để luyện tập cuối chương và phần IV–VI để học sinh hệ thống hóa kiến thức trước khi kiểm tra."</script>
+
+    <script>
+        let units = [];
+        let allImages = [];
+        let currentImageIndex = -1;
+        let isLightboxOpen = false;
+        
+        let imageUndoStack = [];
+        let imageRedoStack = [];
+
+        let currentUnitIndex = -1;
+        let fontSize = 20;
+        let isMuted = false;
+        let speechRate = 1;
+        let synth = window.speechSynthesis;
+        let rawContent = "";
+        let lastSavedFilename = "BaiGiang_Complete.html";
+        
+        let isAutoplay = false;
+        let selectedText = "";
+        let selectedNodeParent = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            let loadedMarkdown = "";
+            const embeddedDataElem = document.getElementById('embedded-data');
+            
+            if (embeddedDataElem) {
+                try {
+                    const parsed = JSON.parse(embeddedDataElem.textContent.trim());
+                    if (parsed && typeof parsed === 'string' && parsed.length > 0) {
+                        loadedMarkdown = parsed;
+                    }
+                } catch(e) {}
+            }
+
+            if (!loadedMarkdown) {
+                const lastContent = localStorage.getItem('current_lecture');
+                if (lastContent) {
+                    loadedMarkdown = lastContent;
+                }
+            }
+
+            if (loadedMarkdown) {
+                parseAndBuildDocument(loadedMarkdown);
+            }
+
+            const savedName = localStorage.getItem('last_saved_filename');
+            if (savedName) lastSavedFilename = savedName;
+
+            document.addEventListener('mouseup', handleTextSelection);
+        });
+
+        function saveStateForUndo() {
+            imageUndoStack.push(rawContent);
+            imageRedoStack = [];
+        }
+
+        function handleUndo() {
+            if (imageUndoStack.length > 0) {
+                imageRedoStack.push(rawContent);
+                rawContent = imageUndoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã hoàn tác (Ctrl+Z)!");
+            } else {
+                showToast("Không còn thao tác để hoàn tác!");
+            }
+        }
+
+        function handleRedo() {
+            if (imageRedoStack.length > 0) {
+                imageUndoStack.push(rawContent);
+                rawContent = imageRedoStack.pop();
+                parseAndBuildDocument(rawContent);
+                showToast("Đã làm lại (Ctrl+Y)!");
+            } else {
+                showToast("Không còn thao tác để làm lại!");
+            }
+        }
+
+        function handleTextSelection(e) {
+            const popup = document.getElementById('selection-popup');
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+
+            if (popup.contains(e.target)) return;
+
+            if (text.length > 0 && document.getElementById('lecture-paper').contains(selection.anchorNode)) {
+                selectedText = text;
+                let node = selection.anchorNode;
+                while (node && node.nodeType !== 1) {
+                    node = node.parentNode;
+                }
+                selectedNodeParent = node.closest('p, li, h1, h2, h3, h4, blockquote') || node;
+
+                document.getElementById('popup-img-url').value = '';
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                popup.style.left = `${Math.max(10, rect.left + window.scrollX - 50)}px`;
+                popup.style.display = 'flex';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+
+        function searchImageSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function searchGifSelected() {
+            if (selectedText) {
+                window.open(`https://tenor.com/search/${encodeURIComponent(selectedText)}-gifs`, '_blank');
+            }
+        }
+
+        function searchGoogleSelected() {
+            if (selectedText) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
+            }
+        }
+
+        function autoInsertImageFromPopup(inputEl) {
+            const url = inputEl.value.trim();
+            if (!url) return;
+
+            if (/^(http|https):\/\/[^ "]+$/i.test(url) || url.startsWith('data:image')) {
+                saveStateForUndo();
+                const imageMarkdown = `\n\n![${selectedText || 'Hình ảnh'}](${url})\n\n`;
+
+                if (selectedText && rawContent.includes(selectedText)) {
+                    const index = rawContent.indexOf(selectedText);
+                    const endOfLine = rawContent.indexOf('\n', index);
+                    const insertPos = endOfLine !== -1 ? endOfLine : index + selectedText.length;
+                    rawContent = rawContent.slice(0, insertPos) + imageMarkdown + rawContent.slice(insertPos);
+                } else {
+                    rawContent += imageMarkdown;
+                }
+
+                parseAndBuildDocument(rawContent);
+                showToast("Đã chèn ảnh tự động! (Ctrl+Z để hoàn tác, Ctrl+Y để làm lại)");
+                inputEl.value = '';
+                document.getElementById('selection-popup').style.display = 'none';
+            }
+        }
+
+        function toggleAutoplay(toggle) {
+            isAutoplay = toggle.checked;
+            if (isAutoplay) showToast("Đã bật Autoplay (Tự động chuyển đoạn)");
+            else showToast("Đã tắt Autoplay");
+        }
+
+        function toggleTheme(toggle) {
+            if (toggle.checked) document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+        }
+
+        function toggleExpandMode(toggle) {
+            if (toggle.checked) {
+                document.body.classList.add('mode-expand');
+                showToast("Đã bật chế độ Expand (Hiện tất cả)");
+            } else {
+                document.body.classList.remove('mode-expand');
+                showToast("Đã tắt chế độ Expand");
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function toggleSlideshow() {
+            document.body.classList.toggle('slideshow-mode');
+            const isSlideshow = document.body.classList.contains('slideshow-mode');
+            if (isSlideshow) {
+                showToast("Đã bật chế độ Slide Show (Ấn Esc để thoát)");
+            }
+        }
+
+        function printLecture() {
+            window.print();
+        }
+
+        function openUpdateModal() { document.getElementById('update-modal').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('update-modal').style.display = 'none'; }
+
+        function openLightbox(imgSrc) {
+            allImages = Array.from(document.querySelectorAll('#lecture-paper img'));
+            currentImageIndex = allImages.findIndex(img => img.src === imgSrc);
+            if (currentImageIndex === -1 && allImages.length > 0) currentImageIndex = 0;
+
+            updateLightboxContent();
+            document.getElementById('image-lightbox').style.display = 'flex';
+            isLightboxOpen = true;
+        }
+
+        function updateLightboxContent() {
+            if (allImages.length === 0 || currentImageIndex < 0) return;
+            const img = document.getElementById('lightbox-img');
+            img.src = allImages[currentImageIndex].src;
+            document.getElementById('lightbox-counter').innerText = `${currentImageIndex + 1} / ${allImages.length}`;
+        }
+
+        function nextImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function prevImage(event) {
+            if (event) event.stopPropagation();
+            if (allImages.length <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+            updateLightboxContent();
+        }
+
+        function closeLightbox(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('image-lightbox').style.display = 'none';
+            isLightboxOpen = false;
+        }
+
+        function closeLightboxOnBg(event) {
+            if (event.target.id === 'image-lightbox') {
+                closeLightbox();
+            }
+        }
+
+        function deleteImageBySrc(src) {
+            saveStateForUndo();
+
+            const escapedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const markdownImgRegex = new RegExp(`!\\[[^\\]]*\\]\\(${escapedSrc}\\)`, 'g');
+            const htmlImgRegex = new RegExp(`<img[^>]*src=["']${escapedSrc}["'][^>]*>`, 'gi');
+
+            let newContent = rawContent.replace(markdownImgRegex, '').replace(htmlImgRegex, '');
+
+            if (newContent !== rawContent) {
+                rawContent = newContent;
+                parseAndBuildDocument(rawContent);
+                showToast("Đã xóa ảnh thành công! (Ctrl+Z để hoàn tác)");
+            } else {
+                const allImgs = Array.from(document.querySelectorAll('#lecture-paper img'));
+                const targetImg = allImgs.find(i => i.src === src);
+                if (targetImg) {
+                    const altText = targetImg.alt || '';
+                    const fallbackRegex = new RegExp(`!\\[${altText}\\]\\([^\\)]+\\)`, 'g');
+                    rawContent = rawContent.replace(fallbackRegex, '');
+                    parseAndBuildDocument(rawContent);
+                    showToast("Đã xóa ảnh thành công!");
+                }
+            }
+        }
+
+        function autoAddMarkdownHeaders(text) {
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+/i.test(trimmed)) {
+                    return '# ' + trimmed;
+                } else if (/^\d+\.\s+/.test(trimmed)) {
+                    return '## ' + trimmed;
+                } else if (/^([A-Z]\.|[a-z]\))\s+/.test(trimmed)) {
+                    return '### ' + trimmed;
+                }
+                return line;
+            });
+            return processedLines.join('\n');
+        }
+
+        function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                const options = {
+                    convertImage: mammoth.images.imgElement(function(image) {
+                        return image.read("base64").then(function(imageBuffer) {
+                            return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                        });
+                    })
+                };
+
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer}, options).then(function(result) {
+                    const html = result.value;
+                    const turndownService = new TurndownService({ headingStyle: 'atx' });
+                    turndownService.addRule('keepImages', {
+                        filter: 'img',
+                        replacement: function (content, node) {
+                            return `\n\n![image](${node.getAttribute('src')})\n\n`;
+                        }
+                    });
+
+                    let markdown = turndownService.turndown(html);
+                    markdown = autoAddMarkdownHeaders(markdown);
+                    document.getElementById('import-text').value = markdown;
+                    processImport();
+                    showToast("Đã đọc xong file Word!");
+                }).catch(function(err) {
+                    showToast("Lỗi khi đọc file Word: " + err.message);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndBuildDocument(markdownText) {
+            rawContent = markdownText;
+            localStorage.setItem('current_lecture', markdownText);
+            saveToHistory(markdownText);
+
+            const container = document.getElementById('lecture-paper');
+            container.innerHTML = marked.parse(markdownText);
+
+            container.querySelectorAll('img').forEach(img => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'image-wrapper';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'img-delete-btn';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = 'Xóa ảnh này khỏi bài giảng';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteImageBySrc(img.src);
+                };
+
+                img.parentNode.insertBefore(wrapper, img);
+                wrapper.appendChild(img);
+                wrapper.appendChild(deleteBtn);
+
+                img.onclick = (e) => {
+                    e.stopPropagation();
+                    openLightbox(img.src);
+                };
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([container]).catch((err) => console.log('MathJax error:', err));
+            }
+
+            reindexUnits();
+            generateTOC();
+            updateCounter();
+        }
+
+        function reindexUnits() {
+            const container = document.getElementById('lecture-paper');
+            units = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, table, .image-wrapper, hr'));
+            
+            units = units.filter(el => {
+                if (el.classList.contains('image-wrapper')) {
+                    return true;
+                }
+                return !el.parentElement.closest('blockquote, table');
+            });
+
+            units.forEach((unit, idx) => {
+                unit.classList.add('markdown-unit');
+                
+                if (!unit.classList.contains('image-wrapper')) {
+                    unit.onclick = (e) => {
+                        if (window.getSelection().toString().trim().length > 0) return;
+                        jumpToUnit(idx);
+                    };
+                }
+
+                if (idx < currentUnitIndex) {
+                    unit.classList.add('revealed');
+                } else if (idx === currentUnitIndex) {
+                    unit.classList.add('active');
+                }
+            });
+        }
+
+        function generateTOC() {
+            const tocContainer = document.getElementById('toc-container');
+            tocContainer.innerHTML = '';
+
+            const headings = units.filter(unit => ['H1', 'H2', 'H3', 'H4'].includes(unit.tagName));
+
+            if (headings.length === 0) {
+                tocContainer.innerHTML = '<li style="font-size: 13px; color: var(--text-color); padding: 8px;">Không tìm thấy mục lục tiêu đề.</li>';
+                return;
+            }
+
+            headings.forEach((heading) => {
+                const level = heading.tagName.substring(1);
+                const li = document.createElement('li');
+                li.className = `toc-item level-${level}`;
+                li.innerText = heading.innerText || heading.textContent;
+                li.dataset.unitIndex = units.indexOf(heading);
+                
+                li.onclick = () => {
+                    const targetIndex = units.indexOf(heading);
+                    if (targetIndex !== -1) {
+                        jumpToUnit(targetIndex);
+                    }
+                };
+
+                tocContainer.appendChild(li);
+            });
+        }
+
+        function highlightTOCForCurrentUnit() {
+            if (currentUnitIndex < 0 || units.length === 0) return;
+
+            let closestHeadingIndex = -1;
+            for (let i = currentUnitIndex; i >= 0; i--) {
+                if (['H1', 'H2', 'H3', 'H4'].includes(units[i].tagName)) {
+                    closestHeadingIndex = i;
+                    break;
+                }
+            }
+
+            const tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(item => {
+                item.classList.remove('active-toc');
+                if (closestHeadingIndex !== -1 && parseInt(item.dataset.unitIndex) === closestHeadingIndex) {
+                    item.classList.add('active-toc');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function jumpToUnit(index) {
+            if (index < 0 || index >= units.length) return;
+            
+            units.forEach((u, idx) => {
+                u.classList.remove('active');
+                if (idx < index) {
+                    u.classList.add('revealed');
+                } else {
+                    u.classList.remove('revealed');
+                }
+            });
+
+            currentUnitIndex = index;
+            const targetEl = units[currentUnitIndex];
+            targetEl.classList.add('active');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(targetEl);
+        }
+
+        function handlePageInputChange(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+            }
+        }
+
+        function jumpToInputValue() {
+            const inputEl = document.getElementById('page-input');
+            let val = parseInt(inputEl.value) - 1;
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val >= units.length) val = units.length - 1;
+            jumpToUnit(val);
+        }
+
+        function showNextSentence() {
+            if (units.length === 0) return;
+            if (currentUnitIndex < units.length - 1) {
+                if (currentUnitIndex >= 0) {
+                    units[currentUnitIndex].classList.remove('active');
+                    units[currentUnitIndex].classList.add('revealed');
+                }
+                currentUnitIndex++;
+                const activeEl = units[currentUnitIndex];
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateCounter();
+                highlightTOCForCurrentUnit();
+                speakUnit(activeEl);
+            }
+        }
+
+        function showPrevSentence() {
+            if (units.length === 0 || currentUnitIndex <= 0) return;
+            const activeEl = units[currentUnitIndex];
+            activeEl.classList.remove('active', 'revealed');
+
+            currentUnitIndex--;
+            const prevEl = units[currentUnitIndex];
+            prevEl.classList.remove('revealed');
+            prevEl.classList.add('active');
+            prevEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateCounter();
+            highlightTOCForCurrentUnit();
+            speakUnit(prevEl);
+        }
+
+        function replayCurrentSentence() {
+            if (currentUnitIndex >= 0 && currentUnitIndex < units.length) {
+                speakUnit(units[currentUnitIndex]);
+            }
+        }
+
+        /* PHÍM TẮT ĐIỀU HƯỚNG, SPACE (BẬT/TẮT LIGHTBOX) & UNDO/REDO */
+        document.addEventListener('keydown', (e) => {
+            const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+
+            if ((e.ctrlKey || e.metaKey) && !isInputActive) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    handleUndo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    handleRedo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'p') {
+                    e.preventDefault();
+                    printLecture();
+                    return;
+                }
+            }
+
+            if (isInputActive) return;
+
+            if (isLightboxOpen) {
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    closeLightbox();
+                } else if (e.key === 'ArrowRight') {
+                    nextImage();
+                } else if (e.key === 'ArrowLeft') {
+                    prevImage();
+                }
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (document.getElementById('save-modal').style.display === 'flex') {
+                    closeSaveModal();
+                    return;
+                }
+                if (document.getElementById('update-modal').style.display === 'flex') {
+                    closeUpdateModal();
+                    return;
+                }
+                if (document.body.classList.contains('slideshow-mode')) {
+                    toggleSlideshow();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                const updateModal = document.getElementById('update-modal');
+                if (updateModal.style.display === 'flex') closeUpdateModal();
+                else openUpdateModal();
+                return;
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                const activeEl = units[currentUnitIndex];
+                if (activeEl && activeEl.classList.contains('image-wrapper')) {
+                    const img = activeEl.querySelector('img');
+                    if (img) {
+                        openLightbox(img.src);
+                    }
+                } else {
+                    replayCurrentSentence();
+                }
+            } else if (e.key === 'ArrowRight') {
+                showNextSentence();
+            } else if (e.key === 'ArrowLeft') {
+                showPrevSentence();
+            } else if (e.key === '=' || e.key === '+') {
+                changeFontSize(2);
+            } else if (e.key === '-') {
+                changeFontSize(-2);
+            }
+        });
+
+        function saveToHistory(text) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            if (history.length === 0 || history[0].content !== text) {
+                const title = text.slice(0, 40).replace(/[#*]/g, '').trim() + '...';
+                history.unshift({ id: Date.now(), title: title, content: text, date: new Date().toLocaleDateString('vi-VN') });
+                if (history.length > 20) history.pop();
+                localStorage.setItem('lecture_history', JSON.stringify(history));
+            }
+        }
+
+        function openHistoryModal() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+
+            if (history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px;">Lịch sử trống.</div>';
+            } else {
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size: 12px; color: var(--text-color);">${item.date}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="loadHistoryItem(${item.id})">Mở</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background:#ef4444; color:#fff;">Xóa</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+
+        function loadHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            const found = history.find(item => item.id === id);
+            if (found) {
+                parseAndBuildDocument(found.content);
+                closeHistoryModal();
+                showNextSentence();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            let history = JSON.parse(localStorage.getItem('lecture_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('lecture_history', JSON.stringify(history));
+            openHistoryModal();
+        }
+
+        function clearAllHistory() {
+            localStorage.removeItem('lecture_history');
+            openHistoryModal();
+            showToast("Đã xóa toàn bộ lịch sử!");
+        }
+
+        function openImportModal() {
+            let contentToLoad = rawContent;
+            if (!contentToLoad) {
+                const embeddedElem = document.getElementById('embedded-data');
+                if (embeddedElem) {
+                    try {
+                        contentToLoad = JSON.parse(embeddedElem.textContent.trim());
+                    } catch(e) {}
+                }
+            }
+            document.getElementById('import-text').value = contentToLoad || "";
+            document.getElementById('import-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('import-text').focus();
+            }, 50);
+        }
+
+        function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+
+        function processImport() {
+            const text = document.getElementById('import-text').value;
+            if (text.trim()) {
+                parseAndBuildDocument(text);
+                closeImportModal();
+                showNextSentence();
+                showToast("Đã import thành công bài giảng!");
+            }
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById('import-text').value = e.target.result;
+                processImport();
+                showToast("Đã đọc xong file văn bản!");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyPrompt() {
+            const topic = document.getElementById('prompt-topic').value.trim() || '[TÊN CHỦ ĐỀ CỦA BẠN]';
+            const btn = document.getElementById('btn-copy-prompt');
+            const promptTemplate = `Hãy tạo một bài giảng chi tiết khoảng 1000 từ về chủ đề: "${topic}". 
+Yêu cầu:
+1. ĐÁNH SỐ VÀ PHÂN CẤP CÁC MỤC BÀI GIẢNG THEO THỨ TỰ CỤ THỂ:
+   - Cấp 1 dùng: I. II. III...
+   - Cấp 2 dùng: 1. 2. 3...
+   - Cấp 3 dùng: a) b) c)...
+2. THÊM TỪ KHÓA TIẾNG ANH TƯƠNG ỨNG CHO CÁC KHÁI NIỆM/TỪ KHÓA/NỘI DUNG QUAN TRỌNG VÀ ĐẶT TRONG DẤU NGOẠC ĐƠN ().
+3. Sử dụng định dạng Markdown đầy đủ: in đậm (**từ khóa**), in nghiêng (*chú thích*), danh sách (*).
+4. Thêm link ảnh minh họa dạng Markdown ![mô tả ảnh](https://url-anh.com) nếu phù hợp.
+5. Công thức toán học và phản ứng hóa học dùng chuẩn LaTeX bọc trong dấu $ (ví dụ $CaCO_3$) hoặc \\[...\\] / \\(...\\).
+6. Các url ảnh được cấp phía trên, đặt các url ảnh đó vào nội dung tương ứng (đặt dưới tiêu đề, nhưng trên nội dung), tất cả các url ảnh đều phải được gắn vào các nội dung phù hợp.
+7. Gửi tôi markdown nhưng dạng plain text để tôi copy.`;
+
+            navigator.clipboard.writeText(promptTemplate).then(() => {
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✅ Đã Copy!';
+                btn.classList.add('active');
+                showToast(`Đã copy Prompt AI cho chủ đề: ${topic}`);
+                
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.classList.remove('active');
+                }, 2000);
+            });
+        }
+
+        function speakUnit(element) {
+            if (!synth) return;
+            synth.cancel();
+            if (isMuted) return;
+
+            if (element.classList.contains('image-wrapper') || element.tagName.toLowerCase() === 'hr') {
+                if (isAutoplay) setTimeout(showNextSentence, 1000);
+                return;
+            }
+
+            const textToSpeak = element.innerText || element.textContent;
+            if (!textToSpeak.trim()) {
+                if (isAutoplay) setTimeout(showNextSentence, 500);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'vi-VN';
+            utterance.rate = speechRate;
+            
+            utterance.onend = () => {
+                if (isAutoplay) {
+                    setTimeout(showNextSentence, 600);
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('btn-mute');
+            if (isMuted) {
+                btn.classList.add('active');
+                if (synth) synth.cancel();
+            } else {
+                btn.classList.remove('active');
+                replayCurrentSentence();
+            }
+        }
+
+        function updateRate(val) { speechRate = parseFloat(val); replayCurrentSentence(); }
+        function changeFontSize(delta) { fontSize = Math.max(14, Math.min(50, fontSize + delta)); document.documentElement.style.setProperty('--font-size', fontSize + 'px'); }
+        
+        function updateCounter() { 
+            const pageInput = document.getElementById('page-input');
+            const totalUnitsCount = document.getElementById('total-units-count');
+            pageInput.value = currentUnitIndex + 1;
+            pageInput.max = units.length;
+            totalUnitsCount.innerText = units.length;
+        }
+
+        function openSaveModal() {
+            if (!rawContent) return showToast("Chưa có nội dung để lưu!");
+            const saveModal = document.getElementById('save-modal');
+            const filenameInput = document.getElementById('save-filename-input');
+            
+            filenameInput.value = lastSavedFilename;
+            saveModal.style.display = 'flex';
+            
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 50);
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').style.display = 'none';
+        }
+
+        function executeSaveAsHtml() {
+            const inputEl = document.getElementById('save-filename-input');
+            let filename = inputEl.value.trim();
+            if (!filename) filename = "BaiGiang_Complete.html";
+            if (!filename.toLowerCase().endsWith('.html') && !filename.toLowerCase().endsWith('.htm')) {
+                filename += '.html';
+            }
+
+            lastSavedFilename = filename;
+            localStorage.setItem('last_saved_filename', filename);
+            closeSaveModal();
+
+            let clonedDoc = document.documentElement.cloneNode(true);
+
+            let embeddedScript = clonedDoc.querySelector('#embedded-data');
+            if (embeddedScript) {
+                embeddedScript.textContent = JSON.stringify(rawContent);
+            }
+
+            let saveModalClone = clonedDoc.querySelector('#save-modal');
+            if (saveModalClone) saveModalClone.style.display = 'none';
+
+            let updateModalClone = clonedDoc.querySelector('#update-modal');
+            if (updateModalClone) updateModalClone.style.display = 'none';
+
+            let importModalClone = clonedDoc.querySelector('#import-modal');
+            if (importModalClone) importModalClone.style.display = 'none';
+
+            let historyModalClone = clonedDoc.querySelector('#history-modal');
+            if (historyModalClone) historyModalClone.style.display = 'none';
+
+            let popupClone = clonedDoc.querySelector('#selection-popup');
+            if (popupClone) popupClone.style.display = 'none';
+
+            let lightboxClone = clonedDoc.querySelector('#image-lightbox');
+            if (lightboxClone) lightboxClone.style.display = 'none';
+
+            clonedDoc.classList.remove('slideshow-mode');
+
+            const fullHtmlContent = "<!DOCTYPE html>\n" + clonedDoc.outerHTML;
+            const blob = new Blob([fullHtmlContent], { type: 'text/html;charset=utf-8' });
+            const link = document.appendLink ? document.appendLink : document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Đã lưu file thành công: ${filename}`);
+        }
+    </script>
+
+</body></html>
