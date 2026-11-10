@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Render Văn Bản AI & Đa Công Thức Toán (KaTeX / LaTeX)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- KaTeX CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- html-docx-js để xuất file Word -->
+    <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+
+    <style>
+        .markdown-body h1 { font-size: 1.75rem; font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .markdown-body h2 { font-size: 1.5rem; font-weight: bold; margin-top: 0.875rem; margin-bottom: 0.5rem; }
+        .markdown-body h3 { font-size: 1.25rem; font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.375rem; }
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body code { background-color: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; }
+        .markdown-body pre { background-color: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 0.75rem; }
+        .markdown-body pre code { background-color: transparent; color: inherit; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; color: #4b5563; font-style: italic; margin-bottom: 0.75rem; }
+        
+        .katex {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        
+        <!-- HEADER -->
+        <header class="mb-8 bg-white rounded-xl shadow-md p-6">
+            <div class="text-center mb-4">
+                <h1 class="text-3xl font-bold text-blue-600">Trình Render Văn Bản AI & Đa Công Thức Toán (KaTeX / LaTeX)</h1>
+                <p class="text-gray-600 mt-1 text-sm">Hỗ trợ tự động chuẩn hóa ký tự tiếng Việt, xử lý lỗi LaTeX từ AI, giữ nguyên định dạng và xuất file Word chuẩn xác.</p>
+            </div>
+
+            <div class="border-t pt-4 border-gray-100">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2">
+                    <label for="user-request" class="font-semibold text-gray-700 text-sm flex items-center gap-2">
+                        <span>💡 Nhập chủ đề/yêu cầu để tạo Prompt gửi AI:</span>
+                    </label>
+                    <button onclick="copyGeneratedPrompt()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm shrink-0">
+                        📋 Copy Prompt Gửi AI
+                    </button>
+                </div>
+                <textarea id="user-request" 
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm h-20 resize-none" 
+                    placeholder="Ví dụ: Giải thích định lý Pitago và cho 3 ví dụ bài tập kèm lời giải chi tiết..."></textarea>
+            </div>
+        </header>
+
+        <!-- KHU VỰC CHÍNH -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Cột 1: Nhập liệu -->
+            <div class="flex flex-col bg-white rounded-xl shadow-md p-4 h-[65vh]">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="input-text" class="font-semibold text-gray-700 text-sm">Dán văn bản AI trả về vào đây:</label>
+                    <div class="flex items-center gap-3">
+                        <!-- Nút cần gạt Sửa \\[ \\] -> \[ \] (MẶC ĐỊNH TẮT) -->
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700" title="Bật để tự động sửa cú pháp \\[ \\] bị lỗi escaped thành \[ \] giúp KaTeX hiển thị đúng công thức block">
+                            <input type="checkbox" id="fix-backslash-toggle" onchange="processContent()" class="sr-only peer">
+                            <span>Sửa \\[ \\]</span>
+                            <div class="relative w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                        <button onclick="clearInput()" class="text-xs bg-red-100 text-red-600 px-2.5 py-1 rounded hover:bg-red-200 transition">Xóa nội dung</button>
+                    </div>
+                </div>
+                <textarea id="input-text" 
+                    class="w-full flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm resize-none" 
+                    placeholder="Dán nội dung chứa các cú pháp công thức từ AI vào đây..."></textarea>
+            </div>
+
+            <!-- Cột 2: Hiển thị kết quả -->
+            <div class="flex flex-col bg-white rounded-xl shadow-md p-4 h-[65vh]">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-semibold text-gray-700 text-sm">Kết quả Render & Tùy chỉnh:</span>
+                    <div class="flex flex-wrap gap-1.5 items-center">
+                        <button onclick="addSpacingToKatex()" title="Chèn khoảng trắng thủ công đệm trước và sau mỗi công thức" class="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg transition font-medium shadow-sm">
+                            ➕ Space
+                        </button>
+                        <button onclick="exportToWord()" class="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg transition font-medium shadow-sm flex items-center gap-1">
+                            📥 Xuất Word (.docx)
+                        </button>
+                        <button onclick="copyResultFormatted()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition font-medium shadow-sm">
+                            📋 Copy Word
+                        </button>
+                        <button onclick="copyHTML()" class="text-xs bg-blue-100 text-blue-700 px-2.5 py-1.5 rounded hover:bg-blue-200 transition font-medium">HTML</button>
+                    </div>
+                </div>
+                <div id="output-preview" 
+                    class="w-full flex-grow p-4 border border-gray-200 rounded-lg overflow-y-auto markdown-body bg-gray-50 select-all" 
+                    tabindex="0">
+                    <span class="text-gray-400 italic">Kết quả hiển thị sẽ xuất hiện ở đây...</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script xử lý sự kiện -->
+    <script>
+        const inputTextArea = document.getElementById('input-text');
+        const outputPreview = document.getElementById('output-preview');
+        const userRequestArea = document.getElementById('user-request');
+        const fixBackslashToggle = document.getElementById('fix-backslash-toggle');
+
+        function preprocessAIFormats(text) {
+            let processed = text;
+
+            // Nếu cần gạt được bật mới sửa \\[ và \\] thành \[ và \]
+            if (fixBackslashToggle.checked) {
+                processed = processed.replace(/\\\\\[/g, '\\[');
+                processed = processed.replace(/\\\\\]/g, '\\]');
+            }
+
+            processed = processed.replace(/\\text\{đ([a-zA-Z0-9]*)\}/g, '\\text{d}$1');
+            processed = processed.replace(/_\{đ\}/g, '_d');
+            processed = processed.replace(/\\text\{đ\}/g, '\\text{d}');
+            processed = processed.replace(/\\begin\{equation\*?\}([\s\S]*?)\\end\{equation\*?\}/g, '$$$1$$');
+            processed = processed.replace(/\\begin\{align\*?\}([\s\S]*?)\\end\{align\*?\}/g, '$$\\begin{aligned}$1\\end{aligned}$$');
+            processed = processed.replace(/\\begin\{gather\*?\}([\s\S]*?)\\end\{gather\*?\}/g, '$$\\begin{gathered}$1\\end{gathered}$$');
+            processed = processed.replace(/\\begin\{math\}([\s\S]*?)\\end\{math\}/g, '$1$');
+            processed = processed.replace(/```(?:math|latex|katex)?\s*([\s\S]*?)\s*```/g, '$$\n$1\n$$');
+
+            return processed;
+        }
+
+        function processContent() {
+            const rawText = inputTextArea.value;
+
+            if (!rawText.trim()) {
+                outputPreview.innerHTML = '<span class="text-gray-400 italic">Kết quả hiển thị sẽ xuất hiện ở đây...</span>';
+                return;
+            }
+
+            const normalizedText = preprocessAIFormats(rawText);
+            let parsedHTML = marked.parse(normalizedText);
+            outputPreview.innerHTML = parsedHTML;
+
+            // Render cả MathML để hỗ trợ xuất Word chuẩn
+            renderMathInElement(outputPreview, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},   
+                    {left: '$', right: '$', display: false},     
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '\\(', right: '\\)', display: false}
+                ],
+                output: 'htmlAndMathml',
+                throwOnError: false 
+            });
+
+            injectNonBreakingSpaces();
+        }
+
+        function injectNonBreakingSpaces() {
+            const katexElements = outputPreview.querySelectorAll('.katex:not(.katex-display)');
+            katexElements.forEach(el => {
+                let prev = el.previousSibling;
+                let needSpaceBefore = false;
+                if (!prev) {
+                    needSpaceBefore = true;
+                } else if (prev.nodeType === Node.TEXT_NODE) {
+                    let text = prev.textContent;
+                    if (/[a-zA-Z0-9À-ỹ]$/.test(text)) {
+                        needSpaceBefore = true;
+                    }
+                }
+
+                if (needSpaceBefore) {
+                    const spaceBefore = document.createElement('span');
+                    spaceBefore.innerHTML = '&nbsp;';
+                    el.parentNode.insertBefore(spaceBefore, el);
+                }
+
+                let next = el.nextSibling;
+                let needSpaceAfter = false;
+                if (!next) {
+                    needSpaceAfter = true;
+                } else if (next.nodeType === Node.TEXT_NODE) {
+                    let text = next.textContent;
+                    if (/^[a-zA-Z0-9À-ỹ]/.test(text)) {
+                        needSpaceAfter = true;
+                    }
+                }
+
+                if (needSpaceAfter) {
+                    const spaceAfter = document.createElement('span');
+                    spaceAfter.innerHTML = '&nbsp;';
+                    el.parentNode.insertBefore(spaceAfter, el.nextSibling);
+                }
+            });
+        }
+
+        function addSpacingToKatex() {
+            injectNonBreakingSpaces();
+            alert('Đã chèn các khoảng trắng cứng chống dính chữ thành công!');
+        }
+
+        inputTextArea.addEventListener('input', processContent);
+
+        function clearInput() {
+            inputTextArea.value = '';
+            processContent();
+        }
+
+        function copyGeneratedPrompt() {
+            const userContent = userRequestArea.value.trim();
+            if (!userContent) {
+                alert('Vui lòng nhập chủ đề hoặc yêu cầu vào ô phía trên trước!');
+                userRequestArea.focus();
+                return;
+            }
+
+            const fullPrompt = `Hãy trả lời yêu cầu sau bằng định dạng Markdown hoàn chỉnh. 
+QUAN TRỌNG VỀ CÔNG THỨC TOÁN HỌC: 
+- Sử dụng cú pháp KaTeX/LaTeX chuẩn ($công_thức$ hoặc $$công_thức$$) cho toàn bộ biểu thức. Tuyệt đối không dùng dấu ngoặc đơn (...) bọc công thức toán.
+- Tuyệt đối không dùng chữ cái tiếng Việt có dấu bên trong thẻ lệnh toán học \\text{} (hãy dùng chữ cái không dấu tiếng Anh tương đương).
+- Luôn cách khoảng trắng rõ ràng giữa chữ và ký hiệu toán học.
+
+Yêu cầu cụ thể của tôi là:
+${userContent}`;
+
+            navigator.clipboard.writeText(fullPrompt).then(() => {
+                alert('Đã copy Prompt chuẩn! Bạn hãy dán vào khung chat của AI.');
+            }).catch(err => {
+                console.error('Không thể copy: ', err);
+            });
+        }
+
+        // Chuyển đổi mã KaTeX HTML sang thẻ MathML chuẩn Word Equation
+        function prepareHTMLForWord() {
+            const cloneContainer = outputPreview.cloneNode(true);
+            
+            // Xử lý các thẻ công thức KaTeX
+            const katexNodes = cloneContainer.querySelectorAll('.katex');
+            katexNodes.forEach(node => {
+                // Lấy phần MathML được KaTeX sinh ra tự động
+                const mathmlNode = node.querySelector('.katex-mathml math');
+                if (mathmlNode) {
+                    // Đảm bảo có namespace MathML đầy đủ để Word nhận diện là Equation
+                    mathmlNode.setAttribute('xmlns', 'http://www.w3.org/1998/Math/MathML');
+                    node.parentNode.replaceChild(mathmlNode.cloneNode(true), node);
+                } else {
+                    // Fallback: nếu không có MathML thì hiển thị ký hiệu text toán
+                    const annotation = node.querySelector('annotation');
+                    let latexCode = annotation ? annotation.textContent : node.textContent;
+                    const mathSpan = document.createElement('span');
+                    mathSpan.style.fontFamily = '"Cambria Math", "Times New Roman", serif';
+                    mathSpan.textContent = ` ${latexCode} `;
+                    node.parentNode.replaceChild(mathSpan, node);
+                }
+            });
+
+            return cloneContainer.innerHTML;
+        }
+
+        function exportToWord() {
+            if (!outputPreview.innerText.trim() || outputPreview.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                alert('Không có nội dung để xuất file Word!');
+                return;
+            }
+
+            injectNonBreakingSpaces();
+            const cleanHTML = prepareHTMLForWord();
+
+            const contentDoc = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                      xmlns:w='urn:schemas-microsoft-com:office:word' 
+                      xmlns:m='http://schemas.microsoft.com/office/2004/12/omml' 
+                      xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset="UTF-8">
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <w:WordDocument>
+                            <w:View>Normal</w:View>
+                            <w:Zoom>100</w:Zoom>
+                            <w:DoNotOptimizeForBrowser/>
+                        </w:WordDocument>
+                    </xml>
+                    <![endif]-->
+                    <style>
+                        body { font-family: 'Times New Roman', Times, serif; font-size: 13pt; line-height: 1.5; color: #000; }
+                        h1 { font-size: 18pt; font-weight: bold; color: #1a56db; margin-top: 12pt; margin-bottom: 6pt; }
+                        h2 { font-size: 15pt; font-weight: bold; color: #1e40af; margin-top: 10pt; margin-bottom: 4pt; }
+                        h3 { font-size: 13pt; font-weight: bold; margin-top: 8pt; margin-bottom: 2pt; }
+                        p { margin-bottom: 6pt; text-align: justify; }
+                        pre { background-color: #f3f4f6; padding: 8px; font-family: 'Courier New', Courier, monospace; font-size: 11pt; }
+                        code { font-family: 'Courier New', Courier, monospace; background-color: #f3f4f6; padding: 2px 4px; }
+                        blockquote { border-left: 3px solid #3b82f6; padding-left: 10px; margin-left: 0; font-style: italic; color: #4b5563; }
+                        math { font-family: 'Cambria Math', serif; }
+                    </style>
+                </head>
+                <body>
+                    ${cleanHTML}
+                </body>
+                </html>
+            `;
+
+            try {
+                const converted = htmlDocx.asBlob(contentDoc);
+                const url = URL.createObjectURL(converted);
+                const downloadLink = document.createElement('a');
+                downloadLink.href = url;
+                downloadLink.download = 'Van_Ban_Va_Cong_Thuc_Toan.docx';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Lỗi khi xuất file Word: ', err);
+                alert('Có lỗi xảy ra khi tạo file Word. Vui lòng thử lại!');
+            }
+        }
+
+        function copyResultFormatted() {
+            if (!outputPreview.innerText.trim() || outputPreview.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                alert('Không có nội dung kết quả để copy!');
+                return;
+            }
+
+            injectNonBreakingSpaces();
+
+            const cleanHTML = prepareHTMLForWord();
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cleanHTML;
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            document.body.appendChild(tempDiv);
+
+            const range = document.createRange();
+            range.selectNodeContents(tempDiv);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    alert('Đã sao chép toàn bộ kết quả sang Word thành công! Bây giờ bạn hãy dán (Ctrl + V) vào Word.');
+                } else {
+                    alert('Trình duyệt không hỗ trợ lệnh sao chép tự động này.');
+                }
+            } catch (err) {
+                console.error('Lỗi khi copy sang Word: ', err);
+            }
+
+            selection.removeAllRanges();
+            document.body.removeChild(tempDiv);
+        }
+
+        function copyHTML() {
+            const htmlContent = outputPreview.innerHTML;
+            if (!outputPreview.innerText.trim() || outputPreview.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                alert('Không có kết quả render để copy HTML!');
+                return;
+            }
+            navigator.clipboard.writeText(htmlContent).then(() => {
+                alert('Đã sao chép mã HTML vào bộ nhớ tạm!');
+            }).catch(err => {
+                console.error('Không thể sao chép: ', err);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            userRequestArea.value = "Giải thích định luật bảo toàn cơ năng và ví dụ bài tập.";
+            inputTextArea.value = `# Bài tập mẫu
+
+Khối lượng vật là $1000\\text{ kg}$ chuyển động với vận tốc thay đổi.
+
+\\[ \\frac{W_{\\text{dB}}}{W_{\\text{dA}}} = \\frac{v_B^2}{v_A^2} \\]
+
+Thay số:
+\\[ \\frac{W_{\\text{dB}}}{W_{\\text{dA}}} \\left(\\frac{20}{10}\\right)^2 = 4 \\]
+
+Biến thiên thế năng:
+$$ \\Delta W_{\\text{t}} = W_{\\text{t2}} - W_{\\text{t1}} $$`;
+            processContent();
+        });
+    </script>
+</body>
+</html>
