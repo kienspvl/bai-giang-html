@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson Viewer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\[', right: '\\]', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false}
+      ],
+      throwOnError: false
+    });"></script>
+  <style>
+    :root {
+      --base-font-size: 1.25rem;
+      --bg-color: #f4f7fb;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --accent: #0d9488;
+      --accent-light: #ccfbf1;
+      --border-color: #cbd5e1;
+      --highlight-bg: #fef9c3;
+      --highlight-border: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-size: var(--base-font-size);
+      line-height: 1.65;
+      padding-bottom: 120px;
+      transition: background-color 0.3s ease;
+    }
+
+    body.hide-captions .img-caption {
+      display: none !important;
+    }
+
+    /* Navigation & Control Bar - Optimized for space */
+    #control-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 8px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    body.hud-hidden #control-bar,
+    body.hud-hidden #bottom-nav,
+    body.hud-hidden #toc-drawer {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-20px);
+    }
+
+    body.hud-hidden #bottom-nav {
+      transform: translateY(20px);
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      color: #ffffff;
+    }
+
+    .btn-info {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      padding: 0;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .btn-info:hover {
+      background: #0f766e;
+      color: #ffffff;
+    }
+
+    .btn-copy-prompt {
+      background: #10b981;
+      border-color: #10b981;
+      color: #ffffff;
+    }
+
+    .btn-copy-prompt:hover {
+      background: #059669;
+      color: #ffffff;
+    }
+
+    /* Speed Select Dropdown */
+    .speed-select {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 8px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .speed-select:hover {
+      border-color: var(--primary);
+    }
+
+    /* Toggle Switch */
+    .switch-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1;
+      transition: .3s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+      z-index: 1001;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1080px;
+      margin: 80px auto 40px;
+      padding: 0 24px;
+      font-size: var(--base-font-size);
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #0369a1 0%, #0d9488 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2);
+    }
+
+    .hero-card h1 {
+      font-size: 1.8em;
+      line-height: 1.3;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-card .subtitle {
+      font-size: 1.35em;
+      font-weight: 700;
+      color: #fef08a;
+      margin-bottom: 16px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.18);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      backdrop-filter: blur(4px);
+    }
+
+    section.lesson-section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    h2 {
+      font-size: 1.45em;
+      color: var(--primary-dark);
+      border-bottom: 3px solid var(--primary-light);
+      padding-bottom: 10px;
+      margin-bottom: 22px;
+    }
+
+    h3 {
+      font-size: 1.22em;
+      color: var(--accent);
+      margin-top: 26px;
+      margin-bottom: 14px;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      margin-left: 28px;
+      margin-bottom: 18px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    /* Table Styling */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      font-size: var(--base-font-size);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+    }
+
+    th {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    tr:hover {
+      background: #f8fafc;
+    }
+
+    .callout {
+      background: var(--primary-light);
+      border-left: 5px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .callout-warn {
+      background: var(--highlight-bg);
+      border-left: 5px solid var(--highlight-border);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .formula-box {
+      background: #f8fafc;
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin: 20px auto;
+      text-align: center;
+      font-size: 1.3em;
+      font-weight: 700;
+      color: var(--primary-dark);
+      max-width: 580px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    }
+
+    /* Image Gallery Grid */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .img-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .img-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+    }
+
+    .img-card img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: zoom-in;
+    }
+
+    .img-caption {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Step-by-Step Reveal Mechanics */
+    .reveal-item {
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  background-color 0.6s ease;
+    }
+
+    body.step-mode .reveal-item.hidden-step {
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      height: 0;
+      overflow: hidden;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+    }
+
+    body.step-mode .reveal-item.active-step {
+      border-radius: 8px;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+      background-color: rgba(224, 242, 254, 0.35);
+    }
+
+    /* Bottom Floating Navigation (Glassmorphic) */
+    #bottom-nav {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    #bottom-nav button {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    #bottom-nav button:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    #step-counter {
+      font-size: 0.9rem;
+      font-weight: 600;
+      min-width: 80px;
+      text-align: center;
+      color: var(--primary-dark);
+    }
+
+    /* TOC Drawer */
+    #toc-drawer {
+      position: fixed;
+      top: 60px;
+      left: 16px;
+      width: 320px;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      z-index: 999;
+      display: none;
+    }
+
+    #toc-drawer.open {
+      display: block;
+    }
+
+    #toc-drawer h4 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+
+    #toc-list {
+      list-style: none;
+      margin: 0;
+    }
+
+    #toc-list li {
+      margin-bottom: 6px;
+    }
+
+    #toc-list a {
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      display: block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    #toc-list a:hover {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Selection Popup Menu */
+    #selection-popup {
+      position: absolute;
+      display: none;
+      background: var(--card-bg);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 8px;
+      z-index: 4000;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+    }
+
+    #selection-popup.open {
+      display: flex;
+    }
+
+    .popup-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    .popup-btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    /* Lightbox Modal */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.94);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 24px;
+    }
+
+    #lightbox.open {
+      display: flex;
+    }
+
+    #lightbox img {
+      max-width: 92vw;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transition: transform 0.2s ease;
+    }
+
+    #lightbox-caption {
+      color: #f1f5f9;
+      margin-top: 14px;
+      font-size: 1.05rem;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 28px;
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lightbox-close:hover {
+      background: #ef4444;
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .lightbox-nav:hover {
+      background: var(--primary);
+    }
+
+    #lb-prev { left: 24px; }
+    #lb-next { right: 24px; }
+
+    /* Modals - Theme-compatible styling */
+    .custom-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      padding: 20px;
+      font-size: 1rem !important;
+    }
+
+    .custom-modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      color: var(--text-main);
+      width: 100%;
+      max-width: 650px;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 90vh;
+      overflow-y: auto;
+      font-size: 1rem !important;
+    }
+
+    .modal-content h3 {
+      color: var(--primary-dark);
+      margin: 0;
+      font-size: 1.25rem !important;
+    }
+
+    .modal-content textarea, 
+    .modal-content input, 
+    .modal-content p, 
+    .modal-content label, 
+    .modal-content span, 
+    .modal-content button {
+      font-size: 1rem !important;
+    }
+
+    .modal-content textarea {
+      width: 100%;
+      height: 200px;
+      padding: 12px;
+      background: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    .modal-content input[type="text"],
+    .modal-content input[type="number"] {
+      background: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .prompt-generator-box {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 14px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .form-row input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .form-row input[type="number"] {
+      width: 90px;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .info-box {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: 10px;
+      line-height: 1.6;
+    }
+
+    /* Shortcut list table inside modal */
+    .shortcut-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .shortcut-table th, .shortcut-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95rem;
+    }
+    .shortcut-table th {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    kbd {
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: 700;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+    }
+
+    @media (max-width: 768px) {
+      section.lesson-section { padding: 20px; }
+      .hero-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body class="step-mode">
+
+  <!-- Progress Bar -->
+  <div id="progress-container"><div id="progress-bar" style="width: 1.1236%;"></div></div>
+
+  <!-- Top Control Bar (Optimized & Minimized) -->
+  <header id="control-bar">
+    <div class="nav-group">
+      <button class="btn" id="btn-toc" title="Mục lục">☰</button>
+      <button class="btn btn-primary" id="btn-import-modal" title="Import Markdown">📂 Import</button>
+      <button class="btn" id="btn-save" title="Lưu tệp">💾 Lưu</button>
+      <button class="btn btn-info" id="btn-info-modal" title="Thông tin tác giả (Key I)">ℹ</button>
+      <button class="btn" id="btn-shortcuts-modal" title="Phím tắt (Key G)">⌨️ Phím tắt</button>
+    </div>
+
+    <div class="nav-group">
+      <div class="switch-wrapper" title="Chế độ hiển thị">
+        <span>Từng bước</span>
+        <label class="switch">
+          <input type="checkbox" id="mode-toggle">
+          <span class="slider"></span>
+        </label>
+        <span>Tất cả</span>
+      </div>
+
+      <div class="switch-wrapper" title="Ẩn/Hiện Caption ảnh">
+        <span>Caption</span>
+        <label class="switch">
+          <input type="checkbox" id="caption-toggle" checked="">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="btn" id="btn-font-dec" title="Giảm cỡ chữ (Key -)">A-</button>
+      <span id="font-size-label" style="font-size: 0.85rem; font-weight: 700; min-width: 48px; text-align: center;">1.25rem</span>
+      <button class="btn" id="btn-font-inc" title="Tăng cỡ chữ (Key +)">A+</button>
+      
+      <!-- Speech Speed Dropdown (Default 2x) -->
+      <select id="speech-speed" class="speed-select" title="Tốc độ đọc">
+        <option value="1">1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2" selected="">2x</option>
+        <option value="2.5">2.5x</option>
+        <option value="3">3x</option>
+        <option value="4">4x</option>
+      </select>
+
+      <div class="switch-wrapper" title="Bật/Tắt tiếng (Key M)">
+        <span>🔇</span>
+        <label class="switch">
+          <input type="checkbox" id="mute-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="btn" id="btn-hud" title="Ẩn/Hiện thanh điều khiển (Key H)">👁️</button>
+    </div>
+  </header>
+
+  <!-- Table of Contents Drawer -->
+  <nav id="toc-drawer">
+    <h4>Mục lục bài học</h4>
+    <ul id="toc-list"><li><a href="#heading-0">I. Gió Tín phong là gì?</a></li><li><a href="#heading-1">II. Vì sao Trái Đất có các đai áp thấp và áp cao?</a></li><li><a href="#heading-2" style="padding-left: 20px; font-size: 0.88rem;">1. Vì sao có áp thấp Xích đạo?</a></li><li><a href="#heading-3" style="padding-left: 20px; font-size: 0.88rem;">2. Vì sao có áp cao chí tuyến ở khoảng 30° Bắc và Nam?</a></li><li><a href="#heading-4" style="padding-left: 20px; font-size: 0.88rem;">3. Vì sao có áp thấp ôn đới ở khoảng 60° Bắc và Nam?</a></li><li><a href="#heading-5" style="padding-left: 20px; font-size: 0.88rem;">4. Vì sao hai cực lại có áp cao?</a></li><li><a href="#heading-6">III. Sơ đồ tổng hợp 7 đai khí áp trên Trái Đất</a></li><li><a href="#heading-7">IV. Gió Tín phong hình thành như thế nào?</a></li><li><a href="#heading-8">V. Ghi nhớ – Hiểu bản chất hiện tượng</a></li><li><a href="#heading-9">Thấp – Cao – Thấp – Cao</a></li></ul>
+  </nav>
+
+  <!-- Selection Popup Menu -->
+  <div id="selection-popup" class="" style="top: -50px; left: -130px;">
+    <button class="popup-btn" id="popup-google-img">🖼️ Google Img</button>
+    <button class="popup-btn" id="popup-gif">🎬 GIF</button>
+    <button class="popup-btn" id="popup-speak">🔊 Đọc</button>
+    <button class="popup-btn" id="popup-google-search">🔍 Tìm kiếm</button>
+  </div>
+
+  <!-- Main Content -->
+  <main id="lesson-content">
+              <div class="hero-card" id="sec-intro">
+                <h1 class="reveal-item active-step">BÀI GIẢNG: GIÓ TÍN PHONG – SỰ HÌNH THÀNH VÀ QUY LUẬT HOẠT ĐỘNG</h1>
+            <div class="hero-meta reveal-item hidden-step"><span class="badge">MÔN ĐỊA LÍ · KHÍ QUYỂN VÀ HOÀN LƯU KHÍ QUYỂN</span></div>
+</div>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" id="heading-0">I. Gió Tín phong là gì?</h2>
+            <div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/4GXcC8FIQ3aeLIrxxtUzA2LiDWbPTi31IFhmDJlWdpBfQzn-I7T0SwGnjrwbeJI7V_0DQ2FcgofQzp_-brnSuaFbUnbolzMTmcQ86YKeO7hLpIHWXwi7F1Bse4ui3d1eEoMt9XUCwEi41zA7Vrwzcr1SPYHx2j6DjshcsI8tPIA?purpose=inline" alt="Meteorologische artikelen">
+                <div class="img-caption">Meteorologische artikelen</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/IzIjpZucJZ5QLvRZH3PnRHbT-l2YPQd3XhHsxQTmaBqYxxF9SSbuPdU-bZVsP3oDCaDMOfoRyGwrMA7oXr0y75CzK8ak92DqSsXk0ec960ZgjwD4UG0A_Dt_DoBmqijno5odw6ca7s5zpU_NGX-3feS4s0mCU__cl9kEOkOgwNE?purpose=inline" alt="World Wind Belts — Free Printable Diagram for Teachers | Kuraplan">
+                <div class="img-caption">World Wind Belts — Free Printable Diagram for Teachers | Kuraplan</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/HgbMkNa3gbSzZPStphUni9DBr0K8I4aKwBvAHb3EY3aR6v-s5jPLYYlr-XiiTAqEEUlzYnbxYFZxehvW1WKgCST2Ryn3WxVWQCGbQCmplOT-KCkRGcbfDojw58ogYY6khqqZEAO89GiOFaG00cOaNzQbi0ReznsVlUfoOoO5DXk?purpose=inline" alt="Winds: Facts and Information | Q-files - Q-files - Search • Read • Discover">
+                <div class="img-caption">Winds: Facts and Information | Q-files - Q-files - Search • Read • Discover</div>
+              </div>
+            </div><p class="reveal-item hidden-step">Gió Tín phong (Trade Winds) là loại gió thổi thường xuyên quanh năm từ các khu vực áp cao chí tuyến (Subtropical High Pressure Belts) về khu vực áp thấp Xích đạo (Equatorial Low Pressure Belt).</p>
+<ul class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Ở bán cầu Bắc, gió có hướng Đông Bắc.</li>
+<li class="reveal-item hidden-step">Ở bán cầu Nam, gió có hướng Đông Nam.</li>
+<li class="reveal-item hidden-step">Gió thổi tương đối ổn định, ít thay đổi hướng theo mùa so với gió mùa.</li>
+</ul>
+<p class="reveal-item hidden-step">Tên gọi Tín phong gắn với tính chất thổi khá đều đặn, từng giúp các tàu buồm lựa chọn tuyến hàng hải vượt đại dương.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" id="heading-1">II. Vì sao Trái Đất có các đai áp thấp và áp cao?</h2>
+            <p class="reveal-item hidden-step">Đây là phần quan trọng nhất để hiểu nguồn gốc của gió Tín phong. Trái Đất có sự phân bố nhiệt độ và khí áp không đồng đều theo vĩ độ. Sự khác biệt này tạo nên các đai khí áp xen kẽ.</p>
+<h3 class="reveal-item hidden-step" id="heading-2">1. Vì sao có áp thấp Xích đạo?</h3>
+<div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/rec5jsLoHDnTwra7fvw6_f_DOOgdy9l_4bKF9RQATYNQSLQbq11ZsM98Cj64g9jzVAIN1WeXcZ3HUKYk6brl99Ln7Jzk8xi23nY7JZk7fOthGdnhxV_ALc3Lc8xbQClCLEWxI_IMaezbvYP98izsFAQ2e4gp3j52RO8z_6PbyqE?purpose=inline" alt="Jet stream - MeteoSwiss">
+                <div class="img-caption">Jet stream - MeteoSwiss</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/KZ9z74GDaj98GcVu9D1n5mWKPjVl_HXDJHJZUHNJcm29MkxnYZzZTfyj75nRFjrPEgpz1kX1ugUIU0PiMrI6qB0-DgyQYdnC4mKGvElkN-taXigm1n5_zVHvIkU6ZTYSSG9gIon9S5OMcU3DNRGnyjnHaZMYEVo3K7I8_t18oH4?purpose=inline" alt="Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento">
+                <div class="img-caption">Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/py_IyQ5dt9hPSscHFnX6z33Tq0ukt3Kq0xk9kBZhFhq5WMBcKaiJJIozsAMntjcVXRF0QmoGdAJIcIFlP3PL0mXaptOcnkOxpZgZWlNEph-jyTdsrUnPePqeRW-8u5kioN6K8CEp6B_5kEnJx410o7L7AdaK6cd1CTalzgbI0T0?purpose=inline" alt="Innertropische Konvergenzzone limitiert Klimavorhersagen im tropischen Atlantik">
+                <div class="img-caption">Innertropische Konvergenzzone limitiert Klimavorhersagen im tropischen Atlantik</div>
+              </div>
+            </div><ul class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Khu vực Xích đạo nhận được lượng bức xạ Mặt Trời lớn quanh năm.</li>
+<li class="reveal-item hidden-step">Bề mặt Trái Đất nóng lên, làm không khí phía trên nóng, nở ra và có xu hướng bốc lên cao.</li>
+<li class="reveal-item hidden-step">Không khí ở tầng thấp hội tụ từ hai bán cầu về khu vực này để thay thế lượng không khí đang bốc lên.</li>
+</ul>
+<p class="reveal-item hidden-step">Kết quả: hình thành đai áp thấp Xích đạo (Equatorial Low Pressure Belt).</p>
+<p class="reveal-item hidden-step">Đây cũng là khu vực thường có mây đối lưu, mưa lớn và dông nhiều.</p>
+<h3 class="reveal-item hidden-step" id="heading-3">2. Vì sao có áp cao chí tuyến ở khoảng 30° Bắc và Nam?</h3>
+<div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/N5Rj59C1WA2Y_TkHV546r4DvGkxoar3qSHm94vJqwKJZT_ld58bP6YcEwGPGRWTuKyuV6iWsWG7AxMeRhFT5fYC15UQYwpDrnACr0s9A3EOldQViL_-CpExoavJBHMPmPJc7-dj8mh-T9GKGab6QIY3WpHhYiELy89azxCijBdg?purpose=inline" alt="Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento">
+                <div class="img-caption">Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/MptgRUjqNu5jisTt1w_T67KCIrKZTZLIaxXnRnI007ME3exl8PIK5h6CM841gggOyMVAFQy7LaSU7V7_-j8WP-Upr_TriObXhmE557acquorv9r0P8TOcIFNIAmblV2SZ0RtjpjZ2eDgVp4om6wajCynwgjTx-ENQ5Q4FB4G-eM?purpose=inline" alt="PPT - Understanding Earth's Energy Balance: Global Transfer &amp; Circulation PowerPoint Presentation - ID:3036904">
+                <div class="img-caption">PPT - Understanding Earth's Energy Balance: Global Transfer &amp; Circulation PowerPoint Presentation - ID:3036904</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/97knLPfkBT2VkpZYmQJDqdJIG2LgtyfPh1Cmr1XWebgSGkCAjMmbVaR26PWtP2NWZXv-tEu8tqiyYXZme27zeCty3QuXnIyJ7b1q7jprx-lx0twP8qKKZ0v9Mt6SIYJuz5Y6Hz1xjTipD-IQkYkTucewPE-2kP2sInpCm-MI-GY?purpose=inline" alt="3. Wereldwijde luchtstromen | klimaatvwo4">
+                <div class="img-caption">3. Wereldwijde luchtstromen | klimaatvwo4</div>
+              </div>
+            </div><p class="reveal-item hidden-step">Đây là kết quả của quá trình hoàn lưu khí quyển, đặc biệt là tế bào Hadley (Hadley Cell).</p>
+<ul class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Không khí nóng bốc lên ở Xích đạo.</li>
+<li class="reveal-item hidden-step">Khi lên cao, không khí lan truyền về phía hai cực.</li>
+<li class="reveal-item hidden-step">Trong quá trình di chuyển, không khí nguội đi và dần mất độ ẩm do mưa ở vùng nhiệt đới.</li>
+<li class="reveal-item hidden-step">Đến khoảng 30° vĩ Bắc và Nam, không khí trong nhánh hoàn lưu này chuyển động đi xuống.</li>
+<li class="reveal-item hidden-step">Không khí đi xuống làm tăng khối lượng không khí ở tầng thấp, tạo vùng áp cao.</li>
+</ul>
+<p class="reveal-item hidden-step">Kết quả: hình thành đai áp cao chí tuyến (Subtropical High Pressure Belts).</p>
+<p class="reveal-item hidden-step">Đặc điểm: khu vực này thường có không khí đi xuống, khô và ít mưa, góp phần hình thành nhiều hoang mạc lớn trên thế giới.</p>
+<h3 class="reveal-item hidden-step" id="heading-4">3. Vì sao có áp thấp ôn đới ở khoảng 60° Bắc và Nam?</h3>
+<div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/-cCKJ3MJVRgKNbjC31Z157pw-wkwX9qmrK-peK5sbDU5QKEgvbL6OzZFSxsXhpHb1ExbKv_JWmoifFP7Eg5Kn47c2qvVOpSl6CeJJVXada93XnuqXp7qH5TzjES599FmcjNEF-7Hkqmrz0b7O--X7RtcvHzD3HWKjyfcRLNK82E?purpose=inline" alt="Global Pattern of Surface Pressure and Wind Global">
+                <div class="img-caption">Global Pattern of Surface Pressure and Wind Global</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/SK6lxTsZDBsko2KqUPOLq22YsE9aR3dBRChvUJJUw25jtppeWY9gbgiAra-oPdE33CD66TNP1wKfxM_tJZXl8gMU7uT3xM3uQHdGJuSz-Zk3K_tR5tJo3Us2f7jmai30lA9ol9Vd91eLE48WizFsUec_82byjVXRQTPeFt_qyrw?purpose=inline" alt="Rules of the Air- Visual Flight Rules (VFRs) Flashcards | Quizlet">
+                <div class="img-caption">Rules of the Air- Visual Flight Rules (VFRs) Flashcards | Quizlet</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/cWPM_W4Uwimx2zwVj5B7Lq1WunIfdaH0De9dA2NWZWGigK0G-cyHxzX6RfBsA01GYLoIfvJHUSVsG0WGO2mUej51qtaBd7-JA1EXlnT4yfv-bpNDZ2gpuBpdcjhedtnmHHJLOacHSwRsY8wgkwnhEkxWS92wxgWESxIrECtPK-w?purpose=inline" alt="Temperate Cyclone - Pan Geography">
+                <div class="img-caption">Temperate Cyclone - Pan Geography</div>
+              </div>
+            </div><p class="reveal-item hidden-step">Khác với áp thấp Xích đạo, áp thấp ôn đới (Subpolar Low Pressure Belt) chủ yếu hình thành do sự hội tụ của các khối khí và hoàn lưu khí quyển.</p>
+<ul class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Ở khoảng 60° vĩ độ, gió Tây ôn đới (Westerlies) từ phía chí tuyến thổi về.</li>
+<li class="reveal-item hidden-step">Gió Đông cực (Polar Easterlies) từ vùng cực thổi về phía ôn đới.</li>
+<li class="reveal-item hidden-step">Hai luồng gió gặp nhau, tạo nên vùng hội tụ tại frông cực (Polar Front).</li>
+<li class="reveal-item hidden-step">Không khí tương đối ấm gặp không khí lạnh, bị đẩy lên cao, làm giảm khí áp ở tầng thấp.</li>
+</ul>
+<p class="reveal-item hidden-step">Kết quả: hình thành đai áp thấp ôn đới, thường có thời tiết biến động, nhiều xoáy thuận và mưa.</p>
+<h3 class="reveal-item hidden-step" id="heading-5">4. Vì sao hai cực lại có áp cao?</h3>
+<div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/b3Xn-RFW9oaqDiV4wMjxFIi-rzbkOfCt7FwYeFgDYkDr1kMHK5SL-RI1TrFdp498YM9vVUnoE1r1MpjbkIumQHx8-A0Qdw02pdXBLfrrXkZK2BA7xQjOhXW4rX_M20IU9AxebiPleD0lzp9tBJVxA882VMzOu8FD-k6PEQqvvks?purpose=inline" alt="Polar Atmosphere">
+                <div class="img-caption">Polar Atmosphere</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/KQRaxEH-pT9-IkTRnwDjd7teK3t0ADM0pneWwvQdCIfAY9s4pik_wfA6WTHYrhJCOj2gtbE6oCqVa1nubq0IHWkKoEQ0jFyceweDiMkV-X0Kvt1K6T1KHLRnqCCzXrk_YkOZsX4p8vPprmaCQbPZJWUI3CbwXPVr9Rlg48P4SR8?purpose=inline" alt="PPT - Unit 2: Surface Processes and the Hydrosphere PowerPoint Presentation - ID:5990855">
+                <div class="img-caption">PPT - Unit 2: Surface Processes and the Hydrosphere PowerPoint Presentation - ID:5990855</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/lqHDfDsKg0HPZ34jsordrYgMunoJ7RzlgKAzBWAslPu7Bercwz4j27jtO3sVVKNbVUDACmurG0om5ASfD2rbfE4fLG2YLmynLKrfcWrEoJbWTEDyuwjfiA_bUq-it7gIKZfH6KX7fBvGRNTQPzdmAruYXzeyhigGyxIDCjwFa4E?purpose=inline" alt="Notes for 2.4C The tricellular mode of atmospheric circulation - IB | RevisionDojo">
+                <div class="img-caption">Notes for 2.4C The tricellular mode of atmospheric circulation - IB | RevisionDojo</div>
+              </div>
+            </div><ul class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Hai vùng cực nhận được rất ít năng lượng Mặt Trời trong phần lớn thời gian trong năm.</li>
+<li class="reveal-item hidden-step">Không khí bị làm lạnh mạnh, trở nên lạnh, đặc và có xu hướng chìm xuống.</li>
+<li class="reveal-item hidden-step">Không khí chìm làm tăng khối lượng không khí ở tầng thấp.</li>
+</ul>
+<p class="reveal-item hidden-step">Kết quả: hình thành đai áp cao cực (Polar High Pressure Belts).</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" id="heading-6">III. Sơ đồ tổng hợp 7 đai khí áp trên Trái Đất</h2>
+            <div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/d3hlPKYd8lS1T5xQOHJQRJ2-tPjwJgD2y48T3XXlMaP1B6I_6BfjnsZShvGMLAYGY9gehGToI4yX_NW6xLCsZTaJMrgH002ogBOLxDZdR1ot4iRnSwKZ_BJD54zzm5OJDQPrHtuxiBQQ2ys4IggmcdoxkFweK8Imsker8AnsOJo?purpose=inline" alt="Pressure Belts of the Earth: Types, Significance, Shifting, Impact &amp; UPSC Notes">
+                <div class="img-caption">Pressure Belts of the Earth: Types, Significance, Shifting, Impact &amp; UPSC Notes</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://testbook.com/ias-preparation/pressure-belts-of-the-earth?utm_source=chatgpt.com" alt="testbook.com">
+                <div class="img-caption">testbook.com</div>
+              </div>
+            </div><div class="table-container reveal-item hidden-step"><table><thead><tr><th>Vĩ độ gần đúng</th><th>Đai khí áp</th><th>Nguyên nhân chính</th></tr></thead><tbody><tr class="reveal-item hidden-step"><td>90° Bắc</td><td>Áp cao cực</td><td>Không khí lạnh chìm xuống</td></tr><tr class="reveal-item hidden-step"><td>60° Bắc</td><td>Áp thấp ôn đới</td><td>Hội tụ, không khí bốc lên</td></tr><tr class="reveal-item hidden-step"><td>30° Bắc</td><td>Áp cao chí tuyến</td><td>Nhánh không khí đi xuống</td></tr><tr class="reveal-item hidden-step"><td>0°</td><td>Áp thấp Xích đạo</td><td>Nóng, không khí bốc lên</td></tr><tr class="reveal-item hidden-step"><td>30° Nam</td><td>Áp cao chí tuyến</td><td>Nhánh không khí đi xuống</td></tr><tr class="reveal-item hidden-step"><td>60° Nam</td><td>Áp thấp ôn đới</td><td>Hội tụ, không khí bốc lên</td></tr><tr class="reveal-item hidden-step"><td>90° Nam</td><td>Áp cao cực</td><td>Không khí lạnh chìm xuống</td></tr></tbody></table></div>
+<p class="reveal-item hidden-step">Lưu ý: Đây là mô hình phân bố trung bình, các đai khí áp thực tế có thể dịch chuyển theo mùa và bị ảnh hưởng bởi lục địa, đại dương.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" id="heading-7">IV. Gió Tín phong hình thành như thế nào?</h2>
+            <div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/LryMGmD6sZ6wuW8U8TaBUjLnoR0rDSK3HBIeZJUv_rwH19vxBD3GCZWxnf6jwFt2uNJSkuI6p-XlbbGEJWO7TxC4pD-yw8UZoRNGT52lBOe3galzX-tzZt7JKk774JDLExwTvucqSdTpQSimeKLP0mcYd9Y8GWQFX2jsh_MMaLY?purpose=inline" alt="8.2: Atmosphere of the Earth - Physics LibreTexts">
+                <div class="img-caption">8.2: Atmosphere of the Earth - Physics LibreTexts</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/N5Rj59C1WA2Y_TkHV546r4DvGkxoar3qSHm94vJqwKJZT_ld58bP6YcEwGPGRWTuKyuV6iWsWG7AxMeRhFT5fYC15UQYwpDrnACr0s9A3EOldQViL_-CpExoavJBHMPmPJc7-dj8mh-T9GKGab6QIY3WpHhYiELy89azxCijBdg?purpose=inline" alt="Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento">
+                <div class="img-caption">Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/HgbMkNa3gbSzZPStphUni9DBr0K8I4aKwBvAHb3EY3aR6v-s5jPLYYlr-XiiTAqEEUlzYnbxYFZxehvW1WKgCST2Ryn3WxVWQCGbQCmplOT-KCkRGcbfDojw58ogYY6khqqZEAO89GiOFaG00cOaNzQbi0ReznsVlUfoOoO5DXk?purpose=inline" alt="Winds: Facts and Information | Q-files - Q-files - Search • Read • Discover">
+                <div class="img-caption">Winds: Facts and Information | Q-files - Q-files - Search • Read • Discover</div>
+              </div>
+            </div><p class="reveal-item hidden-step">Gió Tín phong hình thành do sự chênh lệch khí áp giữa áp cao chí tuyến và áp thấp Xích đạo.</p>
+<p class="reveal-item hidden-step">Quá trình diễn ra như sau:</p>
+<ol class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Không khí đi xuống tại khu vực áp cao chí tuyến.</li>
+<li class="reveal-item hidden-step">Một phần không khí ở tầng thấp di chuyển về phía áp thấp Xích đạo.</li>
+<li class="reveal-item hidden-step">Do lực Coriolis (Coriolis Effect), hướng gió bị lệch:</li>
+</ol>
+<ul class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Bán cầu Bắc: lệch về bên phải, tạo thành gió Đông Bắc.</li>
+<li class="reveal-item hidden-step">Bán cầu Nam: lệch về bên trái, tạo thành gió Đông Nam.</li>
+</ul>
+<ol class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Hai luồng gió hội tụ tại khu vực Xích đạo.</li>
+</ol>
+<div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/f44vkY_WrN-Pj3w8mK0av1bjPgebQHaKgvqiGQ4rP6uygP50XRiO1s-0rx-gN3qJ5rNg6S2ZYgZpagti7-5lrXUI0BsNNCRKPhTkLJ4iNU202m_PTKS7m76JkpRKBmJ3oWzAZuuv3D-YY3gz-c_-gWLNWxr3Wz37f79rZyOhBE0?purpose=inline" alt="如何科学地成为“雨神”，萧敬腾看了都要直呼内行|赤道|季风|降水|降雨|地球_新浪新闻">
+                <div class="img-caption">如何科学地成为“雨神”，萧敬腾看了都要直呼内行|赤道|季风|降水|降雨|地球_新浪新闻</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://k.sina.cn/article_6794763476_194ffdcd4019016jfs.html?utm_source=chatgpt.com" alt="k.sina.cn">
+                <div class="img-caption">k.sina.cn</div>
+              </div>
+            </div></section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" id="heading-8">V. Ghi nhớ – Hiểu bản chất hiện tượng</h2>
+            <p class="reveal-item hidden-step">Tại sao lại có áp thấp Xích đạo – áp cao chí tuyến – áp thấp ôn đới?</p>
+<ul class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Xích đạo: nóng mạnh → không khí bốc lên → áp thấp nhiệt lực.</li>
+<li class="reveal-item hidden-step">Chí tuyến: không khí đi xuống từ nhánh hoàn lưu Hadley → áp cao động lực.</li>
+<li class="reveal-item hidden-step">Ôn đới: các luồng khí hội tụ ở khoảng 60° → không khí bốc lên → áp thấp động lực.</li>
+<li class="reveal-item hidden-step">Hai cực: không khí lạnh, đặc, chìm xuống → áp cao nhiệt lực.</li>
+</ul>
+<p class="reveal-item hidden-step">Mẹo ghi nhớ cho học sinh:</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" id="heading-9">Thấp – Cao – Thấp – Cao</h2>
+            <p class="reveal-item hidden-step">Xích đạo → Chí tuyến → Ôn đới → Cực</p>
+<div class="img-grid reveal-item hidden-step">
+              <div class="img-card">
+                <img src="https://images.openai.com/static-rsc-4/X1F-jl0akWHeD35kMEHo0Faqk88vJChuSjDq2wcPttZYVEut86iI_uITqa_jo95IE4ui9R07QLCD39DlAWOL1n3Mo-EYXj57g0Im15DmUNPGyqXavtUYWJC2TO8SYDRlI-NaMz0wK1RGLGtpEyoNdF8vnPGhXHP2QwGxGrsMJ4A?purpose=inline" alt="File:Earth Global Circulation - en.svg - Wikimedia Commons">
+                <div class="img-caption">File:Earth Global Circulation - en.svg - Wikimedia Commons</div>
+              </div>
+            
+              <div class="img-card">
+                <img src="https://commons.wikimedia.org/wiki/File%3AEarth_Global_Circulation_-_en.svg?utm_source=chatgpt.com" alt="commons.wikimedia.org">
+                <div class="img-caption">commons.wikimedia.org</div>
+              </div>
+            </div><p class="reveal-item hidden-step">Câu hỏi thảo luận cuối bài:</p>
+<ol class="reveal-item hidden-step">
+<li class="reveal-item hidden-step">Vì sao áp thấp Xích đạo được gọi là áp thấp nhiệt lực, còn áp thấp ôn đới chủ yếu là áp thấp động lực?</li>
+<li class="reveal-item hidden-step">Vì sao khu vực áp cao chí tuyến thường có nhiều hoang mạc?</li>
+<li class="reveal-item hidden-step">Nếu Trái Đất không tự quay, hướng gió Tín phong sẽ thay đổi như thế nào?</li>
+<li class="reveal-item hidden-step">Tại sao gió Tín phong ở bán cầu Bắc có hướng Đông Bắc nhưng ở bán cầu Nam lại có hướng Đông Nam?</li>
+</ol>
+</section>
+</main>
+
+  <!-- Embedded Markdown Data Block -->
+  
+
+  <!-- Modal Import Markdown -->
+  <div id="import-modal" class="custom-modal">
+    <div class="modal-content">
+      <h3>Import Markdown &amp; Tạo Prompt AI</h3>
+      
+      <div class="prompt-generator-box">
+        <label style="font-size: 0.9rem; font-weight: 600; color: var(--primary-dark);">🤖 Tạo Prompt gửi AI:</label>
+        <div class="form-row">
+          <input type="text" id="prompt-topic-input" placeholder="Nhập chủ đề..." value="các vòng cung dãy núi ở phía bắc việt nam">
+          <input type="number" id="prompt-word-input" placeholder="Số từ" value="500" min="100" step="50" title="Số lượng từ mặc định">
+          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">từ</span>
+        </div>
+        <div style="display: flex; justify-content: flex-end;">
+          <button class="btn btn-copy-prompt" id="btn-copy-prompt">📋 Copy Prompt</button>
+        </div>
+      </div>
+
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Dán nội dung Markdown vào đây:</p>
+      <textarea id="markdown-input" placeholder="# Tiêu đề bài giảng..."></textarea>
+      <div class="modal-buttons">
+        <button class="btn" id="btn-close-modal">Hủy</button>
+        <button class="btn btn-primary" id="btn-confirm-import">Tải &amp; Hiển thị</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Save Filename Prompt -->
+  <div id="save-modal" class="custom-modal">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3>Lưu tệp bài giảng</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Nhập tên tệp HTML muốn lưu:</p>
+      <input type="text" id="filename-input" value="bai-giang-lesson.html" style="width: 100%; padding: 10px; border-radius: 8px;">
+      <div class="modal-buttons">
+        <button class="btn" id="btn-close-save">Hủy</button>
+        <button class="btn btn-primary" id="btn-confirm-save">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Author Info & Donate -->
+  <div id="info-modal" class="custom-modal">
+    <div class="modal-content">
+      <h3>Thông tin tác giả &amp; Hỗ trợ</h3>
+      <div class="info-box">
+        <p><strong>Tác giả:</strong> Icarus</p>
+        <p><strong>Email:</strong> kienspvl@gmail.com</p>
+        <p><strong>Điện thoại:</strong> 097 463 8794</p>
+        <hr style="margin: 12px 0; border: none; border-top: 1px solid var(--border-color);">
+        <p><strong>Ủng hộ nhà phát triển:</strong></p>
+        <p>Ngân hàng Techcombank</p>
+        <p>Số tài khoản: <strong>1903 2723 2240 12</strong></p>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="btn-close-info">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Shortcuts & Update History -->
+  <div id="shortcuts-modal" class="custom-modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+        <h3 id="shortcuts-modal-title">⌨️ Hướng dẫn phím tắt</h3>
+        <button class="btn" id="btn-toggle-changelog" title="Xem lịch sử cập nhật (Key U)">🔄 Xem lịch sử cập nhật (U)</button>
+      </div>
+      
+      <div id="shortcuts-view-content">
+        <table class="shortcut-table">
+          <thead>
+            <tr>
+              <th>Phím tắt</th>
+              <th>Chức năng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><kbd>→</kbd> / <kbd>↓</kbd></td><td>Chuyển bước tiếp theo</td></tr>
+            <tr><td><kbd>←</kbd> / <kbd>↑</kbd></td><td>Quay lại bước trước</td></tr>
+            <tr><td><kbd>Space</kbd></td><td>Xem ảnh ở mục hiện tại (hoặc ảnh tiếp theo khi đang ở Lightbox)</td></tr>
+            <tr><td><kbd>P</kbd></td><td>Đọc lại (Replay) văn bản hiện tại</td></tr>
+            <tr><td><kbd>G</kbd></td><td>Mở/Đóng bảng phím tắt</td></tr>
+            <tr><td><kbd>U</kbd></td><td>Xem lịch sử cập nhật chương trình</td></tr>
+            <tr><td><kbd>I</kbd></td><td>Mở thông tin tác giả</td></tr>
+            <tr><td><kbd>M</kbd></td><td>Bật/Tắt tiếng (Mute)</td></tr>
+            <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Tăng / Giảm cỡ chữ toàn trang</td></tr>
+            <tr><td><kbd>H</kbd></td><td>Ẩn/Hiện thanh điều khiển (HUD)</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Đóng các bảng modal / lightbox</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="changelog-view-content" style="display: none;">
+        <div class="info-box" style="max-height: 350px; overflow-y: auto;">
+          <p><strong>v2.8 (Hiện tại):</strong> Loại bỏ phím tắt C để tránh xung đột với lệnh sao chép văn bản (Ctrl+C); hỗ trợ nhấn phím Space liên tục để chuyển ảnh kế tiếp khi đang ở chế độ xem ảnh Lightbox.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v2.7:</strong> Khắc phục lỗi mở file tự động hiện modal Save As do trạng thái DOM, tối ưu hóa hàm nhúng dữ liệu gốc hoàn chỉnh khi Save As.</p>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="btn-close-shortcuts">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar (Glassmorphic) -->
+  <div id="bottom-nav">
+    <button id="btn-prev" title="Bước trước (Key Left)">◀ Trước</button>
+    <span id="step-counter">1 / 89</span>
+    <button id="btn-next" title="Bước tiếp theo (Key Right)">Tiếp ▶</button>
+    <button id="btn-reset" title="Chạy lại từ đầu">↺ Đầu</button>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox">
+    <button id="lightbox-close" title="Đóng (Esc)">✕</button>
+    <button class="lightbox-nav" id="lb-prev" title="Ảnh trước">❮</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-caption"></div>
+    <button class="lightbox-nav" id="lb-next" title="Ảnh sau">❯</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const body = document.body;
+      let revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+      const modeToggle = document.getElementById('mode-toggle');
+      const captionToggle = document.getElementById('caption-toggle');
+      const muteToggle = document.getElementById('mute-toggle');
+      const speechSpeedSelect = document.getElementById('speech-speed');
+      const stepCounter = document.getElementById('step-counter');
+      const progressBar = document.getElementById('progress-bar');
+      const btnNext = document.getElementById('btn-next');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnReset = document.getElementById('btn-reset');
+      const btnFontInc = document.getElementById('btn-font-inc');
+      const btnFontDec = document.getElementById('btn-font-dec');
+      const fontSizeLabel = document.getElementById('font-size-label');
+      const btnHud = document.getElementById('btn-hud');
+      const btnToc = document.getElementById('btn-toc');
+      const tocDrawer = document.getElementById('toc-drawer');
+      const tocList = document.getElementById('toc-list');
+      const selectionPopup = document.getElementById('selection-popup');
+
+      // Popup buttons
+      const popupGoogleImg = document.getElementById('popup-google-img');
+      const popupGif = document.getElementById('popup-gif');
+      const popupSpeak = document.getElementById('popup-speak');
+      const popupGoogleSearch = document.getElementById('popup-google-search');
+
+      // Modal elements
+      const btnImportModal = document.getElementById('btn-import-modal');
+      const importModal = document.getElementById('import-modal');
+      const btnCloseModal = document.getElementById('btn-close-modal');
+      const btnConfirmImport = document.getElementById('btn-confirm-import');
+      const markdownInput = document.getElementById('markdown-input');
+      const btnSave = document.getElementById('btn-save');
+
+      // Save Modal elements
+      const saveModal = document.getElementById('save-modal');
+      const btnCloseSave = document.getElementById('btn-close-save');
+      const btnConfirmSave = document.getElementById('btn-confirm-save');
+      const filenameInput = document.getElementById('filename-input');
+      
+      // Prompt generator elements
+      const promptTopicInput = document.getElementById('prompt-topic-input');
+      const promptWordInput = document.getElementById('prompt-word-input');
+      const btnCopyPrompt = document.getElementById('btn-copy-prompt');
+
+      // Info Modal elements
+      const btnInfoModal = document.getElementById('btn-info-modal');
+      const infoModal = document.getElementById('info-modal');
+      const btnCloseInfo = document.getElementById('btn-close-info');
+
+      // Shortcuts & Changelog Modal elements
+      const btnShortcutsModal = document.getElementById('btn-shortcuts-modal');
+      const shortcutsModal = document.getElementById('shortcuts-modal');
+      const btnCloseShortcuts = document.getElementById('btn-close-shortcuts');
+      const btnToggleChangelog = document.getElementById('btn-toggle-changelog');
+      const shortcutsViewContent = document.getElementById('shortcuts-view-content');
+      const changelogViewContent = document.getElementById('changelog-view-content');
+      const shortcutsModalTitle = document.getElementById('shortcuts-modal-title');
+
+      // Lightbox elements
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxCaption = document.getElementById('lightbox-caption');
+      const lightboxClose = document.getElementById('lightbox-close');
+      const lbPrev = document.getElementById('lb-prev');
+      const lbNext = document.getElementById('lb-next');
+
+      let currentIndex = 0;
+      let isShowAll = false;
+      let currentFontSize = 1.25;
+      const MIN_FONT = 1.2;
+      const MAX_FONT = 2.6;
+      let rawMarkdownStorage = "";
+      let selectedTextCache = "";
+      let currentImgIdx = 0;
+
+      // Khởi tạo dữ liệu ngậm sẵn từ thẻ script nhúng hoặc localStorage
+      const embeddedScriptTag = document.getElementById('embedded-markdown-data');
+      if (embeddedScriptTag) {
+        rawMarkdownStorage = embeddedScriptTag.textContent.trim();
+        renderMarkdown(rawMarkdownStorage);
+      } else {
+        const localSaved = localStorage.getItem('lesson_viewer_markdown');
+        if (localSaved) {
+          rawMarkdownStorage = localSaved;
+          renderMarkdown(localSaved);
+        }
+      }
+
+      function initTOC() {
+        tocList.innerHTML = '';
+        const headings = document.querySelectorAll('main h2, main h3');
+        headings.forEach((h, idx) => {
+          if (!h.id) h.id = 'heading-' + idx;
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = '#' + h.id;
+          a.textContent = h.textContent;
+          if (h.tagName === 'H3') {
+            a.style.paddingLeft = '20px';
+            a.style.fontSize = '0.88rem';
+          }
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetIdx = revealItems.indexOf(h);
+            if (!isShowAll && targetIdx !== -1 && targetIdx > currentIndex) {
+              revealUpTo(targetIdx, false);
+            }
+            h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            tocDrawer.classList.remove('open');
+          });
+          li.appendChild(a);
+          tocList.appendChild(li);
+        });
+      }
+
+      initTOC();
+
+      btnToc.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tocDrawer.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!tocDrawer.contains(e.target) && e.target !== btnToc) {
+          tocDrawer.classList.remove('open');
+        }
+      });
+
+      // Text Selection & Popup Logic
+      document.addEventListener('mouseup', (e) => {
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+        if (text.length > 0) {
+          selectedTextCache = text;
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          
+          selectionPopup.style.top = (window.scrollY + rect.top - 50) + 'px';
+          selectionPopup.style.left = (window.scrollX + rect.left + (rect.width / 2) - 130) + 'px';
+          selectionPopup.classList.add('open');
+        } else {
+          if (!selectionPopup.contains(e.target)) {
+            selectionPopup.classList.remove('open');
+          }
+        }
+      });
+
+      document.addEventListener('mousedown', (e) => {
+        if (!selectionPopup.contains(e.target)) {
+          selectionPopup.classList.remove('open');
+        }
+      });
+
+      popupGoogleImg.addEventListener('click', () => {
+        if (selectedTextCache) {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTextCache)}&tbm=isch`, '_blank');
+        }
+      });
+
+      popupGif.addEventListener('click', () => {
+        if (selectedTextCache) {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTextCache + ' gif')}&tbm=isch`, '_blank');
+        }
+      });
+
+      popupSpeak.addEventListener('click', () => {
+        if (selectedTextCache && 'speechSynthesis' in window) {
+          stopSpeech();
+          const utterance = new SpeechSynthesisUtterance(selectedTextCache);
+          utterance.lang = 'vi-VN';
+          utterance.rate = parseFloat(speechSpeedSelect.value) || 2.0;
+          window.speechSynthesis.speak(utterance);
+        }
+      });
+
+      popupGoogleSearch.addEventListener('click', () => {
+        if (selectedTextCache) {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTextCache)}`, '_blank');
+        }
+      });
+
+      // Modal controls & Auto select topic text on import open
+      btnImportModal.addEventListener('click', () => {
+        markdownInput.value = rawMarkdownStorage;
+        importModal.classList.add('open');
+        setTimeout(() => {
+          promptTopicInput.focus();
+          promptTopicInput.select();
+        }, 100);
+      });
+
+      btnCloseModal.addEventListener('click', () => {
+        importModal.classList.remove('open');
+      });
+
+      importModal.addEventListener('click', (e) => {
+        if (e.target === importModal) importModal.classList.remove('open');
+      });
+
+      // Save Modal with Enter key support
+      btnSave.addEventListener('click', () => {
+        filenameInput.value = "bai-giang-lesson.html";
+        saveModal.classList.add('open');
+        setTimeout(() => {
+          filenameInput.focus();
+          filenameInput.select();
+        }, 100);
+        btnSave.blur();
+      });
+
+      btnCloseSave.addEventListener('click', () => {
+        saveModal.classList.remove('open');
+      });
+
+      saveModal.addEventListener('click', (e) => {
+        if (e.target === saveModal) saveModal.classList.remove('open');
+      });
+
+      // Hàm lưu dữ liệu ngậm thành khối hoàn chỉnh và xuất file chuẩn xác
+      function executeSaveFile() {
+        let filename = filenameInput.value.trim() || 'bai-giang-lesson.html';
+        if (!filename.endsWith('.html')) filename += '.html';
+
+        // Đảm bảo đóng hoàn toàn các modal trước khi lấy outerHTML để không lưu trạng thái mở modal vào file
+        importModal.classList.remove('open');
+        saveModal.classList.remove('open');
+        infoModal.classList.remove('open');
+        shortcutsModal.classList.remove('open');
+        tocDrawer.classList.remove('open');
+        selectionPopup.classList.remove('open');
+
+        // Lấy bản sao DOM hiện tại và làm sạch các thẻ ngậm cũ nếu có
+        let cloneDoc = document.documentElement.cloneNode(true);
+        const oldEmbedded = cloneDoc.querySelector('#embedded-markdown-data');
+        if (oldEmbedded) {
+          oldEmbedded.remove();
+        }
+
+        // Tạo thẻ ngậm dữ liệu mới chứa nội dung rawMarkdownStorage hiện tại
+        const newScript = document.createElement('script');
+        newScript.id = 'embedded-markdown-data';
+        newScript.type = 'text/markdown';
+        newScript.textContent = '\n' + rawMarkdownStorage + '\n';
+        cloneDoc.querySelector('body').appendChild(newScript);
+
+        const fullHTML = '<!DOCTYPE html>\n' + cloneDoc.outerHTML;
+
+        const blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        saveModal.classList.remove('open');
+      }
+
+      btnConfirmSave.addEventListener('click', executeSaveFile);
+
+      filenameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeSaveFile();
+        }
+      });
+
+      btnCopyPrompt.addEventListener('click', () => {
+        const topic = promptTopicInput.value.trim() || 'chủ đề bài học';
+        const words = promptWordInput.value.trim() || '500';
+        const generatedPrompt = `tạo bài giảng khoảng ${words} từ về chủ đề ${topic}, kèm nhiều ảnh minh họa cho từng mục, từng phần, phân cấp thông tin rõ ràng, in đậm từ khóa kèm từ khóa tiếng anh`;
+        
+        navigator.clipboard.writeText(generatedPrompt).then(() => {
+          const originalText = btnCopyPrompt.textContent;
+          btnCopyPrompt.textContent = '✅ Copied!';
+          setTimeout(() => {
+            btnCopyPrompt.textContent = originalText;
+          }, 2000);
+        }).catch(err => {
+          alert('Không thể copy prompt tự động!');
+        });
+      });
+
+      btnInfoModal.addEventListener('click', () => {
+        infoModal.classList.add('open');
+      });
+
+      btnCloseInfo.addEventListener('click', () => {
+        infoModal.classList.remove('open');
+      });
+
+      infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) infoModal.classList.remove('open');
+      });
+
+      // Shortcuts & Changelog Modal Logic
+      function openShortcutsModal(showChangelog = false) {
+        if (showChangelog) {
+          shortcutsViewContent.style.display = 'none';
+          changelogViewContent.style.display = 'block';
+          shortcutsModalTitle.textContent = '🔄 Lịch sử cập nhật';
+          btnToggleChangelog.textContent = '⌨️ Xem phím tắt (G)';
+        } else {
+          shortcutsViewContent.style.display = 'block';
+          changelogViewContent.style.display = 'none';
+          shortcutsModalTitle.textContent = '⌨️ Hướng dẫn phím tắt';
+          btnToggleChangelog.textContent = '🔄 Xem lịch sử cập nhật (U)';
+        }
+        shortcutsModal.classList.add('open');
+      }
+
+      btnShortcutsModal.addEventListener('click', () => {
+        openShortcutsModal(false);
+      });
+
+      btnCloseShortcuts.addEventListener('click', () => {
+        shortcutsModal.classList.remove('open');
+      });
+
+      shortcutsModal.addEventListener('click', (e) => {
+        if (e.target === shortcutsModal) shortcutsModal.classList.remove('open');
+      });
+
+      btnToggleChangelog.addEventListener('click', () => {
+        const isChangelogVisible = changelogViewContent.style.display === 'block';
+        openShortcutsModal(!isChangelogVisible);
+      });
+
+      captionToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          body.classList.remove('hide-captions');
+        } else {
+          body.classList.add('hide-captions');
+        }
+        e.target.blur(); 
+      });
+
+      muteToggle.addEventListener('change', (e) => {
+        if (!e.target.checked) {
+          stopSpeech();
+        } else {
+          speakCurrentItem();
+        }
+        e.target.blur(); 
+      });
+
+      speechSpeedSelect.addEventListener('change', (e) => {
+        e.target.blur();
+        if (muteToggle.checked) {
+          speakCurrentItem();
+        }
+      });
+
+      function parseInlineMarkdown(text) {
+        text = text.replace(/\\\\([()])/g, '\\$1');
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+        return text;
+      }
+
+      function parseMarkdownToHTML(mdText) {
+        mdText = mdText.replace(/\\\\([()\[\]])/g, '\\$1');
+        const rawLines = mdText.split('\n');
+        let html = '';
+        
+        let inList = false;
+        let listType = null;
+        let inTable = false;
+        let currentSectionOpened = false;
+        let heroCardOpened = false;
+        let pendingImages = [];
+        let firstHeadingProcessed = false;
+
+        function flushImages() {
+          if (pendingImages.length === 0) return '';
+          let gridHtml = '<div class="img-grid reveal-item">';
+          pendingImages.forEach(img => {
+            gridHtml += `
+              <div class="img-card">
+                <img src="${img.url}" alt="${img.alt}">
+                <div class="img-caption">${img.alt}</div>
+              </div>
+            `;
+          });
+          gridHtml += '</div>';
+          pendingImages = [];
+          return gridHtml;
+        }
+
+        function closeListIfNeeded() {
+          if (inList) {
+            html += `</${listType}>\n`;
+            inList = false;
+            listType = null;
+          }
+        }
+
+        function closeTableIfNeeded() {
+          if (inTable) {
+            html += `</tbody></table></div>\n`;
+            inTable = false;
+          }
+        }
+
+        for (let i = 0; i < rawLines.length; i++) {
+          let line = rawLines[i].trim();
+
+          const imgMatch = line.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+          if (imgMatch) {
+            closeTableIfNeeded();
+            pendingImages.push({ alt: imgMatch[1], url: imgMatch[2] });
+            continue;
+          }
+
+          if (/^\d+$/.test(line) && pendingImages.length > 0) {
+            continue;
+          }
+
+          if (line.startsWith('|') && line.endsWith('|')) {
+            closeListIfNeeded();
+            html += flushImages();
+            let cells = line.split('|').map(c => c.trim()).filter((c, idx, arr) => idx > 0 && idx < arr.length - 1);
+            
+            if (cells.every(c => /^[:-]+$/.test(c))) {
+              continue;
+            }
+
+            if (!inTable) {
+              inTable = true;
+              html += '<div class="table-container reveal-item"><table><thead><tr>';
+              cells.forEach(c => { html += `<th>${parseInlineMarkdown(c)}</th>`; });
+              html += '</tr></thead><tbody>';
+            } else {
+              html += '<tr class="reveal-item">';
+              cells.forEach(c => { html += `<td>${parseInlineMarkdown(c)}</td>`; });
+              html += '</tr>';
+            }
+            continue;
+          } else {
+            closeTableIfNeeded();
+          }
+
+          if (line.startsWith('# ') && !firstHeadingProcessed) {
+            closeListIfNeeded();
+            if (currentSectionOpened) {
+              html += '</section>\n';
+              currentSectionOpened = false;
+            }
+            html += flushImages();
+            const title = parseInlineMarkdown(line.replace(/^#\s+/, ''));
+            firstHeadingProcessed = true;
+            heroCardOpened = true;
+            html += `
+              <div class="hero-card" id="sec-intro">
+                <h1 class="reveal-item">${title}</h1>
+            `;
+            continue;
+          }
+
+          if (heroCardOpened && !currentSectionOpened && !line.startsWith('## ') && !line.startsWith('# ')) {
+            if (line !== '') {
+              html += flushImages();
+              if (!html.includes('hero-meta')) {
+                html += `<div class="hero-meta reveal-item"><span class="badge">${parseInlineMarkdown(line)}</span></div>\n`;
+              } else {
+                html += `<div class="subtitle reveal-item">${parseInlineMarkdown(line)}</div>\n`;
+              }
+            }
+            continue;
+          }
+
+          if (line.startsWith('# ') && firstHeadingProcessed) {
+            closeListIfNeeded();
+            html += flushImages();
+            if (heroCardOpened && !currentSectionOpened) {
+              html += '</div>\n';
+              heroCardOpened = false;
+            }
+            if (currentSectionOpened) {
+              html += '</section>\n';
+            }
+            const secTitle = parseInlineMarkdown(line.replace(/^#\s+/, ''));
+            html += `
+              <section class="lesson-section">
+                <h2 class="reveal-item">${secTitle}</h2>
+            `;
+            currentSectionOpened = true;
+            continue;
+          }
+
+          if (line.startsWith('## ')) {
+            closeListIfNeeded();
+            html += flushImages();
+            if (heroCardOpened && !currentSectionOpened) {
+              html += '</div>\n';
+              heroCardOpened = false;
+            }
+            if (currentSectionOpened) {
+              html += '</section>\n';
+            }
+            const secTitle = parseInlineMarkdown(line.replace(/^##\s+/, ''));
+            html += `
+              <section class="lesson-section">
+                <h2 class="reveal-item">${secTitle}</h2>
+            `;
+            currentSectionOpened = true;
+            continue;
+          }
+
+          if (line.startsWith('### ')) {
+            closeListIfNeeded();
+            html += flushImages();
+            const h3Title = parseInlineMarkdown(line.replace(/^###\s+/, ''));
+            html += `<h3 class="reveal-item">${h3Title}</h3>\n`;
+            continue;
+          }
+
+          if (line.startsWith('- ')) {
+            html += flushImages();
+            if (!inList || listType !== 'ul') {
+              closeListIfNeeded();
+              html += '<ul class="reveal-item">\n';
+              inList = true;
+              listType = 'ul';
+            }
+            let itemText = parseInlineMarkdown(line.replace(/^- \s*/, ''));
+            html += `<li class="reveal-item">${itemText}</li>\n`;
+            continue;
+          }
+
+          const olMatch = line.match(/^\d+\.\s+(.+)$/);
+          if (olMatch) {
+            html += flushImages();
+            if (!inList || listType !== 'ol') {
+              closeListIfNeeded();
+              html += '<ol class="reveal-item">\n';
+              inList = true;
+              listType = 'ol';
+            }
+            let itemText = parseInlineMarkdown(olMatch[1]);
+            html += `<li class="reveal-item">${itemText}</li>\n`;
+            continue;
+          }
+
+          closeListIfNeeded();
+
+          let cleanLine = line.replace(/[,\.;]+$/, '').trim();
+          if (/^(\\+\[[\s\S]*\\+\]|\$\$[\s\S]*\$\$)$/.test(cleanLine)) {
+            html += flushImages();
+            let formulaBoxContent = cleanLine.replace(/^\\+\[/, '\\[').replace(/\\+\]$/, '\\]');
+            html += `<div class="formula-box reveal-item">${formulaBoxContent}</div>\n`;
+            continue;
+          }
+
+          if (line === '') {
+            continue;
+          }
+
+          html += flushImages();
+          html += `<p class="reveal-item">${parseInlineMarkdown(line)}</p>\n`;
+        }
+
+        closeListIfNeeded();
+        closeTableIfNeeded();
+        html += flushImages();
+        if (heroCardOpened && !currentSectionOpened) {
+          html += '</div>\n';
+        }
+        if (currentSectionOpened) {
+          html += '</section>\n';
+        }
+
+        return html;
+      }
+
+      function renderMarkdown(text) {
+        rawMarkdownStorage = text;
+        const parsedHTML = parseMarkdownToHTML(text);
+        const mainContainer = document.getElementById('lesson-content');
+        mainContainer.innerHTML = parsedHTML;
+
+        revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+        currentIndex = 0;
+        updateUI();
+        initTOC();
+
+        if (window.renderMathInElement) {
+          renderMathInElement(document.body, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '\\[', right: '\\]', display: true},
+              {left: '$', right: '$', display: false},
+              {left: '\\(', right: '\\)', display: false}
+            ],
+            throwOnError: false
+          });
+        }
+      }
+
+      btnConfirmImport.addEventListener('click', () => {
+        const text = markdownInput.value.trim();
+        if (!text) {
+          alert('Vui lòng dán nội dung Markdown!');
+          return;
+        }
+
+        renderMarkdown(text);
+        localStorage.setItem('lesson_viewer_markdown', text);
+
+        importModal.classList.remove('open');
+        btnConfirmImport.blur(); 
+      });
+
+      function stopSpeech() {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+      }
+
+      function speakCurrentItem() {
+        if (!muteToggle.checked) return; 
+        if (!('speechSynthesis' in window)) return;
+
+        stopSpeech();
+        const targetEl = revealItems[currentIndex];
+        if (!targetEl) return;
+
+        const clone = targetEl.cloneNode(true);
+        clone.querySelectorAll('.katex-mathml, .img-caption').forEach(el => el.remove());
+        let text = clone.innerText.replace(/\s+/g, ' ').trim();
+        if (!text) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'vi-VN';
+        utterance.rate = parseFloat(speechSpeedSelect.value) || 2.0;
+        window.speechSynthesis.speak(utterance);
+      }
+
+      function updateUI() {
+        const total = revealItems.length;
+        revealItems.forEach((item, idx) => {
+          item.classList.remove('hidden-step', 'active-step');
+          if (!isShowAll) {
+            if (idx > currentIndex) {
+              item.classList.add('hidden-step');
+            } else if (idx === currentIndex) {
+              item.classList.add('active-step');
+            }
+          }
+        });
+
+        if (isShowAll) {
+          stepCounter.textContent = `Tất cả (${total})`;
+          progressBar.style.width = '100%';
+        } else {
+          stepCounter.textContent = `${currentIndex + 1} / ${total}`;
+          const pct = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
+          progressBar.style.width = pct + '%';
+        }
+      }
+
+      function scrollToCenter(el) {
+        if (!el) return;
+        requestAnimationFrame(() => {
+          el.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        });
+      }
+
+      function revealUpTo(index, shouldScroll = true) {
+        if (revealItems.length === 0) return;
+        if (index < 0) index = 0;
+        if (index >= revealItems.length) index = revealItems.length - 1;
+        currentIndex = index;
+        updateUI();
+        speakCurrentItem();
+        if (shouldScroll && !isShowAll) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+      }
+
+      function nextStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex < revealItems.length - 1) {
+          revealUpTo(currentIndex + 1, true);
+        }
+      }
+
+      function prevStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: -window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex > 0) {
+          revealUpTo(currentIndex - 1, true);
+        }
+      }
+
+      btnNext.addEventListener('click', nextStep);
+      btnPrev.addEventListener('click', prevStep);
+      btnReset.addEventListener('click', () => {
+        stopSpeech();
+        if (isShowAll) {
+          modeToggle.checked = false;
+          isShowAll = false;
+          body.classList.add('step-mode');
+        }
+        revealUpTo(0, true);
+        btnReset.blur();
+      });
+
+      modeToggle.addEventListener('change', (e) => {
+        isShowAll = e.target.checked;
+        if (isShowAll) {
+          body.classList.remove('step-mode');
+          stopSpeech();
+        } else {
+          body.classList.add('step-mode');
+          speakCurrentItem();
+        }
+        updateUI();
+        if (!isShowAll && revealItems.length > 0) {
+          scrollToCenter(revealItems[currentIndex]);
+        }
+        e.target.blur(); 
+      });
+
+      function setFontSize(size) {
+        currentFontSize = Math.min(MAX_FONT, Math.max(MIN_FONT, Number(size.toFixed(2))));
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'rem');
+        fontSizeLabel.textContent = currentFontSize.toFixed(2) + 'rem';
+      }
+
+      btnFontInc.addEventListener('click', () => { setFontSize(currentFontSize + 0.1); btnFontInc.blur(); });
+      btnFontDec.addEventListener('click', () => { setFontSize(currentFontSize - 0.1); btnFontDec.blur(); });
+
+      function toggleHud() {
+        body.classList.toggle('hud-hidden');
+      }
+      btnHud.addEventListener('click', () => { toggleHud(); btnHud.blur(); });
+
+      function getAllImages() {
+        return Array.from(document.querySelectorAll('.img-card img'));
+      }
+
+      function openLightbox(idx) {
+        const allImages = getAllImages();
+        if (allImages.length === 0) return;
+        currentImgIdx = (idx + allImages.length) % allImages.length;
+        const img = allImages[currentImgIdx];
+        lightboxImg.src = img.src;
+        lightboxCaption.textContent = img.alt || '';
+        lightbox.classList.add('open');
+      }
+
+      function closeLightbox() {
+        lightbox.classList.remove('open');
+      }
+
+      function openImageAtCurrentSelection() {
+        const currentEl = revealItems[currentIndex];
+        if (!currentEl) return;
+        let img = currentEl.querySelector('img');
+        if (!img && currentEl.matches('img')) {
+          img = currentEl;
+        }
+        if (img) {
+          const allImages = getAllImages();
+          const idx = allImages.indexOf(img);
+          if (idx !== -1) {
+            openLightbox(idx);
+            return;
+          }
+        }
+        const allImages = getAllImages();
+        if (allImages.length > 0) {
+          openLightbox(0);
+        }
+      }
+
+      document.addEventListener('click', (e) => {
+        if (e.target.matches('.img-card img')) {
+          const allImages = getAllImages();
+          const idx = allImages.indexOf(e.target);
+          if (idx !== -1) openLightbox(idx);
+        }
+      });
+
+      lightboxClose.addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+      });
+
+      lbPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const allImages = getAllImages();
+        openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+      });
+
+      lbNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const allImages = getAllImages();
+        openLightbox((currentImgIdx + 1) % allImages.length);
+      });
+
+      // Keyboard Shortcuts & Modals Escape Handling
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (lightbox.classList.contains('open')) {
+            closeLightbox();
+            return;
+          }
+          if (importModal.classList.contains('open')) {
+            importModal.classList.remove('open');
+            return;
+          }
+          if (saveModal.classList.contains('open')) {
+            saveModal.classList.remove('open');
+            return;
+          }
+          if (infoModal.classList.contains('open')) {
+            infoModal.classList.remove('open');
+            return;
+          }
+          if (shortcutsModal.classList.contains('open')) {
+            shortcutsModal.classList.remove('open');
+            return;
+          }
+          if (tocDrawer.classList.contains('open')) {
+            tocDrawer.classList.remove('open');
+            return;
+          }
+          return;
+        }
+
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        // Xử lý khi đang mở Lightbox xem ảnh
+        if (lightbox.classList.contains('open')) {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            openLightbox(currentImgIdx + 1);
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            openLightbox(currentImgIdx - 1);
+          } else if (e.key === ' ' || e.code === 'Space') {
+            e.preventDefault();
+            openLightbox(currentImgIdx + 1); // Nhấn Space để xem ảnh tiếp theo khi đang ở Lightbox
+          }
+          return;
+        }
+
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          nextStep();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          prevStep();
+        } else if (e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          openImageAtCurrentSelection();
+        } else if (e.key === 'p' || e.key === 'P') {
+          e.preventDefault();
+          speakCurrentItem();
+        } else if (e.key === 'g' || e.key === 'G') {
+          e.preventDefault();
+          if (shortcutsModal.classList.contains('open')) {
+            shortcutsModal.classList.remove('open');
+          } else {
+            openShortcutsModal(false);
+          }
+        } else if (e.key === 'u' || e.key === 'U') {
+          e.preventDefault();
+          if (shortcutsModal.classList.contains('open') && changelogViewContent.style.display === 'block') {
+            shortcutsModal.classList.remove('open');
+          } else {
+            openShortcutsModal(true);
+          }
+        } else if (e.key === 'i' || e.key === 'I') {
+          e.preventDefault();
+          if (infoModal.classList.contains('open')) {
+            infoModal.classList.remove('open');
+          } else {
+            infoModal.classList.add('open');
+          }
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          muteToggle.checked = !muteToggle.checked;
+          if (!muteToggle.checked) {
+            stopSpeech();
+          } else {
+            speakCurrentItem();
+          }
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          setFontSize(currentFontSize + 0.1);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          setFontSize(currentFontSize - 0.1);
+        } else if (e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          toggleHud();
+        }
+      });
+    });
+  </script>
+
+<script id="embedded-markdown-data" type="text/markdown">
+# BÀI GIẢNG: GIÓ TÍN PHONG – SỰ HÌNH THÀNH VÀ QUY LUẬT HOẠT ĐỘNG
+
+MÔN ĐỊA LÍ · KHÍ QUYỂN VÀ HOÀN LƯU KHÍ QUYỂN
+
+## I. Gió Tín phong là gì?
+
+[Meteorologische artikelen](https://images.openai.com/static-rsc-4/4GXcC8FIQ3aeLIrxxtUzA2LiDWbPTi31IFhmDJlWdpBfQzn-I7T0SwGnjrwbeJI7V_0DQ2FcgofQzp_-brnSuaFbUnbolzMTmcQ86YKeO7hLpIHWXwi7F1Bse4ui3d1eEoMt9XUCwEi41zA7Vrwzcr1SPYHx2j6DjshcsI8tPIA?purpose=inline)
+
+[World Wind Belts — Free Printable Diagram for Teachers | Kuraplan](https://images.openai.com/static-rsc-4/IzIjpZucJZ5QLvRZH3PnRHbT-l2YPQd3XhHsxQTmaBqYxxF9SSbuPdU-bZVsP3oDCaDMOfoRyGwrMA7oXr0y75CzK8ak92DqSsXk0ec960ZgjwD4UG0A_Dt_DoBmqijno5odw6ca7s5zpU_NGX-3feS4s0mCU__cl9kEOkOgwNE?purpose=inline)
+
+[Winds: Facts and Information | Q-files - Q-files - Search • Read • Discover](https://images.openai.com/static-rsc-4/HgbMkNa3gbSzZPStphUni9DBr0K8I4aKwBvAHb3EY3aR6v-s5jPLYYlr-XiiTAqEEUlzYnbxYFZxehvW1WKgCST2Ryn3WxVWQCGbQCmplOT-KCkRGcbfDojw58ogYY6khqqZEAO89GiOFaG00cOaNzQbi0ReznsVlUfoOoO5DXk?purpose=inline)
+
+8
+
+Gió Tín phong (Trade Winds) là loại gió thổi thường xuyên quanh năm từ các khu vực áp cao chí tuyến (Subtropical High Pressure Belts) về khu vực áp thấp Xích đạo (Equatorial Low Pressure Belt).
+
+- Ở bán cầu Bắc, gió có hướng Đông Bắc.
+- Ở bán cầu Nam, gió có hướng Đông Nam.
+- Gió thổi tương đối ổn định, ít thay đổi hướng theo mùa so với gió mùa.
+
+Tên gọi Tín phong gắn với tính chất thổi khá đều đặn, từng giúp các tàu buồm lựa chọn tuyến hàng hải vượt đại dương.
+
+## II. Vì sao Trái Đất có các đai áp thấp và áp cao?
+
+Đây là phần quan trọng nhất để hiểu nguồn gốc của gió Tín phong. Trái Đất có sự phân bố nhiệt độ và khí áp không đồng đều theo vĩ độ. Sự khác biệt này tạo nên các đai khí áp xen kẽ.
+
+### 1. Vì sao có áp thấp Xích đạo?
+
+[Jet stream - MeteoSwiss](https://images.openai.com/static-rsc-4/rec5jsLoHDnTwra7fvw6_f_DOOgdy9l_4bKF9RQATYNQSLQbq11ZsM98Cj64g9jzVAIN1WeXcZ3HUKYk6brl99Ln7Jzk8xi23nY7JZk7fOthGdnhxV_ALc3Lc8xbQClCLEWxI_IMaezbvYP98izsFAQ2e4gp3j52RO8z_6PbyqE?purpose=inline)
+
+[Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento](https://images.openai.com/static-rsc-4/KZ9z74GDaj98GcVu9D1n5mWKPjVl_HXDJHJZUHNJcm29MkxnYZzZTfyj75nRFjrPEgpz1kX1ugUIU0PiMrI6qB0-DgyQYdnC4mKGvElkN-taXigm1n5_zVHvIkU6ZTYSSG9gIon9S5OMcU3DNRGnyjnHaZMYEVo3K7I8_t18oH4?purpose=inline)
+
+[Innertropische Konvergenzzone limitiert Klimavorhersagen im tropischen Atlantik](https://images.openai.com/static-rsc-4/py_IyQ5dt9hPSscHFnX6z33Tq0ukt3Kq0xk9kBZhFhq5WMBcKaiJJIozsAMntjcVXRF0QmoGdAJIcIFlP3PL0mXaptOcnkOxpZgZWlNEph-jyTdsrUnPePqeRW-8u5kioN6K8CEp6B_5kEnJx410o7L7AdaK6cd1CTalzgbI0T0?purpose=inline)
+
+8
+
+- Khu vực Xích đạo nhận được lượng bức xạ Mặt Trời lớn quanh năm.
+- Bề mặt Trái Đất nóng lên, làm không khí phía trên nóng, nở ra và có xu hướng bốc lên cao.
+- Không khí ở tầng thấp hội tụ từ hai bán cầu về khu vực này để thay thế lượng không khí đang bốc lên.
+
+Kết quả: hình thành đai áp thấp Xích đạo (Equatorial Low Pressure Belt).
+
+Đây cũng là khu vực thường có mây đối lưu, mưa lớn và dông nhiều.
+
+### 2. Vì sao có áp cao chí tuyến ở khoảng 30° Bắc và Nam?
+
+[Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento](https://images.openai.com/static-rsc-4/N5Rj59C1WA2Y_TkHV546r4DvGkxoar3qSHm94vJqwKJZT_ld58bP6YcEwGPGRWTuKyuV6iWsWG7AxMeRhFT5fYC15UQYwpDrnACr0s9A3EOldQViL_-CpExoavJBHMPmPJc7-dj8mh-T9GKGab6QIY3WpHhYiELy89azxCijBdg?purpose=inline)
+
+[PPT - Understanding Earth's Energy Balance: Global Transfer & Circulation PowerPoint Presentation - ID:3036904](https://images.openai.com/static-rsc-4/MptgRUjqNu5jisTt1w_T67KCIrKZTZLIaxXnRnI007ME3exl8PIK5h6CM841gggOyMVAFQy7LaSU7V7_-j8WP-Upr_TriObXhmE557acquorv9r0P8TOcIFNIAmblV2SZ0RtjpjZ2eDgVp4om6wajCynwgjTx-ENQ5Q4FB4G-eM?purpose=inline)
+
+[3. Wereldwijde luchtstromen | klimaatvwo4](https://images.openai.com/static-rsc-4/97knLPfkBT2VkpZYmQJDqdJIG2LgtyfPh1Cmr1XWebgSGkCAjMmbVaR26PWtP2NWZXv-tEu8tqiyYXZme27zeCty3QuXnIyJ7b1q7jprx-lx0twP8qKKZ0v9Mt6SIYJuz5Y6Hz1xjTipD-IQkYkTucewPE-2kP2sInpCm-MI-GY?purpose=inline)
+
+8
+
+Đây là kết quả của quá trình hoàn lưu khí quyển, đặc biệt là tế bào Hadley (Hadley Cell).
+
+- Không khí nóng bốc lên ở Xích đạo.
+- Khi lên cao, không khí lan truyền về phía hai cực.
+- Trong quá trình di chuyển, không khí nguội đi và dần mất độ ẩm do mưa ở vùng nhiệt đới.
+- Đến khoảng 30° vĩ Bắc và Nam, không khí trong nhánh hoàn lưu này chuyển động đi xuống.
+- Không khí đi xuống làm tăng khối lượng không khí ở tầng thấp, tạo vùng áp cao.
+
+Kết quả: hình thành đai áp cao chí tuyến (Subtropical High Pressure Belts).
+
+Đặc điểm: khu vực này thường có không khí đi xuống, khô và ít mưa, góp phần hình thành nhiều hoang mạc lớn trên thế giới.
+
+### 3. Vì sao có áp thấp ôn đới ở khoảng 60° Bắc và Nam?
+
+[Global Pattern of Surface Pressure and Wind Global](https://images.openai.com/static-rsc-4/-cCKJ3MJVRgKNbjC31Z157pw-wkwX9qmrK-peK5sbDU5QKEgvbL6OzZFSxsXhpHb1ExbKv_JWmoifFP7Eg5Kn47c2qvVOpSl6CeJJVXada93XnuqXp7qH5TzjES599FmcjNEF-7Hkqmrz0b7O--X7RtcvHzD3HWKjyfcRLNK82E?purpose=inline)
+
+[Rules of the Air- Visual Flight Rules (VFRs) Flashcards | Quizlet](https://images.openai.com/static-rsc-4/SK6lxTsZDBsko2KqUPOLq22YsE9aR3dBRChvUJJUw25jtppeWY9gbgiAra-oPdE33CD66TNP1wKfxM_tJZXl8gMU7uT3xM3uQHdGJuSz-Zk3K_tR5tJo3Us2f7jmai30lA9ol9Vd91eLE48WizFsUec_82byjVXRQTPeFt_qyrw?purpose=inline)
+
+[Temperate Cyclone - Pan Geography](https://images.openai.com/static-rsc-4/cWPM_W4Uwimx2zwVj5B7Lq1WunIfdaH0De9dA2NWZWGigK0G-cyHxzX6RfBsA01GYLoIfvJHUSVsG0WGO2mUej51qtaBd7-JA1EXlnT4yfv-bpNDZ2gpuBpdcjhedtnmHHJLOacHSwRsY8wgkwnhEkxWS92wxgWESxIrECtPK-w?purpose=inline)
+
+5
+
+Khác với áp thấp Xích đạo, áp thấp ôn đới (Subpolar Low Pressure Belt) chủ yếu hình thành do sự hội tụ của các khối khí và hoàn lưu khí quyển.
+
+- Ở khoảng 60° vĩ độ, gió Tây ôn đới (Westerlies) từ phía chí tuyến thổi về.
+- Gió Đông cực (Polar Easterlies) từ vùng cực thổi về phía ôn đới.
+- Hai luồng gió gặp nhau, tạo nên vùng hội tụ tại frông cực (Polar Front).
+- Không khí tương đối ấm gặp không khí lạnh, bị đẩy lên cao, làm giảm khí áp ở tầng thấp.
+
+Kết quả: hình thành đai áp thấp ôn đới, thường có thời tiết biến động, nhiều xoáy thuận và mưa.
+
+### 4. Vì sao hai cực lại có áp cao?
+
+[Polar Atmosphere](https://images.openai.com/static-rsc-4/b3Xn-RFW9oaqDiV4wMjxFIi-rzbkOfCt7FwYeFgDYkDr1kMHK5SL-RI1TrFdp498YM9vVUnoE1r1MpjbkIumQHx8-A0Qdw02pdXBLfrrXkZK2BA7xQjOhXW4rX_M20IU9AxebiPleD0lzp9tBJVxA882VMzOu8FD-k6PEQqvvks?purpose=inline)
+
+[PPT - Unit 2: Surface Processes and the Hydrosphere PowerPoint Presentation - ID:5990855](https://images.openai.com/static-rsc-4/KQRaxEH-pT9-IkTRnwDjd7teK3t0ADM0pneWwvQdCIfAY9s4pik_wfA6WTHYrhJCOj2gtbE6oCqVa1nubq0IHWkKoEQ0jFyceweDiMkV-X0Kvt1K6T1KHLRnqCCzXrk_YkOZsX4p8vPprmaCQbPZJWUI3CbwXPVr9Rlg48P4SR8?purpose=inline)
+
+[Notes for 2.4C The tricellular mode of atmospheric circulation - IB | RevisionDojo](https://images.openai.com/static-rsc-4/lqHDfDsKg0HPZ34jsordrYgMunoJ7RzlgKAzBWAslPu7Bercwz4j27jtO3sVVKNbVUDACmurG0om5ASfD2rbfE4fLG2YLmynLKrfcWrEoJbWTEDyuwjfiA_bUq-it7gIKZfH6KX7fBvGRNTQPzdmAruYXzeyhigGyxIDCjwFa4E?purpose=inline)
+
+5
+
+- Hai vùng cực nhận được rất ít năng lượng Mặt Trời trong phần lớn thời gian trong năm.
+- Không khí bị làm lạnh mạnh, trở nên lạnh, đặc và có xu hướng chìm xuống.
+- Không khí chìm làm tăng khối lượng không khí ở tầng thấp.
+
+Kết quả: hình thành đai áp cao cực (Polar High Pressure Belts).
+
+## III. Sơ đồ tổng hợp 7 đai khí áp trên Trái Đất
+
+[Pressure Belts of the Earth: Types, Significance, Shifting, Impact & UPSC Notes](https://images.openai.com/static-rsc-4/d3hlPKYd8lS1T5xQOHJQRJ2-tPjwJgD2y48T3XXlMaP1B6I_6BfjnsZShvGMLAYGY9gehGToI4yX_NW6xLCsZTaJMrgH002ogBOLxDZdR1ot4iRnSwKZ_BJD54zzm5OJDQPrHtuxiBQQ2ys4IggmcdoxkFweK8Imsker8AnsOJo?purpose=inline)
+
+[testbook.com](https://testbook.com/ias-preparation/pressure-belts-of-the-earth?utm_source=chatgpt.com)
+
+| Vĩ độ gần đúng | Đai khí áp       | Nguyên nhân chính         |
+| -------------- | ---------------- | ------------------------- |
+| 90° Bắc        | Áp cao cực       | Không khí lạnh chìm xuống |
+| 60° Bắc        | Áp thấp ôn đới   | Hội tụ, không khí bốc lên |
+| 30° Bắc        | Áp cao chí tuyến | Nhánh không khí đi xuống  |
+| 0°             | Áp thấp Xích đạo | Nóng, không khí bốc lên   |
+| 30° Nam        | Áp cao chí tuyến | Nhánh không khí đi xuống  |
+| 60° Nam        | Áp thấp ôn đới   | Hội tụ, không khí bốc lên |
+| 90° Nam        | Áp cao cực       | Không khí lạnh chìm xuống |
+
+Lưu ý: Đây là mô hình phân bố trung bình, các đai khí áp thực tế có thể dịch chuyển theo mùa và bị ảnh hưởng bởi lục địa, đại dương.
+
+## IV. Gió Tín phong hình thành như thế nào?
+
+[8.2: Atmosphere of the Earth - Physics LibreTexts](https://images.openai.com/static-rsc-4/LryMGmD6sZ6wuW8U8TaBUjLnoR0rDSK3HBIeZJUv_rwH19vxBD3GCZWxnf6jwFt2uNJSkuI6p-XlbbGEJWO7TxC4pD-yw8UZoRNGT52lBOe3galzX-tzZt7JKk774JDLExwTvucqSdTpQSimeKLP0mcYd9Y8GWQFX2jsh_MMaLY?purpose=inline)
+
+[Zona de Convergencia Intertropical (ZCIT): qué es y cómo es su comportamiento](https://images.openai.com/static-rsc-4/N5Rj59C1WA2Y_TkHV546r4DvGkxoar3qSHm94vJqwKJZT_ld58bP6YcEwGPGRWTuKyuV6iWsWG7AxMeRhFT5fYC15UQYwpDrnACr0s9A3EOldQViL_-CpExoavJBHMPmPJc7-dj8mh-T9GKGab6QIY3WpHhYiELy89azxCijBdg?purpose=inline)
+
+[Winds: Facts and Information | Q-files - Q-files - Search • Read • Discover](https://images.openai.com/static-rsc-4/HgbMkNa3gbSzZPStphUni9DBr0K8I4aKwBvAHb3EY3aR6v-s5jPLYYlr-XiiTAqEEUlzYnbxYFZxehvW1WKgCST2Ryn3WxVWQCGbQCmplOT-KCkRGcbfDojw58ogYY6khqqZEAO89GiOFaG00cOaNzQbi0ReznsVlUfoOoO5DXk?purpose=inline)
+
+8
+
+Gió Tín phong hình thành do sự chênh lệch khí áp giữa áp cao chí tuyến và áp thấp Xích đạo.
+
+Quá trình diễn ra như sau:
+
+1. Không khí đi xuống tại khu vực áp cao chí tuyến.
+2. Một phần không khí ở tầng thấp di chuyển về phía áp thấp Xích đạo.
+3. Do lực Coriolis (Coriolis Effect), hướng gió bị lệch:
+   - Bán cầu Bắc: lệch về bên phải, tạo thành gió Đông Bắc.
+   - Bán cầu Nam: lệch về bên trái, tạo thành gió Đông Nam.
+4. Hai luồng gió hội tụ tại khu vực Xích đạo.
+
+[如何科学地成为“雨神”，萧敬腾看了都要直呼内行|赤道|季风|降水|降雨|地球_新浪新闻](https://images.openai.com/static-rsc-4/f44vkY_WrN-Pj3w8mK0av1bjPgebQHaKgvqiGQ4rP6uygP50XRiO1s-0rx-gN3qJ5rNg6S2ZYgZpagti7-5lrXUI0BsNNCRKPhTkLJ4iNU202m_PTKS7m76JkpRKBmJ3oWzAZuuv3D-YY3gz-c_-gWLNWxr3Wz37f79rZyOhBE0?purpose=inline)
+
+[k.sina.cn](https://k.sina.cn/article_6794763476_194ffdcd4019016jfs.html?utm_source=chatgpt.com)
+
+## V. Ghi nhớ – Hiểu bản chất hiện tượng
+
+Tại sao lại có áp thấp Xích đạo – áp cao chí tuyến – áp thấp ôn đới?
+
+- Xích đạo: nóng mạnh → không khí bốc lên → áp thấp nhiệt lực.
+- Chí tuyến: không khí đi xuống từ nhánh hoàn lưu Hadley → áp cao động lực.
+- Ôn đới: các luồng khí hội tụ ở khoảng 60° → không khí bốc lên → áp thấp động lực.
+- Hai cực: không khí lạnh, đặc, chìm xuống → áp cao nhiệt lực.
+
+Mẹo ghi nhớ cho học sinh:
+
+# Thấp – Cao – Thấp – Cao
+
+Xích đạo → Chí tuyến → Ôn đới → Cực
+
+[File:Earth Global Circulation - en.svg - Wikimedia Commons](https://images.openai.com/static-rsc-4/X1F-jl0akWHeD35kMEHo0Faqk88vJChuSjDq2wcPttZYVEut86iI_uITqa_jo95IE4ui9R07QLCD39DlAWOL1n3Mo-EYXj57g0Im15DmUNPGyqXavtUYWJC2TO8SYDRlI-NaMz0wK1RGLGtpEyoNdF8vnPGhXHP2QwGxGrsMJ4A?purpose=inline)
+
+[commons.wikimedia.org](https://commons.wikimedia.org/wiki/File%3AEarth_Global_Circulation_-_en.svg?utm_source=chatgpt.com)
+
+Câu hỏi thảo luận cuối bài:
+
+1. Vì sao áp thấp Xích đạo được gọi là áp thấp nhiệt lực, còn áp thấp ôn đới chủ yếu là áp thấp động lực?
+2. Vì sao khu vực áp cao chí tuyến thường có nhiều hoang mạc?
+3. Nếu Trái Đất không tự quay, hướng gió Tín phong sẽ thay đổi như thế nào?
+4. Tại sao gió Tín phong ở bán cầu Bắc có hướng Đông Bắc nhưng ở bán cầu Nam lại có hướng Đông Nam?
+</script></body></html>
