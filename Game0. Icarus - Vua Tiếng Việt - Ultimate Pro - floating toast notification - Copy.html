@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vua Tiếng Việt - Ultimate Pro</title>
+    <style>
+        /* THEMES CONFIGURATION */
+        :root {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --border: #cbd5e1;
+            
+            --scramble-bg: #e0e7ff;
+            --scramble-text: #3730a3;
+            --scramble-border: #6366f1;
+            --tile-bg: #e2e8f0;
+
+            --char-font-size: 36px;
+            --char-font-weight: 800;
+            --tile-font-size: 22px;
+            --tile-width: 44px;
+            --tile-height: 50px;
+        }
+
+        [data-theme="saga-green"] {
+            --bg: #e8f0ec;
+            --card-bg: #f4f8f5;
+            --text: #1b382b;
+            --primary: #2d6a4f;
+            --primary-hover: #1b4332;
+            --border: #b7e4c7;
+            --scramble-bg: #d8f3dc;
+            --scramble-text: #1b4332;
+            --scramble-border: #52b788;
+            --tile-bg: #b7e4c7;
+        }
+
+        [data-theme="amber"] {
+            --bg: #fffbe2;
+            --card-bg: #fffbeb;
+            --text: #451a03;
+            --primary: #d97706;
+            --primary-hover: #b45309;
+            --border: #fde68a;
+            --scramble-bg: #fef3c7;
+            --scramble-text: #78350f;
+            --scramble-border: #f59e0b;
+            --tile-bg: #fde68a;
+        }
+
+        * { box-sizing: border-box; transition: background-color 0.2s, color 0.2s; }
+
+        html, body {
+            width: 100%; height: 100vh;
+            margin: 0; padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex; flex-direction: column;
+        }
+
+        /* HEADER OPTIMIZED */
+        header {
+            width: 100%; height: 54px;
+            background: var(--card-bg);
+            padding: 0 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 8px; flex-shrink: 0; z-index: 20;
+            white-space: nowrap;
+        }
+
+        .header-title {
+            font-size: 18px; font-weight: 800;
+            color: var(--primary);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .header-controls {
+            display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
+        }
+
+        .switch-label {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; font-weight: 600;
+            cursor: pointer; user-select: none;
+        }
+
+        .switch {
+            position: relative; display: inline-block;
+            width: 30px; height: 17px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: .2s; border-radius: 17px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 11px; width: 11px; left: 3px; bottom: 3px;
+            background-color: white; transition: .2s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(13px); }
+
+        select, input[type="text"], input[type="number"] {
+            padding: 4px 6px; border: 1px solid var(--border);
+            border-radius: 6px; background: var(--card-bg);
+            color: var(--text); font-size: 12px; outline: none;
+        }
+
+        button {
+            background-color: var(--primary); color: white; border: none;
+            padding: 5px 9px; border-radius: 6px; cursor: pointer;
+            font-size: 12px; font-weight: 600; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.secondary { background-color: #64748b; color: white; }
+        button.secondary:hover:not(:disabled) { background-color: #475569; }
+        button.outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        button.btn-sm { padding: 3px 6px; font-size: 11px; }
+
+        /* MAIN WORKSPACE */
+        main {
+            flex: 1; width: 100%; padding: 10px 16px;
+            display: flex; flex-direction: column;
+            justify-content: space-between; align-items: center;
+            position: relative; overflow: hidden;
+        }
+
+        .main-space {
+            position: relative; width: 100%; flex: 1; margin-bottom: 8px;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 16px;
+            border-radius: 14px; background: rgba(0,0,0,0.015);
+            border: 1px dashed var(--border); overflow: hidden;
+            cursor: default;
+        }
+
+        /* DYNAMIC BACKGROUND LAYER */
+        .main-space-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            pointer-events: none; z-index: 1;
+        }
+
+        .center-content-wrapper {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 16px; flex: 1; z-index: 5;
+            width: 100%; height: 100%; overflow: hidden;
+        }
+
+        /* KHUNG HIỂN THỊ ẢNH XEN KẼ */
+        .image-slide-wrapper {
+            width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        .image-slide-wrapper img.fit-exact-img {
+            object-fit: fill; 
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            cursor: zoom-in;
+            display: block;
+        }
+
+        .pattern-dots {
+            background-image: radial-gradient(var(--border) 1.5px, transparent 1.5px);
+            background-size: 18px 18px;
+        }
+        .pattern-grid {
+            background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),
+                              linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .pattern-waves {
+            background-image: radial-gradient(circle at 100% 100%, transparent 8px, var(--border) 8px, var(--border) 9px, transparent 9px);
+            background-size: 20px 20px;
+        }
+        .pattern-circles {
+            background-image: radial-gradient(circle, var(--border) 20%, transparent 20%),
+                              radial-gradient(circle, var(--border) 20%, transparent 20%);
+            background-size: 30px 30px; background-position: 0 0, 15px 15px;
+        }
+
+        .scrambled-text {
+            display: flex; gap: 10px; flex-wrap: wrap;
+            justify-content: center; align-items: center;
+            cursor: pointer; padding: 8px; z-index: 5;
+        }
+
+        .char-box {
+            font-size: var(--char-font-size);
+            font-weight: var(--char-font-weight);
+            color: var(--scramble-text);
+            background: var(--scramble-bg);
+            border: 2px dashed var(--scramble-border);
+            padding: 4px 12px; border-radius: 10px;
+            user-select: none; display: inline-block;
+        }
+
+        /* SPIN ANIMATION */
+        .spin-active .char-box { animation: spinAsync linear infinite; }
+        @keyframes spinAsync {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* HINT TILES */
+        .hint-container {
+            display: flex; justify-content: center; gap: 6px;
+            flex-wrap: wrap; min-height: 48px; align-items: center; z-index: 5;
+            position: relative;
+        }
+
+        .hint-tile {
+            width: var(--tile-width); height: var(--tile-height);
+            border: 2px solid var(--border); border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: var(--tile-font-size); font-weight: bold;
+            cursor: pointer; background-color: var(--tile-bg); user-select: none;
+            position: relative;
+        }
+
+        .hint-tile.revealed { background-color: #22c55e; color: white; border-color: #16a34a; }
+        .hint-tile.space { border: none; background: transparent; width: 14px; }
+
+        /* FOOTER & PAGINATION ENHANCED */
+        footer {
+            width: 100%; display: flex; align-items: center;
+            justify-content: space-between; gap: 12px; padding-top: 8px;
+            border-top: 1px solid var(--border); flex-shrink: 0; white-space: nowrap;
+        }
+
+        .pagination {
+            display: flex; gap: 5px; align-items: center;
+            overflow-x: auto; max-width: 50%; padding: 2px 0;
+        }
+        .pagination::-webkit-scrollbar { height: 3px; }
+        .pagination::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .page-item {
+            min-width: 28px; height: 28px; padding: 0 4px; border-radius: 6px;
+            border: 1px solid var(--border); background: var(--card-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-weight: bold; font-size: 11px; flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .page-item.active { border: 2px solid var(--primary); color: var(--primary); font-weight: 900; transform: scale(1.08); }
+        .page-item.solved { background-color: #22c55e; color: white; border-color: #16a34a; }
+        .page-item.image-page { border-color: #a855f7; color: #a855f7; }
+        .page-item.image-page.active { background-color: #a855f7; color: white; }
+
+        .footer-actions { display: flex; align-items: center; gap: 8px; }
+
+        /* LIGHTBOX OVERLAY PHÓNG TO ẢNH TRÀN MÀN HÌNH */
+        .lightbox-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.9); display: none;
+            justify-content: center; align-items: center; z-index: 200;
+            cursor: default; padding: 20px;
+        }
+
+        .lightbox-overlay img.fit-exact-img {
+            object-fit: fill;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            cursor: zoom-out;
+            display: block;
+        }
+
+        /* FLOATING TOAST NOTIFICATION (GÓC DƯỚI BÊN PHẢI) */
+        .toast-notification {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            background: #10b981; color: white;
+            padding: 10px 18px; border-radius: 10px;
+            font-size: 13px; font-weight: 700;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.35);
+            display: flex; align-items: center; gap: 8px;
+            z-index: 300; opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* MODALS */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6); display: none;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal {
+            background: var(--card-bg); padding: 20px; border-radius: 12px;
+            width: 92%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .modal textarea { width: 100%; height: 120px; }
+        
+        .history-list {
+            max-height: 200px; overflow-y: auto; margin: 10px 0;
+            border: 1px solid var(--border); border-radius: 8px;
+        }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-item .info { cursor: pointer; flex: 1; }
+        .history-item .info:hover { color: var(--primary); font-weight: 600; }
+
+        .form-group { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; }
+        .form-row { display: flex; gap: 10px; align-items: center; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <span id="appHeaderTitle">👑 Vua Tiếng Việt</span>
+    </div>
+    
+    <div class="header-controls">
+        <!-- NÚT LƯU FILE HTML -->
+        <button style="background:#10b981;" onclick="saveAsHtml()" title="Lưu toàn bộ ứng dụng thành file HTML độc lập kèm dữ liệu hiện tại">💾 Save AS HTML</button>
+
+        <!-- NÚT TẮT/BẬT ÂM THANH -->
+        <button class="outline btn-sm" id="muteBtn" onclick="toggleMute()" title="Bật/Tắt âm thanh">🔊 Sound</button>
+
+        <!-- CỠ CHỮ -->
+        <button class="outline btn-sm" onclick="changeFontSize(2)" title="Tăng cỡ chữ">A+</button>
+        <button class="outline btn-sm" onclick="changeFontSize(-2)" title="Giảm cỡ chữ">A-</button>
+
+        <!-- NÚT GẠT CHỮ ĐẬM -->
+        <label class="switch-label" title="Bật/Tắt chữ đậm">
+            <span>Đậm</span>
+            <div class="switch">
+                <input type="checkbox" id="boldToggle" checked onchange="toggleBold()">
+                <span class="slider"></span>
+            </div>
+        </label>
+
+        <!-- NÚT GẠT CHỮ IN HOA HOẶC NGUYÊN BẢN -->
+        <label class="switch-label" title="Bật: In hoa hoàn toàn | Tắt: Giữ nguyên bản từ import">
+            <span>Hoa</span>
+            <div class="switch">
+                <input type="checkbox" id="caseToggle" checked onchange="renderAll()">
+                <span class="slider"></span>
+            </div>
+        </label>
+
+        <!-- NÚT GẠT XOAY CHỮ -->
+        <label class="switch-label" title="Xoay các chữ cái">
+            <span>Xoay</span>
+            <div class="switch">
+                <input type="checkbox" id="spinToggle" onchange="toggleSpin()">
+                <span class="slider"></span>
+            </div>
+        </label>
+
+        <!-- NÚT GẠT TỰ ĐỘNG NEXT CÂU (MẶC ĐỊNH TẮT) -->
+        <label class="switch-label" title="Tự động qua câu sau 1.2s khi giải xong">
+            <span>⏭️ Auto</span>
+            <div class="switch">
+                <input type="checkbox" id="autoNextToggle">
+                <span class="slider"></span>
+            </div>
+        </label>
+
+        <!-- HỌA TIẾT -->
+        <select id="patternSelect" onchange="changePattern()" title="Chọn họa tiết nền">
+            <option value="pattern-dots">🎨 Lưới chấm</option>
+            <option value="pattern-grid">📐 Ô vuông</option>
+            <option value="pattern-waves">🌊 Làn sóng</option>
+            <option value="pattern-circles">⭕ Đồng tâm</option>
+            <option value="none">🚫 Không nền</option>
+        </select>
+
+        <!-- THEME -->
+        <select id="themeSelect" onchange="changeTheme()">
+            <option value="default">🎨 Mặc định</option>
+            <option value="saga-green">🌿 Saga Green</option>
+            <option value="amber">🍂 Amber</option>
+        </select>
+
+        <button onclick="openImportModal()">📥 Import từ khóa & Nền</button>
+        <button class="secondary" onclick="openHistoryModal()">📜 Lịch sử</button>
+    </div>
+</header>
+
+<main>
+    <div class="main-space pattern-dots" id="mainSpace">
+        <div class="main-space-bg" id="mainSpaceBg"></div>
+
+        <!-- CENTER CONTENT (GAME TILES & SCRAMBLE OR IMAGE SLIDE) -->
+        <div class="center-content-wrapper" id="centerContentWrapper">
+            <div class="scrambled-text" id="scrambledWord" onclick="searchImage()" title="Bấm để tìm ảnh trên Google"></div>
+            <div class="hint-container" id="hintContainer" style="display: none;"></div>
+        </div>
+    </div>
+
+    <small id="footerTip" style="opacity: 0.7; margin-bottom: 2px;">💡 Click từ bị mix để tìm ảnh | Gõ ký tự để mở ô tương ứng | Space: Hiện ô -> Hiện đáp án -> Sang câu tiếp</small>
+
+    <footer>
+        <button class="outline" onclick="prevQuestion()">⬅️ Trước</button>
+        <div class="pagination" id="pagination"></div>
+        <div class="footer-actions">
+            <button class="secondary" id="mixBtn" onclick="mixCurrentWord()">🔀 Mix lại</button>
+            <button class="outline" onclick="nextQuestion()">Sau ➡️</button>
+        </div>
+    </footer>
+</main>
+
+<!-- FLOATING TOAST NOTIFICATION GÓC DƯỚI BÊN PHẢI -->
+<div class="toast-notification" id="completionToast">
+    🎉 Bạn đã hoàn thành tất cả các câu hỏi!
+</div>
+
+<!-- OVERLAY PHÓNG TO ẢNH -->
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
+    <img id="lightboxImg" class="fit-exact-img" src="" alt="Zoom Image" onclick="event.stopPropagation(); closeLightbox();">
+</div>
+
+<!-- MODAL IMPORT VÀ CẤU HÌNH -->
+<div class="modal-overlay" id="importModal">
+    <div class="modal">
+        <h3>📥 Import Danh Sách Từ Khóa & URL Ảnh Nền</h3>
+        
+        <div class="form-group">
+            <label>Danh sách từ khóa / Link ảnh xem xen kẽ (mỗi nội dung 1 dòng):</label>
+            <textarea id="wordListInput" placeholder="Bánh chưng&#10;https://example.com/anh_minh_hoa.jpg&#10;Phở bò..."></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group" style="flex:2;">
+                <label>URL Ảnh nền MainSpace (Hoặc Ctrl+V dán ảnh):</label>
+                <input type="text" id="bgUrlInput" placeholder="Dán link hoặc paste ảnh trực tiếp...">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Nền Opacity (0 -> 1):</label>
+                <input type="number" id="bgOpacityInput" min="0" max="1" step="0.1" value="0.2">
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <button class="secondary" onclick="closeModal('importModal')">Hủy</button>
+            <button onclick="processImport()">Lưu & Bắt đầu</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL LỊCH SỬ -->
+<div class="modal-overlay" id="historyModal">
+    <div class="modal">
+        <h3>📜 Lịch Sử Nhập Từ Khóa</h3>
+        <div class="history-list" id="historyList"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <button class="secondary" style="background:#ef4444" onclick="clearAllHistory()">Xóa tất cả</button>
+            <button class="secondary" onclick="closeModal('historyModal')">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<script id="appStateScript">
+    // INITIAL APP CONFIG & DATA STATE
+    window.INITIAL_DATA = {
+        isSavedStandalone: false,
+        words: ["Vua Tiếng Việt", "Giao Diện Đẹp", "Mô Phỏng Trí Tuệ"],
+        appConfig: {
+            bgUrl: "https://ans.edu.vn/wp-content/uploads/2022/01/photo-1-16415593145462082569904.jpg",
+            bgOpacity: 0.2
+        }
+    };
+</script>
+
+<script>
+    let words = window.INITIAL_DATA.words;
+    let appConfig = window.INITIAL_DATA.appConfig;
+    let currentIndex = 0;
+    let autoNextTimer = null;
+    let toastTimer = null;
+
+    let questionStates = [];
+    let charFontSize = 36;
+    let tileFontSize = 22;
+
+    const DATA_STORAGE_KEY = 'vua_tieng_viet_config_data';
+
+    // NHẬN DIỆN DÒNG CÓ PHẢI LÀ LINK ẢNH
+    function isImageUrl(str) {
+        if (!str) return false;
+        const trimmed = str.trim();
+        return /^https?:\/\/.+/i.test(trimmed) || /^data:image\/.+/i.test(trimmed);
+    }
+
+    // AUDIO API CONTROLLER
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    let isMuted = false;
+
+    function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        const btn = document.getElementById('muteBtn');
+        btn.innerText = isMuted ? '🔇 Muted' : '🔊 Sound';
+        btn.style.opacity = isMuted ? '0.6' : '1';
+    }
+
+    function playSound(type) {
+        if (isMuted) return;
+        try {
+            initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+                gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now); osc.stop(now + 0.05);
+            } else if (type === 'tile') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(500, now + 0.08);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
+            } else if (type === 'win') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, now);
+                osc.frequency.setValueAtTime(600, now + 0.08);
+                osc.frequency.setValueAtTime(800, now + 0.16);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            }
+        } catch (e) {}
+    }
+
+    function saveConfigToLocalStorage() {
+        if (window.INITIAL_DATA.isSavedStandalone) return;
+        const configData = { words, appConfig };
+        localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(configData));
+    }
+
+    function loadConfigFromLocalStorage() {
+        if (window.INITIAL_DATA.isSavedStandalone) return;
+        const savedRaw = localStorage.getItem(DATA_STORAGE_KEY);
+        if (!savedRaw) return;
+
+        try {
+            const data = JSON.parse(savedRaw);
+            if (data && data.words && data.words.length > 0) {
+                words = data.words;
+                appConfig = data.appConfig || appConfig;
+            }
+        } catch (e) {
+            console.error("Lỗi khôi phục cấu hình:", e);
+        }
+    }
+
+    function adjustImgExactDimensions(imgElem, maxW, maxH) {
+        const nw = imgElem.naturalWidth;
+        const nh = imgElem.naturalHeight;
+        if (!nw || !nh) return;
+
+        const ratio = Math.min(maxW / nw, maxH / nh);
+        const finalW = Math.round(nw * ratio);
+        const finalH = Math.round(nh * ratio);
+
+        imgElem.style.width = finalW + 'px';
+        imgElem.style.height = finalH + 'px';
+    }
+
+    window.onload = function() {
+        loadConfigFromLocalStorage();
+        initGame();
+        setupImagePasteListeners();
+
+        window.addEventListener('resize', () => {
+            const state = questionStates[currentIndex];
+            if (state && state.isImage) {
+                const img = document.querySelector('.image-slide-wrapper img.fit-exact-img');
+                const mainSpace = document.getElementById('mainSpace');
+                if (img && mainSpace) {
+                    adjustImgExactDimensions(img, mainSpace.clientWidth - 32, mainSpace.clientHeight - 32);
+                }
+            }
+
+            const lightbox = document.getElementById('lightboxOverlay');
+            if (lightbox && lightbox.style.display === 'flex') {
+                const lbImg = document.getElementById('lightboxImg');
+                if (lbImg) {
+                    adjustImgExactDimensions(lbImg, window.innerWidth * 0.96, window.innerHeight * 0.94);
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            const isLightboxOpen = document.getElementById('lightboxOverlay').style.display === 'flex';
+
+            if (isLightboxOpen) {
+                if (event.key === 'ArrowRight') {
+                    navigateImageSlide(1);
+                } else if (event.key === 'ArrowLeft') {
+                    navigateImageSlide(-1);
+                } else if (event.key === 'Escape') {
+                    closeLightbox();
+                }
+                return;
+            }
+
+            if (event.key === 'ArrowLeft') {
+                prevQuestion();
+            } else if (event.key === 'ArrowRight') {
+                nextQuestion();
+            } else if (event.code === 'Space') {
+                event.preventDefault();
+                handleSpaceShortcut();
+            } else if (event.key === '=' || event.key === '+') {
+                changeFontSize(2);
+            } else if (event.key === '-') {
+                changeFontSize(-2);
+            } else if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+                handleKeyInput(event.key);
+            }
+        });
+    };
+
+    function navigateImageSlide(direction) {
+        let targetIdx = currentIndex + direction;
+        while (targetIdx >= 0 && targetIdx < questionStates.length) {
+            if (questionStates[targetIdx].isImage) {
+                playSound('click');
+                currentIndex = targetIdx;
+                loadQuestion();
+                
+                const lbImg = document.getElementById('lightboxImg');
+                const cleanUrl = words[currentIndex].trim();
+                lbImg.src = cleanUrl;
+                lbImg.onload = function() {
+                    adjustImgExactDimensions(lbImg, window.innerWidth * 0.96, window.innerHeight * 0.94);
+                };
+                return;
+            }
+            targetIdx += direction;
+        }
+    }
+
+    function initGame() {
+        currentIndex = 0;
+        questionStates = words.map(item => {
+            const isImg = isImageUrl(item);
+            return {
+                isImage: isImg,
+                scrambledChars: isImg ? [] : mixCharacters(item),
+                hintVisible: false,
+                revealedIndices: new Set(),
+                status: isImg ? 'solved' : 'none',
+                spacePressStep: 0
+            };
+        });
+
+        applyUIConfig();
+        renderPagination();
+        loadQuestion();
+    }
+
+    function mixCharacters(str) {
+        let chars = str.replace(/\s+/g, '').split('');
+        for (let i = chars.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [chars[i], chars[j]] = [chars[j], chars[i]];
+        }
+        return chars;
+    }
+
+    function applyUIConfig() {
+        const bgLayer = document.getElementById('mainSpaceBg');
+        if (appConfig.bgUrl) {
+            bgLayer.style.backgroundImage = `url("${appConfig.bgUrl}")`;
+            bgLayer.style.opacity = appConfig.bgOpacity !== undefined ? appConfig.bgOpacity : 0.2;
+        } else {
+            bgLayer.style.backgroundImage = 'none';
+        }
+    }
+
+    // HIỂN THỊ THÔNG BÁO FLOAT NỔI VÀ TỰ ĐỘNG BIẾN MẤT Ở GÓC DƯỚI PHẢI
+    function checkCompletionState() {
+        const allCompleted = questionStates.every(st => st.status === 'solved' || st.isImage);
+        if (allCompleted) {
+            playSound('win');
+            const toast = document.getElementById('completionToast');
+            toast.classList.add('show');
+
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+    }
+
+    function handleSpaceShortcut() {
+        const state = questionStates[currentIndex];
+
+        if (state.isImage) {
+            playSound('click');
+            if (currentIndex < words.length - 1) {
+                nextQuestion();
+            } else {
+                checkCompletionState();
+            }
+            return;
+        }
+
+        if (state.spacePressStep === 0) {
+            playSound('click');
+            state.hintVisible = true;
+            state.spacePressStep = 1;
+            renderHintTiles();
+        } else if (state.spacePressStep === 1) {
+            revealAnswerInTiles();
+            state.spacePressStep = 2;
+        } else {
+            playSound('click');
+            if (currentIndex < words.length - 1) {
+                nextQuestion();
+            } else {
+                checkCompletionState();
+            }
+        }
+    }
+
+    function handleKeyInput(pressedKey) {
+        const state = questionStates[currentIndex];
+        if (state.isImage) return;
+
+        if (!state.hintVisible) {
+            state.hintVisible = true;
+            state.spacePressStep = 1;
+        }
+
+        const targetWord = words[currentIndex];
+        const cleanWord = targetWord.replace(/\s+/g, '');
+        const keyLower = pressedKey.toLowerCase();
+        let matched = false;
+
+        for (let i = 0; i < cleanWord.length; i++) {
+            if (cleanWord[i].toLowerCase() === keyLower) {
+                if (!state.revealedIndices.has(i)) {
+                    state.revealedIndices.add(i);
+                    matched = true;
+                }
+            }
+        }
+
+        if (matched) {
+            playSound('tile');
+            if (state.revealedIndices.size === cleanWord.length) {
+                state.status = 'solved';
+                state.spacePressStep = 2;
+                playSound('win');
+                triggerAutoNextIfEnabled();
+                checkCompletionState();
+            }
+            renderHintTiles();
+            renderPagination();
+        }
+    }
+
+    function loadQuestion() {
+        if (autoNextTimer) clearTimeout(autoNextTimer);
+        const state = questionStates[currentIndex];
+
+        const mixBtn = document.getElementById('mixBtn');
+        const footerTip = document.getElementById('footerTip');
+
+        if (state.isImage) {
+            mixBtn.disabled = true;
+            footerTip.innerText = '🖼️ Click trực tiếp vào ảnh để phóng to | Space / Mũi tên: Chuyển trang';
+            renderImageSlide(words[currentIndex]);
+        } else {
+            mixBtn.disabled = false;
+            footerTip.innerText = '💡 Click từ bị mix để tìm ảnh | Gõ ký tự để mở ô tương ứng | Space: Hiện ô -> Hiện đáp án -> Sang câu tiếp';
+            renderScrambled();
+            renderHintTiles();
+        }
+
+        renderPagination();
+    }
+
+    function renderImageSlide(url) {
+        const wrapper = document.getElementById('centerContentWrapper');
+        const cleanUrl = url.trim();
+        wrapper.innerHTML = `
+            <div class="image-slide-wrapper">
+                <img class="fit-exact-img" src="${cleanUrl}" alt="Ảnh minh họa" onclick="openLightbox(event, '${cleanUrl}')" onerror="this.alt='Không thể tải ảnh từ URL này'">
+            </div>
+        `;
+
+        const img = wrapper.querySelector('img.fit-exact-img');
+        const mainSpace = document.getElementById('mainSpace');
+
+        img.onload = function() {
+            adjustImgExactDimensions(img, mainSpace.clientWidth - 32, mainSpace.clientHeight - 32);
+        };
+    }
+
+    function openLightbox(event, url) {
+        event.stopPropagation();
+        playSound('click');
+        const lightbox = document.getElementById('lightboxOverlay');
+        const img = document.getElementById('lightboxImg');
+        img.src = url;
+        lightbox.style.display = 'flex';
+
+        img.onload = function() {
+            adjustImgExactDimensions(img, window.innerWidth * 0.96, window.innerHeight * 0.94);
+        };
+    }
+
+    function closeLightbox() {
+        playSound('click');
+        document.getElementById('lightboxOverlay').style.display = 'none';
+    }
+
+    function mixCurrentWord() {
+        const state = questionStates[currentIndex];
+        if (state.isImage) return;
+
+        playSound('click');
+        state.scrambledChars = mixCharacters(words[currentIndex]);
+        renderScrambled();
+    }
+
+    function renderScrambled() {
+        const wrapper = document.getElementById('centerContentWrapper');
+        wrapper.innerHTML = `
+            <div class="scrambled-text" id="scrambledWord" onclick="searchImage()" title="Bấm để tìm ảnh trên Google"></div>
+            <div class="hint-container" id="hintContainer" style="display: none;"></div>
+        `;
+
+        const container = document.getElementById('scrambledWord');
+        const isUpper = document.getElementById('caseToggle').checked;
+        const state = questionStates[currentIndex];
+
+        state.scrambledChars.forEach((char) => {
+            const box = document.createElement('div');
+            box.className = 'char-box';
+            box.innerText = isUpper ? char.toUpperCase() : char;
+            
+            box.style.animationDuration = `${(1.5 + Math.random() * 2.5).toFixed(2)}s`;
+            box.style.animationDirection = Math.random() > 0.5 ? 'normal' : 'reverse';
+            box.style.animationDelay = `${(Math.random() * 2).toFixed(2)}s`;
+
+            container.appendChild(box);
+        });
+    }
+
+    function renderHintTiles() {
+        const state = questionStates[currentIndex];
+        if (state.isImage) return;
+
+        const container = document.getElementById('hintContainer');
+        if (!container) return;
+        
+        container.innerHTML = "";
+        const targetWord = words[currentIndex];
+        const isUpper = document.getElementById('caseToggle').checked;
+
+        if (!state.hintVisible) {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'flex';
+        let letterIndex = 0;
+
+        for (let i = 0; i < targetWord.length; i++) {
+            const char = targetWord[i];
+            const tile = document.createElement('div');
+
+            if (char === ' ') {
+                tile.className = 'hint-tile space';
+            } else {
+                tile.className = 'hint-tile';
+                const charToShow = isUpper ? char.toUpperCase() : char;
+                tile.dataset.char = charToShow;
+                const currentTileIndex = letterIndex;
+
+                if (state.revealedIndices.has(currentTileIndex)) {
+                    tile.innerText = charToShow;
+                    tile.classList.add('revealed');
+                } else {
+                    tile.innerText = "";
+                    tile.onclick = function() {
+                        playSound('tile');
+                        state.revealedIndices.add(currentTileIndex);
+                        if (state.revealedIndices.size === targetWord.replace(/\s+/g, '').length) {
+                            state.status = 'solved';
+                            state.spacePressStep = 2;
+                            playSound('win');
+                            triggerAutoNextIfEnabled();
+                            checkCompletionState();
+                        }
+                        renderHintTiles();
+                        renderPagination();
+                    };
+                }
+                letterIndex++;
+            }
+            container.appendChild(tile);
+        }
+    }
+
+    function revealAnswerInTiles() {
+        const state = questionStates[currentIndex];
+        if (state.isImage) return;
+
+        playSound('win');
+        const targetWord = words[currentIndex];
+        
+        state.hintVisible = true;
+        state.status = 'solved';
+        state.spacePressStep = 2;
+
+        const cleanWord = targetWord.replace(/\s+/g, '');
+        for (let i = 0; i < cleanWord.length; i++) {
+            state.revealedIndices.add(i);
+        }
+
+        renderHintTiles();
+        renderPagination();
+        triggerAutoNextIfEnabled();
+        checkCompletionState();
+    }
+
+    function triggerAutoNextIfEnabled() {
+        if (document.getElementById('autoNextToggle').checked) {
+            if (autoNextTimer) clearTimeout(autoNextTimer);
+            autoNextTimer = setTimeout(() => {
+                if (currentIndex < words.length - 1) {
+                    nextQuestion();
+                } else {
+                    checkCompletionState();
+                }
+            }, 1200);
+        }
+    }
+
+    function renderPagination() {
+        const container = document.getElementById('pagination');
+        container.innerHTML = "";
+
+        let questionCounter = 0;
+
+        words.forEach((item, idx) => {
+            const btn = document.createElement('div');
+            const state = questionStates[idx];
+            
+            let statusClass = "";
+            if (idx === currentIndex) statusClass += " active";
+            
+            let labelText = "";
+
+            if (state && state.isImage) {
+                statusClass += " image-page";
+                labelText = "🖼️";
+            } else {
+                questionCounter++;
+                labelText = questionCounter;
+                if (state && state.status === 'solved') {
+                    statusClass += " solved";
+                }
+            }
+
+            btn.className = `page-item ${statusClass}`;
+            btn.innerText = labelText;
+            btn.onclick = () => { playSound('click'); currentIndex = idx; loadQuestion(); };
+            container.appendChild(btn);
+        });
+
+        const activeItem = container.querySelector('.page-item.active');
+        if (activeItem) activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    function setupImagePasteListeners() {
+        const bgInput = document.getElementById('bgUrlInput');
+
+        const handlePaste = (inputElem) => (event) => {
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        inputElem.value = e.target.result;
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            }
+        };
+
+        bgInput.addEventListener('paste', handlePaste(bgInput));
+    }
+
+    function changePattern() {
+        playSound('click');
+        const pattern = document.getElementById('patternSelect').value;
+        const mainSpace = document.getElementById('mainSpace');
+        mainSpace.className = 'main-space ' + (pattern !== 'none' ? pattern : '');
+        if (document.getElementById('spinToggle').checked) mainSpace.classList.add('spin-active');
+    }
+
+    function toggleBold() {
+        playSound('click');
+        const isBold = document.getElementById('boldToggle').checked;
+        document.documentElement.style.setProperty('--char-font-weight', isBold ? '800' : '400');
+    }
+
+    function toggleSpin() {
+        playSound('click');
+        const isSpin = document.getElementById('spinToggle').checked;
+        const mainSpace = document.getElementById('mainSpace');
+        if (isSpin) mainSpace.classList.add('spin-active');
+        else mainSpace.classList.remove('spin-active');
+    }
+
+    function changeTheme() {
+        playSound('click');
+        const theme = document.getElementById('themeSelect').value;
+        if (theme === 'default') document.body.removeAttribute('data-theme');
+        else document.body.setAttribute('data-theme', theme);
+    }
+
+    function changeFontSize(delta) {
+        playSound('click');
+        charFontSize = Math.max(20, Math.min(80, charFontSize + delta));
+        tileFontSize = Math.max(14, Math.min(60, tileFontSize + delta));
+        
+        const root = document.documentElement;
+        root.style.setProperty('--char-font-size', `${charFontSize}px`);
+        root.style.setProperty('--tile-font-size', `${tileFontSize}px`);
+        root.style.setProperty('--tile-width', `${tileFontSize + 22}px`);
+        root.style.setProperty('--tile-height', `${tileFontSize + 28}px`);
+    }
+
+    function renderAll() {
+        playSound('click');
+        const state = questionStates[currentIndex];
+        if (!state.isImage) {
+            renderScrambled();
+            renderHintTiles();
+        }
+    }
+
+    function searchImage() {
+        playSound('click');
+        const state = questionStates[currentIndex];
+        if (!state.isImage) {
+            window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(words[currentIndex])}`, '_blank');
+        }
+    }
+
+    function openImportModal() {
+        playSound('click');
+        document.getElementById('wordListInput').value = words.join('\n');
+        document.getElementById('bgUrlInput').value = appConfig.bgUrl;
+        document.getElementById('bgOpacityInput').value = appConfig.bgOpacity !== undefined ? appConfig.bgOpacity : 0.2;
+
+        document.getElementById('importModal').style.display = 'flex';
+    }
+
+    function closeModal(id) { playSound('click'); document.getElementById(id).style.display = 'none'; }
+    
+    function processImport() {
+        playSound('click');
+        const rawText = document.getElementById('wordListInput').value;
+        const parsedWords = rawText.split(/\n/).map(w => w.trim()).filter(w => w.length > 0);
+
+        appConfig.bgUrl = document.getElementById('bgUrlInput').value.trim();
+        appConfig.bgOpacity = parseFloat(document.getElementById('bgOpacityInput').value);
+        if (isNaN(appConfig.bgOpacity)) appConfig.bgOpacity = 0.2;
+
+        if (parsedWords.length > 0) {
+            words = parsedWords;
+            saveHistoryToLocalStorage(parsedWords);
+        }
+
+        saveConfigToLocalStorage();
+        applyUIConfig();
+        closeModal('importModal');
+        initGame();
+    }
+
+    function saveAsHtml() {
+        playSound('click');
+        
+        const cloneDoc = document.documentElement.cloneNode(true);
+        
+        const updatedDataScript = `
+    window.INITIAL_DATA = {
+        isSavedStandalone: true,
+        words: ${JSON.stringify(words)},
+        appConfig: ${JSON.stringify(appConfig)}
+    };`;
+
+        let fullHtml = "<!DOCTYPE html>\n" + cloneDoc.outerHTML;
+        
+        fullHtml = fullHtml.replace(
+            /window\.INITIAL_DATA = \{[\s\S]*?\};/,
+            updatedDataScript
+        );
+
+        const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `VuaTiengViet_${new Date().toISOString().slice(0,10)}.html`;
+        a.click();
+    }
+
+    function saveHistoryToLocalStorage(wordList) {
+        let history = JSON.parse(localStorage.getItem('vua_tv_history') || '[]');
+        const newEntry = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}),
+            words: wordList
+        };
+        history.unshift(newEntry);
+        localStorage.setItem('vua_tv_history', JSON.stringify(history));
+    }
+
+    function openHistoryModal() {
+        playSound('click');
+        renderHistoryList();
+        document.getElementById('historyModal').style.display = 'flex';
+    }
+
+    function renderHistoryList() {
+        const container = document.getElementById('historyList');
+        let history = JSON.parse(localStorage.getItem('vua_tv_history') || '[]');
+        container.innerHTML = "";
+
+        if (history.length === 0) {
+            container.innerHTML = `<div style="padding:15px; text-align:center; opacity:0.6;">Chưa có lịch sử import nào.</div>`;
+            return;
+        }
+
+        history.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div class="info" onclick="loadHistoryItem(${item.id})">
+                    <strong>${item.words.length} dòng/từ</strong> - <i>${item.date}</i><br>
+                    <small style="opacity:0.75;">${item.words.slice(0, 3).join(', ')}...</small>
+                </div>
+                <button class="outline btn-sm" style="color:#ef4444; border-color:#ef4444" onclick="deleteHistoryItem(${item.id})">Xóa</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function loadHistoryItem(id) {
+        let history = JSON.parse(localStorage.getItem('vua_tv_history') || '[]');
+        const target = history.find(item => item.id === id);
+        if (target) {
+            playSound('click');
+            words = target.words;
+            saveConfigToLocalStorage();
+            closeModal('historyModal');
+            initGame();
+        }
+    }
+
+    function deleteHistoryItem(id) {
+        playSound('click');
+        let history = JSON.parse(localStorage.getItem('vua_tv_history') || '[]');
+        history = history.filter(item => item.id !== id);
+        localStorage.setItem('vua_tv_history', JSON.stringify(history));
+        renderHistoryList();
+    }
+
+    function clearAllHistory() {
+        if (confirm('Bạn có chắc muốn xóa toàn bộ lịch sử?')) {
+            playSound('click');
+            localStorage.removeItem('vua_tv_history');
+            renderHistoryList();
+        }
+    }
+
+    function prevQuestion() { 
+        if (currentIndex > 0) { playSound('click'); currentIndex--; loadQuestion(); } 
+    }
+    
+    function nextQuestion() { 
+        if (currentIndex < words.length - 1) { 
+            playSound('click'); 
+            currentIndex++; 
+            loadQuestion(); 
+        } else {
+            checkCompletionState();
+        }
+    }
+</script>
+</body>
+</html>
