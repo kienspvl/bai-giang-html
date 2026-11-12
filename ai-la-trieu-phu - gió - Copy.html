@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ai Là Triệu Phú - Full Screen</title>
+    <style>
+        :root {
+            --bg-color: #060919;
+            --panel-bg: #111638;
+            --accent-gold: #ffd700;
+            --btn-blue: #1b2454;
+            --btn-hover: #2b3980;
+            --correct-green: #28a745;
+            --wrong-red: #dc3545;
+            --question-size: 1.3rem;
+            --answer-size: 1.1rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- HEADER TỐI GIẢN --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 2px solid #2c3673;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 56px;
+            z-index: 10;
+            gap: 12px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            color: var(--accent-gold);
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+            white-space: nowrap;
+        }
+
+        .hamburger-btn {
+            background: none;
+            border: 1px solid #3b4894;
+            color: var(--accent-gold);
+            font-size: 1.2rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .hamburger-btn:hover {
+            background-color: var(--btn-hover);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: var(--btn-blue);
+            color: var(--accent-gold);
+            border: 1px solid var(--accent-gold);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background-color: var(--btn-hover);
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            border-color: #555;
+            color: #888;
+        }
+
+        button.btn-success {
+            background-color: var(--correct-green);
+            color: white;
+            border-color: #28a745;
+        }
+
+        button.btn-save {
+            background-color: #17a2b8;
+            color: white;
+            border-color: #17a2b8;
+        }
+
+        button.btn-save:hover {
+            background-color: #138496;
+        }
+
+        /* Toggle Switches */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: #0b0e26;
+            padding: 4px 10px;
+            border-radius: 16px;
+            border: 1px solid #2c3673;
+            font-size: 0.8rem;
+            color: #d1d5db;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3b4894;
+            transition: .3s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--correct-green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Font Controls */
+        .font-controls {
+            display: flex;
+            align-items: center;
+            background-color: #0b0e26;
+            border-radius: 6px;
+            border: 1px solid #2c3673;
+            overflow: hidden;
+        }
+
+        .font-btn {
+            background: none;
+            border: none;
+            color: var(--accent-gold);
+            padding: 4px 10px;
+            font-size: 1rem;
+            border-radius: 0;
+        }
+
+        .font-btn:hover {
+            background-color: var(--btn-hover);
+            box-shadow: none;
+        }
+
+        /* --- FULL SCREEN GAME PLAY AREA --- */
+        .game-wrapper {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - 86px);
+            transition: grid-template-columns 0.3s ease;
+            align-items: center;
+        }
+
+        .game-wrapper.hide-ladder {
+            grid-template-columns: 1fr 0px;
+            gap: 0px;
+        }
+
+        @media (max-width: 768px) {
+            .game-wrapper {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+            .money-ladder {
+                display: none !important;
+            }
+        }
+
+        .main-quiz-area {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* LIFELINE & KEYWORDS BAR */
+        .lifeline-bar {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+            min-height: 38px;
+        }
+
+        .keywords-container {
+            grid-column: 2;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            visibility: hidden;
+        }
+
+        .keyword-chip {
+            background-color: #1d265c;
+            color: var(--accent-gold);
+            border: 1px solid var(--accent-gold);
+            border-radius: 15px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .keyword-chip:hover {
+            background-color: var(--accent-gold);
+            color: #000;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+        }
+
+        .btn-5050 {
+            grid-column: 3;
+            justify-self: end;
+            background-color: #111638;
+            border: 2px solid var(--accent-gold);
+            color: var(--accent-gold);
+            font-size: 0.95rem;
+            border-radius: 20px;
+            padding: 6px 16px;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-5050:hover:not(:disabled) {
+            background-color: var(--accent-gold);
+            color: #000;
+        }
+
+        .question-box {
+            width: 100%;
+            background: linear-gradient(180deg, #1d265c 0%, #0d1233 100%);
+            border: 2px solid var(--accent-gold);
+            border-radius: 15px;
+            padding: 25px 20px;
+            text-align: center;
+            font-size: var(--question-size);
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            transition: font-size 0.2s ease, border-color 0.2s;
+            line-height: 1.4;
+            word-break: break-word;
+            cursor: pointer;
+        }
+
+        .question-box:hover {
+            border-color: #fff;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+        }
+
+        .answers-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .answer-btn {
+            background-color: var(--btn-blue);
+            border: 1px solid #4a59a8;
+            color: white;
+            padding: 16px 20px;
+            border-radius: 35px;
+            text-align: left;
+            cursor: pointer;
+            font-size: var(--answer-size);
+            transition: font-size 0.2s ease, background-color 0.2s, border-color 0.2s;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            line-height: 1.3;
+            word-break: break-word;
+            white-space: normal;
+        }
+
+        .answer-text {
+            text-align: left;
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .answer-btn:hover:not(:disabled) {
+            border-color: var(--accent-gold);
+            background-color: var(--btn-hover);
+        }
+
+        .answer-btn:disabled {
+            cursor: default;
+        }
+
+        .answer-btn.correct {
+            background-color: var(--correct-green) !important;
+            border-color: #fff !important;
+            color: #fff !important;
+        }
+
+        .answer-btn.wrong {
+            background-color: var(--wrong-red) !important;
+            border-color: #fff !important;
+            color: #fff !important;
+        }
+
+        .answer-btn.hidden-5050 {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .key-hint {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 215, 0, 0.2);
+            color: var(--accent-gold);
+            border-radius: 50%;
+            width: var(--answer-size);
+            height: var(--answer-size);
+            min-width: var(--answer-size);
+            margin-right: 12px;
+            font-weight: bold;
+            font-size: calc(var(--answer-size) * 0.85);
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .next-btn-container {
+            margin-top: 20px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-next {
+            background-color: var(--accent-gold);
+            color: #000;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .btn-next:hover {
+            background-color: #ffe44d;
+        }
+
+        /* --- MONEY LADDER --- */
+        .money-ladder {
+            background-color: var(--panel-bg);
+            border: 1px solid #2c3673;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column-reverse;
+            justify-content: space-around;
+            height: 100%;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .game-wrapper.hide-ladder .money-ladder {
+            padding: 0;
+            border: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .ladder-item {
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: #8a94c7;
+            border-radius: 4px;
+        }
+
+        .ladder-item.milestone {
+            color: #fff;
+        }
+
+        .ladder-item.active {
+            background-color: var(--accent-gold);
+            color: #000;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .status-mark {
+            font-size: 1rem;
+            margin-left: 6px;
+            font-weight: bold;
+        }
+
+        .status-mark.correct-mark {
+            color: var(--correct-green);
+        }
+
+        .status-mark.wrong-mark {
+            color: var(--wrong-red);
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            height: 30px;
+            background-color: var(--panel-bg);
+            border-top: 1px solid #2c3673;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #8a94c7;
+            z-index: 10;
+        }
+
+        footer a {
+            color: var(--accent-gold);
+            text-decoration: none;
+            margin-left: 4px;
+        }
+
+        /* --- MODAL DIALOGS --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--panel-bg);
+            border: 2px solid #3b4894;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 650px;
+            padding: 20px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.8);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2c3673;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h3 { color: var(--accent-gold); }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #3b4894;
+            background-color: #060919;
+            color: #fff;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        textarea {
+            height: 180px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .prompt-box {
+            background-color: #0b0e26;
+            border: 1px dashed #3b4894;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        /* --- FLOATING TOASTS --- */
+        #toastContainer {
+            position: fixed;
+            bottom: 40px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .toast {
+            background-color: #111638;
+            color: #fff;
+            border: 1px solid var(--accent-gold);
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            min-width: 250px;
+            max-width: 350px;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s forwards;
+            pointer-events: auto;
+        }
+
+        .toast.success { border-color: var(--correct-green); }
+        .toast.error { border-color: var(--wrong-red); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toastContainer"></div>
+
+    <header>
+        <div class="header-left">
+            <button class="hamburger-btn" onclick="toggleLadder()" title="Ẩn/Hiện Bảng Tiền Thưởng">☰</button>
+            <div class="logo">AI LÀ TRIỆU PHÚ</div>
+        </div>
+
+        <div class="header-controls">
+            <button id="muteBtn" onclick="toggleMute()" title="Bật/Tắt Âm Thanh">🔊</button>
+
+            <div class="font-controls" title="Phím tắt: + (Tăng cỡ chữ), - (Giảm cỡ chữ)">
+                <button class="font-btn" onclick="changeFontSize(-1)">-</button>
+                <span style="font-size: 0.8rem; color: #8a94c7; padding: 0 2px;">Chữ</span>
+                <button class="font-btn" onclick="changeFontSize(1)">+</button>
+            </div>
+
+            <div class="toggle-container" title="Tự động qua câu">
+                <span>Tự qua câu</span>
+                <label class="switch">
+                    <input type="checkbox" id="autoNextToggle" checked="" onchange="toggleAutoNext(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-container" title="Xáo trộn đáp án">
+                <span>Trộn đáp án</span>
+                <label class="switch">
+                    <input type="checkbox" id="shuffleAnswersToggle" onchange="toggleShuffleAnswers(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button onclick="openModal('importModal')">Import</button>
+            <button onclick="loadDemoData()" style="background-color: #3b4894;">Demo</button>
+            <button onclick="openSaveModal()" class="btn-save">Save As</button>
+            <button onclick="startGame()" class="btn-success">Replay</button>
+        </div>
+    </header>
+
+    <div class="game-wrapper" id="gameWrapper">
+        <div class="main-quiz-area">
+            <div class="lifeline-bar">
+                <div></div>
+                <div class="keywords-container" id="keywordsContainer" style="visibility: hidden;"></div>
+                <button class="btn-5050" id="btn5050" onclick="use5050()" title="Trợ giúp 50:50">💡 50:50</button>
+            </div>
+
+            <div class="question-box" id="questionText" onclick="searchQuestionOnGoogle()" title="Ấn để tìm kiếm câu hỏi này trên Google">Câu 1: Gió là sự chuyển động của không khí theo hướng nào?</div>
+
+            <div class="answers-grid">
+                <button class="answer-btn" onclick="checkAnswer('A')" id="btnA"><span class="key-hint" id="hintA">A</span> <span class="answer-text" id="textA">Từ vùng áp thấp đến vùng áp cao</span></button>
+                <button class="answer-btn" onclick="checkAnswer('B')" id="btnB"><span class="key-hint" id="hintB">B</span> <span class="answer-text" id="textB">Từ vùng áp cao đến vùng áp thấp</span></button>
+                <button class="answer-btn" onclick="checkAnswer('C')" id="btnC"><span class="key-hint" id="hintC">C</span> <span class="answer-text" id="textC">Từ vùng nóng đến vùng lạnh</span></button>
+                <button class="answer-btn" onclick="checkAnswer('D')" id="btnD"><span class="key-hint" id="hintD">D</span> <span class="answer-text" id="textD">Từ vùng lạnh đến vùng nóng</span></button>
+            </div>
+            
+            <div class="next-btn-container">
+                <button class="btn-next" id="btnNext" onclick="nextQuestion()" style="display: none;">Câu Tiếp Theo » (Phím Mũi Tên Phải)</button>
+            </div>
+        </div>
+
+        <div class="money-ladder" id="moneyLadder"><div class="ladder-item active" id="ladder-0"><span>Câu 1</span> <span>200.000 VNĐ</span></div><div class="ladder-item " id="ladder-1"><span>Câu 2</span> <span>400.000 VNĐ</span></div><div class="ladder-item " id="ladder-2"><span>Câu 3</span> <span>600.000 VNĐ</span></div><div class="ladder-item " id="ladder-3"><span>Câu 4</span> <span>1.000.000 VNĐ</span></div><div class="ladder-item milestone" id="ladder-4"><span>Câu 5</span> <span>2.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-5"><span>Câu 6</span> <span>3.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-6"><span>Câu 7</span> <span>6.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-7"><span>Câu 8</span> <span>10.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-8"><span>Câu 9</span> <span>14.000.000 VNĐ</span></div><div class="ladder-item milestone" id="ladder-9"><span>Câu 10</span> <span>22.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-10"><span>Câu 11</span> <span>30.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-11"><span>Câu 12</span> <span>40.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-12"><span>Câu 13</span> <span>60.000.000 VNĐ</span></div><div class="ladder-item " id="ladder-13"><span>Câu 14</span> <span>85.000.000 VNĐ</span></div><div class="ladder-item milestone" id="ladder-14"><span>Câu 15</span> <span>150.000.000 VNĐ</span></div></div>
+    </div>
+
+    <footer>
+        Author: Icarus - <a href="mailto:kienspvl@gmail.com">kienspvl@gmail.com</a>
+    </footer>
+
+    <!-- MODAL QUẢN LÝ CÂU HỎI -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Quản Lý &amp; Import Câu Hỏi</h3>
+                <button class="close-btn" onclick="closeModal('importModal')">×</button>
+            </div>
+            
+            <div class="prompt-box">
+                <label style="display:block; margin-bottom: 6px; font-weight: bold; color: var(--accent-gold);">Tạo Prompt AI:</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="topicInput" placeholder="Nhập chủ đề (vd: Lịch sử, Công nghệ...)" style="margin-bottom: 0;">
+                    <button class="btn-success" onclick="copyAIPrompt()" style="white-space: nowrap;">Copy Prompt</button>
+                </div>
+            </div>
+
+            <label style="display:block; margin-bottom: 6px; font-weight: bold;">Dữ liệu bộ câu hỏi (Chỉ đặt # ở đầu dòng cho cả 3 từ khóa, phân cách bởi dấu phẩy):</label>
+            <textarea id="importArea" placeholder="Dán văn bản bộ câu hỏi vào đây...">Câu 1. Gió là sự chuyển động của không khí theo hướng nào?
+A. Từ vùng áp thấp đến vùng áp cao
+*B. Từ vùng áp cao đến vùng áp thấp
+C. Từ vùng nóng đến vùng lạnh
+D. Từ vùng lạnh đến vùng nóng
+
+# Wind Movement, Air Pressure, Atmospheric Circulation
+
+Câu 2. Loại gió nào thổi thường xuyên từ áp cao chí tuyến về áp thấp xích đạo?
+A. Gió Tây ôn đới
+B. Gió mùa châu Á
+*C. Gió Tín phong
+D. Gió Đông cực
+
+# Trade Winds, Equator, Global Winds
+
+Câu 3. Gió Tây ôn đới chủ yếu thổi theo hướng nào ở Bắc bán cầu?
+A. Đông Bắc
+*B. Tây Nam
+C. Đông Nam
+D. Tây Bắc
+
+# Westerlies, Northern Hemisphere, Wind Direction
+
+Câu 4. Gió mùa là loại gió có đặc điểm nổi bật nào?
+A. Thổi cố định quanh năm
+B. Chỉ xuất hiện ở vùng cực
+*C. Đổi hướng theo mùa trong năm
+D. Chỉ thổi từ biển vào đất liền
+
+# Monsoon Winds, Seasonal Reversal, Climate
+
+Câu 5. Gió biển thường thổi theo hướng nào vào ban ngày?
+A. Từ đất liền ra biển
+*B. Từ biển vào đất liền
+C. Từ núi xuống thung lũng
+D. Từ thung lũng lên núi
+
+# Sea Breeze, Coastal Wind, Daytime
+
+Câu 6. Vì sao ban ngày thường xuất hiện gió biển?
+A. Biển nóng nhanh hơn đất liền
+*B. Đất liền nóng nhanh hơn biển
+C. Biển có áp suất thấp hơn đất liền
+D. Đất liền lạnh nhanh hơn biển
+
+# Sea Breeze, Land Heating, Pressure Difference
+
+Câu 7. Vào ban đêm, gió đất thường thổi theo hướng nào?
+*A. Từ đất liền ra biển
+B. Từ biển vào đất liền
+C. Từ núi lên sườn núi
+D. Từ thung lũng xuống chân núi
+
+# Land Breeze, Nighttime, Coastal Wind
+
+Câu 8. Gió phơn thường hình thành khi khối khí vượt qua địa hình nào?
+A. Đồng bằng ven biển
+B. Cao nguyên bằng phẳng
+*C. Dãy núi cao chắn ngang
+D. Vùng biển nhiệt đới rộng
+
+# Foehn Wind, Mountain Barrier, Rain Shadow
+
+Câu 9. Vì sao gió phơn ở sườn khuất gió thường nóng và khô?
+A. Không khí hấp thụ hơi nước từ biển
+B. Không khí tăng độ ẩm khi hạ xuống
+*C. Không khí hạ xuống và bị nén đoạn nhiệt
+D. Không khí mất nhiệt khi vượt đỉnh núi
+
+# Foehn Effect, Adiabatic Warming, Dry Air
+
+Câu 10. Gió Tín phong ở hai bán cầu có hướng lệch khác nhau chủ yếu do yếu tố nào?
+A. Sự thay đổi khoảng cách đến Mặt Trời
+B. Sự khác biệt về độ cao địa hình
+C. Sự phân bố khác nhau của đại dương
+*D. Lực Côriôlit do Trái Đất tự quay
+
+# Coriolis Effect, Trade Winds, Earth Rotation
+
+Câu 11. Trong hoàn lưu khí quyển toàn cầu, gió Tây ôn đới hình thành chủ yếu giữa hai đai áp nào?
+A. Áp thấp xích đạo và áp cao chí tuyến
+*B. Áp cao chí tuyến và áp thấp ôn đới
+C. Áp thấp ôn đới và áp cao cực
+D. Áp cao cực và áp thấp xích đạo
+
+# Westerlies, Subtropical High, Subpolar Low
+
+Câu 12. Vì sao gió Đông cực thường có tính chất lạnh và khô?
+A. Hình thành trên vùng biển nhiệt đới
+B. Thổi từ vùng áp thấp xích đạo
+*C. Xuất phát từ vùng áp cao cực lạnh
+D. Hình thành từ các khối khí nóng ẩm
+
+# Polar Easterlies, Polar High, Cold Air
+
+Câu 13. Hiện tượng gió phơn mạnh lên khi không khí vượt núi có liên quan trực tiếp đến quá trình nào?
+A. Không khí giãn nở và lạnh đoạn nhiệt
+B. Không khí ngưng tụ và tỏa nhiệt liên tục
+*C. Không khí hạ xuống và nóng đoạn nhiệt
+D. Không khí đối lưu và lạnh đẳng nhiệt
+
+# Foehn Wind, Adiabatic Compression, Mountain Wind
+
+Câu 14. Tại sao ở vĩ độ trung bình, gió Tây ôn đới thường có hướng tây nam ở Bắc bán cầu và tây bắc ở Nam bán cầu?
+A. Do chênh lệch nhiệt độ giữa hai bán cầu
+B. Do sự phân bố không đều của lục địa
+*C. Do lực Côriôlit làm lệch phải ở Bắc, lệch trái ở Nam
+D. Do áp cao chí tuyến dịch chuyển theo mùa
+
+# Coriolis Force, Westerlies, Global Circulation
+
+Câu 15. Khi một khối khí ẩm vượt qua dãy núi cao, mưa lớn ở sườn đón gió và không khí khô nóng ở sườn khuất gió được giải thích chính xác nhất bằng cơ chế nào?
+A. Không khí lạnh xuống núi, nóng lên do ma sát
+B. Không khí nóng lên khi lên núi, lạnh đi khi xuống
+C. Hơi nước ngưng tụ ở cả hai sườn núi
+*D. Không khí nâng lên lạnh đoạn nhiệt, mất ẩm rồi hạ xuống nóng đoạn nhiệt
+
+# Orographic Rainfall, Foehn Effect, Mountain Climate</textarea>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="closeModal('importModal')">Hủy</button>
+                <button class="btn-success" onclick="importQuestions()">Lưu &amp; Bắt Đầu Chơi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ĐẶT TÊN FILE KHI LƯU -->
+    <div class="modal-overlay" id="saveModal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3>Lưu File Game HTML</h3>
+                <button class="close-btn" onclick="closeModal('saveModal')">×</button>
+            </div>
+            
+            <label style="display:block; margin-bottom: 8px; font-weight: bold;">Tên file muốn lưu (.html):</label>
+            <input type="text" id="fileNameInput" placeholder="Nhập tên file..." onkeydown="if(event.key==='Enter') executeSaveHtml()">
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="closeModal('saveModal')">Hủy</button>
+                <button class="btn-save" onclick="executeSaveHtml()">Lưu File</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const moneyValues = [
+        "200.000", "400.000", "600.000", "1.000.000", "2.000.000",
+        "3.000.000", "6.000.000", "10.000.000", "14.000.000", "22.000.000",
+        "30.000.000", "40.000.000", "60.000.000", "85.000.000", "150.000.000"
+    ];
+
+    const defaultDemoText = `Thủ đô của Việt Nam là gì?
+A. TP. Hồ Chí Minh
+*B. Hà Nội
+C. Đà Nẵng
+D. Cần Thơ
+# Hanoi, Vietnam Capital, Hoan Kiem Lake
+
+Trái Đất quay quanh mặt trời mất bao lâu?
+A. 24 giờ
+B. 30 ngày
+*C. 365 ngày (1 năm)
+D. 12 tháng
+# Earth Orbit, Sun, Solar System
+
+Loại khí nào chiếm phần lớn trong không khí Trái Đất?
+A. Oxi
+*B. Nitơ
+C. Cacbonic
+D. Hydro
+# Nitrogen Gas, Atmosphere, Earth Air
+
+Sông nào dài nhất thế giới?
+*A. Sông Nile
+B. Sông Amazon
+C. Sông Mê Kông
+D. Sông Hằng
+# Nile River, Egypt, Longest River
+
+Đơn vị đo cường độ dòng điện là gì?
+A. Volt
+B. Watt
+*C. Ampere
+D. Joule
+# Ampere, Electric Current, Physics Measurement
+
+Ai là tác giả của tác phẩm "Truyện Kiều"?
+A. Nam Cao
+*B. Nguyễn Du
+C. Xuân Diệu
+D. Ngô Tất Tố
+# Nguyen Du, Tale of Kieu, Vietnamese Literature
+
+Hành tinh nào gần Mặt Trời nhất?
+*A. Sao Thủy
+B. Sao Kim
+C. Sao Hỏa
+D. Sao Mộc
+# Mercury Planet, Solar System, Sun Orbit
+
+Số nguyên tố nhỏ nhất là số mấy?
+A. 0
+B. 1
+*C. 2
+D. 3
+# Prime Number 2, Mathematics, Smallest Prime
+
+Quốc gia nào có diện tích lớn nhất thế giới?
+A. Trung Quốc
+B. Mỹ
+*C. Nga
+D. Canada
+# Russia Country, Map of Russia, World Geography
+
+Đỉnh núi nào cao nhất thế giới?
+*A. Everest
+B. K2
+C. Kangchenjunga
+D. Lhotse
+# Mount Everest, Himalayas, Highest Peak
+
+Bác Hồ đọc Bản Tuyên ngôn Độc lập vào năm nào?
+A. 1930
+*B. 1945
+C. 1954
+D. 1975
+# Ho Chi Minh, Vietnam Independence 1945, Ba Dinh Square
+
+Thành phố nào được mệnh danh là "Thành phố sương mù" ở Việt Nam?
+A. Sapa
+*B. Đà Lạt
+C. Tam Đảo
+D. Mẫu Sơn
+# Da Lat City, Foggy City Vietnam, Xuan Huong Lake
+
+Chất nào có công thức hóa học là H2O?
+A. Muối
+B. Axit
+*C. Nước
+D. Rượu
+# Water H2O, Water Molecule, Chemistry Water
+
+Loại động vật nào lớn nhất còn sống trên Trái Đất?
+A. Voi châu Phi
+*B. Cá voi xanh
+C. Tê giác
+D. Khủng long
+# Blue Whale, Ocean Animal, Largest Animal
+
+Việt Nam thuộc khu vực nào của châu Á?
+A. Đông Á
+B. Nam Á
+*C. Đông Nam Á
+D. Tây Á
+# Southeast Asia, ASEAN Map, Vietnam Location`;
+
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let isAnsweringBlocked = false;
+    let autoNext = true;
+    let shuffleAnswers = false;
+    let fontSizeStep = 0;
+    let isMuted = false;
+    let isLadderVisible = true;
+    let savedFileName = "ai-la-trieu-phu";
+    
+    let gameState = [];
+
+    // --- SOUND SYSTEM ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+    }
+
+    function playSound(type) {
+        if (isMuted) return;
+        initAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'correct') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(80, now + 0.4);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        } else if (type === 'click') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'reveal') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('muteBtn').innerText = isMuted ? '🔇' : '🔊';
+    }
+
+    function toggleLadder() {
+        isLadderVisible = !isLadderVisible;
+        const wrapper = document.getElementById('gameWrapper');
+        if (isLadderVisible) {
+            wrapper.classList.remove('hide-ladder');
+        } else {
+            wrapper.classList.add('hide-ladder');
+        }
+    }
+
+    function searchQuestionOnGoogle() {
+        if (questions.length === 0 || !questions[currentQuestionIndex]) return;
+        const currentQ = questions[currentQuestionIndex].question;
+        if (currentQ) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(currentQ)}`, '_blank');
+        }
+    }
+
+    function searchImageKeyword(keyword) {
+        if (!keyword) return;
+        const cleanKw = keyword.trim();
+        window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(cleanKw)}`, '_blank');
+    }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toasts = container.getElementsByClassName('toast');
+        if (toasts.length >= 2) container.removeChild(toasts[0]);
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerText = message;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast.parentNode === container) container.removeChild(toast);
+        }, 3000);
+    }
+
+    function saveFullGameProgress() {
+        const progressData = {
+            questions: questions,
+            gameState: gameState,
+            currentQuestionIndex: currentQuestionIndex
+        };
+        localStorage.setItem('altp_full_progress', JSON.stringify(progressData));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedAutoNext = localStorage.getItem('altp_auto_next');
+        if (savedAutoNext !== null) {
+            autoNext = savedAutoNext === 'true';
+            document.getElementById('autoNextToggle').checked = autoNext;
+        }
+
+        const savedShuffle = localStorage.getItem('altp_shuffle');
+        if (savedShuffle !== null) {
+            shuffleAnswers = savedShuffle === 'true';
+            document.getElementById('shuffleAnswersToggle').checked = shuffleAnswers;
+        }
+
+        const savedFontSize = localStorage.getItem('altp_font_step');
+        if (savedFontSize !== null) {
+            fontSizeStep = parseInt(savedFontSize, 10);
+            applyFontSize();
+        }
+
+        // Lấy nội dung hiện tại đang có sẵn trong textarea của file HTML (dữ liệu file ngậm)
+        const embeddedText = document.getElementById('importArea').value.trim();
+
+        if (embeddedText) {
+            // NẾU FILE ĐÃ NGẬM DỮ LIỆU: Nạp trực tiếp từ file ngậm, bỏ qua localStorage của câu hỏi
+            questions = parseTextToQuestions(embeddedText);
+            if (questions.length > 0) {
+                startGame();
+            } else {
+                loadDemoData();
+            }
+        } else {
+            // NẾU KHÔNG CÓ DỮ LIỆU NGẬM: Mới tiến hành nạp từ localStorage như cũ
+            const savedQuestionsText = localStorage.getItem('altp_questions_text');
+            if (savedQuestionsText) {
+                document.getElementById('importArea').value = savedQuestionsText;
+            }
+
+            const savedProgress = localStorage.getItem('altp_full_progress');
+            if (savedProgress) {
+                try {
+                    const data = JSON.parse(savedProgress);
+                    if (data.questions && data.questions.length > 0 && data.gameState) {
+                        questions = data.questions;
+                        gameState = data.gameState;
+                        currentQuestionIndex = data.currentQuestionIndex || 0;
+                        showQuestion();
+                        return;
+                    }
+                } catch(e) {
+                    console.error("Khôi phục tiến trình thất bại", e);
+                }
+            }
+
+            if (savedQuestionsText) {
+                questions = parseTextToQuestions(savedQuestionsText);
+                if (questions.length > 0) {
+                    startGame();
+                } else {
+                    loadDemoData();
+                }
+            } else {
+                loadDemoData();
+            }
+        }
+    });
+
+    function toggleAutoNext(val) {
+        autoNext = val;
+        localStorage.setItem('altp_auto_next', val);
+    }
+
+    function toggleShuffleAnswers(val) {
+        shuffleAnswers = val;
+        localStorage.setItem('altp_shuffle', val);
+    }
+
+    function changeFontSize(delta) {
+        fontSizeStep += delta;
+        if (fontSizeStep < -3) fontSizeStep = -3;
+        localStorage.setItem('altp_font_step', fontSizeStep);
+        applyFontSize();
+    }
+
+    function applyFontSize() {
+        const baseQ = 1.3;
+        const baseA = 1.1;
+        const qSize = Math.max(0.7, baseQ + fontSizeStep * 0.15).toFixed(2);
+        const aSize = Math.max(0.6, baseA + fontSizeStep * 0.12).toFixed(2);
+        document.documentElement.style.setProperty('--question-size', `${qSize}rem`);
+        document.documentElement.style.setProperty('--answer-size', `${aSize}rem`);
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (document.querySelector('.modal-overlay.active')) return;
+
+        if (e.key === '+' || e.key === '=') { changeFontSize(1); return; }
+        if (e.key === '-' || e.key === '_') { changeFontSize(-1); return; }
+
+        if (e.code === 'Space') {
+            if (!isAnsweringBlocked) {
+                revealAnswer();
+                e.preventDefault();
+                return;
+            } else {
+                const btnNext = document.getElementById('btnNext');
+                if (btnNext.style.display === 'block') {
+                    nextQuestion();
+                    e.preventDefault();
+                    return;
+                }
+            }
+        }
+
+        if (e.key === 'ArrowRight') { nextQuestion(); return; }
+        if (e.key === 'ArrowLeft') { prevQuestion(); return; }
+
+        if (isAnsweringBlocked || questions.length === 0) return;
+
+        const key = e.key.toUpperCase();
+        if (['A', 'B', 'C', 'D'].includes(key)) {
+            checkAnswer(key);
+        }
+    });
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function renderLadder() {
+        const ladderEl = document.getElementById('moneyLadder');
+        ladderEl.innerHTML = '';
+        moneyValues.forEach((val, index) => {
+            const item = document.createElement('div');
+            item.className = `ladder-item ${ (index + 1) % 5 === 0 ? 'milestone' : '' }`;
+            item.id = `ladder-${index}`;
+            
+            let markHtml = '';
+            if (gameState[index] && gameState[index].isAnswered) {
+                if (gameState[index].isCorrect) {
+                    markHtml = `<span class="status-mark correct-mark">✔</span>`;
+                } else if (gameState[index].isCorrect === false) {
+                    markHtml = `<span class="status-mark wrong-mark">✖</span>`;
+                }
+            }
+
+            item.innerHTML = `<span>Câu ${index + 1}${markHtml}</span> <span>${val} VNĐ</span>`;
+            ladderEl.appendChild(item);
+        });
+    }
+
+    function copyAIPrompt() {
+        const topic = document.getElementById('topicInput').value.trim() || 'Kiến thức tổng hợp';
+        const promptText = `Hãy tạo cho tôi đúng 15 câu hỏi trắc nghiệm về chủ đề "${topic}" để dùng cho game Ai Là Triệu Phú.
+
+QUY ĐỊNH VỀ ĐỊNH DẠNG VÀ TRÌNH BÀY (BẮT BUỘC):
+- Trả về dữ liệu ở dạng PLAIN TEXT thuần túy, tuyệt đối KHÔNG bọc trong thẻ mã Code Block (\`\`\` markdown hay \`\`\` text).
+- Tất cả 4 đáp án (A, B, C, D) phải có ĐỘ DÀI TƯƠNG ĐƯƠNG NHAU (tránh tình trạng đáp án đúng là câu dài nhất gây dễ đoán).
+
+ĐIỀU KIỆN ĐỘ KHÓ YÊU CẦU:
+- Câu 1 đến 5: Độ khó DỄ (Kiến thức cơ bản, phổ thông).
+- Câu 6 đến 10: Độ khó VỪA (Kiến thức mở rộng, đòi hỏi suy luận).
+- Câu 11 đến 13: Độ khó KHÓ (Kiến thức chuyên sâu).
+- Câu 14 đến 15: Độ khó RẤT KHÓ (Kiến thức hiểm, thách thức nhà vô địch).
+
+CẤU TRÚC ĐỊNH DẠNG BẮT BUỘC KHI XUẤT RA:
+Mỗi câu hỏi gồm đúng 6 dòng theo thứ tự:
+- Dòng 1: Tên câu hỏi.
+- Dòng 2-5: 4 phương án A, B, C, D. Phương án đúng có dấu sao (*) ở đầu chữ cái A, B, C, D.
+- Dòng 6: Đúng 3 từ khóa tiếng Anh ngắn gọn liên quan trực tiếp để tìm kiếm hình ảnh, nằm trên CÙNG 1 DÒNG, bắt đầu bằng duy nhất 1 dấu # ở đầu dòng và phân cách bởi dấu phẩy.
+
+Ví dụ mẫu:
+Thủ đô của Việt Nam là gì?
+A. Thành phố Hồ Chí Minh
+*B. Thủ đô Hà Nội ngàn năm
+C. Thành phố Đà Nẵng
+D. Thành phố Cần Thơ
+# Hanoi, Vietnam Capital, Hoan Kiem Lake`;
+
+        navigator.clipboard.writeText(promptText).then(() => {
+            showToast('Đã sao chép AI Prompt!', 'success');
+        });
+    }
+
+    function cleanQuestionTitle(text) {
+        return text.replace(/^(câu|cau)\s*\d+[\.\:\s\-]*/i, '').trim();
+    }
+
+    function parseTextToQuestions(text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const parsed = [];
+        let currentQ = null;
+
+        lines.forEach(line => {
+            if (line.startsWith('#')) {
+                if (currentQ) {
+                    const contentWithoutHash = line.replace(/^#/, '').trim();
+                    const rawKeywords = contentWithoutHash.split(',');
+                    rawKeywords.forEach(kwStr => {
+                        let cleanKw = kwStr.replace(/^#/, '').trim();
+                        if (cleanKw) currentQ.keywords.push(cleanKw);
+                    });
+                }
+            } else if (line.match(/^[*]?([A-D])[\.\s]/i)) {
+                if (currentQ) {
+                    const isCorrect = line.startsWith('*');
+                    const cleanLine = line.replace('*', '').trim();
+                    const optionKey = cleanLine.charAt(0).toUpperCase();
+                    const optionContent = cleanLine.substring(2).trim();
+                    currentQ.options.push({ text: optionContent, isCorrect: isCorrect, originalKey: optionKey });
+                }
+            } else {
+                if (currentQ && currentQ.options.length === 4) parsed.push(currentQ);
+                currentQ = { question: cleanQuestionTitle(line), options: [], keywords: [] };
+            }
+        });
+
+        if (currentQ && currentQ.options.length === 4) parsed.push(currentQ);
+        return parsed;
+    }
+
+    function importQuestions() {
+        const text = document.getElementById('importArea').value;
+        const parsedData = parseTextToQuestions(text);
+
+        if (parsedData.length === 0) {
+            showToast('Không tìm thấy câu hỏi hợp lệ!', 'error');
+            return;
+        }
+
+        questions = parsedData;
+        localStorage.setItem('altp_questions_text', text);
+        closeModal('importModal');
+        showToast(`Đã nạp thành công ${questions.length} câu hỏi`, 'success');
+        startGame();
+    }
+
+    function loadDemoData() {
+        const parsedData = parseTextToQuestions(defaultDemoText);
+        if (parsedData.length > 0) {
+            questions = parsedData;
+            showToast('Đã nạp bộ câu hỏi Demo!', 'info');
+            startGame();
+        }
+    }
+
+    function startGame() {
+        if (questions.length === 0) return;
+        currentQuestionIndex = 0;
+
+        gameState = questions.map(q => {
+            let opts = q.options;
+            if (shuffleAnswers) opts = shuffleArray(opts);
+
+            let currentOptions = {};
+            ['A', 'B', 'C', 'D'].forEach((key, idx) => {
+                currentOptions[key] = opts[idx];
+            });
+
+            return {
+                optionsLayout: currentOptions,
+                isAnswered: false,
+                selectedKey: null,
+                isCorrect: null,
+                is5050Used: false,
+                hiddenKeys5050: [],
+                showKeywords: false
+            };
+        });
+
+        saveFullGameProgress();
+        showQuestion();
+    }
+
+    function shuffleArray(array) {
+        let arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function showQuestion() {
+        resetButtonStyles();
+
+        const q = questions[currentQuestionIndex];
+        const state = gameState[currentQuestionIndex];
+
+        document.getElementById('questionText').innerText = `Câu ${currentQuestionIndex + 1}: ${q.question}`;
+
+        ['A', 'B', 'C', 'D'].forEach(key => {
+            document.getElementById(`text${key}`).innerText = state.optionsLayout[key].text;
+        });
+
+        const btn5050 = document.getElementById('btn5050');
+        btn5050.disabled = state.is5050Used;
+        if (state.hiddenKeys5050 && state.hiddenKeys5050.length > 0) {
+            state.hiddenKeys5050.forEach(key => {
+                document.getElementById(`btn${key}`).classList.add('hidden-5050');
+            });
+        }
+
+        const kwContainer = document.getElementById('keywordsContainer');
+        if (state.showKeywords && q.keywords && q.keywords.length > 0) {
+            kwContainer.innerHTML = '';
+            q.keywords.forEach(kw => {
+                const chip = document.createElement('div');
+                chip.className = 'keyword-chip';
+                chip.innerHTML = `🖼️ ${kw}`;
+                chip.title = `Ấn để tìm ảnh "${kw}" trên Google Images`;
+                chip.onclick = () => searchImageKeyword(kw);
+                kwContainer.appendChild(chip);
+            });
+            kwContainer.style.visibility = 'visible';
+        } else {
+            kwContainer.style.visibility = 'hidden';
+            kwContainer.innerHTML = '';
+        }
+
+        if (state.isAnswered) {
+            isAnsweringBlocked = true;
+
+            ['A', 'B', 'C', 'D'].forEach(key => {
+                document.getElementById(`btn${key}`).disabled = true;
+            });
+
+            let correctKey = '';
+            ['A', 'B', 'C', 'D'].forEach(k => {
+                if (state.optionsLayout[k].isCorrect) correctKey = k;
+            });
+
+            if (state.selectedKey) {
+                if (state.isCorrect) {
+                    document.getElementById(`btn${state.selectedKey}`).classList.add('correct');
+                } else {
+                    document.getElementById(`btn${state.selectedKey}`).classList.add('wrong');
+                    if (correctKey) document.getElementById(`btn${correctKey}`).classList.add('correct');
+                }
+            } else {
+                if (correctKey) document.getElementById(`btn${correctKey}`).classList.add('correct');
+            }
+
+            document.getElementById('btnNext').style.display = 'block';
+        } else {
+            isAnsweringBlocked = false;
+            document.getElementById('btnNext').style.display = 'none';
+        }
+
+        renderLadder();
+        const activeLadder = document.getElementById(`ladder-${currentQuestionIndex}`);
+        if (activeLadder) activeLadder.classList.add('active');
+        
+        saveFullGameProgress();
+    }
+
+    function resetButtonStyles() {
+        ['A', 'B', 'C', 'D'].forEach(key => {
+            const btn = document.getElementById(`btn${key}`);
+            btn.className = 'answer-btn';
+            btn.disabled = false;
+        });
+    }
+
+    function use5050() {
+        const state = gameState[currentQuestionIndex];
+        if (state.is5050Used || isAnsweringBlocked) return;
+
+        let wrongKeys = [];
+        ['A', 'B', 'C', 'D'].forEach(k => {
+            if (!state.optionsLayout[k].isCorrect) wrongKeys.push(k);
+        });
+
+        wrongKeys = shuffleArray(wrongKeys).slice(0, 2);
+        wrongKeys.forEach(key => {
+            document.getElementById(`btn${key}`).classList.add('hidden-5050');
+        });
+
+        state.is5050Used = true;
+        state.hiddenKeys5050 = wrongKeys;
+        document.getElementById('btn5050').disabled = true;
+        
+        saveFullGameProgress();
+        playSound('click');
+    }
+
+    function checkAnswer(selectedKey) {
+        if (isAnsweringBlocked) return;
+        isAnsweringBlocked = true;
+        playSound('click');
+
+        const state = gameState[currentQuestionIndex];
+        const selectedOpt = state.optionsLayout[selectedKey];
+
+        state.isAnswered = true;
+        state.selectedKey = selectedKey;
+        state.isCorrect = selectedOpt.isCorrect;
+        state.showKeywords = true;
+
+        showQuestion();
+
+        if (state.isCorrect) {
+            playSound('correct');
+            if (autoNext) {
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1200);
+            }
+        } else {
+            playSound('wrong');
+        }
+    }
+
+    function revealAnswer() {
+        if (isAnsweringBlocked) return;
+        isAnsweringBlocked = true;
+        playSound('reveal');
+
+        const state = gameState[currentQuestionIndex];
+        state.isAnswered = true;
+        state.selectedKey = null;
+        state.isCorrect = null;
+        state.showKeywords = true;
+
+        showQuestion();
+    }
+
+    function nextQuestion() {
+        if (currentQuestionIndex < questions.length - 1) {
+            currentQuestionIndex++;
+            showQuestion();
+        } else {
+            showToast('Bạn đã hoàn thành tất cả câu hỏi!', 'success');
+        }
+    }
+
+    function prevQuestion() {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            showQuestion();
+        }
+    }
+
+    function openSaveModal() {
+        const input = document.getElementById('fileNameInput');
+        input.value = savedFileName;
+        openModal('saveModal');
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 100);
+    }
+
+    function executeSaveHtml() {
+        let nameInput = document.getElementById('fileNameInput').value.trim();
+        if (!nameInput) nameInput = "ai-la-trieu-phu";
+        savedFileName = nameInput;
+
+        closeModal('saveModal');
+
+        const textData = document.getElementById('importArea').value || defaultDemoText;
+        
+        const cloneDoc = document.documentElement.cloneNode(true);
+
+        const modals = cloneDoc.querySelectorAll('.modal-overlay');
+        modals.forEach(m => m.classList.remove('active'));
+
+        const importArea = cloneDoc.querySelector('#importArea');
+        if (importArea) importArea.textContent = textData;
+
+        let fullHtml = "<!DOCTYPE html>\n<html lang=\"vi\">\n" + cloneDoc.innerHTML + "\n</html>";
+
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${savedFileName}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast(`Đã tải xuống file ${savedFileName}.html!`, 'success');
+    }
+
+    renderLadder();
+</script>
+
+
+</body>
+</html>
