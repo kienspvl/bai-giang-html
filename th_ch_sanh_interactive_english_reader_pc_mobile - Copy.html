@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Thạch Sanh — Interactive English Reader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&display=swap" rel="stylesheet" />
+  <style>
+    /* Global Unified Font Scale Variable (Applies to BOTH Main Story & Study Drawer) */
+    :root {
+      --font-scale: 1;
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button {
+      touch-action: manipulation;
+    }
+
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .story-font {
+      font-family: 'Newsreader', Georgia, serif;
+      line-height: 1.92;
+    }
+
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Proportional Typography Classes Driven by --font-scale */
+    .scale-story-title {
+      font-size: calc(1.56rem * var(--font-scale));
+      line-height: 1.28;
+    }
+    .scale-story-body {
+      font-size: calc(1.2rem * var(--font-scale));
+      line-height: 1.92;
+    }
+    .scale-side-title {
+      font-size: calc(0.98rem * var(--font-scale));
+      line-height: 1.45;
+    }
+    .scale-side-body {
+      font-size: calc(0.92rem * var(--font-scale));
+      line-height: 1.65;
+    }
+    .scale-side-sub {
+      font-size: calc(0.83rem * var(--font-scale));
+      line-height: 1.56;
+    }
+    .scale-side-meta {
+      font-size: calc(0.74rem * var(--font-scale));
+      line-height: 1.4;
+    }
+    .scale-tab-label {
+      font-size: calc(0.78rem * var(--font-scale));
+      line-height: 1.3;
+    }
+
+    /* Interactive Sentence Spans with comfortable scroll margin */
+    .sentence-span {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 2px 5px;
+      margin: 0 -2px;
+      scroll-margin-top: 88px;
+      scroll-margin-bottom: 120px;
+      transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    }
+
+    /* Light Theme: Lacquer Cream, Deep Jade & Cinnabar Gold */
+    body.theme-light {
+      background-color: #f8f5ee;
+      color: #1e2421;
+    }
+    body.theme-light .surface-card {
+      background-color: #ffffff;
+      border-color: #e0d9ca;
+    }
+    body.theme-light .surface-subtle {
+      background-color: #f0ece1;
+      border-color: #d6cebe;
+    }
+    body.theme-light .sentence-span:hover {
+      background-color: rgba(31, 92, 77, 0.09);
+    }
+    body.theme-light .sentence-active {
+      background-color: #e1efe9 !important;
+      box-shadow: 0 0 0 2px rgba(31, 92, 77, 0.36);
+      color: #10201a;
+    }
+    body.theme-light .vocab-highlight {
+      border-bottom: 2px dashed #a83b2b;
+      background-color: rgba(168, 59, 43, 0.09);
+      color: #8f2d1f;
+      font-weight: 600;
+      border-radius: 4px;
+      padding: 0 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    body.theme-light .vocab-highlight:hover,
+    body.theme-light .vocab-active {
+      background-color: #a83b2b;
+      color: #ffffff;
+      border-bottom-color: transparent;
+    }
+
+    /* Dark Theme: Dark Lacquer, Bright Jade & Antique Bronze */
+    body.theme-dark {
+      background-color: #121614;
+      color: #ebe7de;
+    }
+    body.theme-dark .surface-card {
+      background-color: #1a201d;
+      border-color: #2c3631;
+    }
+    body.theme-dark .surface-subtle {
+      background-color: #222a26;
+      border-color: #36423c;
+    }
+    body.theme-dark .sentence-span:hover {
+      background-color: rgba(78, 184, 157, 0.15);
+    }
+    body.theme-dark .sentence-active {
+      background-color: rgba(31, 92, 77, 0.45) !important;
+      box-shadow: 0 0 0 2px rgba(78, 184, 157, 0.48);
+      color: #ffffff;
+    }
+    body.theme-dark .vocab-highlight {
+      border-bottom: 2px dashed #e0a943;
+      background-color: rgba(224, 169, 67, 0.15);
+      color: #f3c66f;
+      font-weight: 600;
+      border-radius: 4px;
+      padding: 0 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    body.theme-dark .vocab-highlight:hover,
+    body.theme-dark .vocab-active {
+      background-color: #b8860b;
+      color: #ffffff;
+      border-bottom-color: transparent;
+    }
+
+    /* Toggle off vocabulary highlighting */
+    body.hide-vocab .vocab-highlight {
+      border-bottom: none;
+      background-color: transparent;
+      color: inherit;
+      font-weight: inherit;
+      padding: 0;
+    }
+
+    /* Desktop vs Mobile Adaptive Layout (> 900px vs <= 900px) */
+    @media (min-width: 901px) {
+      .desktop-only {
+        display: flex !important;
+      }
+      .mobile-only {
+        display: none !important;
+      }
+      .workspace-grid {
+        display: grid;
+        grid-template-columns: 55fr 45fr;
+        gap: 1.25rem;
+        align-items: start;
+      }
+      .study-drawer-container {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        display: flex;
+        flex-direction: column;
+      }
+      .study-scroll-area {
+        max-height: calc(100vh - 9.2rem);
+        overflow-y: auto;
+      }
+      .mobile-backdrop {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .desktop-only {
+        display: none !important;
+      }
+      .mobile-only {
+        display: flex !important;
+      }
+      .workspace-grid {
+        display: block;
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+      }
+      .study-drawer-container {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 45;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-top-left-radius: 1.5rem !important;
+        border-top-right-radius: 1.5rem !important;
+        max-height: 82vh;
+        display: flex;
+        flex-direction: column;
+        transform: translateY(105%);
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        padding-bottom: env(safe-area-inset-bottom);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.22);
+      }
+      .study-drawer-container.drawer-open {
+        transform: translateY(0);
+      }
+      .study-scroll-area {
+        max-height: calc(82vh - 5.5rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .mobile-bottom-bar {
+        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+      }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(125, 138, 130, 0.38);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(125, 138, 130, 0.62);
+    }
+
+    /* Keyboard Key Badge */
+    kbd {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border-width: 1px;
+      border-bottom-width: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body class="theme-light min-h-screen flex flex-col">
+
+  <!-- Top Header (Adaptive: Full Controls on PC > 900px, Clean Minimal on Mobile <= 900px) -->
+  <header class="surface-card border-b sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2.5">
+
+      <!-- Left: Brand Emblem + Title + Sentence Progress Pill -->
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1f5c4d] to-[#b8860b] text-white flex items-center justify-center shadow-xs shrink-0">
+          <!-- Magic Lute / Fairy Tale Emblem -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+          </svg>
+        </div>
+        <div class="truncate">
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-base font-bold leading-none tracking-tight truncate">
+              Thạch Sanh
+            </h1>
+            <span id="header-progress-pill" class="font-mono-code text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#1f5c4d]/12 text-[#1f5c4d] dark:text-[#4eb89d] shrink-0">
+              1 / 24
+            </span>
+          </div>
+          <p class="text-[11px] opacity-70 truncate mt-0.5 hidden sm:block">
+            Vietnamese Fairy Tale • Truyện Cổ Tích Việt Nam
+          </p>
+        </div>
+      </div>
+
+      <!-- Center (PC > 900px Only): Playback Cluster -->
+      <div class="desktop-only items-center gap-2 shrink-0">
+        <button id="btn-prev-pc" onclick="prevSentence()" title="Câu trước (Phím ← hoặc P)"
+          class="surface-subtle border hover:border-[#1f5c4d] w-8 h-8 rounded-lg flex items-center justify-center transition active:scale-95"
+          aria-label="Câu trước">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <button id="btn-play-pause-pc" onclick="togglePlayPause()" title="Phát / Tạm dừng (Phím Space)"
+          class="bg-[#1f5c4d] hover:bg-[#17463a] text-white h-8 px-3.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition active:scale-95">
+          <svg id="icon-play-pc" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <svg id="icon-pause-pc" class="w-3.5 h-3.5 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+          <span id="label-play-pause-pc">Đọc</span>
+        </button>
+
+        <button id="btn-next-pc" onclick="nextSentence()" title="Câu tiếp theo (Phím → hoặc N)"
+          class="surface-subtle border hover:border-[#1f5c4d] w-8 h-8 rounded-lg flex items-center justify-center transition active:scale-95"
+          aria-label="Câu tiếp theo">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <button id="btn-speed-pc" onclick="cycleSpeed()" title="Đổi tốc độ đọc (0.75x / 1.0x / 1.25x)"
+          class="surface-subtle border hover:border-[#1f5c4d] h-8 px-2.5 rounded-lg font-mono-code text-xs font-semibold transition active:scale-95">
+          1.0x
+        </button>
+      </div>
+
+      <!-- Right (Both PC & Mobile): Font Scale Cluster + Settings Popover + Shortcuts Help -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
+        <!-- Synchronized Font Scale Cluster -->
+        <div class="flex items-center surface-subtle border rounded-lg h-9 sm:h-8 p-0.5" title="Cỡ chữ đồng bộ toàn trang (Phím - / + / 0)">
+          <button onclick="changeFontScale(-0.05)" title="Giảm cỡ chữ (Phím -)"
+            class="px-2.5 sm:px-2 h-full rounded-md text-xs font-bold hover:bg-[#1f5c4d]/15 transition">A-</button>
+          <button onclick="resetFontScale()" id="font-scale-display" title="Đặt lại cỡ chữ 100% (Phím 0)"
+            class="px-1.5 h-full font-mono-code text-[11px] font-semibold opacity-85 hover:opacity-100">100%</button>
+          <button onclick="changeFontScale(0.05)" title="Tăng cỡ chữ (Phím +)"
+            class="px-2.5 sm:px-2 h-full rounded-md text-xs font-bold hover:bg-[#1f5c4d]/15 transition">A+</button>
+        </div>
+
+        <!-- Settings Popover Trigger -->
+        <div class="relative" id="settings-wrapper">
+          <button id="btn-settings" onclick="toggleSettingsMenu(event)" title="Tùy chọn đọc & giao diện"
+            class="surface-subtle border hover:border-[#1f5c4d] w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition active:scale-95"
+            aria-label="Cài đặt">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+
+          <!-- Clean Dropdown Settings Popover -->
+          <div id="settings-popover" class="hidden absolute right-0 mt-2 w-72 surface-card border rounded-2xl shadow-xl p-4 z-50 space-y-3.5 text-xs">
+            <div class="font-bold text-xs uppercase tracking-wider opacity-70 pb-1 border-b border-stone-300/60 dark:border-stone-700/60">
+              Tùy chỉnh đọc & học tập
+            </div>
+
+            <!-- Voice Selector -->
+            <div class="space-y-1">
+              <label for="voice-select" class="font-semibold block opacity-85">Giọng đọc tiếng Anh (TTS)</label>
+              <select id="voice-select" onchange="changeVoice()"
+                class="w-full surface-subtle border rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-[#1f5c4d]">
+                <option value="">Giọng tự động (English)</option>
+              </select>
+            </div>
+
+            <!-- Auto-Advance Toggle -->
+            <div class="flex items-center justify-between py-1">
+              <div>
+                <div class="font-semibold">Tự động chuyển câu</div>
+                <div class="text-[11px] opacity-65">Đọc liên tục hết bài</div>
+              </div>
+              <button id="toggle-auto-btn" onclick="toggleAutoAdvance()"
+                class="w-10 h-5 rounded-full bg-[#1f5c4d] relative transition">
+                <span id="toggle-auto-knob" class="w-4 h-4 rounded-full bg-white absolute top-0.5 left-5 transition-all"></span>
+              </button>
+            </div>
+
+            <!-- Vocabulary Highlight Toggle -->
+            <div class="flex items-center justify-between py-1">
+              <div>
+                <div class="font-semibold flex items-center gap-1.5">Tô sáng từ vựng <kbd class="surface-subtle">V</kbd></div>
+                <div class="text-[11px] opacity-65">Gạch chân từ trọng tâm</div>
+              </div>
+              <button id="toggle-vocab-btn" onclick="toggleVocabHighlight()"
+                class="w-10 h-5 rounded-full bg-[#a83b2b] relative transition">
+                <span id="toggle-vocab-knob" class="w-4 h-4 rounded-full bg-white absolute top-0.5 left-5 transition-all"></span>
+              </button>
+            </div>
+
+            <!-- Light / Dark Mode Toggle -->
+            <div class="flex items-center justify-between py-1">
+              <div>
+                <div class="font-semibold flex items-center gap-1.5">Giao diện Sơn Mài Tối <kbd class="surface-subtle">T</kbd></div>
+                <div class="text-[11px] opacity-65">Chuyển chế độ Sáng / Tối</div>
+              </div>
+              <button id="toggle-theme-btn" onclick="toggleTheme()"
+                class="w-10 h-5 rounded-full bg-stone-300 dark:bg-stone-600 relative transition">
+                <span id="toggle-theme-knob" class="w-4 h-4 rounded-full bg-white absolute top-0.5 left-0.5 transition-all"></span>
+              </button>
+            </div>
+
+            <!-- Replay & Restart Actions -->
+            <div class="pt-2 border-t border-stone-300/60 dark:border-stone-700/60 flex items-center justify-between gap-2">
+              <button onclick="replayCurrentSentence(); closeSettingsMenu();"
+                class="flex-1 surface-subtle border hover:border-[#1f5c4d] py-2 rounded-lg font-semibold transition">
+                ↺ Đọc lại câu (<kbd class="border-0 p-0">R</kbd>)
+              </button>
+              <button onclick="restartStory(); closeSettingsMenu();"
+                class="flex-1 surface-subtle border hover:border-[#a83b2b] py-2 rounded-lg font-semibold transition">
+                ⏮ Từ đầu
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Modal Trigger (PC) -->
+        <button onclick="toggleShortcutsModal()" title="Danh sách phím tắt (? hoặc H)"
+          class="desktop-only surface-subtle border hover:border-[#1f5c4d] w-8 h-8 rounded-lg text-xs font-bold items-center justify-center transition active:scale-95">
+          ?
+        </button>
+      </div>
+    </div>
+
+    <!-- Subtle Reading Progress Line -->
+    <div class="w-full h-1 bg-stone-200/80 dark:bg-stone-800">
+      <div id="reading-progress" class="h-full bg-gradient-to-r from-[#1f5c4d] via-[#b8860b] to-[#a83b2b] transition-all duration-300" style="width: 4%"></div>
+    </div>
+  </header>
+
+  <!-- Non-blocking Toast Banner -->
+  <div id="toast-box" class="fixed bottom-20 sm:bottom-5 left-1/2 -translate-x-1/2 z-50 hidden pointer-events-none">
+    <div class="bg-[#161c19] text-[#f8f5ee] border border-[#4eb89d]/60 px-4 py-2 rounded-xl shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+      <span class="w-2 h-2 rounded-full bg-[#e0a943] animate-pulse"></span>
+      <span id="toast-message">Thông báo</span>
+    </div>
+  </div>
+
+  <!-- Main Workspace: 55% Story Pane (Left) + 45% Study Pane / Bottom Sheet (Right) -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 workspace-grid">
+
+    <!-- Left Column: .story-pane (Supports Horizontal Touch Swipe on Mobile) -->
+    <section id="story-swipe-zone" class="story-pane surface-card border rounded-2xl p-4 sm:p-8 shadow-xs">
+      <!-- Story Header -->
+      <div class="border-b border-stone-300/70 dark:border-stone-700/70 pb-4 mb-5 sm:mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="scale-side-meta inline-block font-bold uppercase tracking-wider text-[#1f5c4d] dark:text-[#4eb89d] bg-[#1f5c4d]/12 px-2.5 py-0.5 rounded-full">
+              Truyện Cổ Tích Việt Nam • Folklore
+            </span>
+            <span class="scale-side-meta inline-block font-semibold text-[#8f2d1f] dark:text-[#f3c66f] bg-[#a83b2b]/12 px-2.5 py-0.5 rounded-full">
+              Intermediate B1–B2
+            </span>
+          </div>
+          <h2 class="story-font scale-story-title font-bold tracking-tight">
+            Thạch Sanh <span class="font-normal italic opacity-80">(The Woodcutter and the Magic Lute)</span>
+          </h2>
+        </div>
+        <div class="scale-side-meta opacity-80 font-medium text-right">
+          <div>Câu <span id="sentence-counter" class="font-bold text-[#1f5c4d] dark:text-[#4eb89d]">1</span> / <span id="sentence-total">24</span></div>
+          <div id="progress-percent" class="opacity-70">4% hoàn thành</div>
+        </div>
+      </div>
+
+      <!-- Adaptive Reading Guide (Different hint for PC vs Smartphone) -->
+      <div class="surface-subtle border rounded-xl px-3.5 py-2.5 mb-5 sm:mb-6 scale-side-meta flex items-center justify-between gap-2 opacity-90">
+        <span class="desktop-only items-center gap-1.5">
+          🪕 <span><strong>Mẹo học:</strong> Nhấp vào bất kỳ câu nào để nghe đọc & xem phân tích; nhấp vào <span class="underline decoration-[#a83b2b] decoration-dashed font-semibold">từ vựng tô sáng</span> để tra từ điển.</span>
+        </span>
+        <span class="mobile-only items-center gap-1.5">
+          👆 <span><strong>Cảm ứng:</strong> Chạm câu để nghe, <strong>vuốt ngang</strong> để chuyển câu, chạm <span class="underline decoration-[#a83b2b] decoration-dashed font-semibold">từ tô sáng</span> để tra nghĩa.</span>
+        </span>
+      </div>
+
+      <!-- Story Paragraphs Container (Scales smoothly via .scale-story-body) -->
+      <article id="story-container" class="story-font scale-story-body space-y-5 select-text">
+        <!-- Populated dynamically by JS -->
+      </article>
+
+      <!-- Story Footer -->
+      <div class="mt-8 pt-4 border-t border-stone-300/70 dark:border-stone-700/70 flex flex-wrap items-center justify-between gap-3 scale-side-meta">
+        <div class="desktop-only flex-wrap items-center gap-2 opacity-75">
+          <span>Phím tắt:</span>
+          <kbd class="surface-subtle">Space</kbd> Phát/Dừng
+          <kbd class="surface-subtle">←</kbd><kbd class="surface-subtle">→</kbd> Chuyển câu
+          <kbd class="surface-subtle">1–4</kbd> Chuyển thẻ
+          <kbd class="surface-subtle">-</kbd><kbd class="surface-subtle">+</kbd> Cỡ chữ
+        </div>
+        <div class="mobile-only items-center gap-2 opacity-75">
+          <span>👈 Vuốt trái: Câu tiếp • 👉 Vuốt phải: Câu trước</span>
+        </div>
+        <button onclick="restartStory()" class="text-[#1f5c4d] dark:text-[#4eb89d] hover:underline font-semibold py-1">
+          ↺ Đọc lại từ đầu
+        </button>
+      </div>
+    </section>
+
+    <!-- Mobile Backdrop Overlay for Bottom Sheet -->
+    <div id="mobile-drawer-backdrop" onclick="closeMobileDrawer()"
+      class="mobile-backdrop fixed inset-0 bg-black/45 backdrop-blur-[1px] z-40 hidden transition-opacity"></div>
+
+    <!-- Right Column (PC) / Bottom Sheet Drawer (Mobile <= 900px): .study-pane -->
+    <aside id="study-drawer" class="study-pane study-drawer-container surface-card border rounded-2xl shadow-xs overflow-hidden">
+      <!-- Mobile Bottom Sheet Drag/Close Handle Bar -->
+      <div class="mobile-only flex-col items-center pt-2 pb-1 px-4 border-b border-stone-200/70 dark:border-stone-800 cursor-pointer" onclick="closeMobileDrawer()">
+        <div class="w-10 h-1.5 rounded-full bg-stone-300 dark:bg-stone-600 mb-1.5"></div>
+        <div class="w-full flex items-center justify-between text-xs font-semibold opacity-80">
+          <span>📚 Góc Học Tập & Phân Tích Chi Tiết</span>
+          <button onclick="event.stopPropagation(); closeMobileDrawer();" class="px-2 py-0.5 rounded-lg surface-subtle border text-[11px] font-bold">
+            Thu gọn ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Study Tabs -->
+      <div class="grid grid-cols-4 border-b border-stone-300/70 dark:border-stone-700/70 surface-subtle p-1 gap-1 shrink-0">
+        <button onclick="switchTab('sentence')" id="tab-btn-sentence"
+          class="tab-btn scale-tab-label py-2.5 sm:py-2 px-1 rounded-xl font-semibold transition text-center bg-[#1f5c4d] text-white shadow-xs">
+          1. Câu Chọn
+        </button>
+        <button onclick="switchTab('vocab')" id="tab-btn-vocab"
+          class="tab-btn scale-tab-label py-2.5 sm:py-2 px-1 rounded-xl font-semibold transition text-center opacity-75 hover:opacity-100">
+          2. Từ Vựng
+        </button>
+        <button onclick="switchTab('grammar')" id="tab-btn-grammar"
+          class="tab-btn scale-tab-label py-2.5 sm:py-2 px-1 rounded-xl font-semibold transition text-center opacity-75 hover:opacity-100">
+          3. Ngữ Pháp
+        </button>
+        <button onclick="switchTab('structure')" id="tab-btn-structure"
+          class="tab-btn scale-tab-label py-2.5 sm:py-2 px-1 rounded-xl font-semibold transition text-center opacity-75 hover:opacity-100">
+          4. Cấu Trúc
+        </button>
+      </div>
+
+      <!-- Tab Panels Container (Scrolls independently) -->
+      <div class="p-4 sm:p-5 study-scroll-area">
+
+        <!-- TAB 1: Selected Sentence Analysis -->
+        <div id="panel-sentence" class="study-panel space-y-3.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="scale-side-meta font-bold uppercase tracking-wider text-[#1f5c4d] dark:text-[#4eb89d]">
+              Phân tích câu đang chọn
+            </span>
+            <button onclick="replayCurrentSentence()" class="scale-side-meta bg-[#1f5c4d]/15 hover:bg-[#1f5c4d]/25 text-[#1f5c4d] dark:text-[#4eb89d] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shrink-0">
+              🔊 Nghe câu này
+            </button>
+          </div>
+
+          <!-- English Sentence -->
+          <div class="surface-subtle border rounded-xl p-3.5">
+            <div class="scale-side-meta font-semibold uppercase opacity-60 mb-1">Nguyên văn tiếng Anh</div>
+            <p id="detail-en" class="story-font scale-side-title font-medium"></p>
+          </div>
+
+          <!-- Literary Vietnamese Translation -->
+          <div class="surface-subtle border border-[#1f5c4d]/35 rounded-xl p-3.5">
+            <div class="scale-side-meta font-semibold uppercase text-[#1f5c4d] dark:text-[#4eb89d] mb-1">Dịch nghĩa tiếng Việt</div>
+            <p id="detail-vi" class="scale-side-body font-medium"></p>
+          </div>
+
+          <!-- Key Phrases Breakdown -->
+          <div class="surface-subtle border rounded-xl p-3.5">
+            <div class="scale-side-meta font-semibold uppercase opacity-65 mb-1.5">Giải nghĩa cụm từ đắt giá</div>
+            <ul id="detail-phrases" class="scale-side-sub space-y-1.5">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+
+          <!-- Folklore & Cultural Context -->
+          <div class="surface-subtle border border-[#a83b2b]/45 rounded-xl p-3.5">
+            <div class="scale-side-meta font-semibold uppercase text-[#8f2d1f] dark:text-[#f3c66f] mb-1">Ghi chú văn hóa & Cổ tích Việt Nam</div>
+            <p id="detail-note" class="scale-side-sub opacity-95"></p>
+          </div>
+
+          <!-- Prev / Next Sentence Navigation -->
+          <div class="flex items-center justify-between pt-1">
+            <button onclick="prevSentence()" class="surface-subtle border hover:border-[#1f5c4d] px-3.5 py-2 rounded-lg scale-side-meta font-semibold transition">
+              ← Câu trước
+            </button>
+            <span id="panel-sentence-index" class="scale-side-meta font-semibold opacity-75">Câu 1 / 24</span>
+            <button onclick="nextSentence()" class="surface-subtle border hover:border-[#1f5c4d] px-3.5 py-2 rounded-lg scale-side-meta font-semibold transition">
+              Câu tiếp theo →
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 2: Key Vocabulary Bank (26 items) -->
+        <div id="panel-vocab" class="study-panel hidden space-y-3">
+          <!-- Selected Word Spotlight -->
+          <div id="vocab-spotlight" class="hidden surface-subtle border-2 border-[#a83b2b]/60 rounded-xl p-3.5 mb-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span id="spot-word" class="scale-side-title font-bold text-[#8f2d1f] dark:text-[#f3c66f]"></span>
+                  <span id="spot-pos" class="scale-side-meta font-semibold px-2 py-0.5 rounded-md bg-[#a83b2b]/15"></span>
+                  <span id="spot-ipa" class="font-mono-code scale-side-meta opacity-75"></span>
+                </div>
+                <p id="spot-vi" class="scale-side-body font-semibold mt-1"></p>
+              </div>
+              <button id="spot-audio-btn" class="bg-[#a83b2b] hover:bg-[#8c3022] text-white p-2.5 rounded-lg shadow-xs transition shrink-0" title="Nghe phát âm">
+                🔊
+              </button>
+            </div>
+            <p id="spot-nuance" class="scale-side-sub opacity-90 mt-2"></p>
+            <div class="mt-2 pt-2 border-t border-stone-300/50 dark:border-stone-700/60 flex items-center justify-between gap-2 scale-side-meta">
+              <span id="spot-context" class="italic opacity-80 truncate"></span>
+              <button id="spot-jump-btn" class="shrink-0 text-[#1f5c4d] dark:text-[#4eb89d] font-semibold hover:underline py-1">
+                ↗ Tới câu
+              </button>
+            </div>
+          </div>
+
+          <!-- Search & Part-of-Speech Filter -->
+          <div class="space-y-2">
+            <input type="text" id="vocab-search" oninput="filterVocabList()" placeholder="Tìm từ tiếng Anh hoặc nghĩa tiếng Việt..."
+              class="w-full surface-subtle border rounded-xl px-3.5 py-2.5 scale-side-sub focus:outline-none focus:border-[#1f5c4d]" />
+            <div class="flex flex-wrap gap-1" id="pos-filters">
+              <button onclick="setPosFilter('all')" data-pos="all" class="pos-filter-btn px-2.5 py-1.5 rounded-lg scale-side-meta font-semibold bg-[#1f5c4d] text-white transition">Tất cả (26)</button>
+              <button onclick="setPosFilter('verb')" data-pos="verb" class="pos-filter-btn surface-subtle border px-2.5 py-1.5 rounded-lg scale-side-meta font-semibold transition">Động từ</button>
+              <button onclick="setPosFilter('noun')" data-pos="noun" class="pos-filter-btn surface-subtle border px-2.5 py-1.5 rounded-lg scale-side-meta font-semibold transition">Danh từ</button>
+              <button onclick="setPosFilter('adj')" data-pos="adj" class="pos-filter-btn surface-subtle border px-2.5 py-1.5 rounded-lg scale-side-meta font-semibold transition">Tính từ</button>
+              <button onclick="setPosFilter('adv')" data-pos="adv" class="pos-filter-btn surface-subtle border px-2.5 py-1.5 rounded-lg scale-side-meta font-semibold transition">Trạng từ</button>
+            </div>
+          </div>
+
+          <!-- Vocabulary Cards Container -->
+          <div id="vocab-list" class="space-y-2.5">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- TAB 3: Grammar Points (5 Core Rules) -->
+        <div id="panel-grammar" class="study-panel hidden space-y-4">
+          <p class="scale-side-sub opacity-80">5 chủ điểm ngữ pháp tiêu biểu trích trực tiếp từ truyện cổ tích <em>Thạch Sanh</em>:</p>
+          <div id="grammar-list" class="space-y-3.5">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- TAB 4: Sentence Structures & Collocations (7 Patterns) -->
+        <div id="panel-structure" class="study-panel hidden space-y-4">
+          <p class="scale-side-sub opacity-80">7 cấu trúc câu và cụm từ diễn đạt đắt giá (nhấp vào ví dụ trong truyện để nghe đọc):</p>
+          <div id="structure-list" class="space-y-3.5">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+    </aside>
+  </main>
+
+  <!-- Mobile Bottom Thumb Control Bar (<= 900px Only, Touch Targets >= 44px) -->
+  <nav class="mobile-only mobile-bottom-bar surface-card border-t fixed bottom-0 left-0 right-0 z-35 px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] items-center justify-between gap-2"
+    aria-label="Thanh điều khiển đọc trên điện thoại">
+    <!-- Prev Sentence (min 44px) -->
+    <button onclick="prevSentence()" aria-label="Câu trước"
+      class="surface-subtle border active:scale-95 min-w-[46px] h-11 rounded-xl flex items-center justify-center transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+
+    <!-- Speed Pill (min 44px) -->
+    <button id="btn-speed-mobile" onclick="cycleSpeed()" aria-label="Tốc độ đọc"
+      class="surface-subtle border active:scale-95 min-w-[52px] h-11 px-2.5 rounded-xl font-mono-code text-xs font-bold flex items-center justify-center transition">
+      1.0x
+    </button>
+
+    <!-- Prominent Center Play / Pause Button -->
+    <button id="btn-play-pause-mobile" onclick="togglePlayPause()"
+      class="flex-1 max-w-[155px] h-11 bg-[#1f5c4d] hover:bg-[#17463a] active:scale-95 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition">
+      <svg id="icon-play-mobile" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+      <svg id="icon-pause-mobile" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+      </svg>
+      <span id="label-play-pause-mobile">Đọc truyện</span>
+    </button>
+
+    <!-- Next Sentence (min 44px) -->
+    <button onclick="nextSentence()" aria-label="Câu tiếp theo"
+      class="surface-subtle border active:scale-95 min-w-[46px] h-11 rounded-xl flex items-center justify-center transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+
+    <!-- Open Bottom Sheet Study Drawer Button (min 44px) -->
+    <button onclick="openMobileDrawer('sentence')" aria-label="Mở bảng học tập"
+      class="bg-[#a83b2b]/12 border border-[#a83b2b]/45 text-[#8f2d1f] dark:text-[#f3c66f] active:scale-95 h-11 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0">
+      <span>📖 Học</span>
+    </button>
+  </nav>
+
+  <!-- Keyboard Shortcuts Modal (PC) -->
+  <div id="shortcuts-modal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) toggleShortcutsModal()">
+    <div class="surface-card border rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b border-stone-300/70 dark:border-stone-700/70 pb-3 mb-4">
+        <h3 class="text-base font-bold">⌨️ Bảng Phím Tắt (Keyboard Shortcuts)</h3>
+        <button onclick="toggleShortcutsModal()" class="text-sm font-bold opacity-60 hover:opacity-100 px-2 py-1">✕</button>
+      </div>
+      <div class="space-y-2 text-xs sm:text-sm">
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Phát / Tạm dừng đọc (Play / Pause)</span>
+          <kbd class="surface-subtle">Space</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Câu trước đó (Previous Sentence)</span>
+          <div class="flex gap-1"><kbd class="surface-subtle">←</kbd> hoặc <kbd class="surface-subtle">P</kbd></div>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Câu tiếp theo (Next Sentence)</span>
+          <div class="flex gap-1"><kbd class="surface-subtle">→</kbd> hoặc <kbd class="surface-subtle">N</kbd></div>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Đọc lại câu hiện tại (Replay Sentence)</span>
+          <kbd class="surface-subtle">R</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Chuyển nhanh 4 thẻ học tập</span>
+          <div class="flex gap-1"><kbd class="surface-subtle">1</kbd><kbd class="surface-subtle">2</kbd><kbd class="surface-subtle">3</kbd><kbd class="surface-subtle">4</kbd></div>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Tăng / Giảm / Đặt lại cỡ chữ đồng bộ</span>
+          <div class="flex gap-1"><kbd class="surface-subtle">+</kbd> <kbd class="surface-subtle">-</kbd> <kbd class="surface-subtle">0</kbd></div>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Bật / Tắt tô sáng từ vựng</span>
+          <kbd class="surface-subtle">V</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-stone-200/70 dark:border-stone-800">
+          <span>Chuyển giao diện Sáng / Tối</span>
+          <kbd class="surface-subtle">T</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1">
+          <span>Mở / Đóng bảng phím tắt</span>
+          <div class="flex gap-1"><kbd class="surface-subtle">?</kbd> hoặc <kbd class="surface-subtle">H</kbd></div>
+        </div>
+      </div>
+      <button onclick="toggleShortcutsModal()" class="mt-5 w-full bg-[#1f5c4d] hover:bg-[#17463a] text-white py-2.5 rounded-xl text-xs font-semibold transition">
+        Đóng hướng dẫn
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. COMPLETE 6-PARAGRAPH STORY DATA (24 Sentences, ~500 English Words)
+    // =========================================================================
+    const STORY_DATA = [
+      // Paragraph 1 (S1 - S4): Xuất thân & Kết nghĩa với Lý Thông
+      {
+        p: 1,
+        en: "Long ago, in a quiet village beside a mountain forest, lived Thạch Sanh, a kindhearted orphan who earned a modest living chopping firewood beneath an ancient banyan tree.",
+        vi: "Ngày xửa ngày xưa, tại một ngôi làng yên bình ven rừng núi, có chàng Thạch Sanh mồ côi nhân hậu kiếm sống đạm bạc bằng nghề đốn củi dưới gốc đa cổ thụ.",
+        phrases: [
+          "<strong>kindhearted orphan</strong>: chàng trai mồ côi tốt bụng, nhân hậu",
+          "<strong>earned a modest living chopping firewood</strong>: kiếm sống thanh bạch bằng nghề đốn củi",
+          "<strong>ancient banyan tree</strong>: cây đa cổ thụ (gốc đa đầu làng trong văn hóa Việt)"
+        ],
+        note: "Văn hóa cổ tích Việt Nam: Cây đa đầu làng là biểu tượng linh thiêng gắn liền với đời sống thôn quê Việt Nam; Thạch Sanh vốn là thái tử con Ngọc Hoàng đầu thai xuống trần gian."
+      },
+      {
+        p: 1,
+        en: "Seeing the boy's pure soul, the Jade Emperor sent a celestial immortal down to teach him martial arts and miraculous magic spells.",
+        vi: "Thấy chàng trai có tâm hồn thuần khiết, Ngọc Hoàng bèn sai một vị tiên ông hạ phàm truyền dạy cho chàng đủ mọi môn võ nghệ và các phép thần thông kỳ diệu.",
+        phrases: [
+          "<strong>Jade Emperor</strong>: Ngọc Hoàng Thượng Đế",
+          "<strong>sent a celestial immortal down</strong>: sai tiên ông từ thiên đình xuống trần gian",
+          "<strong>martial arts and miraculous magic spells</strong>: võ nghệ và các phép thần thông biến hóa"
+        ],
+        note: "Yếu tố thần kỳ: Phép thần thông giúp Thạch Sanh có sức mạnh phi thường, làm tiền đề để chàng chiến thắng mọi thế lực tà ác sau này."
+      },
+      {
+        p: 1,
+        en: "One day, a cunning wine merchant named Lý Thông noticed Thạch Sanh's extraordinary strength and slyly proposed becoming sworn brothers.",
+        vi: "Một hôm, tên lái rượu xảo quyệt tên là Lý Thông nhận thấy sức khỏe phi thường của Thạch Sanh liền khôn khéo ngỏ lời kết nghĩa anh em.",
+        phrases: [
+          "<strong>cunning wine merchant</strong>: tên buôn rượu xảo quyệt, mưu mô",
+          "<strong>extraordinary strength</strong>: sức mạnh phi thường",
+          "<strong>sworn brothers</strong>: anh em kết nghĩa sống chết có nhau"
+        ],
+        note: "Nghệ thuật tương phản: Ngay từ đầu truyện, tác giả dân gian đã đặt sự chất phác thật thà của Thạch Sanh đối lập với bản tính gian xảo của Lý Thông."
+      },
+      {
+        p: 1,
+        en: "Trusting his new brother completely, Thạch Sanh moved into Lý Thông's house and worked tirelessly without ever asking for a reward.",
+        vi: "Hoàn toàn tin tưởng người anh kết nghĩa mới, Thạch Sanh dọn về ở chung nhà với Lý Thông và làm lụng không biết mệt mỏi mà chẳng bao giờ đòi hỏi công lao.",
+        phrases: [
+          "<strong>worked tirelessly</strong>: làm việc miệt mài không ngơi nghỉ",
+          "<strong>without ever asking for a reward</strong>: không bao giờ đòi hỏi sự đền đáp"
+        ],
+        note: "Phẩm chất nhân vật: Lòng vị tha và sự chân thành vô điều kiện khiến Thạch Sanh dễ dàng tin vào những lời dối trá của mẹ con Lý Thông."
+      },
+
+      // Paragraph 2 (S5 - S8): Diệt chằn tinh & Bị cướp công
+      {
+        p: 2,
+        en: "At that time, a ferocious ogre haunted a nearby temple, demanding human sacrifices from the terrified villagers every year.",
+        vi: "Bấy giờ, có một con chằn tinh hung dữ tác oai tác quái trong ngôi miếu gần làng, hằng năm bắt dân làng khiếp sợ phải nộp mạng người tế lễ.",
+        phrases: [
+          "<strong>ferocious ogre</strong>: con chằn tinh hung tợn, khát máu",
+          "<strong>haunted a nearby temple</strong>: ám ảnh, hoành hành tại ngôi miếu gần đó",
+          "<strong>demanding human sacrifices</strong>: đòi hỏi vật hiến tế bằng mạng người"
+        ],
+        note: "Hình tượng chằn tinh: Trong cổ tích Việt Nam, chằn tinh là loài yêu quái hung ác ăn thịt người, tượng trưng cho tai ương và bạo lực đe dọa cuộc sống bình yên của nhân dân."
+      },
+      {
+        p: 2,
+        en: "When Lý Thông's turn came to guard the temple, he deceitfully sent Thạch Sanh in his place while he stayed safely at home.",
+        vi: "Khi đến phiên Lý Thông phải đi canh miếu nộp mạng, hắn bèn lừa Thạch Sanh đi thế mạng cho mình còn bản thân thì trốn an toàn ở nhà.",
+        phrases: [
+          "<strong>deceitfully sent Thạch Sanh in his place</strong>: gian dối đẩy Thạch Sanh đi thay chỗ mình"
+        ],
+        note: "Sự bội bạc: Lý Thông lợi dụng tình nghĩa anh em để đẩy người em kết nghĩa vào chỗ chết."
+      },
+      {
+        p: 2,
+        en: "Armed only with his trusty axe, Thạch Sanh fought fiercely through the night, slew the monster, and claimed a gleaming golden bow left behind in the ashes.",
+        vi: "Chỉ với chiếc rìu thân thuộc trong tay, Thạch Sanh giao chiến quyết liệt suốt đêm, chém chết yêu quái và nhặt được cây cung vàng lấp lánh còn sót lại trong đống tro tàn.",
+        phrases: [
+          "<strong>Armed only with his trusty axe</strong>: Chỉ trang bị duy nhất chiếc rìu quen thuộc",
+          "<strong>slew the monster</strong>: tiêu diệt quái vật (slay – slew – slain)",
+          "<strong>gleaming golden bow</strong>: cây cung vàng sáng loáng (bảo vật gắn với chiến công của Thạch Sanh)"
+        ],
+        note: "Ngữ pháp: Động từ bất quy tắc 'slay – slew – slain' (giết, chém chết) thường dùng trong truyện thần thoại và sử thi."
+      },
+      {
+        p: 2,
+        en: "Instead of thanking him, Lý Thông lied that the ogre was the king's sacred beast, tricking Thạch Sanh into fleeing into the forest so Lý Thông could steal the royal reward.",
+        vi: "Thay vì cảm tạ chàng, Lý Thông lại bịa chuyện rằng chằn tinh chính là thần thú của nhà vua, lừa Thạch Sanh bỏ trốn vào rừng sâu để hắn ngang nhiên cướp công nhận thưởng từ triều đình.",
+        phrases: [
+          "<strong>the king's sacred beast</strong>: thần thú linh thiêng của nhà vua",
+          "<strong>tricking Thạch Sanh into fleeing</strong>: lừa Thạch Sanh phải chạy trốn (trick sb into V-ing)",
+          "<strong>steal the royal reward</strong>: cướp đoạt phần thưởng của nhà vua"
+        ],
+        note: "Cấu trúc đắt giá: 'trick somebody into doing something' (lừa ai làm điều gì sai lầm)."
+      },
+
+      // Paragraph 3 (S9 - S12): Cứu công chúa Quỳnh Nga & Bị lấp cửa hang
+      {
+        p: 3,
+        en: "Months later, a gigantic eagle swooped down from the clouds and carried off Princess Quỳnh Nga during a royal festival.",
+        vi: "Vài tháng sau, một con đại bàng khổng lồ từ trên mây sà xuống và quắp mất công chúa Quỳnh Nga ngay giữa lễ hội hoàng gia.",
+        phrases: [
+          "<strong>gigantic eagle swooped down</strong>: con đại bàng khổng lồ lao sầm xuống",
+          "<strong>carried off Princess Quỳnh Nga</strong>: quắp, bắt cóc công chúa Quỳnh Nga đi mất"
+        ],
+        note: "Tình tiết nối tiếp: Nhờ có cây cung vàng, Thạch Sanh bắn trúng cánh đại bàng và lần theo vết máu tìm ra hang ổ của nó."
+      },
+      {
+        p: 3,
+        en: "Tracking the wounded bird's trail to a deep cavern, Thạch Sanh bravely descended on a rope and rescued the terrified princess.",
+        vi: "Lần theo dấu vết con chim bị thương tới một hang sâu thăm thẳm, Thạch Sanh dũng cảm đu dây xuống hang và giải cứu nàng công chúa đang hoảng sợ.",
+        phrases: [
+          "<strong>Tracking the wounded bird's trail</strong>: Lần theo dấu vết của con chim bị thương",
+          "<strong>deep cavern</strong>: hang động sâu thẳm",
+          "<strong>descended on a rope</strong>: tụt xuống bằng sợi dây thừng"
+        ],
+        note: "Lòng quả cảm: Thạch Sanh không màng hiểm nguy, một mình xuống hang sâu đối đầu đại bàng tinh để cứu người gặp nạn."
+      },
+      {
+        p: 3,
+        en: "However, once the princess was safely hoisted up, the treacherous Lý Thông sealed the cave entrance with massive boulders to bury Thạch Sanh alive.",
+        vi: "Thế nhưng, ngay khi công chúa vừa được kéo lên mặt đất an toàn, tên Lý Thông phản trắc liền sai quân lấp kín cửa hang bằng những tảng đá khổng lồ hòng chôn sống Thạch Sanh.",
+        phrases: [
+          "<strong>safely hoisted up</strong>: được kéo lên cao an toàn",
+          "<strong>treacherous Lý Thông</strong>: tên Lý Thông phản bội, xảo trá",
+          "<strong>sealed the cave entrance with massive boulders</strong>: bịt kín cửa hang bằng những tảng đá lớn"
+        ],
+        note: "Đỉnh điểm của tội ác: Đây là lần thứ hai Lý Thông rắp tâm hãm hại người em kết nghĩa để độc chiếm công lao làm phò mã."
+      },
+      {
+        p: 3,
+        en: "After slaying the ferocious eagle inside the dark abyss, Thạch Sanh searched desperately for a way out.",
+        vi: "Sau khi tiêu diệt con đại bàng hung dữ bên trong vực sâu tối tăm, Thạch Sanh tuyệt vọng tìm kiếm lối thoát ra ngoài.",
+        phrases: [
+          "<strong>slaying the ferocious eagle</strong>: hạ sát con đại bàng hung tợn",
+          "<strong>dark abyss</strong>: vực thẳm tối tăm không đáy"
+        ],
+        note: "Nghịch cảnh thử thách: Rơi vào hang sâu không lối thoát, nhưng chính lòng nhân ái lại mở ra cơ duyên kỳ diệu cho chàng."
+      },
+
+      // Paragraph 4 (S13 - S16): Cứu thái tử Thủy Tề & Được tặng đàn thần
+      {
+        p: 4,
+        en: "In a hidden corner of the cave, he discovered an iron cage imprisoning a young man who turned out to be the Dragon King's son.",
+        vi: "Ở một góc khuất trong hang, chàng phát hiện một chiếc cũi sắt đang giam giữ một chàng trai trẻ hóa ra chính là thái tử con của vua Thủy Tề.",
+        phrases: [
+          "<strong>iron cage imprisoning a young man</strong>: chiếc cũi sắt giam cầm một chàng trai trẻ",
+          "<strong>turned out to be the Dragon King's son</strong>: hóa ra là con trai của vua Thủy Tề"
+        ],
+        note: "Thế giới Thủy cung: Trong tâm thức dân gian Việt Nam, vua Thủy Tề cai quản vùng sông biển, luôn trọng ân nghĩa và ban thưởng cho người hiền lành."
+      },
+      {
+        p: 4,
+        en: "Using his golden bow to shatter the heavy bars, Thạch Sanh freed the prince and accompanied him down to the glittering underwater palace.",
+        vi: "Dùng cây cung vàng bắn vỡ toang những song sắt nặng nề, Thạch Sanh giải thoát cho thái tử và theo chàng xuống thăm thủy cung lộng lẫy dưới đáy biển.",
+        phrases: [
+          "<strong>shatter the heavy bars</strong>: đập vỡ tan tành những thanh sắt nặng",
+          "<strong>glittering underwater palace</strong>: thủy cung lấp lánh châu báu dưới đáy nước"
+        ],
+        note: "Chi tiết liên kết: Cây cung vàng nhặt được từ trận đánh chằn tinh nay trở thành chìa khóa cứu thái tử Thủy Tề."
+      },
+      {
+        p: 4,
+        en: "Overwhelmed with gratitude, the Dragon King offered heaps of gold and pearls, yet Thạch Sanh politely declined all material wealth.",
+        vi: "Tràn ngập lòng biết ơn, vua Thủy Tề ban tặng vô số vàng bạc và châu báu, nhưng Thạch Sanh nhã nhặn từ chối mọi của cải vật chất.",
+        phrases: [
+          "<strong>Overwhelmed with gratitude</strong>: Vô cùng cảm kích, tràn ngập lòng biết ơn",
+          "<strong>politely declined all material wealth</strong>: lịch sự khước từ mọi của cải vật chất"
+        ],
+        note: "Đức tính thanh cao: Thạch Sanh không tham lam phú quý, chỉ xin một bảo vật tinh thần giản dị."
+      },
+      {
+        p: 4,
+        en: "Instead, he accepted only an ancient magic lute whose enchanted strings could voice the deepest truths of the human heart.",
+        vi: "Thay vào đó, chàng chỉ nhận một cây đàn thần cổ xưa với những dây đàn nhiệm màu có thể cất lên tiếng nói sâu thẳm nhất của lòng người.",
+        phrases: [
+          "<strong>ancient magic lute</strong>: cây đàn thần cổ kính (cây đàn của công lý và tình người)",
+          "<strong>enchanted strings</strong>: những dây đàn mang phép màu"
+        ],
+        note: "Biểu tượng cây đàn thần: Khác với vũ khí bạo lực, cây đàn thần tượng trưng cho sức mạnh của nghệ thuật, chân lý và lòng nhân ái trong văn hóa Việt."
+      },
+
+      // Paragraph 5 (S17 - S20): Tiếng đàn giải oan & Vạch trần Lý Thông
+      {
+        p: 5,
+        en: "Upon returning to the capital, Thạch Sanh was falsely accused of theft by Lý Thông's vengeful ghosts and thrown into a dark dungeon.",
+        vi: "Khi vừa trở về kinh thành, Thạch Sanh lại bị hồn ma của chằn tinh và đại bàng báo thù vu oan tội trộm cắp của kho nhà vua nên bị tống vào ngục tối.",
+        phrases: [
+          "<strong>falsely accused of theft</strong>: bị vu khống tội trộm cắp (accuse sb of sth)",
+          "<strong>thrown into a dark dungeon</strong>: bị ném vào ngục tối"
+        ],
+        note: "Thử thách cuối cùng: Oan khuất chồng chất oan khuất, đưa câu chuyện tới cao trào kịch tính trước khi công lý được thực thi."
+      },
+      {
+        p: 5,
+        en: "Inside his lonely cell, he plucked the magic lute, sending poignant melodies floating across the palace walls to recount his wrongful suffering.",
+        vi: "Trong căn buồng giam cô quạnh, chàng gảy lên tiếng đàn thần, gửi những giai điệu ai oán bay qua tường thành hoàng cung để kể lại nỗi oan khuất của mình.",
+        phrases: [
+          "<strong>plucked the magic lute</strong>: gảy lên cây đàn thần",
+          "<strong>poignant melodies</strong>: những giai điệu da diết, nhói lòng",
+          "<strong>recount his wrongful suffering</strong>: kể lại nỗi đau oan ức"
+        ],
+        note: "Tiếng đàn giải oan: Tiếng đàn cất lên trách móc Lý Thông bội bạc ('Đàn kêu tích tịch tình tang / Ai đem công chúa dưới hang trở về...')."
+      },
+      {
+        p: 5,
+        en: "Hearing the familiar music, Princess Quỳnh Nga—who had remained mute ever since leaving the cave—suddenly spoke and begged the king to summon the musician.",
+        vi: "Nghe thấy tiếng nhạc thân quen, công chúa Quỳnh Nga—người vốn bị câm lặng suốt từ ngày rời khỏi hang sâu—bỗng cất tiếng nói và cầu xin vua cha cho triệu người gảy đàn vào cung.",
+        phrases: [
+          "<strong>remained mute</strong>: giữ im lặng, không nói được tiếng nào (công chúa hóa câm vì đau buồn và uất ức)",
+          "<strong>summon the musician</strong>: triệu tập người nhạc công vào chầu"
+        ],
+        note: "Phép màu của tiếng đàn: Tiếng đàn thần không chỉ minh oan mà còn chữa lành nỗi đau tinh thần cho công chúa."
+      },
+      {
+        p: 5,
+        en: "Before the royal court, Thạch Sanh's golden bow and crystal-clear testimony exposed every lie, stripping Lý Thông of his stolen titles.",
+        vi: "Trước triều đình văn võ bá quan, cây cung vàng và lời khai sáng tỏ của Thạch Sanh đã phơi bày mọi lời dối trá, tước bỏ toàn bộ chức tước cướp được của Lý Thông.",
+        phrases: [
+          "<strong>crystal-clear testimony</strong>: lời khai rành mạch, sáng tỏ như pha lê",
+          "<strong>exposed every lie</strong>: vạch trần mọi sự dối trá",
+          "<strong>stripping Lý Thông of his stolen titles</strong>: tước đoạt mọi tước vị đánh cắp của Lý Thông"
+        ],
+        note: "Công lý sáng tỏ: Ác giả ác báo—mọi mưu hèn kế bẩn cuối cùng đều bị phơi bày trước ánh sáng sự thật."
+      },
+
+      // Paragraph 6 (S21 - S24): Lòng khoan dung, Niêu cơm thần & Kết thúc có hậu
+      {
+        p: 6,
+        en: "Rather than executing the traitors, the merciful Thạch Sanh pardoned Lý Thông and his mother, allowing them to return to their home village.",
+        vi: "Thay vì xử tử những kẻ phản bội, chàng Thạch Sanh nhân từ đã tha tội chết cho mẹ con Lý Thông, cho phép họ được trở về quê cũ.",
+        phrases: [
+          "<strong>Rather than executing the traitors</strong>: Thay vì hành quyết những kẻ phản trắc",
+          "<strong>merciful Thạch Sanh pardoned</strong>: Thạch Sanh giàu lòng khoan dung đã tha bổng"
+        ],
+        note: "Đạo lý Việt Nam: Tinh thần 'đánh kẻ chạy đi không ai đánh người chạy lại', dù sau đó mẹ con Lý Thông vẫn bị thiên lôi đánh chết và hóa thành bọ hung vì bản tính không hối cải."
+      },
+      {
+        p: 6,
+        en: "Soon afterward, princes from eighteen neighboring kingdoms marched toward the capital in anger because Quỳnh Nga had refused their marriage proposals.",
+        vi: "Không lâu sau đó, các hoàng tử từ mười tám nước chư hầu láng giềng tức giận kéo quân vây đánh kinh thành vì công chúa Quỳnh Nga đã từ chối lời cầu hôn của họ.",
+        phrases: [
+          "<strong>eighteen neighboring kingdoms</strong>: quân đội 18 nước chư hầu láng giềng",
+          "<strong>refused their marriage proposals</strong>: khước từ lời cầu hôn của họ"
+        ],
+        note: "Thử thách giữ nước: Thạch Sanh từ người anh hùng diệt trừ yêu quái nay trở thành người anh hùng bảo vệ bờ cõi đất nước."
+      },
+      {
+        p: 6,
+        en: "Stepping onto the battlefield without spilling a single drop of blood, Thạch Sanh played his magic lute until the invading soldiers laid down their weapons in homesick tears.",
+        vi: "Bước ra chiến trường mà không hề làm đổ một giọt máu nào, Thạch Sanh gảy lên tiếng đàn thần cho đến khi binh sĩ xâm lược buông vũ khí trong những giọt nước mắt nhớ quê hương.",
+        phrases: [
+          "<strong>without spilling a single drop of blood</strong>: không làm đổ một giọt máu nào (tư tưởng nhân nghĩa hòa bình)",
+          "<strong>laid down their weapons in homesick tears</strong>: hạ vũ khí trong nước mắt nhớ nhà"
+        ],
+        note: "Tư tưởng nhân văn cao cả: Dùng tiếng đàn hòa bình cảm hóa lòng người thay cho gươm giáo chiến tranh—khát vọng muôn đời của dân tộc Việt Nam."
+      },
+      {
+        p: 6,
+        en: "After feeding the entire starving army from his inexhaustible magic rice pot, the humble hero married Princess Quỳnh Nga and ruled the land in lasting peace.",
+        vi: "Sau khi thiết đãi toàn bộ đạo quân đói khát bằng niêu cơm thần ăn mãi không bao giờ cạn, người anh hùng bình dị ấy kết duyên cùng công chúa Quỳnh Nga và trị vì đất nước trong nền thái bình bền vững.",
+        phrases: [
+          "<strong>inexhaustible magic rice pot</strong>: niêu cơm thần ăn mãi không hết (tượng trưng cho sự no ấm, bao dung và lòng hiếu khách của người Việt)",
+          "<strong>ruled the land in lasting peace</strong>: trị vì đất nước trong nền hòa bình lâu dài"
+        ],
+        note: "Biểu tượng Niêu cơm thần: Niêu cơm bé xíu mà cả vạn quân ăn mãi vẫn đầy—biểu trưng cho sức sống dồi dào, lòng nhân hậu và triết lý 'ở hiền gặp lành' của người Việt."
+      }
+    ];
+
+    // =========================================================================
+    // 2. KEY VOCABULARY BANK (26 Literary & Academic Words)
+    // =========================================================================
+    const VOCAB_DATA = [
+      {
+        word: "kindhearted",
+        forms: ["kindhearted"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˌkaɪndˈhɑːr.tɪd/",
+        sentenceIndex: 0,
+        vi: "tốt bụng, nhân hậu, giàu lòng trắc ẩn",
+        nuance: "Khắc họa bản chất hiền lành, thuần khiết của Thạch Sanh ngay từ phần giới thiệu nhân vật.",
+        context: "...lived Thạch Sanh, a kindhearted orphan who earned a modest living..."
+      },
+      {
+        word: "celestial",
+        forms: ["celestial"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/səˈles.tʃəl/",
+        sentenceIndex: 1,
+        vi: "thuộc về thiên đình, tiên giới, thần tiên",
+        nuance: "Từ vựng trang trọng thường dùng trong thần thoại để chỉ các vị tiên hoặc cõi trời.",
+        context: "...the Jade Emperor sent a celestial immortal down to teach him..."
+      },
+      {
+        word: "miraculous",
+        forms: ["miraculous"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/məˈræk.jə.ləs/",
+        sentenceIndex: 1,
+        vi: "kỳ diệu, thần kỳ, phi thường",
+        nuance: "Diễn tả những phép thần thông biến hóa mà tiên ông truyền dạy cho Thạch Sanh.",
+        context: "...teach him martial arts and miraculous magic spells."
+      },
+      {
+        word: "cunning",
+        forms: ["cunning"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˈkʌn.ɪŋ/",
+        sentenceIndex: 2,
+        vi: "xảo quyệt, mưu mô, ranh mãnh",
+        nuance: "Tính từ chuẩn xác để lột tả bản chất lừa lọc, tính toán của tên lái rượu Lý Thông.",
+        context: "One day, a cunning wine merchant named Lý Thông noticed..."
+      },
+      {
+        word: "ferocious",
+        forms: ["ferocious"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/fəˈroʊ.ʃəs/",
+        sentenceIndex: 4,
+        vi: "hung dữ, tàn bạo, khát máu",
+        nuance: "Dùng để miêu tả loài ác thú hoặc quái vật như chằn tinh và đại bàng tinh.",
+        context: "At that time, a ferocious ogre haunted a nearby temple..."
+      },
+      {
+        word: "ogre",
+        forms: ["ogre"],
+        posCat: "noun",
+        pos: "noun (danh từ)",
+        ipa: "/ˈoʊ.ɡər/",
+        sentenceIndex: 4,
+        vi: "chằn tinh, yêu quái ăn thịt người trong truyện cổ tích",
+        nuance: "Danh từ cổ tích kinh điển chỉ loài quái vật khổng lồ hung ác.",
+        context: "...a ferocious ogre haunted a nearby temple, demanding human sacrifices..."
+      },
+      {
+        word: "deceitfully",
+        forms: ["deceitfully"],
+        posCat: "adv",
+        pos: "adverb (trạng từ)",
+        ipa: "/dɪˈsiːt.fəl.i/",
+        sentenceIndex: 5,
+        vi: "một cách gian dối, lừa lọc, xảo trá",
+        nuance: "Nhấn mạnh thủ đoạn đẩy người khác đi chết thay của Lý Thông.",
+        context: "...he deceitfully sent Thạch Sanh in his place while he stayed safely at home."
+      },
+      {
+        word: "slew",
+        forms: ["slew", "slay", "slaying"],
+        posCat: "verb",
+        pos: "verb (động từ - quá khứ của slay)",
+        ipa: "/sluː/",
+        sentenceIndex: 6,
+        vi: "giết chết, hạ sát (quái vật, kẻ thù trong chiến trận)",
+        nuance: "Động từ bất quy tắc: slay – slew – slain, mang sắc thái anh hùng ca và cổ tích.",
+        context: "...Thạch Sanh fought fiercely through the night, slew the monster..."
+      },
+      {
+        word: "gleaming",
+        forms: ["gleaming", "gleam"],
+        posCat: "adj",
+        pos: "adjective / verb",
+        ipa: "/ˈɡliː.mɪŋ/",
+        sentenceIndex: 6,
+        vi: "sáng lấp lánh, ánh lên rực rỡ",
+        nuance: "Miêu tả vẻ đẹp lấp lánh của cây cung vàng thần kỳ còn lại sau khi chằn tinh bị tiêu diệt.",
+        context: "...and claimed a gleaming golden bow left behind in the ashes."
+      },
+      {
+        word: "swooped",
+        forms: ["swooped", "swoop"],
+        posCat: "verb",
+        pos: "verb (động từ)",
+        ipa: "/swuːpt/",
+        sentenceIndex: 8,
+        vi: "lao vụt xuống, sà xuống bất ngờ từ trên cao",
+        nuance: "Động từ gợi hình chuyên dùng cho chim săn mồi khổng lồ như đại bàng.",
+        context: "Months later, a gigantic eagle swooped down from the clouds..."
+      },
+      {
+        word: "cavern",
+        forms: ["cavern"],
+        posCat: "noun",
+        pos: "noun (danh từ)",
+        ipa: "/ˈkæv.ərn/",
+        sentenceIndex: 9,
+        vi: "hang động lớn và sâu thẳm",
+        nuance: "Lớn và tối tăm hơn 'cave', gợi cảm giác rùng rợn nơi hang ổ của đại bàng tinh.",
+        context: "Tracking the wounded bird's trail to a deep cavern..."
+      },
+      {
+        word: "descended",
+        forms: ["descended", "descend"],
+        posCat: "verb",
+        pos: "verb (động từ)",
+        ipa: "/dɪˈsen.dɪd/",
+        sentenceIndex: 9,
+        vi: "đi xuống, tụt xuống từ trên cao",
+        nuance: "Trái nghĩa với 'ascend' (đi lên), thường dùng trong văn phong kể chuyện trang trọng.",
+        context: "...Thạch Sanh bravely descended on a rope and rescued the terrified princess."
+      },
+      {
+        word: "treacherous",
+        forms: ["treacherous"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˈtretʃ.ər.əs/",
+        sentenceIndex: 10,
+        vi: "phản trắc, bội bạc, đâm sau lưng",
+        nuance: "Khi chỉ tính cách con người ('treacherous Lý Thông'), từ này có nghĩa là kẻ phản bội đáng khinh.",
+        context: "...the treacherous Lý Thông sealed the cave entrance with massive boulders..."
+      },
+      {
+        word: "abyss",
+        forms: ["abyss"],
+        posCat: "noun",
+        pos: "noun (danh từ)",
+        ipa: "/əˈbɪs/",
+        sentenceIndex: 11,
+        vi: "vực thẳm sâu hun hút không đáy",
+        nuance: "Tạo cảm giác tuyệt vọng và tối tăm khi Thạch Sanh bị nhốt dưới lòng đất.",
+        context: "After slaying the ferocious eagle inside the dark abyss..."
+      },
+      {
+        word: "shatter",
+        forms: ["shatter"],
+        posCat: "verb",
+        pos: "verb (động từ)",
+        ipa: "/ˈʃæt̬.ər/",
+        sentenceIndex: 13,
+        vi: "đập vỡ tan tành thành nhiều mảnh",
+        nuance: "Thể hiện sức mạnh phi thường của mũi tên vàng khi phá tan cũi sắt cứu thái tử.",
+        context: "Using his golden bow to shatter the heavy bars..."
+      },
+      {
+        word: "declined",
+        forms: ["declined", "decline"],
+        posCat: "verb",
+        pos: "verb (động từ)",
+        ipa: "/dɪˈklaɪnd/",
+        sentenceIndex: 14,
+        vi: "từ chối một cách lịch sự, nhã nhặn",
+        nuance: "Trang trọng hơn 'refuse', thể hiện phong thái khiêm nhường của Thạch Sanh trước vua Thủy Tề.",
+        context: "...yet Thạch Sanh politely declined all material wealth."
+      },
+      {
+        word: "lute",
+        forms: ["lute"],
+        posCat: "noun",
+        pos: "noun (danh từ)",
+        ipa: "/luːt/",
+        sentenceIndex: 15,
+        vi: "cây đàn tỳ bà / đàn nguyệt cổ điển",
+        nuance: "Tên gọi chuẩn trong văn học tiếng Anh cho cây đàn thần nổi tiếng của Thạch Sanh.",
+        context: "Instead, he accepted only an ancient magic lute..."
+      },
+      {
+        word: "vengeful",
+        forms: ["vengeful"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˈvendʒ.fəl/",
+        sentenceIndex: 16,
+        vi: "đầy thù hận, ôm lòng báo thù",
+        nuance: "Chỉ linh hồn ác quỷ của chằn tinh và đại bàng tìm cách trả thù Thạch Sanh.",
+        context: "...falsely accused of theft by Lý Thông's vengeful ghosts..."
+      },
+      {
+        word: "poignant",
+        forms: ["poignant"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˈpɔɪn.jənt/",
+        sentenceIndex: 17,
+        vi: "da diết, ai oán, chạm sâu vào nỗi buồn lòng người",
+        nuance: "Từ vựng C1 giàu chất thơ, miêu tả tiếng đàn kể nỗi oan khuất khiến công chúa xúc động.",
+        context: "...sending poignant melodies floating across the palace walls..."
+      },
+      {
+        word: "mute",
+        forms: ["mute"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/mjuːt/",
+        sentenceIndex: 18,
+        vi: "câm lặng, không nói nên lời",
+        nuance: "Diễn tả tình trạng công chúa Quỳnh Nga không nói một lời nào từ khi bị Lý Thông lừa dối.",
+        context: "...Princess Quỳnh Nga—who had remained mute ever since leaving the cave..."
+      },
+      {
+        word: "summon",
+        forms: ["summon"],
+        posCat: "verb",
+        pos: "verb (động từ)",
+        ipa: "/ˈsʌm.ən/",
+        sentenceIndex: 18,
+        vi: "triệu tập, cho gọi đến (một cách trang trọng)",
+        nuance: "Thường dùng khi nhà vua hoặc triều đình cho gọi ai đó vào cung diện kiến.",
+        context: "...begged the king to summon the musician."
+      },
+      {
+        word: "testimony",
+        forms: ["testimony"],
+        posCat: "noun",
+        pos: "noun (danh từ)",
+        ipa: "/ˈtes.tə.moʊ.ni/",
+        sentenceIndex: 19,
+        vi: "lời khai, bằng chứng xác thực trước tòa hoặc triều đình",
+        nuance: "Khẳng định sự thật rành mạch của Thạch Sanh giúp lật tẩy mọi tội ác của Lý Thông.",
+        context: "...Thạch Sanh's golden bow and crystal-clear testimony exposed every lie..."
+      },
+      {
+        word: "merciful",
+        forms: ["merciful"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˈmɜːr.sɪ.fəl/",
+        sentenceIndex: 20,
+        vi: "nhân từ, khoan dung, giàu lòng thương xót",
+        nuance: "Tôn vinh tấm lòng vị tha của Thạch Sanh khi tha mạng cho mẹ con kẻ thù.",
+        context: "Rather than executing the traitors, the merciful Thạch Sanh pardoned..."
+      },
+      {
+        word: "pardoned",
+        forms: ["pardoned", "pardon"],
+        posCat: "verb",
+        pos: "verb (động từ)",
+        ipa: "/ˈpɑːr.dənd/",
+        sentenceIndex: 20,
+        vi: "tha thứ, ân xá tội lỗi",
+        nuance: "Động từ trang trọng chỉ hành động tha tội chết cho kẻ phạm tội.",
+        context: "...the merciful Thạch Sanh pardoned Lý Thông and his mother..."
+      },
+      {
+        word: "homesick",
+        forms: ["homesick"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˈhoʊm.sɪk/",
+        sentenceIndex: 22,
+        vi: "nhớ nhà, nhớ quê hương da diết",
+        nuance: "Tiếng đàn của Thạch Sanh đánh thức nỗi nhớ quê nhà khiến quân xâm lược tự nguyện rút lui.",
+        context: "...the invading soldiers laid down their weapons in homesick tears."
+      },
+      {
+        word: "inexhaustible",
+        forms: ["inexhaustible"],
+        posCat: "adj",
+        pos: "adjective (tính từ)",
+        ipa: "/ˌɪn.ɪɡˈzɑː.stə.bəl/",
+        sentenceIndex: 23,
+        vi: "vô tận, không bao giờ cạn kiệt",
+        nuance: "Tính từ chuẩn xác nhất để miêu tả niêu cơm thần ăn mãi vẫn đầy của Thạch Sanh.",
+        context: "After feeding the entire starving army from his inexhaustible magic rice pot..."
+      }
+    ];
+
+    // =========================================================================
+    // 3. GRAMMAR POINTS DATA (5 Key Rules from the Story)
+    // =========================================================================
+    const GRAMMAR_DATA = [
+      {
+        title: "1. Đảo ngữ mở đầu truyện cổ tích (Narrative Locative Inversion)",
+        badge: "Văn phong kể chuyện",
+        formula: "Trạng ngữ thời gian & nơi chốn + Động từ chính + Chủ ngữ",
+        explanation: "Để mở đầu câu chuyện cổ tích theo lối truyền thống giàu chất thơ, cụm trạng ngữ chỉ thời gian và không gian được đưa lên đầu câu, kéo theo <strong>động từ chính (lived) đứng trước chủ ngữ (Thạch Sanh)</strong>.",
+        examples: [
+          {
+            sentenceIndex: 0,
+            en: "“Long ago, in a quiet village beside a mountain forest, <strong>lived Thạch Sanh</strong>, a kindhearted orphan...”",
+            vi: "Ngày xửa ngày xưa, tại một ngôi làng yên bình ven rừng núi, có chàng Thạch Sanh mồ côi nhân hậu sinh sống..."
+          }
+        ]
+      },
+      {
+        title: "2. Mệnh đề phân từ hiện tại & quá khứ rút gọn (Participle Clauses)",
+        badge: "Participle Clauses",
+        formula: "V-ing (Chủ động) / V3-ed (Bị động) + ..., S + V",
+        explanation: "Rút gọn mệnh đề phụ có cùng chủ ngữ với mệnh đề chính thành <strong>V-ing</strong> (diễn tả nguyên nhân hoặc hành động đồng thời) hoặc <strong>V3/ed</strong> (diễn tả trạng thái bị động), giúp câu văn mạch lạc và giàu nhịp điệu.",
+        examples: [
+          {
+            sentenceIndex: 1,
+            en: "“<strong>Seeing the boy's pure soul</strong>, the Jade Emperor sent a celestial immortal down...”",
+            vi: "Phân từ hiện tại (Nguyên nhân): Thấy chàng trai có tâm hồn thuần khiết, Ngọc Hoàng bèn sai tiên ông hạ phàm..."
+          },
+          {
+            sentenceIndex: 6,
+            en: "“<strong>Armed only with his trusty axe</strong>, Thạch Sanh fought fiercely through the night...”",
+            vi: "Phân từ quá khứ (Trạng thái bị động): Chỉ được trang bị chiếc rìu thân thuộc, Thạch Sanh chiến đấu quyết liệt..."
+          },
+          {
+            sentenceIndex: 14,
+            en: "“<strong>Overwhelmed with gratitude</strong>, the Dragon King offered heaps of gold and pearls...”",
+            vi: "Phân từ quá khứ (Cảm xúc): Tràn ngập lòng biết ơn, vua Thủy Tề ban tặng vô số vàng bạc châu báu..."
+          }
+        ]
+      },
+      {
+        title: "3. Mệnh đề quan hệ không xác định (Non-defining Relative Clauses)",
+        badge: "Mệnh đề quan hệ",
+        formula: "Danh từ riêng, who / whose + Mệnh đề bổ sung, + V chính",
+        explanation: "Dùng dấu phẩy tách biệt mệnh đề quan hệ bắt đầu bằng <strong>who</strong> hoặc <strong>whose</strong> sau tên nhân vật hoặc bảo vật để cung cấp thêm thông tin giải thích mà không làm thay đổi đối tượng được nhắc tới.",
+        examples: [
+          {
+            sentenceIndex: 15,
+            en: "“Instead, he accepted only an ancient magic lute <strong>whose enchanted strings could voice the deepest truths</strong>...”",
+            vi: "Thay vào đó, chàng chỉ nhận một cây đàn thần cổ xưa mà những dây đàn nhiệm màu của nó có thể cất lên tiếng nói..."
+          },
+          {
+            sentenceIndex: 18,
+            en: "“Hearing the familiar music, Princess Quỳnh Nga—<strong>who had remained mute ever since leaving the cave</strong>—suddenly spoke...”",
+            vi: "Nghe thấy tiếng nhạc thân quen, công chúa Quỳnh Nga—người vốn bị câm lặng từ khi rời hang sâu—bỗng cất tiếng nói..."
+          }
+        ]
+      },
+      {
+        title: "4. Cấu trúc chỉ mục đích & kết quả ('so + Clause' & 'until + Clause')",
+        badge: "Liên từ mạch lạc",
+        formula: "Action + so + Subject + could + V  |  Action + until + Result",
+        explanation: "Liên từ <strong>so</strong> diễn đạt mục đích (<em>để mà...</em>), trong khi <strong>until</strong> diễn đạt ngưỡng kết quả đạt được sau một quá trình tác động liên tục (<em>cho đến khi...</em>).",
+        examples: [
+          {
+            sentenceIndex: 7,
+            en: "“...tricking Thạch Sanh into fleeing into the forest <strong>so Lý Thông could steal the royal reward</strong>.”",
+            vi: "...lừa Thạch Sanh bỏ trốn vào rừng sâu để Lý Thông có thể cướp đoạt phần thưởng của triều đình."
+          },
+          {
+            sentenceIndex: 22,
+            en: "“...Thạch Sanh played his magic lute <strong>until the invading soldiers laid down their weapons</strong> in homesick tears.”",
+            vi: "...Thạch Sanh gảy lên tiếng đàn thần cho đến khi binh sĩ xâm lược buông vũ khí trong những giọt nước mắt nhớ quê."
+          }
+        ]
+      },
+      {
+        title: "5. Cấu trúc đối lập hành động ('Instead of + V-ing' & 'Rather than + V-ing')",
+        badge: "Tương phản lựa chọn",
+        formula: "Instead of / Rather than + V-ing, S + V",
+        explanation: "Cả hai cụm giới từ này đều đứng đầu câu kèm động từ đuôi <strong>-ing</strong> để nhấn mạnh sự lựa chọn hoàn toàn trái ngược với kỳ vọng thông thường, làm nổi bật phẩm chất cao thượng của nhân vật.",
+        examples: [
+          {
+            sentenceIndex: 7,
+            en: "“<strong>Instead of thanking him</strong>, Lý Thông lied that the ogre was the king's sacred beast...”",
+            vi: "Thay vì cảm tạ chàng, Lý Thông lại bịa chuyện rằng chằn tinh chính là thần thú của nhà vua..."
+          },
+          {
+            sentenceIndex: 20,
+            en: "“<strong>Rather than executing the traitors</strong>, the merciful Thạch Sanh pardoned Lý Thông and his mother...”",
+            vi: "Thay vì xử tử những kẻ phản bội, chàng Thạch Sanh nhân từ đã tha tội chết cho mẹ con Lý Thông..."
+          }
+        ]
+      }
+    ];
+
+    // =========================================================================
+    // 4. SENTENCE STRUCTURES & COLLOCATIONS DATA (7 High-Value Patterns)
+    // =========================================================================
+    const STRUCTURE_DATA = [
+      {
+        pattern: "earn a modest living + V-ing",
+        meaning: "Kiếm sống thanh bạch, đạm bạc bằng nghề gì đó",
+        register: "Tự nhiên & Giàu sắc thái (B2)",
+        sentenceIndex: 0,
+        storyQuote: "...lived Thạch Sanh, a kindhearted orphan who earned a modest living chopping firewood beneath an ancient banyan tree.",
+        storyVi: "...có chàng Thạch Sanh mồ côi nhân hậu kiếm sống đạm bạc bằng nghề đốn củi dưới gốc đa cổ thụ.",
+        extraEn: "Her grandfather earned a modest living repairing wooden boats along the river.",
+        extraVi: "Ông nội của cô ấy kiếm sống đạm bạc bằng nghề sửa thuyền gỗ dọc bờ sông."
+      },
+      {
+        pattern: "trick somebody into + V-ing",
+        meaning: "Lừa gạt ai đó làm một việc gì (thường gây bất lợi cho họ)",
+        register: "Phổ biến trong giao tiếp & báo chí (B2)",
+        sentenceIndex: 7,
+        storyQuote: "...tricking Thạch Sanh into fleeing into the forest so Lý Thông could steal the royal reward.",
+        storyVi: "...lừa Thạch Sanh bỏ trốn vào rừng sâu để Lý Thông có thể cướp đoạt phần thưởng của nhà vua.",
+        extraEn: "Online scammers often trick careless users into sharing their private passwords.",
+        extraVi: "Những kẻ lừa đảo trực tuyến thường đánh lừa người dùng bất cẩn chia sẻ mật khẩu cá nhân."
+      },
+      {
+        pattern: "turn out to be + Noun / Adj",
+        meaning: "Hóa ra là, kết quả cuối cùng lại chính là... (bất ngờ ngoài dự đoán)",
+        register: "Rất thông dụng (B1–B2)",
+        sentenceIndex: 12,
+        storyQuote: "...he discovered an iron cage imprisoning a young man who turned out to be the Dragon King's son.",
+        storyVi: "...chàng phát hiện một chiếc cũi sắt đang giam giữ một chàng trai trẻ hóa ra chính là thái tử con của vua Thủy Tề.",
+        extraEn: "The quiet traveler we met on the mountain train turned out to be a famous historian.",
+        extraVi: "Vị lữ khách trầm lặng chúng tôi gặp trên chuyến tàu miền núi hóa ra lại là một nhà sử học nổi tiếng."
+      },
+      {
+        pattern: "overwhelmed with + Noun (gratitude / emotion / joy)",
+        meaning: "Tràn ngập, choáng ngợp bởi một cảm xúc mãnh liệt (lòng biết ơn, niềm vui...)",
+        register: "Trang trọng / Biểu cảm (B2–C1)",
+        sentenceIndex: 14,
+        storyQuote: "Overwhelmed with gratitude, the Dragon King offered heaps of gold and pearls, yet Thạch Sanh politely declined all material wealth.",
+        storyVi: "Tràn ngập lòng biết ơn, vua Thủy Tề ban tặng vô số vàng bạc và châu báu, nhưng Thạch Sanh nhã nhặn từ chối...",
+        extraEn: "The rescued hikers were overwhelmed with gratitude when the village team arrived.",
+        extraVi: "Những người leo núi được giải cứu tràn ngập lòng biết ơn khi đội cứu hộ của bản làng tới nơi."
+      },
+      {
+        pattern: "falsely accuse somebody of + Noun / V-ing",
+        meaning: "Vu khống, buộc tội oan cho ai đó về việc gì",
+        register: "Học thuật & Pháp lý (B2–C1)",
+        sentenceIndex: 16,
+        storyQuote: "Upon returning to the capital, Thạch Sanh was falsely accused of theft by Lý Thông's vengeful ghosts...",
+        storyVi: "Khi vừa trở về kinh thành, Thạch Sanh lại bị hồn ma của chằn tinh và đại bàng báo thù vu oan tội trộm cắp...",
+        extraEn: "He was falsely accused of breaking the ancient vase before the security footage proved his innocence.",
+        extraVi: "Anh ấy bị vu oan làm vỡ chiếc bình cổ trước khi đoạn phim an ninh chứng minh sự vô tội của anh."
+      },
+      {
+        pattern: "strip somebody of + Noun (titles / power / dignity)",
+        meaning: "Tước đoạt của ai đó chức tước, quyền lực hoặc danh dự",
+        register: "Trang trọng / Văn học & Tin tức (B2–C1)",
+        sentenceIndex: 19,
+        storyQuote: "Before the royal court, Thạch Sanh's golden bow and crystal-clear testimony exposed every lie, stripping Lý Thông of his stolen titles.",
+        storyVi: "Trước triều đình, cây cung vàng và lời khai sáng tỏ của Thạch Sanh đã vạch trần mọi lời dối trá, tước bỏ mọi chức tước cướp được của Lý Thông.",
+        extraEn: "The committee stripped the dishonest official of all honorary titles.",
+        extraVi: "Ủy ban đã tước bỏ mọi danh hiệu danh dự của viên quan bất chính."
+      },
+      {
+        pattern: "without spilling a single drop of blood",
+        meaning: "Mà không hề làm đổ một giọt máu nào (chiến thắng bằng hòa bình, nhân nghĩa)",
+        register: "Thành ngữ giàu hình ảnh (B2–C1)",
+        sentenceIndex: 22,
+        storyQuote: "Stepping onto the battlefield without spilling a single drop of blood, Thạch Sanh played his magic lute...",
+        storyVi: "Bước ra chiến trường mà không hề làm đổ một giọt máu nào, Thạch Sanh gảy lên tiếng đàn thần...",
+        extraEn: "Through wise diplomacy, the two nations resolved the border dispute without spilling a single drop of blood.",
+        extraVi: "Nhờ ngoại giao khôn ngoan, hai quốc gia đã giải quyết tranh chấp biên giới mà không đổ một giọt máu nào."
+      }
+    ];
+
+    // =========================================================================
+    // 5. APPLICATION STATE & INITIALIZATION
+    // =========================================================================
+    let currentSentenceIndex = 0;
+    let isPlaying = false;
+    let autoAdvance = true;
+    const SPEED_STEPS = [0.75, 1.0, 1.25];
+    let speedIndex = 1;
+    let speechRate = 1.0;
+    let fontScale = 1.0;
+    let isDarkTheme = false;
+    let showVocabHighlights = true;
+    let selectedVoiceURI = "";
+    let currentPosFilter = "all";
+    let toastTimeout = null;
+
+    // Build lookup map & case-insensitive whole-word regex
+    const vocabLookup = {};
+    VOCAB_DATA.forEach(item => {
+      item.forms.forEach(form => {
+        vocabLookup[form.toLowerCase()] = item;
+      });
+    });
+
+    const allForms = VOCAB_DATA.flatMap(v => v.forms).sort((a, b) => b.length - a.length);
+    const vocabRegex = new RegExp(`\\b(${allForms.map(f => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\b`, "gi");
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderStory();
+      renderVocabList();
+      renderGrammarList();
+      renderStructureList();
+      selectSentence(0, false);
+      initMobileSwipeGestures();
+
+      if ("speechSynthesis" in window) {
+        populateVoices();
+        if (typeof window.speechSynthesis.onvoiceschanged !== "undefined") {
+          window.speechSynthesis.onvoiceschanged = populateVoices;
+        }
+      }
+    });
+
+    // Close settings popover when clicking outside
+    document.addEventListener("click", (e) => {
+      const wrapper = document.getElementById("settings-wrapper");
+      const popover = document.getElementById("settings-popover");
+      if (wrapper && popover && !wrapper.contains(e.target)) {
+        popover.classList.add("hidden");
+      }
+    });
+
+    // =========================================================================
+    // 6. MOBILE BOTTOM SHEET & HORIZONTAL TOUCH SWIPE GESTURES
+    // =========================================================================
+    function isMobileViewport() {
+      return window.innerWidth <= 900;
+    }
+
+    function openMobileDrawer(tabName = null) {
+      if (tabName) {
+        switchTab(tabName);
+      }
+      if (!isMobileViewport()) return;
+
+      const drawer = document.getElementById("study-drawer");
+      const backdrop = document.getElementById("mobile-drawer-backdrop");
+      drawer.classList.add("drawer-open");
+      backdrop.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeMobileDrawer() {
+      const drawer = document.getElementById("study-drawer");
+      const backdrop = document.getElementById("mobile-drawer-backdrop");
+      drawer.classList.remove("drawer-open");
+      backdrop.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+
+    window.addEventListener("resize", () => {
+      if (!isMobileViewport()) {
+        document.getElementById("mobile-drawer-backdrop").classList.add("hidden");
+        document.body.style.overflow = "";
+      }
+    });
+
+    function initMobileSwipeGestures() {
+      const zone = document.getElementById("story-swipe-zone");
+      if (!zone) return;
+
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      zone.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      zone.addEventListener("touchend", (e) => {
+        if (e.changedTouches.length !== 1) return;
+        // Do not hijack text selection gestures
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim().length > 0) return;
+
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+
+        // Horizontal swipe threshold (> 56px) and predominantly horizontal
+        if (Math.abs(deltaX) > 56 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+          if (deltaX < 0) {
+            nextSentence();
+            showToast(`Câu tiếp: ${currentSentenceIndex + 1} / ${STORY_DATA.length}`);
+          } else {
+            prevSentence();
+            showToast(`Câu trước: ${currentSentenceIndex + 1} / ${STORY_DATA.length}`);
+          }
+        }
+      }, { passive: true });
+    }
+
+    // =========================================================================
+    // 7. SETTINGS POPOVER & UNIFIED FONT SCALE CONTROLS
+    // =========================================================================
+    function toggleSettingsMenu(event) {
+      event.stopPropagation();
+      const popover = document.getElementById("settings-popover");
+      popover.classList.toggle("hidden");
+    }
+
+    function closeSettingsMenu() {
+      document.getElementById("settings-popover").classList.add("hidden");
+    }
+
+    function changeFontScale(delta) {
+      fontScale = Math.round(Math.min(1.45, Math.max(0.85, fontScale + delta)) * 100) / 100;
+      applyFontScale();
+      showToast(`Cỡ chữ đồng bộ: ${Math.round(fontScale * 100)}%`);
+    }
+
+    function resetFontScale() {
+      fontScale = 1.0;
+      applyFontScale();
+      showToast("Đã đặt lại cỡ chữ mặc định (100%)");
+    }
+
+    function applyFontScale() {
+      document.documentElement.style.setProperty("--font-scale", fontScale.toString());
+      document.getElementById("font-scale-display").textContent = `${Math.round(fontScale * 100)}%`;
+    }
+
+    function cycleSpeed() {
+      speedIndex = (speedIndex + 1) % SPEED_STEPS.length;
+      speechRate = SPEED_STEPS[speedIndex];
+      const formatted = `${speechRate.toFixed(2).replace(/\.00$/, ".0")}x`;
+      const pcBtn = document.getElementById("btn-speed-pc");
+      const mobBtn = document.getElementById("btn-speed-mobile");
+      if (pcBtn) pcBtn.textContent = formatted;
+      if (mobBtn) mobBtn.textContent = formatted;
+
+      showToast(`Tốc độ đọc: ${speechRate}x`);
+      if (isPlaying) {
+        speakSentence(currentSentenceIndex, autoAdvance);
+      }
+    }
+
+    // =========================================================================
+    // 8. RENDERING FUNCTIONS
+    // =========================================================================
+    function formatSentenceWithVocab(text) {
+      return text.replace(vocabRegex, (matched) => {
+        const key = matched.toLowerCase();
+        const entry = vocabLookup[key];
+        if (!entry) return matched;
+        const safeWord = entry.word.replace(/'/g, "\\'");
+        return `<span class="vocab-highlight" data-word="${entry.word}" onclick="handleVocabClick(event, '${safeWord}')">${matched}</span>`;
+      });
+    }
+
+    function renderStory() {
+      const container = document.getElementById("story-container");
+      container.innerHTML = "";
+
+      const paragraphs = {};
+      STORY_DATA.forEach((item, idx) => {
+        if (!paragraphs[item.p]) paragraphs[item.p] = [];
+        paragraphs[item.p].push({ ...item, index: idx });
+      });
+
+      Object.keys(paragraphs).forEach(pNum => {
+        const pEl = document.createElement("p");
+        pEl.className = "leading-relaxed";
+
+        paragraphs[pNum].forEach((sent, sIdx) => {
+          const span = document.createElement("span");
+          span.id = `sentence-${sent.index}`;
+          span.className = "sentence-span";
+          span.innerHTML = formatSentenceWithVocab(sent.en);
+          span.onclick = () => {
+            selectSentence(sent.index, true);
+          };
+          pEl.appendChild(span);
+
+          if (sIdx < paragraphs[pNum].length - 1) {
+            pEl.appendChild(document.createTextNode(" "));
+          }
+        });
+
+        container.appendChild(pEl);
+      });
+
+      document.getElementById("sentence-total").textContent = STORY_DATA.length;
+    }
+
+    function setPosFilter(posCat) {
+      currentPosFilter = posCat;
+      document.querySelectorAll(".pos-filter-btn").forEach(btn => {
+        if (btn.getAttribute("data-pos") === posCat) {
+          btn.classList.add("bg-[#1f5c4d]", "text-white");
+          btn.classList.remove("surface-subtle", "border");
+        } else {
+          btn.classList.remove("bg-[#1f5c4d]", "text-white");
+          btn.classList.add("surface-subtle", "border");
+        }
+      });
+      filterVocabList();
+    }
+
+    function renderVocabList(filterQuery = "") {
+      const listEl = document.getElementById("vocab-list");
+      listEl.innerHTML = "";
+      const q = filterQuery.trim().toLowerCase();
+
+      const filtered = VOCAB_DATA.filter(v => {
+        const matchesPos = currentPosFilter === "all" || v.posCat === currentPosFilter;
+        const matchesQuery =
+          !q ||
+          v.word.toLowerCase().includes(q) ||
+          v.vi.toLowerCase().includes(q) ||
+          v.nuance.toLowerCase().includes(q);
+        return matchesPos && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<div class="text-center scale-side-sub opacity-60 py-6">Không tìm thấy từ vựng phù hợp.</div>`;
+        return;
+      }
+
+      filtered.forEach(item => {
+        const card = document.createElement("div");
+        card.id = `vocab-card-${item.word.replace(/\s+/g, "-")}`;
+        card.className = "surface-subtle border hover:border-[#a83b2b]/60 rounded-xl p-3 transition cursor-pointer";
+        card.onclick = () => showVocabSpotlight(item.word, false);
+        const safeWord = item.word.replace(/'/g, "\\'");
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-bold scale-side-body text-[#8f2d1f] dark:text-[#f3c66f]">${item.word}</span>
+              <span class="font-mono-code scale-side-meta opacity-70">${item.ipa}</span>
+              <span class="scale-side-meta px-1.5 py-0.5 rounded bg-[#a83b2b]/12 opacity-85">${item.pos.split("(")[0].trim()}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button onclick="event.stopPropagation(); jumpToSentence(${item.sentenceIndex}, false); closeMobileDrawer();"
+                class="scale-side-meta px-2.5 py-1.5 sm:py-1 rounded-lg bg-[#1f5c4d]/12 hover:bg-[#1f5c4d]/25 text-[#1f5c4d] dark:text-[#4eb89d] font-semibold transition"
+                title="Đi tới câu ${item.sentenceIndex + 1} trong truyện">
+                Câu ${item.sentenceIndex + 1}
+              </button>
+              <button onclick="event.stopPropagation(); speakWord('${safeWord}')"
+                class="scale-side-meta px-2.5 py-1.5 sm:py-1 rounded-lg bg-[#a83b2b]/15 hover:bg-[#a83b2b]/30 text-[#8f2d1f] dark:text-[#f3c66f] font-semibold transition"
+                title="Nghe phát âm '${item.word}'">
+                🔊
+              </button>
+            </div>
+          </div>
+          <p class="scale-side-sub font-medium mt-1">${item.vi}</p>
+          <p class="scale-side-meta opacity-75 mt-1">${item.nuance}</p>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function filterVocabList() {
+      const q = document.getElementById("vocab-search").value;
+      renderVocabList(q);
+    }
+
+    function renderGrammarList() {
+      const container = document.getElementById("grammar-list");
+      container.innerHTML = "";
+
+      GRAMMAR_DATA.forEach(g => {
+        const card = document.createElement("div");
+        card.className = "surface-subtle border rounded-xl p-3.5 space-y-2.5";
+
+        const examplesHtml = g.examples.map(ex => `
+          <div onclick="jumpToSentence(${ex.sentenceIndex}, true); closeMobileDrawer();"
+            class="surface-card border hover:border-[#1f5c4d] rounded-lg p-2.5 scale-side-sub space-y-1 cursor-pointer transition group">
+            <div class="flex items-start justify-between gap-2">
+              <p class="story-font text-[#1f5c4d] dark:text-[#4eb89d]">${ex.en}</p>
+              <span class="scale-side-meta shrink-0 opacity-60 group-hover:opacity-100 font-semibold">🔊 Câu ${ex.sentenceIndex + 1}</span>
+            </div>
+            <p class="opacity-85">→ ${ex.vi}</p>
+          </div>
+        `).join("");
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <h4 class="font-bold scale-side-body text-[#1f5c4d] dark:text-[#4eb89d]">${g.title}</h4>
+            <span class="scale-side-meta font-semibold px-2 py-0.5 rounded-full bg-[#a83b2b]/15 text-[#8f2d1f] dark:text-[#f3c66f] shrink-0">${g.badge}</span>
+          </div>
+          <div class="font-mono-code scale-side-meta bg-[#1f5c4d]/10 px-2.5 py-1.5 rounded-lg">
+            📐 <strong>Công thức:</strong> ${g.formula}
+          </div>
+          <p class="scale-side-sub opacity-90">${g.explanation}</p>
+          <div class="space-y-2 pt-1">${examplesHtml}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderStructureList() {
+      const container = document.getElementById("structure-list");
+      container.innerHTML = "";
+
+      STRUCTURE_DATA.forEach(st => {
+        const card = document.createElement("div");
+        card.className = "surface-subtle border rounded-xl p-3.5 space-y-2.5";
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2 flex-wrap">
+            <div class="font-mono-code scale-side-sub font-bold text-[#8f2d1f] dark:text-[#f3c66f] bg-[#a83b2b]/15 px-2.5 py-1 rounded-lg">
+              ${st.pattern}
+            </div>
+            <span class="scale-side-meta font-semibold px-2 py-0.5 rounded-full bg-[#1f5c4d]/15 text-[#1f5c4d] dark:text-[#4eb89d]">
+              ${st.register}
+            </span>
+          </div>
+          <p class="scale-side-sub font-medium opacity-90">📌 <strong>Ý nghĩa:</strong> ${st.meaning}</p>
+          <div onclick="jumpToSentence(${st.sentenceIndex}, true); closeMobileDrawer();"
+            class="surface-card border hover:border-[#a83b2b] rounded-lg p-2.5 scale-side-sub space-y-1 cursor-pointer transition group">
+            <div class="flex items-center justify-between scale-side-meta opacity-65 group-hover:opacity-100 font-semibold">
+              <span>📖 Trích từ truyện (Câu ${st.sentenceIndex + 1})</span>
+              <span>🔊 Nghe & Xem</span>
+            </div>
+            <p class="story-font italic">“${st.storyQuote}”</p>
+            <p class="opacity-80">→ ${st.storyVi}</p>
+          </div>
+          <div class="surface-card border border-dashed rounded-lg p-2.5 scale-side-sub space-y-1">
+            <div class="scale-side-meta opacity-60 font-semibold">✨ Ví dụ thực tế mở rộng</div>
+            <p class="font-medium">${st.extraEn}</p>
+            <p class="opacity-80">→ ${st.extraVi}</p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // 9. SENTENCE NAVIGATION & TEXT-TO-SPEECH (TTS)
+    // =========================================================================
+    function populateVoices() {
+      if (!("speechSynthesis" in window)) return;
+      try {
+        const select = document.getElementById("voice-select");
+        const voices = window.speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith("en"));
+
+        if (voices.length === 0) return;
+
+        const currentVal = select.value;
+        select.innerHTML = `<option value="">Giọng tự động (English)</option>`;
+
+        voices.forEach(voice => {
+          const opt = document.createElement("option");
+          opt.value = voice.voiceURI;
+          opt.textContent = `${voice.name} (${voice.lang})`;
+          select.appendChild(opt);
+        });
+
+        if (currentVal) {
+          select.value = currentVal;
+        }
+      } catch (err) {
+        // Ignore browser voice list quirks
+      }
+    }
+
+    function changeVoice() {
+      selectedVoiceURI = document.getElementById("voice-select").value;
+      showToast("Đã cập nhật giọng đọc tiếng Anh");
+      if (isPlaying) {
+        speakSentence(currentSentenceIndex, autoAdvance);
+      }
+    }
+
+    function getSelectedEnglishVoice() {
+      if (!("speechSynthesis" in window)) return null;
+      const voices = window.speechSynthesis.getVoices();
+      if (selectedVoiceURI) {
+        const chosen = voices.find(v => v.voiceURI === selectedVoiceURI);
+        if (chosen) return chosen;
+      }
+      return (
+        voices.find(v => v.lang.startsWith("en-US") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Samantha"))) ||
+        voices.find(v => v.lang.startsWith("en-GB") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Daniel"))) ||
+        voices.find(v => v.lang.startsWith("en")) ||
+        null
+      );
+    }
+
+    function selectSentence(index, autoSpeak = false) {
+      if (index < 0) index = 0;
+      if (index >= STORY_DATA.length) index = STORY_DATA.length - 1;
+
+      const prevEl = document.getElementById(`sentence-${currentSentenceIndex}`);
+      if (prevEl) prevEl.classList.remove("sentence-active");
+
+      currentSentenceIndex = index;
+
+      const currEl = document.getElementById(`sentence-${currentSentenceIndex}`);
+      if (currEl) {
+        currEl.classList.add("sentence-active");
+        currEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      const total = STORY_DATA.length;
+      const pct = Math.round(((currentSentenceIndex + 1) / total) * 100);
+      document.getElementById("sentence-counter").textContent = currentSentenceIndex + 1;
+      document.getElementById("header-progress-pill").textContent = `${currentSentenceIndex + 1} / ${total}`;
+      document.getElementById("panel-sentence-index").textContent = `Câu ${currentSentenceIndex + 1} / ${total}`;
+      document.getElementById("progress-percent").textContent = `${pct}% hoàn thành`;
+      document.getElementById("reading-progress").style.width = `${pct}%`;
+
+      const data = STORY_DATA[currentSentenceIndex];
+      document.getElementById("detail-en").textContent = data.en;
+      document.getElementById("detail-vi").textContent = data.vi;
+      document.getElementById("detail-note").textContent = data.note;
+
+      const phrasesList = document.getElementById("detail-phrases");
+      phrasesList.innerHTML = data.phrases.map(p => `<li class="flex items-start gap-1.5"><span class="text-[#a83b2b] dark:text-[#f3c66f] font-bold">•</span><span>${p}</span></li>`).join("");
+
+      if (autoSpeak) {
+        speakSentence(currentSentenceIndex, autoAdvance);
+      }
+    }
+
+    function jumpToSentence(index, speak = true) {
+      selectSentence(index, speak);
+      if (!speak) {
+        showToast(`Đã chuyển tới Câu ${index + 1}`);
+      }
+    }
+
+    function speakSentence(index, continueReading = true) {
+      if (!("speechSynthesis" in window)) {
+        showToast("Trình duyệt không hỗ trợ đọc giọng nói (TTS).");
+        return;
+      }
+
+      try {
+        window.speechSynthesis.cancel();
+
+        const text = STORY_DATA[index].en;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        utterance.rate = speechRate;
+
+        const voice = getSelectedEnglishVoice();
+        if (voice) utterance.voice = voice;
+
+        utterance.onstart = () => {
+          isPlaying = true;
+          updatePlayPauseUI();
+        };
+
+        utterance.onend = () => {
+          if (isPlaying && continueReading && autoAdvance) {
+            if (currentSentenceIndex < STORY_DATA.length - 1) {
+              selectSentence(currentSentenceIndex + 1, true);
+            } else {
+              isPlaying = false;
+              updatePlayPauseUI();
+              showToast("Đã đọc hoàn tất truyện Thạch Sanh!");
+            }
+          } else {
+            isPlaying = false;
+            updatePlayPauseUI();
+          }
+        };
+
+        utterance.onerror = (e) => {
+          if (e.error !== "interrupted" && e.error !== "canceled") {
+            isPlaying = false;
+            updatePlayPauseUI();
+          }
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        isPlaying = false;
+        updatePlayPauseUI();
+      }
+    }
+
+    function replayCurrentSentence() {
+      speakSentence(currentSentenceIndex, autoAdvance && isPlaying);
+    }
+
+    function speakWord(word) {
+      if (!("speechSynthesis" in window)) return;
+      if (isPlaying) {
+        pauseReading();
+      }
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = "en-US";
+        utterance.rate = 0.9;
+        const voice = getSelectedEnglishVoice();
+        if (voice) utterance.voice = voice;
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        // Ignore TTS error
+      }
+    }
+
+    function togglePlayPause() {
+      if (isPlaying) {
+        pauseReading();
+      } else {
+        startReading();
+      }
+    }
+
+    function startReading() {
+      isPlaying = true;
+      updatePlayPauseUI();
+      speakSentence(currentSentenceIndex, autoAdvance);
+    }
+
+    function pauseReading() {
+      isPlaying = false;
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      updatePlayPauseUI();
+    }
+
+    function updatePlayPauseUI() {
+      const pairs = [
+        { play: "icon-play-pc", pause: "icon-pause-pc", label: "label-play-pause-pc", idleText: "Đọc", activeText: "Dừng" },
+        { play: "icon-play-mobile", pause: "icon-pause-mobile", label: "label-play-pause-mobile", idleText: "Đọc truyện", activeText: "Tạm dừng" }
+      ];
+
+      pairs.forEach(p => {
+        const iconPlay = document.getElementById(p.play);
+        const iconPause = document.getElementById(p.pause);
+        const label = document.getElementById(p.label);
+        if (!iconPlay || !iconPause || !label) return;
+
+        if (isPlaying) {
+          iconPlay.classList.add("hidden");
+          iconPause.classList.remove("hidden");
+          label.textContent = p.activeText;
+        } else {
+          iconPlay.classList.remove("hidden");
+          iconPause.classList.add("hidden");
+          label.textContent = p.idleText;
+        }
+      });
+    }
+
+    function prevSentence() {
+      const target = Math.max(0, currentSentenceIndex - 1);
+      selectSentence(target, isPlaying);
+    }
+
+    function nextSentence() {
+      const target = Math.min(STORY_DATA.length - 1, currentSentenceIndex + 1);
+      selectSentence(target, isPlaying);
+    }
+
+    function restartStory() {
+      selectSentence(0, true);
+      showToast("Bắt đầu đọc lại từ câu đầu tiên");
+    }
+
+    // =========================================================================
+    // 10. VOCABULARY INTERACTION, TABS & PREFERENCE SWITCHES
+    // =========================================================================
+    function handleVocabClick(event, baseWord) {
+      event.stopPropagation();
+      const sentenceEl = event.target.closest(".sentence-span");
+      if (sentenceEl) {
+        const idx = parseInt(sentenceEl.id.replace("sentence-", ""), 10);
+        if (!isNaN(idx)) {
+          selectSentence(idx, false);
+        }
+      }
+      if (currentPosFilter !== "all") {
+        setPosFilter("all");
+      }
+      switchTab("vocab");
+      openMobileDrawer("vocab");
+      showVocabSpotlight(baseWord, true);
+    }
+
+    function showVocabSpotlight(baseWord, autoPronounce = true) {
+      const entry = VOCAB_DATA.find(v => v.word.toLowerCase() === baseWord.toLowerCase());
+      if (!entry) return;
+
+      document.querySelectorAll(".vocab-highlight").forEach(el => {
+        if (el.getAttribute("data-word") === entry.word) {
+          el.classList.add("vocab-active");
+        } else {
+          el.classList.remove("vocab-active");
+        }
+      });
+
+      const spotlight = document.getElementById("vocab-spotlight");
+      spotlight.classList.remove("hidden");
+
+      document.getElementById("spot-word").textContent = entry.word;
+      document.getElementById("spot-pos").textContent = entry.pos;
+      document.getElementById("spot-ipa").textContent = entry.ipa;
+      document.getElementById("spot-vi").textContent = entry.vi;
+      document.getElementById("spot-nuance").textContent = `💡 Sắc thái cổ tích: ${entry.nuance}`;
+      document.getElementById("spot-context").textContent = `“${entry.context}”`;
+
+      const audioBtn = document.getElementById("spot-audio-btn");
+      audioBtn.onclick = () => speakWord(entry.word);
+
+      const jumpBtn = document.getElementById("spot-jump-btn");
+      jumpBtn.onclick = () => {
+        switchTab("sentence");
+        closeMobileDrawer();
+        jumpToSentence(entry.sentenceIndex, true);
+      };
+
+      const cardEl = document.getElementById(`vocab-card-${entry.word.replace(/\s+/g, "-")}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      if (autoPronounce) {
+        speakWord(entry.word);
+      }
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.remove("bg-[#1f5c4d]", "text-white", "shadow-xs");
+        btn.classList.add("opacity-75");
+      });
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.add("bg-[#1f5c4d]", "text-white", "shadow-xs");
+        activeBtn.classList.remove("opacity-75");
+      }
+
+      document.querySelectorAll(".study-panel").forEach(panel => {
+        panel.classList.add("hidden");
+      });
+      const activePanel = document.getElementById(`panel-${tabName}`);
+      if (activePanel) {
+        activePanel.classList.remove("hidden");
+      }
+    }
+
+    function toggleAutoAdvance() {
+      autoAdvance = !autoAdvance;
+      const btn = document.getElementById("toggle-auto-btn");
+      const knob = document.getElementById("toggle-auto-knob");
+      if (autoAdvance) {
+        btn.classList.remove("bg-stone-300", "dark:bg-stone-600");
+        btn.classList.add("bg-[#1f5c4d]");
+        knob.classList.remove("left-0.5");
+        knob.classList.add("left-5");
+        showToast("Tự động chuyển câu tiếp theo: BẬT");
+      } else {
+        btn.classList.remove("bg-[#1f5c4d]");
+        btn.classList.add("bg-stone-300", "dark:bg-stone-600");
+        knob.classList.remove("left-5");
+        knob.classList.add("left-0.5");
+        showToast("Tự động chuyển câu tiếp theo: TẮT");
+      }
+    }
+
+    function toggleVocabHighlight() {
+      showVocabHighlights = !showVocabHighlights;
+      const body = document.body;
+      const btn = document.getElementById("toggle-vocab-btn");
+      const knob = document.getElementById("toggle-vocab-knob");
+
+      if (showVocabHighlights) {
+        body.classList.remove("hide-vocab");
+        btn.classList.remove("bg-stone-300", "dark:bg-stone-600");
+        btn.classList.add("bg-[#a83b2b]");
+        knob.classList.remove("left-0.5");
+        knob.classList.add("left-5");
+        showToast("Đã bật tô sáng từ vựng");
+      } else {
+        body.classList.add("hide-vocab");
+        btn.classList.remove("bg-[#a83b2b]");
+        btn.classList.add("bg-stone-300", "dark:bg-stone-600");
+        knob.classList.remove("left-5");
+        knob.classList.add("left-0.5");
+        showToast("Đã ẩn tô sáng từ vựng");
+      }
+    }
+
+    function toggleTheme() {
+      isDarkTheme = !isDarkTheme;
+      const body = document.body;
+      const btn = document.getElementById("toggle-theme-btn");
+      const knob = document.getElementById("toggle-theme-knob");
+
+      if (isDarkTheme) {
+        body.classList.remove("theme-light");
+        body.classList.add("theme-dark");
+        btn.classList.remove("bg-stone-300");
+        btn.classList.add("bg-[#1f5c4d]");
+        knob.classList.remove("left-0.5");
+        knob.classList.add("left-5");
+        showToast("Chế độ Sơn Mài Tối (Dark Mode)");
+      } else {
+        body.classList.remove("theme-dark");
+        body.classList.add("theme-light");
+        btn.classList.remove("bg-[#1f5c4d]");
+        btn.classList.add("bg-stone-300");
+        knob.classList.remove("left-5");
+        knob.classList.add("left-0.5");
+        showToast("Chế độ Giấy Dó Kem Ngà (Light Mode)");
+      }
+    }
+
+    function toggleShortcutsModal() {
+      const modal = document.getElementById("shortcuts-modal");
+      modal.classList.toggle("hidden");
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById("toast-box");
+      const label = document.getElementById("toast-message");
+      label.textContent = msg;
+      box.classList.remove("hidden");
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        box.classList.add("hidden");
+      }, 2200);
+    }
+
+    // =========================================================================
+    // 11. KEYBOARD SHORTCUTS HANDLER (PC)
+    // =========================================================================
+    document.addEventListener("keydown", (e) => {
+      const tag = document.activeElement.tagName.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") {
+        if (e.key === "Escape") {
+          document.activeElement.blur();
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          togglePlayPause();
+          break;
+        case "ArrowLeft":
+        case "p":
+        case "P":
+          e.preventDefault();
+          prevSentence();
+          break;
+        case "ArrowRight":
+        case "n":
+        case "N":
+          e.preventDefault();
+          nextSentence();
+          break;
+        case "r":
+        case "R":
+          e.preventDefault();
+          replayCurrentSentence();
+          break;
+        case "+":
+        case "=":
+          e.preventDefault();
+          changeFontScale(0.05);
+          break;
+        case "-":
+        case "_":
+          e.preventDefault();
+          changeFontScale(-0.05);
+          break;
+        case "0":
+          e.preventDefault();
+          resetFontScale();
+          break;
+        case "1":
+          e.preventDefault();
+          switchTab("sentence");
+          break;
+        case "2":
+          e.preventDefault();
+          switchTab("vocab");
+          break;
+        case "3":
+          e.preventDefault();
+          switchTab("grammar");
+          break;
+        case "4":
+          e.preventDefault();
+          switchTab("structure");
+          break;
+        case "v":
+        case "V":
+          e.preventDefault();
+          toggleVocabHighlight();
+          break;
+        case "t":
+        case "T":
+          e.preventDefault();
+          toggleTheme();
+          break;
+        case "?":
+        case "h":
+        case "H":
+          e.preventDefault();
+          toggleShortcutsModal();
+          break;
+        case "Escape":
+          closeSettingsMenu();
+          closeMobileDrawer();
+          document.getElementById("shortcuts-modal").classList.add("hidden");
+          break;
+      }
+    });
+  </script>
+</body>
+</html>
