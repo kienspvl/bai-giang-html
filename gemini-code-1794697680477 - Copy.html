@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chú Ong Chăm Chỉ - Luyện Trắc Nghiệm Vườn Hoa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-display: 'Baloo 2', cursive, sans-serif;
+            --font-body: 'Nunito', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input, textarea {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+
+        body {
+            font-family: var(--font-body);
+            margin: 0;
+            padding: 4px 8px;
+            background: linear-gradient(135deg, var(--bg-grad-1, #fef08a) 0%, var(--bg-grad-2, #d9f99d) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-x: hidden;
+            transition: background 0.5s ease;
+        }
+
+        .font-display {
+            font-family: var(--font-display);
+        }
+
+        .btn-3d {
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        }
+        .btn-3d:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+        }
+        .btn-3d:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        #gameWrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1100px;
+            aspect-ratio: 16 / 9;
+            max-height: 82vh;
+            min-height: 400px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(202, 138, 4, 0.22), 0 0 0 3px #ffffff;
+            background: linear-gradient(to bottom, #bae6fd, #e0f2fe);
+            transition: box-shadow 0.5s ease;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes shakeCanvas {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shakeCanvas 0.35s ease-in-out;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.86) translateY(14px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .pop-in {
+            animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes toastSlide {
+            0% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .toast-animate {
+            animation: toastSlide 0.25s ease-out forwards;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- THANH TIÊU ĐỀ TRÊN HEADER -->
+    <header class="w-full max-w-[1100px] flex items-center justify-between gap-2 my-1 px-2.5 py-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-white/90 z-20">
+        <div class="flex items-center gap-2">
+            <div id="headerLogoIcon" class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md font-display text-lg font-extrabold transition-colors shrink-0">
+                🐝
+            </div>
+            <div class="min-w-0">
+                <h1 class="font-display text-sm sm:text-base font-extrabold text-slate-800 leading-tight truncate">
+                    Chú Ong Chăm Chỉ
+                </h1>
+                <p id="themeLevelDesc" class="text-[10px] text-slate-600 font-semibold leading-none mt-0.5 truncate">Skin: Ong Thợ • Nhạc Vườn Hoa</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 flex-wrap justify-end">
+            <!-- Chuyển chế độ chơi (Hỗn hợp / Chỉ chơi / Chỉ câu hỏi) -->
+            <button id="playModeBtn" type="button" class="btn-3d px-2.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center gap-1" title="Đổi chế độ: Hỗn hợp / Chỉ chơi (Game Only) / Chỉ câu hỏi (Question Only)">
+                <span id="playModeIcon">🎮📚</span>
+                <span id="playModeLabel" class="hidden sm:inline">Hỗn hợp</span>
+            </button>
+
+            <!-- Nút Bất tử -->
+            <button id="godModeBtn" type="button" class="btn-3d px-2 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs flex items-center gap-1" title="Bật/Tắt chế độ bất tử">
+                <span>🛡️</span>
+                <span id="godModeLabel" class="hidden md:inline">Bất tử: Tắt</span>
+            </button>
+
+            <!-- Chọn chủ đề -->
+            <button id="openCategoryBtn" type="button" class="btn-3d px-2.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs flex items-center gap-1" title="Chọn bộ câu hỏi">
+                <span>📚</span>
+                <span id="currentCategoryBadge" class="truncate max-w-[85px] sm:max-w-[120px]">Tổng hợp</span>
+            </button>
+
+            <!-- Import -->
+            <button id="openImportModalBtn" type="button" class="btn-3d px-2 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1" title="Import bộ câu hỏi mới">
+                <span>📥</span>
+                <span class="hidden sm:inline">Import</span>
+            </button>
+
+            <!-- Nút Replay đặt trực tiếp trên Header -->
+            <button id="headerReplayBtn" type="button" class="btn-3d px-2.5 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs flex items-center gap-1" title="Chơi lại từ đầu">
+                <span>🔄</span>
+                <span class="hidden sm:inline">Chơi lại</span>
+            </button>
+
+            <!-- Nút Clear Local Storage -->
+            <button id="clearStorageBtn" type="button" class="btn-3d px-2 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs flex items-center gap-1" title="Xóa dữ liệu đã lưu (Kỷ lục & Bộ câu hỏi Import)">
+                <span>🗑️</span>
+                <span class="hidden md:inline">Clear</span>
+            </button>
+
+            <!-- Save As -->
+            <button id="saveAsBtn" type="button" class="btn-3d px-2 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1" title="Lưu file HTML (reset về màn đầu)">
+                <span>💾</span>
+            </button>
+
+            <!-- Lịch sử cập nhật (U) -->
+            <button id="openUpdateHistoryBtn" type="button" class="btn-3d px-2 py-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs flex items-center gap-1" title="Lịch sử cập nhật (Phím U)">
+                <span>📜</span>
+                <span class="hidden lg:inline">U</span>
+            </button>
+
+            <!-- Thông tin tác giả (i) -->
+            <button id="openAuthorInfoBtn" type="button" class="btn-3d px-2 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs flex items-center gap-1" title="Thông tin tác giả (Phím i)">
+                <span>ℹ️</span>
+                <span class="hidden lg:inline">i</span>
+            </button>
+
+            <!-- Âm thanh -->
+            <button id="soundToggleBtn" type="button" class="btn-3d px-2 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center" title="Bật/Tắt âm thanh">
+                <span id="soundIcon">🔊</span>
+            </button>
+
+            <!-- Tạm dừng -->
+            <button id="pauseBtn" type="button" class="btn-3d px-2.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs hidden" title="Tạm dừng">
+                ⏸
+            </button>
+        </div>
+    </header>
+
+    <!-- KHUNG TRÒ CHƠI CHÍNH -->
+    <main id="gameWrapper">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD TRÊN CANVAS -->
+        <div id="hudOverlay" class="absolute top-3 left-3 right-3 flex items-start justify-between pointer-events-none z-10">
+            <div class="flex flex-col gap-1.5">
+                <div class="flex items-center gap-1.5 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-2xl shadow-sm border border-slate-200/80">
+                    <div id="heartsContainer" class="flex items-center gap-1 text-lg sm:text-xl">
+                        <span>❤️</span><span>❤️</span><span>❤️</span>
+                    </div>
+                </div>
+                <div id="comboBadge" class="hidden self-start bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold shadow-md">
+                    🍯 Mật Ngọt x2
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 bg-white/90 backdrop-blur-xs px-3.5 py-1.5 rounded-2xl shadow-sm border border-slate-200/80 text-right">
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Kỷ lục</div>
+                    <div id="highScoreDisplay" class="font-display text-base sm:text-lg font-extrabold text-amber-600 leading-tight">00000</div>
+                </div>
+                <div class="h-7 w-[1px] bg-slate-200 mx-1"></div>
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Điểm số</div>
+                    <div id="scoreDisplay" class="font-display text-lg sm:text-xl font-extrabold text-slate-800 leading-tight">00000</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH BẮT ĐẦU -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-900/55 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 z-20">
+            <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border-4 border-amber-400 text-center pop-in max-h-full overflow-y-auto custom-scroll">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold mb-2">
+                    <span>🐝 CHÚ ONG THỢ THÔNG THÁI</span>
+                </div>
+                <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-slate-800">
+                    Bay Lượn Vườn Hoa & Trả Lời Câu Hỏi!
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-600 mt-1">
+                    Nhấn <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-bold">Space</kbd> hoặc <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-bold">↑</kbd> để bay. Chọn chế độ <b>Hỗn hợp</b>, <b>Chỉ chơi</b> hoặc <b>Chỉ câu hỏi</b> ngay trên thanh công cụ!
+                </p>
+
+                <!-- Chọn chế độ chơi nhanh ngay tại Start Screen -->
+                <div class="mt-3">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 text-center">
+                        Chế độ hoạt động:
+                    </label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" data-mode="MIXED" class="mode-select-btn p-2 rounded-xl border-2 border-teal-500 bg-teal-50 text-teal-900 font-extrabold text-xs flex flex-col items-center gap-0.5 transition">
+                            <span class="text-base">🎮📚</span>
+                            <span>Hỗn hợp</span>
+                        </button>
+                        <button type="button" data-mode="GAME_ONLY" class="mode-select-btn p-2 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center gap-0.5 transition hover:border-teal-400">
+                            <span class="text-base">🎮</span>
+                            <span>Chỉ chơi (Game Only)</span>
+                        </button>
+                        <button type="button" data-mode="QUESTION_ONLY" class="mode-select-btn p-2 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center gap-0.5 transition hover:border-teal-400">
+                            <span class="text-base">📚</span>
+                            <span>Chỉ câu hỏi</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-3.5 text-left">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 text-center">
+                        Chọn bộ câu hỏi ôn tập:
+                    </label>
+                    <div id="categoryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto custom-scroll p-1"></div>
+                </div>
+
+                <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                    <button id="startGameBtn" type="button" class="btn-3d w-full sm:w-auto px-8 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-white font-display text-xl font-extrabold tracking-wide cursor-pointer">
+                        🌻 BẮT ĐẦU
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BẢNG THỬ THÁCH TRẮC NGHIỆM -->
+        <div id="quizOverlay" class="absolute inset-0 bg-slate-950/65 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-6 z-30 transition-colors">
+            <div class="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl border-4 border-amber-400 text-center pop-in max-h-full overflow-y-auto custom-scroll">
+                <!-- Thanh trạng thái phụ khi ở chế độ Question Only -->
+                <div id="questionOnlyHeaderBar" class="hidden items-center justify-between mb-3 pb-2 border-b border-slate-100 text-xs font-extrabold text-slate-600">
+                    <span class="px-2.5 py-1 rounded-full bg-teal-100 text-teal-800">📚 Chế độ Chỉ Câu Hỏi (Question Only)</span>
+                    <div class="flex items-center gap-3">
+                        <span id="qoLivesLabel" class="text-rose-600">❤️❤️❤️</span>
+                        <span id="qoScoreLabel" class="text-amber-600">Điểm: 0</span>
+                        <button id="qoFinishBtn" type="button" class="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold transition">🏁 Tổng kết</button>
+                    </div>
+                </div>
+
+                <!-- Khung Câu Hỏi Lớn -->
+                <div class="mb-4 py-4 px-5 rounded-2xl bg-amber-50/90 border-2 border-dashed border-amber-300 shadow-inner">
+                    <div id="quizPrompt" class="font-display text-xl sm:text-3xl font-extrabold text-slate-800 tracking-wide leading-snug">
+                        Thủ đô của Việt Nam là gì?
+                    </div>
+                </div>
+
+                <!-- 4 Lựa Chọn Đáp Án Rộng Rãi -->
+                <div id="quizOptions" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <button type="button" data-idx="0" class="quiz-opt-btn btn-3d py-4 px-5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-base sm:text-xl flex items-center justify-start gap-3.5 text-left">
+                        <span class="w-9 h-9 rounded-xl bg-white/25 text-sm sm:text-base font-display font-extrabold flex items-center justify-center shrink-0">A</span>
+                        <span class="opt-text leading-snug">Thành phố Hồ Chí Minh</span>
+                    </button>
+                    <button type="button" data-idx="1" class="quiz-opt-btn btn-3d py-4 px-5 rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-base sm:text-xl flex items-center justify-start gap-3.5 text-left">
+                        <span class="w-9 h-9 rounded-xl bg-white/25 text-sm sm:text-base font-display font-extrabold flex items-center justify-center shrink-0">B</span>
+                        <span class="opt-text leading-snug">Đà Nẵng</span>
+                    </button>
+                    <button type="button" data-idx="2" class="quiz-opt-btn btn-3d py-4 px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-base sm:text-xl flex items-center justify-start gap-3.5 text-left">
+                        <span class="w-9 h-9 rounded-xl bg-white/25 text-sm sm:text-base font-display font-extrabold flex items-center justify-center shrink-0">C</span>
+                        <span class="opt-text leading-snug">Hà Nội</span>
+                    </button>
+                    <button type="button" data-idx="3" class="quiz-opt-btn btn-3d py-4 px-5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-base sm:text-xl flex items-center justify-start gap-3.5 text-left">
+                        <span class="w-9 h-9 rounded-xl bg-white/25 text-sm sm:text-base font-display font-extrabold flex items-center justify-center shrink-0">D</span>
+                        <span class="opt-text leading-snug">Hải Phòng</span>
+                    </button>
+                </div>
+
+                <!-- KHUNG HIỆN ĐÁP ÁN ĐÚNG + LINK TÌM GOOGLE HÌNH ẢNH -->
+                <div id="quizFeedbackBox" class="hidden mt-4 p-4 rounded-2xl border-2 text-left transition-all">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex-1">
+                            <div id="feedbackStatusLabel" class="font-extrabold text-sm sm:text-base mb-1">
+                                ✅ Đáp án chính xác:
+                            </div>
+                            <a id="correctAnswerImageLink" href="#" target="_blank" rel="noopener noreferrer" class="group inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 border-2 border-emerald-400 shadow-xs transition cursor-pointer" title="Ấn để tìm kiếm Google Hình ảnh cho đáp án này">
+                                <span id="correctWordHighlight" class="font-display font-extrabold text-emerald-700 text-lg sm:text-xl group-hover:underline">Hà Nội</span>
+                                <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-extrabold flex items-center gap-1 shrink-0">
+                                    🖼️ Ảnh Google
+                                </span>
+                            </a>
+                        </div>
+                        <button id="continueAfterQuizBtn" type="button" class="btn-3d px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base shrink-0">
+                            Tiếp tục (Space) ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL IMPORT CÂU HỎI -->
+        <div id="importModal" class="absolute inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-5 z-40">
+            <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border-4 border-purple-400 text-left pop-in max-h-full flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">📥</span>
+                        <h3 class="font-display text-xl sm:text-2xl font-extrabold text-slate-800">Import Câu Hỏi Vườn Hoa</h3>
+                    </div>
+                    <button id="closeImportModalBtn" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center">✕</button>
+                </div>
+
+                <p class="text-xs text-slate-600 mb-2">
+                    Dán câu hỏi vào bên dưới. Đáp án đúng có dấu <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600 font-bold">*</code>. Sau khi Import, hệ thống sẽ mặc định dùng bộ câu hỏi này.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                    <div>
+                        <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Tên Chủ Đề:</label>
+                        <input id="importTopicInput" type="text" placeholder="Ví dụ: Sinh học, Lịch sử..." class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-purple-500 focus:outline-none text-xs font-semibold text-slate-800 bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Số lượng câu hỏi (Prompt AI):</label>
+                        <input id="promptCountInput" type="number" min="1" max="50" value="12" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-purple-500 focus:outline-none text-xs font-semibold text-slate-800 bg-slate-50">
+                    </div>
+                </div>
+
+                <div class="flex-1 min-h-0 flex flex-col mb-3">
+                    <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                        <label class="text-xs font-extrabold uppercase tracking-wider text-slate-600">Nội dung câu hỏi:</label>
+                        <div class="flex items-center gap-1.5">
+                            <button id="removeBackslashBtn" type="button" class="btn-3d px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs flex items-center gap-1" title="Xóa dấu \ và **">
+                                <span>🧹 Xóa dấu \ và **</span>
+                            </button>
+                            <button id="copyAiPromptBtn" type="button" class="btn-3d px-2.5 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold text-xs flex items-center gap-1">
+                                <span>🤖 Copy Prompt AI</span>
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="importTextArea" class="w-full h-32 sm:h-38 p-3 rounded-2xl border border-slate-300 focus:border-purple-500 focus:outline-none text-xs font-mono custom-scroll bg-slate-50 leading-relaxed" placeholder="Thủ đô của Việt Nam là gì?
+A. Thành phố Hồ Chí Minh
+B. Đà Nẵng
+*C. Hà Nội
+D. Hải Phòng"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                    <button id="cancelImportBtn" type="button" class="btn-3d px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-sm">Hủy</button>
+                    <button id="confirmImportBtn" type="button" class="btn-3d px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-display text-base font-extrabold">✨ Xác nhận Import</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH TẠM DỪNG -->
+        <div id="pauseOverlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4 z-30">
+            <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-sky-400 text-center pop-in">
+                <h3 class="font-display text-2xl font-extrabold text-slate-800">⏸ Trò Chơi Tạm Dừng</h3>
+                <p class="text-xs sm:text-sm text-slate-600 mt-1 mb-4">Đổi chủ đề hoặc tiếp tục hành trình!</p>
+                
+                <div id="pauseCategoryGrid" class="grid grid-cols-2 gap-2 mb-4 text-left max-h-40 overflow-y-auto custom-scroll p-1"></div>
+
+                <div class="flex gap-2.5 justify-center flex-wrap">
+                    <button id="resumeBtn" type="button" class="btn-3d flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm">▶ Tiếp tục</button>
+                    <button id="restartFromPauseBtn" type="button" class="btn-3d flex-1 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-sm">🏠 Về màn hình chính</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH TỔNG KẾT & SỔ TAY TIẾN TRÌNH CHI TIẾT -->
+        <div id="gameOverOverlay" class="absolute inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-5 z-30">
+            <div class="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border-4 border-rose-400 text-center pop-in max-h-full flex flex-col">
+                <div class="text-3xl mb-1">🏆</div>
+                <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-slate-800">Kết Thúc Hành Trình</h2>
+
+                <div class="grid grid-cols-3 gap-2 my-3">
+                    <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                        <div class="text-[11px] font-bold text-slate-400 uppercase">Điểm số</div>
+                        <div id="finalScore" class="font-display text-xl sm:text-2xl font-extrabold text-amber-600">0</div>
+                    </div>
+                    <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                        <div class="text-[11px] font-bold text-slate-400 uppercase">Kỷ lục</div>
+                        <div id="finalHighScore" class="font-display text-xl sm:text-2xl font-extrabold text-amber-500">0</div>
+                    </div>
+                    <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                        <div class="text-[11px] font-bold text-slate-400 uppercase">Đúng</div>
+                        <div id="finalAccuracy" class="font-display text-xl sm:text-2xl font-extrabold text-sky-600">0/0</div>
+                    </div>
+                </div>
+
+                <div class="text-left flex-1 min-h-0 flex flex-col">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700">📖 Sổ tay lịch sử toàn bộ tiến trình trả lời:</span>
+                        <span id="historyCountBadge" class="text-xs font-bold text-slate-500">0 câu</span>
+                    </div>
+                    <div id="fullHistoryList" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1 max-h-52 bg-slate-50 p-2.5 rounded-2xl border border-slate-200"></div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+                    <button id="playAgainBtn" type="button" class="btn-3d flex-1 sm:flex-none px-7 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-white font-display text-lg font-extrabold">🔄 Chơi Lại Ngay</button>
+                    <button id="changeModeGameOverBtn" type="button" class="btn-3d flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-amber-200 hover:bg-amber-100 text-amber-900 font-bold text-sm">📚 Đổi chủ đề</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL LỊCH SỬ CẬP NHẬT -->
+        <div id="updateHistoryModal" class="absolute inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-5 z-40">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border-4 border-indigo-400 text-left pop-in max-h-full flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">📜</span>
+                        <h3 class="font-display text-xl font-extrabold text-slate-800">Lịch sử cập nhật phiên bản</h3>
+                    </div>
+                    <button id="closeUpdateModalBtn" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center">✕</button>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scroll space-y-3 pr-1 text-xs text-slate-700">
+                    <div class="p-3 bg-indigo-50 rounded-2xl border border-indigo-200">
+                        <div class="font-extrabold text-indigo-900 mb-1">✨ Bản cập nhật mới nhất</div>
+                        <ul class="list-disc pl-4 space-y-1">
+                            <li>Giữ lại duy nhất bản nhạc nền đầu tiên (Giai điệu Vườn Hoa) xuyên suốt trò chơi.</li>
+                            <li>Thêm 3 chế độ chơi: <b>Hỗn hợp</b>, <b>Chỉ chơi (Game Only)</b> - bay thuần túy không hiện câu hỏi, và <b>Chỉ câu hỏi (Question Only)</b> - ẩn màn chơi, nối tiếp liên tục từ câu hỏi này sang câu hỏi khác.</li>
+                            <li>Thêm nút <b>Clear</b> trên thanh công cụ để xóa sạch dữ liệu đã lưu trong Local Storage (kỷ lục & các bộ câu hỏi đã Import).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL THÔNG TIN TÁC GIẢ -->
+        <div id="authorInfoModal" class="absolute inset-0 bg-slate-950/70 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-5 z-40">
+            <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-sky-400 text-center pop-in">
+                <div class="text-4xl mb-2">🐝</div>
+                <h3 class="font-display text-2xl font-extrabold text-slate-800 mb-1">Thông Tin Tác Giả</h3>
+                <p class="text-xs text-slate-500 mb-4">Ứng dụng học tập tương tác Chú Ong Chăm Chỉ</p>
+
+                <div class="bg-sky-50 p-4 rounded-2xl border border-sky-200 text-left space-y-2 mb-5">
+                    <div class="text-sm text-slate-800"><b>👤 Tác giả:</b> Icarus</div>
+                    <div class="text-sm text-slate-800"><b>📧 Email:</b> kienspvl@gmail.com</div>
+                    <div class="text-sm text-slate-800"><b>📞 Điện thoại:</b> 097 463 87 94</div>
+                </div>
+
+                <button id="closeAuthorModalBtn" type="button" class="btn-3d w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Đóng</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Hướng dẫn chân trang -->
+    <footer class="w-full max-w-[1100px] mt-1 px-2 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
+        <div class="flex items-center gap-3 flex-wrap">
+            <span>🐝 <b>Bay:</b> Space / ↑</span>
+            <span>🌻 <b>Đáp án:</b> A, B, C, D (Space hiện đáp án & Next)</span>
+            <span>📜 <b>U:</b> Lịch sử</span>
+            <span>ℹ️ <b>i:</b> Tác giả</span>
+        </div>
+        <div class="font-semibold text-amber-800">
+            Icarus - kienspvl@gmail.com - 097.463.87.94
+        </div>
+    </footer>
+
+    <script>
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-emerald-600 text-white';
+            let icon = '✨';
+            if (type === 'error') { bgClass = 'bg-rose-600 text-white'; icon = '⚠️'; }
+            else if (type === 'info') { bgClass = 'bg-sky-600 text-white'; icon = '💡'; }
+
+            toast.className = `toast-animate pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl font-bold text-sm ${bgClass}`;
+            toast.innerHTML = `<span class="text-lg">${icon}</span><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        const BASE_CATEGORIES = [
+            { id: 'ALL', name: 'Tất cả (Tổng hợp)', short: 'Tổng hợp', icon: '🌟' },
+            { id: 'BIO', name: 'Sinh học & Thiên nhiên', short: 'Sinh học', icon: '🌿' },
+            { id: 'SCI', name: 'Khoa học vui', short: 'Khoa học', icon: '🔬' },
+            { id: 'GEO', name: 'Địa lý & Xã hội', short: 'Địa lý', icon: '🌍' }
+        ];
+
+        const BASE_QUESTION_BANK = [
+            { cat: 'BIO', prompt: 'Loài côn trùng nào chuyên hút mật và tạo ra mật ong?', options: ['Ong mật', 'Kiến vàng', 'Con muỗi', 'Con ruồi'], correctIdx: 0, tip: 'Ong mật sống theo bầy đàn và sản xuất mật ong.' },
+            { cat: 'BIO', prompt: 'Bộ phận nào của thực vật thực hiện quá trình quang hợp chính?', options: ['Lá cây', 'Rễ cây', 'Thân cây', 'Cành cây'], correctIdx: 0, tip: 'Lá chứa diệp lục giúp cây quang hợp dưới ánh sáng.' },
+            { cat: 'SCI', prompt: 'Trái Đất quay quanh Mặt Trời mất bao lâu?', options: ['365 ngày', '300 ngày', '400 ngày', '200 ngày'], correctIdx: 0, tip: 'Một năm trên Trái Đất có khoảng 365 ngày.' },
+            { cat: 'SCI', prompt: 'Nước sôi ở điều kiện áp suất chuẩn ở nhiệt độ bao nhiêu?', options: ['100°C', '50°C', '0°C', '150°C'], correctIdx: 0, tip: 'Nước chuyển sang thể hơi (sôi) ở 100 độ C.' },
+            { cat: 'GEO', prompt: 'Thủ đô của Việt Nam là gì?', options: ['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng'], correctIdx: 0, tip: 'Hà Nội là trung tâm chính trị và văn hóa của cả nước.' }
+        ];
+
+        let CATEGORIES = [...BASE_CATEGORIES];
+        let QUESTION_BANK = [...BASE_QUESTION_BANK];
+
+        const THEME_LEVELS = [
+            { threshold: 0, name: 'Ong Thợ', icon: '🐝', bg1: '#fef08a', bg2: '#d9f99d', wrapperShadow: 'rgba(202, 138, 4, 0.22)' },
+            { threshold: 500, name: 'Ong Chúa', icon: '👑', bg1: '#bae6fd', bg2: '#fed7aa', wrapperShadow: 'rgba(14, 165, 233, 0.3)' },
+            { threshold: 1000, name: 'Ong Hoàng Kim', icon: '🌟', bg1: '#fde047', bg2: '#fca5a5', wrapperShadow: 'rgba(234, 179, 8, 0.35)' },
+            { threshold: 1500, name: 'Ong Siêu Sao', icon: '🚀', bg1: '#c084fc', bg2: '#38bdf8', wrapperShadow: 'rgba(168, 85, 247, 0.4)' }
+        ];
+
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.bgmTimer = null;
+                this.bgmStep = 0;
+                // Chỉ giữ lại duy nhất bản nhạc nền đầu tiên
+                this.mainTrack = {
+                    tempo: 220,
+                    type: 'sine',
+                    notes: [659.25, 587.33, 523.25, 587.33, 659.25, 659.25, 659.25, 0, 587.33, 587.33, 587.33, 0, 659.25, 783.99, 783.99, 0]
+                };
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            }
+
+            playTone(freq, type = 'sine', duration = 0.15, vol = 0.18, slideTo = null) {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+                if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+
+                gain.gain.setValueAtTime(vol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+
+            playJump() { this.playTone(440, 'triangle', 0.14, 0.18, 720); }
+            playScoreTick() { this.playTone(880, 'sine', 0.08, 0.1, 1175); }
+            playCorrect() {
+                this.playTone(523.25, 'triangle', 0.12, 0.2);
+                setTimeout(() => this.playTone(659.25, 'triangle', 0.12, 0.2), 70);
+                setTimeout(() => this.playTone(783.99, 'triangle', 0.22, 0.24, 1046.5), 140);
+            }
+            playWrong() {
+                this.playTone(240, 'sawtooth', 0.2, 0.2, 110);
+                setTimeout(() => this.playTone(165, 'sawtooth', 0.28, 0.2, 95), 140);
+            }
+            playLevelUp() {
+                const notes = [523, 659, 784, 1046];
+                notes.forEach((n, i) => setTimeout(() => this.playTone(n, 'triangle', 0.2, 0.25), i * 110));
+            }
+            playGameOver() {
+                const notes = [392, 349.23, 329.63, 261.63];
+                notes.forEach((n, i) => setTimeout(() => this.playTone(n, 'triangle', 0.25, 0.2), i * 160));
+            }
+
+            startBgm() {
+                this.stopBgm();
+                if (!this.enabled) return;
+                const track = this.mainTrack;
+                this.bgmStep = 0;
+                this.bgmTimer = setInterval(() => {
+                    if (!this.enabled || (gameState.status !== 'PLAYING' && !(gameState.playMode === 'QUESTION_ONLY' && gameState.status === 'QUIZ'))) return;
+                    const freq = track.notes[this.bgmStep % track.notes.length];
+                    if (freq > 0) this.playTone(freq, track.type, 0.13, 0.038);
+                    this.bgmStep++;
+                }, track.tempo);
+            }
+
+            stopBgm() {
+                if (this.bgmTimer) { clearInterval(this.bgmTimer); this.bgmTimer = null; }
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        const STORAGE_KEY = 'bee_garden_highscore_v4';
+        const CUSTOM_QUESTIONS_KEY = 'bee_garden_custom_questions_v4';
+
+        let defaultSelectedCat = 'ALL';
+
+        try {
+            const savedCustom = localStorage.getItem(CUSTOM_QUESTIONS_KEY);
+            if (savedCustom) {
+                const parsed = JSON.parse(savedCustom);
+                if (parsed && parsed.categories && parsed.questions) {
+                    CATEGORIES.push(...parsed.categories);
+                    QUESTION_BANK.push(...parsed.questions);
+                    if (parsed.categories.length > 0) {
+                        defaultSelectedCat = parsed.categories[parsed.categories.length - 1].id;
+                    }
+                }
+            }
+        } catch(e) {}
+
+        // playMode: 'MIXED' (Hỗn hợp) | 'GAME_ONLY' (Chỉ chơi, không câu hỏi) | 'QUESTION_ONLY' (Chỉ câu hỏi, ẩn màn chơi)
+        const gameState = {
+            status: 'START',
+            playMode: 'MIXED',
+            selectedCategory: defaultSelectedCat,
+            score: 0,
+            highScore: parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10),
+            lives: 3,
+            maxLives: 3,
+            combo: 0,
+            maxCombo: 0,
+            totalQuestions: 0,
+            correctQuestions: 0,
+            fullHistory: [],
+            usedQuestionIndices: new Set(),
+            speed: 340,
+            baseSpeed: 340,
+            maxSpeed: 720,
+            distanceSinceObstacle: 0,
+            nextObstacleGap: 420,
+            obstaclesSpawned: 0,
+            activeQuizObstacle: null,
+            currentQuestion: null,
+            quizAnswered: false,
+            quizAnsweredWrong: false,
+            quizSpaceStep: 0,
+            lastMilestone: 0,
+            currentThemeIdx: 0,
+            godMode: false
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameWrapper = document.getElementById('gameWrapper');
+
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const heartsContainer = document.getElementById('heartsContainer');
+        const comboBadge = document.getElementById('comboBadge');
+        const hudOverlay = document.getElementById('hudOverlay');
+
+        const startScreen = document.getElementById('startScreen');
+        const quizOverlay = document.getElementById('quizOverlay');
+        const importModal = document.getElementById('importModal');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const updateHistoryModal = document.getElementById('updateHistoryModal');
+        const authorInfoModal = document.getElementById('authorInfoModal');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const godModeBtn = document.getElementById('godModeBtn');
+        const godModeLabel = document.getElementById('godModeLabel');
+
+        // XỬ LÝ CHUYỂN CHẾ ĐỘ CHƠI (MIXED -> GAME_ONLY -> QUESTION_ONLY)
+        function setPlayMode(newMode) {
+            gameState.playMode = newMode;
+            const playModeIcon = document.getElementById('playModeIcon');
+            const playModeLabel = document.getElementById('playModeLabel');
+            const playModeBtn = document.getElementById('playModeBtn');
+
+            if (newMode === 'MIXED') {
+                playModeIcon.textContent = '🎮📚';
+                playModeLabel.textContent = 'Hỗn hợp';
+                playModeBtn.className = 'btn-3d px-2.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center gap-1';
+                canvas.style.opacity = '1';
+                hudOverlay.classList.remove('hidden');
+            } else if (newMode === 'GAME_ONLY') {
+                playModeIcon.textContent = '🎮';
+                playModeLabel.textContent = 'Chỉ chơi';
+                playModeBtn.className = 'btn-3d px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-1';
+                canvas.style.opacity = '1';
+                hudOverlay.classList.remove('hidden');
+            } else if (newMode === 'QUESTION_ONLY') {
+                playModeIcon.textContent = '📚';
+                playModeLabel.textContent = 'Chỉ câu hỏi';
+                playModeBtn.className = 'btn-3d px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1';
+                canvas.style.opacity = '0';
+                hudOverlay.classList.add('hidden');
+            }
+
+            // Đồng bộ nút trên Start Screen
+            document.querySelectorAll('.mode-select-btn').forEach(btn => {
+                const m = btn.getAttribute('data-mode');
+                if (m === newMode) {
+                    btn.className = 'mode-select-btn p-2 rounded-xl border-2 border-teal-500 bg-teal-50 text-teal-900 font-extrabold text-xs flex flex-col items-center gap-0.5 transition shadow-xs';
+                } else {
+                    btn.className = 'mode-select-btn p-2 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center gap-0.5 transition hover:border-teal-400';
+                }
+            });
+
+            // Nếu đang trong trận và đổi chế độ trực tiếp
+            if (gameState.status === 'PLAYING' || gameState.status === 'QUIZ') {
+                if (newMode === 'QUESTION_ONLY') {
+                    triggerQuestionOnlyStep();
+                } else if (newMode === 'GAME_ONLY') {
+                    // Xóa các cổng câu hỏi đang có trên màn hình và đóng bảng quiz nếu đang mở
+                    obstacles = obstacles.filter(o => o.type !== 'QUIZ_GATE' && o.type !== 'MAGIC_FLOWER');
+                    if (gameState.status === 'QUIZ') {
+                        quizOverlay.classList.add('hidden');
+                        quizOverlay.classList.remove('flex');
+                        gameState.activeQuizObstacle = null;
+                        gameState.status = 'PLAYING';
+                    }
+                } else if (newMode === 'MIXED') {
+                    const qoBar = document.getElementById('questionOnlyHeaderBar');
+                    qoBar.classList.add('hidden');
+                    qoBar.classList.remove('flex');
+                    quizOverlay.classList.remove('bg-gradient-to-br', 'from-amber-100', 'via-sky-100', 'to-emerald-100');
+                    quizOverlay.classList.add('bg-slate-950/65', 'backdrop-blur-xs');
+                }
+            }
+        }
+
+        document.getElementById('playModeBtn').addEventListener('click', () => {
+            const order = ['MIXED', 'GAME_ONLY', 'QUESTION_ONLY'];
+            const nextIdx = (order.indexOf(gameState.playMode) + 1) % order.length;
+            const nextMode = order[nextIdx];
+            setPlayMode(nextMode);
+            const names = {
+                'MIXED': 'Chế độ Hỗn hợp (Bay & Trả lời câu hỏi)',
+                'GAME_ONLY': 'Chế độ Chỉ chơi (Game Only - Không hiện câu hỏi)',
+                'QUESTION_ONLY': 'Chế độ Chỉ câu hỏi (Question Only - Ẩn màn chơi)'
+            };
+            showToast(names[nextMode], 'info');
+        });
+
+        document.querySelectorAll('.mode-select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setPlayMode(btn.getAttribute('data-mode'));
+            });
+        });
+
+        // NÚT CLEAR LOCAL STORAGE
+        document.getElementById('clearStorageBtn').addEventListener('click', () => {
+            if (confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu đã lưu trong trình duyệt (Kỷ lục điểm số và các bộ câu hỏi đã Import)?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(CUSTOM_QUESTIONS_KEY);
+
+                gameState.highScore = 0;
+                CATEGORIES = [...BASE_CATEGORIES];
+                QUESTION_BANK = [...BASE_QUESTION_BANK];
+                gameState.selectedCategory = 'ALL';
+                gameState.usedQuestionIndices.clear();
+
+                document.getElementById('currentCategoryBadge').textContent = 'Tổng hợp';
+                renderCategorySelectors();
+                updateHud();
+                showToast('Đã xóa sạch dữ liệu Local Storage!', 'success');
+            }
+        });
+
+        godModeBtn.addEventListener('click', () => {
+            gameState.godMode = !gameState.godMode;
+            if (gameState.godMode) {
+                godModeBtn.className = 'btn-3d px-2 py-1.5 rounded-xl bg-amber-500 text-white font-bold text-xs flex items-center gap-1 shadow-md';
+                godModeLabel.textContent = 'Bất tử: Bật';
+                showToast('Đã bật chế độ Bất tử!', 'info');
+            } else {
+                godModeBtn.className = 'btn-3d px-2 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs flex items-center gap-1';
+                godModeLabel.textContent = 'Bất tử: Tắt';
+                showToast('Đã tắt chế độ Bất tử.', 'info');
+            }
+            updateHud();
+            updateQuestionOnlyHud();
+        });
+
+        let cw = 960;
+        let ch = 540;
+        let groundY = 445;
+
+        function resizeCanvas() {
+            const rect = gameWrapper.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            cw = rect.width;
+            ch = rect.height;
+            groundY = Math.round(ch * 0.82);
+            if (bee && !bee.isJumping) bee.y = groundY - bee.height;
+        }
+
+        const bee = {
+            x: 95,
+            y: 350,
+            width: 58,
+            height: 52,
+            vy: 0,
+            gravity: 2000,
+            jumpForce: -760,
+            isJumping: false,
+            wingFrame: 0,
+            wingTimer: 0,
+            invincibleTimer: 0,
+            pollenTimer: 0,
+            pollenTargetX: 0,
+
+            reset() {
+                this.width = Math.max(48, Math.round(ch * 0.11));
+                this.height = Math.round(this.width * 0.9);
+                this.x = Math.max(55, Math.round(cw * 0.11));
+                this.y = groundY - this.height;
+                this.vy = 0;
+                this.isJumping = false;
+                this.invincibleTimer = 0;
+                this.pollenTimer = 0;
+            },
+
+            jump() {
+                if (!this.isJumping && gameState.status === 'PLAYING' && gameState.playMode !== 'QUESTION_ONLY') {
+                    this.vy = this.jumpForce * (ch / 540);
+                    this.isJumping = true;
+                    sound.playJump();
+                    spawnPollenDust(this.x + this.width * 0.5, this.y + this.height, 6);
+                }
+            },
+
+            update(dt) {
+                if (this.isJumping) {
+                    this.vy += this.gravity * (ch / 540) * dt;
+                    this.y += this.vy * dt;
+                    if (this.y >= groundY - this.height) {
+                        this.y = groundY - this.height;
+                        this.vy = 0;
+                        this.isJumping = false;
+                        spawnPollenDust(this.x + this.width * 0.5, groundY, 4);
+                    }
+                } else {
+                    this.wingTimer += dt * 18;
+                    if (this.wingTimer >= 0.1) {
+                        this.wingTimer = 0;
+                        this.wingFrame = (this.wingFrame + 1) % 2;
+                    }
+                }
+                if (this.invincibleTimer > 0) this.invincibleTimer -= dt;
+                if (this.pollenTimer > 0) this.pollenTimer -= dt;
+            },
+
+            draw() {
+                ctx.save();
+                if (this.invincibleTimer > 0 && Math.floor(this.invincibleTimer * 14) % 2 === 0) {
+                    ctx.globalAlpha = 0.45;
+                }
+
+                const x = this.x;
+                const y = this.y;
+                const w = this.width;
+                const h = this.height;
+
+                ctx.fillStyle = 'rgba(161, 98, 7, 0.18)';
+                const shadowScale = this.isJumping ? Math.max(0.4, 1 - (groundY - (y + h)) / 180) : 1;
+                ctx.beginPath();
+                ctx.ellipse(x + w * 0.5, groundY + 3, w * 0.38 * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 1.5;
+                const wingRot = this.wingFrame === 0 ? -0.35 : 0.25;
+                ctx.save();
+                ctx.translate(x + w * 0.4, y + h * 0.2);
+                ctx.rotate(wingRot);
+                ctx.beginPath();
+                ctx.ellipse(0, -12, 14, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                const theme = THEME_LEVELS[gameState.currentThemeIdx];
+                ctx.fillStyle = gameState.currentThemeIdx >= 2 ? '#f59e0b' : '#facc15';
+                ctx.beginPath();
+                ctx.ellipse(x + w * 0.5, y + h * 0.55, w * 0.42, h * 0.36, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(x + w * 0.36, y + h * 0.25, 6, h * 0.6);
+                ctx.fillRect(x + w * 0.6, y + h * 0.28, 6, h * 0.54);
+
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(x + w * 0.82, y + h * 0.52, w * 0.22, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(x + w * 0.88, y + h * 0.48, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x + w * 0.92, y + h * 0.36);
+                ctx.lineTo(x + w * 1.05, y + h * 0.22);
+                ctx.stroke();
+
+                const hatX = x + w * 0.76;
+                const hatY = y + h * 0.15;
+                if (gameState.currentThemeIdx >= 1) {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 18px sans-serif';
+                    ctx.fillText(theme.icon, hatX - 10, hatY);
+                } else {
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(hatX - 11, hatY - 5, 22, 6);
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.moveTo(hatX, hatY - 12);
+                    ctx.lineTo(hatX + 20, hatY - 5);
+                    ctx.lineTo(hatX, hatY + 2);
+                    ctx.lineTo(hatX - 20, hatY - 5);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                if (this.pollenTimer > 0) {
+                    const mouthX = x + w * 0.95;
+                    const mouthY = y + h * 0.55;
+                    const grad = ctx.createLinearGradient(mouthX, mouthY, this.pollenTargetX, mouthY);
+                    grad.addColorStop(0, '#fef08a');
+                    grad.addColorStop(0.5, '#f59e0b');
+                    grad.addColorStop(1, '#10b981');
+
+                    ctx.strokeStyle = grad;
+                    ctx.lineWidth = 14 * (this.pollenTimer / 0.35);
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(mouthX, mouthY);
+                    ctx.lineTo(this.pollenTargetX, mouthY);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        };
+
+        let obstacles = [];
+        let clouds = [];
+        let flowersBg = [];
+        let particles = [];
+        let floatingTexts = [];
+
+        function initEnvironment() {
+            clouds = [];
+            for (let i = 0; i < 5; i++) {
+                clouds.push({ x: Math.random() * cw, y: 40 + Math.random() * (ch * 0.3), scale: 0.6 + Math.random() * 0.5, speed: 16 + Math.random() * 20 });
+            }
+            flowersBg = [];
+            for (let i = 0; i < 8; i++) {
+                flowersBg.push({ x: i * (cw / 4), width: 180 + Math.random() * 100, height: 80 + Math.random() * 60, color: i % 2 === 0 ? '#4ade80' : '#22c55e' });
+            }
+        }
+
+        function spawnPollenDust(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: -30 - Math.random() * 80,
+                    vy: -15 - Math.random() * 50,
+                    size: 2.5 + Math.random() * 3.5,
+                    life: 0.3 + Math.random() * 0.25,
+                    maxLife: 0.55,
+                    color: '#fde047',
+                    gravity: 120
+                });
+            }
+        }
+
+        function spawnFireworks(x, y, count = 28) {
+            const colors = ['#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#fde047'];
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.3;
+                const spd = 100 + Math.random() * 220;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd - 50,
+                    size: 4 + Math.random() * 4,
+                    life: 0.6 + Math.random() * 0.4,
+                    maxLife: 1.0,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    gravity: 300
+                });
+            }
+        }
+
+        function addFloatingText(text, x, y, color = '#10b981') {
+            floatingTexts.push({ text, x, y, vy: -60, life: 1.1, color });
+        }
+
+        function spawnObstacle() {
+            gameState.obstaclesSpawned++;
+            // Nếu ở chế độ GAME_ONLY thì không sinh ra cổng câu hỏi / hoa thần kỳ
+            const isQuizEntity = (gameState.playMode === 'MIXED') && ((gameState.obstaclesSpawned % 3 === 2) || (gameState.obstaclesSpawned === 2));
+
+            if (isQuizEntity) {
+                const isMagicFlower = Math.random() < 0.4;
+                if (isMagicFlower) {
+                    obstacles.push({
+                        type: 'MAGIC_FLOWER',
+                        x: cw + 40,
+                        y: groundY - 60,
+                        width: 50,
+                        height: 60,
+                        triggered: false,
+                        destroyed: false,
+                        bobOffset: Math.random() * Math.PI * 2
+                    });
+                } else {
+                    obstacles.push({
+                        type: 'QUIZ_GATE',
+                        x: cw + 40,
+                        y: groundY - 120,
+                        width: 56,
+                        height: 120,
+                        triggered: false,
+                        destroyed: false
+                    });
+                }
+            } else {
+                const r = Math.random();
+                if (r < 0.55) {
+                    const h = 50 + Math.random() * 16;
+                    obstacles.push({ type: 'ROSE_BUSH', x: cw + 40, y: groundY - h, width: 38, height: h, hit: false });
+                } else if (r < 0.82 && gameState.score > 120) {
+                    const flyHigh = Math.random() < 0.5;
+                    obstacles.push({ type: 'MOTH', x: cw + 40, y: flyHigh ? groundY - 95 : groundY - 45, width: 48, height: 34, hit: false });
+                } else {
+                    const w = 70 + Math.random() * 25;
+                    obstacles.push({ type: 'HONEY_POOL', x: cw + 40, y: groundY - 6, width: w, height: 20, hit: false });
+                }
+            }
+            const speedFactor = gameState.speed / gameState.baseSpeed;
+            gameState.nextObstacleGap = (360 + Math.random() * 220) * Math.min(1.4, speedFactor);
+            gameState.distanceSinceObstacle = 0;
+        }
+
+        function checkThemeProgression(score) {
+            let newThemeIdx = 0;
+            for (let i = THEME_LEVELS.length - 1; i >= 0; i--) {
+                if (score >= THEME_LEVELS[i].threshold) {
+                    newThemeIdx = i;
+                    break;
+                }
+            }
+
+            if (newThemeIdx !== gameState.currentThemeIdx) {
+                gameState.currentThemeIdx = newThemeIdx;
+                const theme = THEME_LEVELS[newThemeIdx];
+                sound.playLevelUp();
+                if (gameState.playMode !== 'QUESTION_ONLY') {
+                    addFloatingText(`✨ Thăng cấp: ${theme.name}!`, cw / 2, ch * 0.25, '#f59e0b');
+                }
+                
+                document.documentElement.style.setProperty('--bg-grad-1', theme.bg1);
+                document.documentElement.style.setProperty('--bg-grad-2', theme.bg2);
+                gameWrapper.style.boxShadow = `0 15px 40px ${theme.wrapperShadow}, 0 0 0 3px #ffffff`;
+                document.getElementById('headerLogoIcon').textContent = theme.icon;
+                document.getElementById('themeLevelDesc').textContent = `Skin: ${theme.name} • Nhạc Vườn Hoa`;
+            }
+        }
+
+        document.getElementById('removeBackslashBtn').addEventListener('click', () => {
+            const ta = document.getElementById('importTextArea');
+            ta.value = ta.value.replace(/\\/g, '').replace(/\*\*/g, '');
+        });
+
+        document.getElementById('copyAiPromptBtn').addEventListener('click', () => {
+            const count = document.getElementById('promptCountInput').value || 12;
+            const topic = document.getElementById('importTopicInput').value.trim() || 'Tổng hợp kiến thức';
+            const promptText = `Hãy tạo cho tôi đúng ${count} câu hỏi trắc nghiệm về chủ đề "${topic}" dưới định dạng PLAIN TEXT THUẦN TÚY. 
+YÊU CẦU NGHIÊM NGẶT: 
+- Không sử dụng bất kỳ ký tự định dạng markdown nào như backslash, gạch chéo ngược, hoặc dấu sao kép (**).
+- Trình bày theo đúng mẫu sau:
+
+Thủ đô của Việt Nam là gì?
+A. Thành phố Hồ Chí Minh
+B. Đà Nẵng
+*C. Hà Nội
+D. Hải Phòng
+
+(Đảm bảo có dấu * trước đáp án đúng, mỗi câu cách nhau 1 dòng trống).`;
+            navigator.clipboard.writeText(promptText).then(() => {
+                showToast(`Đã copy Prompt tạo ${count} câu hỏi thuần túy!`);
+            });
+        });
+
+        // XỬ LÝ SAVE AS: ĐẶT TRẠNG THÁI VỀ MÀN HÌNH START BAN ĐẦU
+        document.getElementById('saveAsBtn').addEventListener('click', () => {
+            quizOverlay.classList.add('hidden');
+            quizOverlay.classList.remove('flex');
+            pauseOverlay.classList.add('hidden');
+            pauseOverlay.classList.remove('flex');
+            gameOverOverlay.classList.add('hidden');
+            gameOverOverlay.classList.remove('flex');
+            importModal.classList.add('hidden');
+            importModal.classList.remove('flex');
+            updateHistoryModal.classList.add('hidden');
+            updateHistoryModal.classList.remove('flex');
+            authorInfoModal.classList.add('hidden');
+            authorInfoModal.classList.remove('flex');
+            
+            startScreen.classList.remove('hidden');
+            startScreen.classList.add('flex');
+            pauseBtn.classList.add('hidden');
+            
+            gameState.status = 'START';
+            sound.stopBgm();
+
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ChuOngChamChi_Custom_${Date.now()}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Đã lưu file HTML thành công!');
+        });
+
+        function parseImportedQuestions(rawText, topicName) {
+            const blocks = rawText.trim().split(/\n\s*\n/);
+            const newQuestions = [];
+            const catId = 'IMPORTED_' + Date.now();
+            const topName = topicName || 'Bộ câu hỏi Import';
+
+            blocks.forEach(block => {
+                const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+                if (lines.length < 3) return;
+
+                let prompt = '';
+                let options = [];
+                let correctIdx = 0;
+
+                lines.forEach((line, idx) => {
+                    const cleanLine = line.replace(/\\/g, '').replace(/\*\*/g, '');
+                    const match = cleanLine.match(/^(\*)?\s*([A-Da-d])[\.\)]\s*(.*)$/);
+                    if (match) {
+                        const isCorrectStar = !!match[1] || cleanLine.startsWith('*');
+                        const optText = match[3].trim();
+                        const optLetter = match[2].toUpperCase();
+                        let optIndex = optLetter === 'B' ? 1 : optLetter === 'C' ? 2 : optLetter === 'D' ? 3 : 0;
+
+                        options[optIndex] = optText;
+                        if (isCorrectStar || cleanLine.startsWith('*')) correctIdx = optIndex;
+                    } else if (idx === 0) {
+                        prompt = cleanLine;
+                    }
+                });
+
+                options = options.filter(o => o !== undefined && o !== '');
+                if (prompt && options.length >= 2) {
+                    newQuestions.push({
+                        cat: catId,
+                        prompt: prompt,
+                        options: options,
+                        correctIdx: correctIdx < options.length ? correctIdx : 0,
+                        tip: `Đáp án đúng là: ${options[correctIdx < options.length ? correctIdx : 0]}`
+                    });
+                }
+            });
+
+            if (newQuestions.length > 0) {
+                const newCat = { id: catId, name: topName, short: topName.substring(0, 14), icon: '📥' };
+                CATEGORIES.push(newCat);
+                QUESTION_BANK.push(...newQuestions);
+
+                try {
+                    const existingCustom = JSON.parse(localStorage.getItem(CUSTOM_QUESTIONS_KEY) || '{"categories":[],"questions":[]}');
+                    existingCustom.categories.push(newCat);
+                    existingCustom.questions.push(...newQuestions);
+                    localStorage.setItem(CUSTOM_QUESTIONS_KEY, JSON.stringify(existingCustom));
+                } catch(e) {}
+
+                gameState.selectedCategory = catId;
+                gameState.usedQuestionIndices.clear();
+                document.getElementById('currentCategoryBadge').textContent = topName;
+                renderCategorySelectors();
+                
+                showToast(`Đã import ${newQuestions.length} câu hỏi & đặt làm bộ mặc định!`, 'success');
+                importModal.classList.add('hidden');
+                importModal.classList.remove('flex');
+            } else {
+                showToast('Không đọc được định dạng câu hỏi!', 'error');
+            }
+        }
+
+        function getNextQuestion() {
+            const pool = QUESTION_BANK.map((q, idx) => ({ ...q, originalIdx: idx }))
+                .filter(q => gameState.selectedCategory === 'ALL' || q.cat === gameState.selectedCategory);
+
+            let available = pool.filter(q => !gameState.usedQuestionIndices.has(q.originalIdx));
+            if (available.length === 0) {
+                gameState.usedQuestionIndices.clear();
+                available = pool;
+            }
+            const chosen = available[Math.floor(Math.random() * available.length)];
+            gameState.usedQuestionIndices.add(chosen.originalIdx);
+            return chosen;
+        }
+
+        function showCorrectAnswerBox(correctText, statusType) {
+            const feedbackBox = document.getElementById('quizFeedbackBox');
+            const statusLabel = document.getElementById('feedbackStatusLabel');
+            const wordHighlight = document.getElementById('correctWordHighlight');
+            const imageLink = document.getElementById('correctAnswerImageLink');
+            const continueBtn = document.getElementById('continueAfterQuizBtn');
+
+            wordHighlight.textContent = correctText;
+            imageLink.href = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(correctText)}`;
+            continueBtn.textContent = gameState.playMode === 'QUESTION_ONLY' ? 'Câu tiếp theo (Space) ➔' : 'Tiếp tục bay (Space) ➔';
+
+            feedbackBox.classList.remove('hidden', 'bg-rose-50', 'border-rose-200', 'bg-emerald-50', 'border-emerald-200', 'bg-amber-50', 'border-amber-200');
+            
+            if (statusType === 'WRONG') {
+                feedbackBox.classList.add('bg-rose-50', 'border-rose-200');
+                statusLabel.className = 'font-extrabold text-sm sm:text-base mb-1.5 text-rose-700';
+                statusLabel.textContent = '❌ Chưa chính xác! Đáp án đúng là (nhấn để xem ảnh):';
+            } else if (statusType === 'CORRECT') {
+                feedbackBox.classList.add('bg-emerald-50', 'border-emerald-200');
+                statusLabel.className = 'font-extrabold text-sm sm:text-base mb-1.5 text-emerald-700';
+                statusLabel.textContent = '🎉 Tuyệt vời! Đáp án chính xác (nhấn để xem ảnh):';
+            } else {
+                feedbackBox.classList.add('bg-amber-50', 'border-amber-200');
+                statusLabel.className = 'font-extrabold text-sm sm:text-base mb-1.5 text-amber-800';
+                statusLabel.textContent = '💡 Đáp án đúng (nhấn để xem ảnh, Space để tiếp tục):';
+            }
+        }
+
+        function updateQuestionOnlyHud() {
+            const qoScore = document.getElementById('qoScoreLabel');
+            const qoLives = document.getElementById('qoLivesLabel');
+            if (qoScore) qoScore.textContent = `Điểm: ${Math.floor(gameState.score)}`;
+            if (qoLives) {
+                if (gameState.godMode) {
+                    qoLives.textContent = '🛡️ Bất tử';
+                } else {
+                    let h = '';
+                    for (let i = 0; i < gameState.maxLives; i++) h += i < gameState.lives ? '❤️' : '🖤';
+                    qoLives.textContent = h;
+                }
+            }
+        }
+
+        function triggerQuestionOnlyStep() {
+            canvas.style.opacity = '0';
+            hudOverlay.classList.add('hidden');
+            const qoBar = document.getElementById('questionOnlyHeaderBar');
+            qoBar.classList.remove('hidden');
+            qoBar.classList.add('flex');
+            quizOverlay.classList.remove('bg-slate-950/65', 'backdrop-blur-xs');
+            quizOverlay.classList.add('bg-gradient-to-br', 'from-amber-100', 'via-sky-100', 'to-emerald-100');
+            updateQuestionOnlyHud();
+            triggerQuiz(null);
+        }
+
+        document.getElementById('qoFinishBtn').addEventListener('click', () => {
+            quizOverlay.classList.add('hidden');
+            quizOverlay.classList.remove('flex');
+            endGame();
+        });
+
+        function triggerQuiz(obstacle) {
+            gameState.status = 'QUIZ';
+            gameState.activeQuizObstacle = obstacle;
+            gameState.quizAnswered = false;
+            gameState.quizAnsweredWrong = false;
+            gameState.quizSpaceStep = 0;
+            if (obstacle) obstacle.triggered = true;
+
+            if (gameState.playMode !== 'QUESTION_ONLY') {
+                const qoBar = document.getElementById('questionOnlyHeaderBar');
+                qoBar.classList.add('hidden');
+                qoBar.classList.remove('flex');
+                quizOverlay.classList.remove('bg-gradient-to-br', 'from-amber-100', 'via-sky-100', 'to-emerald-100');
+                quizOverlay.classList.add('bg-slate-950/65', 'backdrop-blur-xs');
+            }
+
+            const q = getNextQuestion();
+            gameState.currentQuestion = q;
+
+            document.getElementById('quizPrompt').textContent = q.prompt;
+
+            const optButtons = document.querySelectorAll('.quiz-opt-btn');
+            optButtons.forEach((btn, i) => {
+                if (q.options && q.options[i]) {
+                    btn.style.display = 'flex';
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-45', 'ring-4', 'ring-emerald-400', 'ring-rose-500', 'ring-amber-400');
+                    btn.querySelector('.opt-text').textContent = q.options[i];
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
+
+            document.getElementById('quizFeedbackBox').classList.add('hidden');
+            quizOverlay.classList.remove('hidden');
+            quizOverlay.classList.add('flex');
+        }
+
+        function handleQuizAnswer(optionIdx) {
+            if (gameState.status !== 'QUIZ' || gameState.quizAnswered) return;
+            const q = gameState.currentQuestion;
+            if (!q || !q.options[optionIdx]) return;
+
+            gameState.quizAnswered = true;
+            gameState.totalQuestions++;
+            const isCorrect = (optionIdx === q.correctIdx);
+            const correctText = q.options[q.correctIdx];
+
+            gameState.fullHistory.push({
+                prompt: q.prompt,
+                chosen: q.options[optionIdx],
+                correct: correctText,
+                isCorrect: isCorrect,
+                tip: q.tip,
+                options: q.options
+            });
+
+            const optButtons = document.querySelectorAll('.quiz-opt-btn');
+            optButtons.forEach((btn, i) => {
+                btn.disabled = true;
+                if (i === q.correctIdx) {
+                    btn.classList.add('ring-4', 'ring-emerald-400');
+                } else if (i === optionIdx && !isCorrect) {
+                    btn.classList.add('opacity-45', 'ring-4', 'ring-rose-500');
+                } else {
+                    btn.classList.add('opacity-45');
+                }
+            });
+
+            if (isCorrect) {
+                gameState.quizAnsweredWrong = false;
+                gameState.correctQuestions++;
+                gameState.combo++;
+                if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
+
+                const bonus = 100 + (gameState.combo > 1 ? (gameState.combo - 1) * 20 : 0);
+                gameState.score += bonus;
+                checkThemeProgression(gameState.score);
+                updateHud();
+                updateQuestionOnlyHud();
+                sound.playCorrect();
+
+                if (gameState.activeQuizObstacle) {
+                    const obs = gameState.activeQuizObstacle;
+                    bee.pollenTimer = 0.35;
+                    bee.pollenTargetX = obs.x + obs.width / 2;
+                    spawnFireworks(obs.x + obs.width / 2, obs.y + obs.height / 2, gameState.combo >= 3 ? 42 : 24);
+                    addFloatingText(`+${bonus} mật!`, obs.x, obs.y - 10, '#f59e0b');
+                    if (gameState.combo >= 2) addFloatingText(`🍯 Mật x${gameState.combo}!`, bee.x + 20, bee.y - 26, '#f43f5e');
+                }
+
+                showCorrectAnswerBox(correctText, 'CORRECT');
+            } else {
+                gameState.quizAnsweredWrong = true;
+                gameState.combo = 0;
+                
+                if (!gameState.godMode) {
+                    gameState.lives = Math.max(0, gameState.lives - 1);
+                }
+                
+                updateHud();
+                updateQuestionOnlyHud();
+                sound.playWrong();
+                if (gameState.playMode !== 'QUESTION_ONLY') triggerShake();
+                showCorrectAnswerBox(correctText, 'WRONG');
+            }
+        }
+
+        function handleSpaceInQuiz() {
+            if (gameState.status !== 'QUIZ') return;
+            const q = gameState.currentQuestion;
+            if (!q) return;
+
+            if (gameState.quizAnswered) {
+                continueAfterQuiz();
+                return;
+            }
+
+            if (gameState.quizSpaceStep === 0) {
+                gameState.quizSpaceStep = 1;
+                gameState.quizAnswered = true;
+                gameState.quizAnsweredWrong = false;
+                const correctText = q.options[q.correctIdx];
+
+                const optButtons = document.querySelectorAll('.quiz-opt-btn');
+                optButtons.forEach((btn, i) => {
+                    btn.disabled = true;
+                    if (i === q.correctIdx) {
+                        btn.classList.add('ring-4', 'ring-amber-400');
+                    } else {
+                        btn.classList.add('opacity-45');
+                    }
+                });
+
+                gameState.totalQuestions++;
+                gameState.fullHistory.push({
+                    prompt: q.prompt,
+                    chosen: '(Xem đáp án)',
+                    correct: correctText,
+                    isCorrect: true,
+                    tip: q.tip,
+                    options: q.options
+                });
+
+                gameState.correctQuestions++;
+                gameState.score += 40;
+                checkThemeProgression(gameState.score);
+                updateHud();
+                updateQuestionOnlyHud();
+                sound.playScoreTick();
+
+                showCorrectAnswerBox(correctText, 'PEEK');
+            }
+        }
+
+        function continueAfterQuiz() {
+            if (gameState.status !== 'QUIZ') return;
+
+            if (gameState.activeQuizObstacle) {
+                const obs = gameState.activeQuizObstacle;
+                obs.destroyed = true;
+                if (!gameState.quizAnsweredWrong && gameState.quizSpaceStep === 1) {
+                    bee.pollenTimer = 0.35;
+                    bee.pollenTargetX = obs.x + obs.width / 2;
+                    spawnFireworks(obs.x + obs.width / 2, obs.y + obs.height / 2, 16);
+                    addFloatingText('+40 mật', obs.x, obs.y - 10, '#38bdf8');
+                }
+                gameState.activeQuizObstacle = null;
+            }
+
+            if (gameState.lives <= 0 && !gameState.godMode) {
+                quizOverlay.classList.add('hidden');
+                quizOverlay.classList.remove('flex');
+                endGame();
+                return;
+            }
+
+            // Nếu đang ở chế độ QUESTION_ONLY, chuyển thẳng sang câu hỏi kế tiếp mà không hiện màn chơi
+            if (gameState.playMode === 'QUESTION_ONLY') {
+                triggerQuestionOnlyStep();
+                return;
+            }
+
+            quizOverlay.classList.add('hidden');
+            quizOverlay.classList.remove('flex');
+            if (gameState.quizAnsweredWrong) bee.invincibleTimer = 1.2;
+            gameState.status = 'PLAYING';
+        }
+
+        function drawBackground(timeSec) {
+            const grad = ctx.createLinearGradient(0, 0, 0, groundY);
+            grad.addColorStop(0, gameState.currentThemeIdx >= 2 ? '#38bdf8' : '#7dd3fc');
+            grad.addColorStop(1, '#e0f2fe');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, cw, ch);
+
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.arc(cw * 0.85, ch * 0.2, 34, 0, Math.PI * 2);
+            ctx.fill();
+
+            clouds.forEach(c => {
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.scale(c.scale, c.scale);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.arc(18, -5, 24, 0, Math.PI * 2);
+                ctx.arc(40, 0, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            flowersBg.forEach(f => {
+                ctx.fillStyle = f.color;
+                ctx.beginPath();
+                ctx.moveTo(f.x, groundY);
+                ctx.lineTo(f.x + f.width * 0.5, groundY - f.height);
+                ctx.lineTo(f.x + f.width, groundY);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            ctx.fillStyle = gameState.currentThemeIdx >= 2 ? '#15803d' : '#16a34a';
+            ctx.fillRect(0, groundY, cw, 14);
+            ctx.fillStyle = '#854d0e';
+            ctx.fillRect(0, groundY + 14, cw, ch - groundY - 14);
+        }
+
+        function drawObstacles(timeSec) {
+            obstacles.forEach(obs => {
+                if (obs.destroyed) return;
+
+                if (obs.type === 'ROSE_BUSH') {
+                    ctx.fillStyle = '#15803d';
+                    roundRect(ctx, obs.x + obs.width * 0.3, obs.y, obs.width * 0.4, obs.height, 6);
+                    ctx.fill();
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath();
+                    ctx.arc(obs.x + obs.width * 0.5, obs.y + 12, 7, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obs.type === 'MOTH') {
+                    ctx.fillStyle = '#a855f7';
+                    ctx.beginPath();
+                    ctx.ellipse(obs.x + obs.width * 0.5, obs.y + obs.height * 0.55, obs.width * 0.38, obs.height * 0.28, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obs.type === 'HONEY_POOL') {
+                    ctx.fillStyle = '#d97706';
+                    roundRect(ctx, obs.x, obs.y, obs.width, obs.height, 8);
+                    ctx.fill();
+                } else if (obs.type === 'QUIZ_GATE') {
+                    ctx.save();
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.shadowBlur = 16;
+                    ctx.fillStyle = '#10b981';
+                    roundRect(ctx, obs.x, obs.y + 18, 10, obs.height - 18, 4);
+                    ctx.fill();
+                    roundRect(ctx, obs.x + obs.width - 10, obs.y + 18, 10, obs.height - 18, 4);
+                    ctx.fill();
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath();
+                    ctx.arc(obs.x + obs.width / 2, obs.y + 12, 18, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '800 24px "Baloo 2", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('?', obs.x + obs.width / 2, obs.y + obs.height * 0.65);
+                    ctx.restore();
+                } else if (obs.type === 'MAGIC_FLOWER') {
+                    const bob = Math.sin(timeSec * 5 + obs.bobOffset) * 5;
+                    const cx = obs.x + obs.width / 2;
+                    const cy = obs.y + obs.height / 2 + bob;
+
+                    ctx.save();
+                    ctx.fillStyle = '#ec4899';
+                    for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+                        ctx.beginPath();
+                        ctx.arc(cx + Math.cos(a) * 12, cy + Math.sin(a) * 12, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = '#fde047';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+        }
+
+        function drawParticlesAndText() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, ft.life);
+                ctx.font = '800 20px "Baloo 2", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 4;
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            const radius = Math.min(r, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.arcTo(x + w, y, x + w, y + h, radius);
+            ctx.arcTo(x + w, y + h, x, y + h, radius);
+            ctx.arcTo(x, y + h, x, y, radius);
+            ctx.arcTo(x, y, x + w, y, radius);
+            ctx.closePath();
+        }
+
+        function checkAABB(a, b, pad = 8) {
+            return (
+                a.x + pad < b.x + b.width - pad &&
+                a.x + a.width - pad > b.x + pad &&
+                a.y + pad < b.y + b.height - pad &&
+                a.y + a.height - pad > b.y + pad
+            );
+        }
+
+        function triggerShake() {
+            gameWrapper.classList.remove('shake');
+            void gameWrapper.offsetWidth;
+            gameWrapper.classList.add('shake');
+        }
+
+        function updateGame(dt) {
+            if (gameState.playMode === 'QUESTION_ONLY') return;
+
+            const envSpeed = gameState.status === 'PLAYING' ? gameState.speed : 40;
+            clouds.forEach(c => {
+                c.x -= c.speed * (envSpeed / 300) * dt;
+                if (c.x < -90) c.x = cw + 70;
+            });
+
+            if (gameState.status === 'PLAYING') {
+                flowersBg.forEach(f => {
+                    f.x -= gameState.speed * 0.16 * dt;
+                    if (f.x + f.width < 0) f.x = cw + 20;
+                });
+
+                gameState.speed = Math.min(gameState.maxSpeed, gameState.baseSpeed + gameState.score * 0.22);
+                gameState.score += dt * 16;
+                checkThemeProgression(gameState.score);
+
+                const currentMilestone = Math.floor(gameState.score / 500);
+                if (currentMilestone > gameState.lastMilestone) {
+                    gameState.lastMilestone = currentMilestone;
+                    sound.playScoreTick();
+                }
+                updateHud();
+
+                bee.update(dt);
+
+                gameState.distanceSinceObstacle += gameState.speed * dt;
+                if (gameState.distanceSinceObstacle >= gameState.nextObstacleGap) {
+                    spawnObstacle();
+                }
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    obs.x -= gameState.speed * dt;
+
+                    if (obs.x + obs.width < -60) {
+                        obstacles.splice(i, 1);
+                        continue;
+                    }
+                    if (obs.destroyed) continue;
+
+                    if ((obs.type === 'QUIZ_GATE' || obs.type === 'MAGIC_FLOWER') && !obs.triggered) {
+                        if (gameState.playMode === 'MIXED' && obs.x <= bee.x + bee.width + 65) {
+                            triggerQuiz(obs);
+                            break;
+                        }
+                    } else if (!obs.hit && bee.invincibleTimer <= 0) {
+                        if (checkAABB(bee, obs, 10)) {
+                            obs.hit = true;
+                            if (!gameState.godMode) {
+                                gameState.lives = Math.max(0, gameState.lives - 1);
+                            }
+                            gameState.combo = 0;
+                            bee.invincibleTimer = 1.3;
+                            sound.playWrong();
+                            triggerShake();
+                            spawnPollenDust(bee.x + bee.width / 2, bee.y + bee.height / 2, 14);
+                            addFloatingText('💔 Va chạm!', bee.x + 20, bee.y - 12, '#ef4444');
+                            updateHud();
+
+                            if (gameState.lives <= 0 && !gameState.godMode) {
+                                endGame();
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += p.gravity * dt;
+                p.life -= dt;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy * dt;
+                ft.life -= dt;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        let lastTimestamp = 0;
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+            lastTimestamp = timestamp;
+            const timeSec = timestamp / 1000;
+
+            updateGame(dt);
+            ctx.clearRect(0, 0, cw, ch);
+            if (gameState.playMode !== 'QUESTION_ONLY') {
+                drawBackground(timeSec);
+                drawObstacles(timeSec);
+                bee.draw();
+                drawParticlesAndText();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function formatScore(num) {
+            return Math.floor(num).toString().padStart(5, '0');
+        }
+
+        function updateHud() {
+            const intScore = Math.floor(gameState.score);
+            scoreDisplay.textContent = formatScore(intScore);
+            if (intScore > gameState.highScore) {
+                gameState.highScore = intScore;
+                localStorage.setItem(STORAGE_KEY, intScore.toString());
+            }
+            highScoreDisplay.textContent = formatScore(gameState.highScore);
+
+            let heartsHtml = '';
+            for (let i = 0; i < gameState.maxLives; i++) {
+                heartsHtml += i < gameState.lives ? '<span>❤️</span>' : '<span class="opacity-25 grayscale">🖤</span>';
+            }
+            heartsContainer.innerHTML = gameState.godMode ? '<span class="text-amber-500 font-extrabold text-xs">🛡️ BẤT TỬ</span>' : heartsHtml;
+
+            if (gameState.combo >= 2) {
+                comboBadge.textContent = `🍯 Mật x${gameState.combo}`;
+                comboBadge.classList.remove('hidden');
+            } else {
+                comboBadge.classList.add('hidden');
+            }
+        }
+
+        function renderCategorySelectors() {
+            const grids = [
+                document.getElementById('categoryGrid'),
+                document.getElementById('pauseCategoryGrid')
+            ];
+
+            grids.forEach(grid => {
+                if (!grid) return;
+                grid.innerHTML = '';
+                CATEGORIES.forEach(cat => {
+                    const isSelected = gameState.selectedCategory === cat.id;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `p-2.5 rounded-2xl border-2 text-left transition flex items-center gap-2 ${
+                        isSelected
+                            ? 'bg-amber-50 border-amber-500 text-amber-950 font-extrabold shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-amber-400 text-slate-700 font-bold'
+                    }`;
+                    btn.innerHTML = `<span class="text-lg">${cat.icon}</span><span class="text-xs sm:text-sm leading-tight truncate">${cat.name}</span>`;
+                    btn.addEventListener('click', () => {
+                        gameState.selectedCategory = cat.id;
+                        gameState.usedQuestionIndices.clear();
+                        document.getElementById('currentCategoryBadge').textContent = cat.short || cat.name;
+                        renderCategorySelectors();
+                    });
+                    grid.appendChild(btn);
+                });
+            });
+        }
+
+        function startNewGame() {
+            sound.init();
+            gameState.status = 'PLAYING';
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.totalQuestions = 0;
+            gameState.correctQuestions = 0;
+            gameState.fullHistory = [];
+            gameState.usedQuestionIndices.clear();
+            gameState.speed = gameState.baseSpeed;
+            gameState.distanceSinceObstacle = 0;
+            gameState.nextObstacleGap = 340;
+            gameState.obstaclesSpawned = 0;
+            gameState.lastMilestone = 0;
+            gameState.activeQuizObstacle = null;
+            gameState.currentThemeIdx = 0;
+
+            const theme = THEME_LEVELS[0];
+            document.documentElement.style.setProperty('--bg-grad-1', theme.bg1);
+            document.documentElement.style.setProperty('--bg-grad-2', theme.bg2);
+            gameWrapper.style.boxShadow = `0 15px 40px ${theme.wrapperShadow}, 0 0 0 3px #ffffff`;
+            document.getElementById('headerLogoIcon').textContent = theme.icon;
+            document.getElementById('themeLevelDesc').textContent = `Skin: ${theme.name} • Nhạc Vườn Hoa`;
+
+            obstacles = [];
+            particles = [];
+            floatingTexts = [];
+            bee.reset();
+            updateHud();
+
+            startScreen.classList.add('hidden');
+            quizOverlay.classList.add('hidden');
+            importModal.classList.add('hidden');
+            pauseOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+            updateHistoryModal.classList.add('hidden');
+            authorInfoModal.classList.add('hidden');
+
+            if (gameState.playMode === 'QUESTION_ONLY') {
+                pauseBtn.classList.add('hidden');
+                triggerQuestionOnlyStep();
+            } else {
+                canvas.style.opacity = '1';
+                hudOverlay.classList.remove('hidden');
+                pauseBtn.classList.remove('hidden');
+            }
+
+            sound.startBgm();
+        }
+
+        function endGame() {
+            gameState.status = 'GAMEOVER';
+            sound.stopBgm();
+            sound.playGameOver();
+            pauseBtn.classList.add('hidden');
+
+            const intScore = Math.floor(gameState.score);
+            document.getElementById('finalScore').textContent = intScore;
+            document.getElementById('finalHighScore').textContent = gameState.highScore;
+            document.getElementById('finalAccuracy').textContent = `${gameState.correctQuestions}/${gameState.totalQuestions}`;
+
+            const listEl = document.getElementById('fullHistoryList');
+            document.getElementById('historyCountBadge').textContent = `${gameState.fullHistory.length} câu đã làm`;
+
+            if (gameState.fullHistory.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-5 text-slate-500">
+                        <p class="font-bold text-sm">Chưa có câu hỏi nào được trả lời trong lượt này.</p>
+                    </div>
+                `;
+            } else {
+                listEl.innerHTML = gameState.fullHistory.map((item, idx) => {
+                    const searchQuery = encodeURIComponent(item.correct);
+                    const googleImageUrl = `https://www.google.com/search?tbm=isch&q=${searchQuery}`;
+                    const statusBadge = item.isCorrect 
+                        ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold">ĐÚNG ✓</span>'
+                        : '<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-extrabold">SAI ✗</span>';
+                    
+                    return `
+                        <div class="bg-white p-2.5 rounded-xl border ${item.isCorrect ? 'border-emerald-200' : 'border-rose-200'} shadow-2xs flex items-start justify-between gap-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-bold text-slate-400">#${idx + 1}</span>
+                                    ${statusBadge}
+                                </div>
+                                <div class="font-bold text-slate-800 text-xs sm:text-sm mb-1">${item.prompt}</div>
+                                <div class="text-xs text-slate-600">Bạn chọn: <b class="${item.isCorrect ? 'text-emerald-700' : 'text-rose-600'}">${item.chosen}</b></div>
+                                <div class="text-xs text-emerald-700 font-extrabold mt-0.5">Đáp án đúng: ${item.correct}</div>
+                            </div>
+                            <a href="${googleImageUrl}" target="_blank" rel="noopener noreferrer" class="w-8 h-8 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 flex items-center justify-center shrink-0 font-bold text-sm shadow-xs" title="Tìm kiếm Google Hình ảnh cho đáp án">
+                                🖼️
+                            </a>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            gameOverOverlay.classList.remove('hidden');
+            gameOverOverlay.classList.add('flex');
+        }
+
+        function togglePause() {
+            if (gameState.playMode === 'QUESTION_ONLY') return;
+            if (gameState.status === 'PLAYING') {
+                gameState.status = 'PAUSED';
+                sound.stopBgm();
+                renderCategorySelectors();
+                pauseOverlay.classList.remove('hidden');
+                pauseOverlay.classList.add('flex');
+            } else if (gameState.status === 'PAUSED') {
+                gameState.status = 'PLAYING';
+                pauseOverlay.classList.add('hidden');
+                pauseOverlay.classList.remove('flex');
+                sound.startBgm();
+            }
+        }
+
+        // BỘ LẮNG NGHE PHÍM TẮT (BỎ QUA KHI ĐANG TYPING TRONG TEXTAREA / INPUT)
+        window.addEventListener('keydown', (e) => {
+            const activeEl = document.activeElement;
+            const isTyping = activeEl && (
+                activeEl.tagName === 'TEXTAREA' ||
+                activeEl.tagName === 'INPUT' ||
+                activeEl.isContentEditable
+            );
+
+            if (isTyping) {
+                return;
+            }
+
+            const key = e.key.toUpperCase();
+            
+            if (key === 'U') {
+                e.preventDefault();
+                updateHistoryModal.classList.remove('hidden');
+                updateHistoryModal.classList.add('flex');
+                return;
+            }
+            if (key === 'I') {
+                e.preventDefault();
+                authorInfoModal.classList.remove('hidden');
+                authorInfoModal.classList.add('flex');
+                return;
+            }
+
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                if (gameState.status === 'PLAYING' && gameState.playMode !== 'QUESTION_ONLY') {
+                    e.preventDefault();
+                    bee.jump();
+                } else if (gameState.status === 'QUIZ') {
+                    e.preventDefault();
+                    handleSpaceInQuiz();
+                } else if (gameState.status === 'START') {
+                    e.preventDefault();
+                    startNewGame();
+                }
+            } else if (gameState.status === 'QUIZ' && !gameState.quizAnswered) {
+                if (key === 'A' || key === '1') { e.preventDefault(); handleQuizAnswer(0); }
+                else if (key === 'B' || key === '2') { e.preventDefault(); handleQuizAnswer(1); }
+                else if (key === 'C' || key === '3') { e.preventDefault(); handleQuizAnswer(2); }
+                else if (key === 'D' || key === '4') { e.preventDefault(); handleQuizAnswer(3); }
+            } else if (e.code === 'Escape' || key === 'P') {
+                if (gameState.status === 'PLAYING' || gameState.status === 'PAUSED') togglePause();
+            }
+        });
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if (gameState.status === 'PLAYING' && gameState.playMode !== 'QUESTION_ONLY') {
+                e.preventDefault();
+                bee.jump();
+            }
+        });
+
+        document.querySelectorAll('.quiz-opt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                handleQuizAnswer(idx);
+            });
+        });
+
+        const openImportModalBtn = document.getElementById('openImportModalBtn');
+        const closeImportModalBtn = document.getElementById('closeImportModalBtn');
+        const cancelImportBtn = document.getElementById('cancelImportBtn');
+        const confirmImportBtn = document.getElementById('confirmImportBtn');
+
+        openImportModalBtn.addEventListener('click', () => {
+            if (gameState.status === 'PLAYING') togglePause();
+            importModal.classList.remove('hidden');
+            importModal.classList.add('flex');
+            setTimeout(() => document.getElementById('importTextArea').focus(), 50);
+        });
+
+        const closeImport = () => {
+            importModal.classList.add('hidden');
+            importModal.classList.remove('flex');
+        };
+
+        closeImportModalBtn.addEventListener('click', closeImport);
+        cancelImportBtn.addEventListener('click', closeImport);
+
+        confirmImportBtn.addEventListener('click', () => {
+            const topic = document.getElementById('importTopicInput').value.trim();
+            const text = document.getElementById('importTextArea').value.trim();
+            if (!text) { 
+                showToast('Vui lòng dán danh sách câu hỏi!', 'error'); 
+                return; 
+            }
+            parseImportedQuestions(text, topic);
+        });
+
+        document.getElementById('openUpdateHistoryBtn').addEventListener('click', () => {
+            if (gameState.status === 'PLAYING') togglePause();
+            updateHistoryModal.classList.remove('hidden');
+            updateHistoryModal.classList.add('flex');
+        });
+        document.getElementById('closeUpdateModalBtn').addEventListener('click', () => {
+            updateHistoryModal.classList.add('hidden');
+            updateHistoryModal.classList.remove('flex');
+        });
+
+        document.getElementById('openAuthorInfoBtn').addEventListener('click', () => {
+            if (gameState.status === 'PLAYING') togglePause();
+            authorInfoModal.classList.remove('hidden');
+            authorInfoModal.classList.add('flex');
+        });
+        document.getElementById('closeAuthorModalBtn').addEventListener('click', () => {
+            authorInfoModal.classList.add('hidden');
+            authorInfoModal.classList.remove('flex');
+        });
+
+        document.getElementById('continueAfterQuizBtn').addEventListener('click', continueAfterQuiz);
+        document.getElementById('startGameBtn').addEventListener('click', startNewGame);
+        document.getElementById('playAgainBtn').addEventListener('click', startNewGame);
+        document.getElementById('headerReplayBtn').addEventListener('click', startNewGame);
+        
+        document.getElementById('restartFromPauseBtn').addEventListener('click', () => {
+            pauseOverlay.classList.add('hidden');
+            pauseOverlay.classList.remove('flex');
+            startScreen.classList.remove('hidden');
+            startScreen.classList.add('flex');
+            gameState.status = 'START';
+        });
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        document.getElementById('resumeBtn').addEventListener('click', togglePause);
+
+        document.getElementById('openCategoryBtn').addEventListener('click', () => {
+            if (gameState.status === 'PLAYING') togglePause();
+            else if (gameState.status === 'GAMEOVER') {
+                gameOverOverlay.classList.add('hidden');
+                startScreen.classList.remove('hidden');
+                startScreen.classList.add('flex');
+                gameState.status = 'START';
+            } else if (gameState.status === 'QUIZ' && gameState.playMode === 'QUESTION_ONLY') {
+                quizOverlay.classList.add('hidden');
+                quizOverlay.classList.remove('flex');
+                startScreen.classList.remove('hidden');
+                startScreen.classList.add('flex');
+                gameState.status = 'START';
+            }
+        });
+
+        document.getElementById('changeModeGameOverBtn').addEventListener('click', () => {
+            gameOverOverlay.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            startScreen.classList.add('flex');
+            gameState.status = 'START';
+        });
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            document.getElementById('soundIcon').textContent = sound.enabled ? '🔊' : '🔇';
+            if (sound.enabled && (gameState.status === 'PLAYING' || (gameState.playMode === 'QUESTION_ONLY' && gameState.status === 'QUIZ'))) {
+                sound.startBgm();
+            } else {
+                sound.stopBgm();
+            }
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = function () {
+            resizeCanvas();
+            initEnvironment();
+            bee.reset();
+            
+            const initialCat = CATEGORIES.find(c => c.id === gameState.selectedCategory);
+            if (initialCat) {
+                document.getElementById('currentCategoryBadge').textContent = initialCat.short || initialCat.name;
+            }
+            
+            updateHud();
+            renderCategorySelectors();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
