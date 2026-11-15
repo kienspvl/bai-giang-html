@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown & Math to Word Converter - Icarus</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <!-- KaTeX JS -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .math-container { overflow-x: auto; padding: 6px 0; margin: 8px 0; }
+        .math-inline { display: inline-block; margin: 0 3px; }
+        /* Toast animation */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { transform: translateY(20px); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .toast.show { transform: translateY(0); opacity: 1; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col justify-between">
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Header tối ưu gọn gàng -->
+    <header class="bg-indigo-700 text-white shadow-md py-3 px-4 sm:px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                    <span>📐</span> Markdown & Math to Word Converter
+                </h1>
+                <p class="text-indigo-200 text-xs sm:text-sm mt-0.5">Soạn thảo bên trái, xem trước chuẩn công thức toán ở bên phải.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <input type="file" id="fileInput" accept=".md,.txt" class="hidden" onchange="importFile(event)">
+                <button onclick="document.getElementById('fileInput').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow flex items-center gap-1.5">
+                    📂 Import
+                </button>
+                <button onclick="loadSample()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow">
+                    💡 Mẫu
+                </button>
+                <button onclick="copyToWord()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow flex items-center gap-1.5">
+                    📋 Copy Word
+                </button>
+                <button onclick="exportToWord()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow flex items-center gap-1.5">
+                    💾 Export .doc
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Cột Trái: Markdown Input -->
+        <div class="flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex justify-between items-center">
+                <span class="font-semibold text-slate-700 text-xs sm:text-sm">📝 Soạn thảo Markdown & LaTeX</span>
+                <span id="charCount" class="text-xs text-slate-500">0 ký tự</span>
+            </div>
+            <textarea id="markdownInput" 
+                class="flex-grow w-full p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed text-slate-800 min-h-[450px]"
+                placeholder="Nhập nội dung markdown tại đây... $...$ cho inline và $$...$$ cho block."
+                oninput="updatePreview()"></textarea>
+        </div>
+
+        <!-- Cột Phải: Live Preview -->
+        <div class="flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-200">
+                <span class="font-semibold text-slate-700 text-xs sm:text-sm">👁️ Xem trước định dạng & Công thức</span>
+            </div>
+            <div id="preview" class="flex-grow p-6 overflow-y-auto prose max-w-none text-slate-800 bg-white min-h-[450px]">
+                <!-- Nội dung render hiển thị ở đây -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-3 px-6 text-center text-xs text-slate-500">
+        Author: Icarus - kienspvl@gmail.com - 097.463.87.94
+    </footer>
+
+    <!-- Script xử lý Logic -->
+    <script>
+        const sampleMarkdown = `# Đạo hàm và Tích phân trong Vật lý
+
+Chào mừng bạn đến với trình soạn thảo Markdown tích hợp công thức toán học!
+
+## 1. Công thức nội dòng (Inline Math)
+Động năng của vật được tính bằng công thức $E_k = \\frac{1}{2}mv^2$, trong đó $m$ là khối lượng và $v$ là vận tốc của vật. 
+Phương trình dao động điều hòa quen thuộc: $x = A \\cos(\\omega t + \\varphi)$ với biên độ $A$.
+
+## 2. Công thức hiển thị độc lập (Block Math)
+Phương trình Schrödinger độc lập theo thời gian trong cơ học lượng tử:
+
+$$-\\frac{\\hbar^2}{2m} \\frac{d^2 \\psi}{dx^2} + V(x)\\psi = E\\psi$$
+
+Công thức tính công của lực điện trường dịch chuyển điện tích:
+$$A_{12} = q \\int_{M}^{N} \\vec{E} \\cdot d\\vec{l} = V_M - V_N$$
+
+## 3. Danh sách các định luật Newton
+* **Định luật I:** Vật giữ nguyên trạng thái đứng yên hoặc chuyển động thẳng đều nếu không chịu tác dụng của lực nào.
+* **Định luật II:** Gia tốc của vật cùng hướng với lực tác dụng:
+  $$\\vec{a} = \\frac{\\vec{F}}{m} \\implies \\vec{F} = m\\vec{a}$$
+* **Định luật III:** Lực và phản lực luôn xuất hiện thành từng cặp trực đối:
+  $$\\vec{F}_{12} = -\\vec{F}_{21}$$
+`;
+
+        window.onload = function() {
+            document.getElementById('markdownInput').value = sampleMarkdown;
+            updatePreview();
+        };
+
+        // Hàm hiển thị Toast thông báo nổi thay cho alert
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-indigo-600';
+            toast.className = `toast ${bgClass} text-white px-4 py-3 rounded-xl shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2`;
+            toast.innerHTML = `<span>${type === 'success' ? '✅' : 'ℹ️'}</span> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function updatePreview() {
+            const markdownText = document.getElementById('markdownInput').value;
+            document.getElementById('charCount').innerText = `${markdownText.length} ký tự`;
+
+            const htmlResult = processMarkdownWithMath(markdownText);
+            document.getElementById('preview').innerHTML = htmlResult;
+        }
+
+        function processMarkdownWithMath(text) {
+            const mathBlocks = [];
+            let index = 0;
+
+            // 1. Xử lý Block Math: $$ ... $$ (thêm khoảng trắng chống dính chữ)
+            let processed = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+                const placeholder = `@@MATH_BLOCK_${index}@@`;
+                try {
+                    const rendered = katex.renderToString(formula.trim(), {
+                        displayMode: true,
+                        output: 'htmlAndMathml',
+                        throwOnError: false
+                    });
+                    mathBlocks.push({ placeholder, html: `<div class="math-container my-3 text-center">&nbsp;${rendered}&nbsp;</div>` });
+                } catch (err) {
+                    mathBlocks.push({ placeholder, html: `<span class="text-red-500">[Lỗi công thức]</span>` });
+                }
+                index++;
+                return placeholder;
+            });
+
+            // 2. Xử lý Inline Math: $ ... $ (thêm khoảng trắng bảo vệ trước/sau công thức)
+            processed = processed.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
+                const placeholder = `@@MATH_INLINE_${index}@@`;
+                try {
+                    const rendered = katex.renderToString(formula.trim(), {
+                        displayMode: false,
+                        output: 'htmlAndMathml',
+                        throwOnError: false
+                    });
+                    mathBlocks.push({ placeholder, html: `<span class="math-inline">&nbsp;${rendered}&nbsp;</span>` });
+                } catch (err) {
+                    mathBlocks.push({ placeholder, html: `<span class="text-red-500">[Lỗi công thức]</span>` });
+                }
+                index++;
+                return placeholder;
+            });
+
+            // 3. Parse Markdown bằng marked.js
+            let html = marked.parse(processed);
+
+            // 4. Khôi phục các công thức toán
+            mathBlocks.forEach(item => {
+                html = html.replace(item.placeholder, item.html);
+            });
+
+            return html;
+        }
+
+        function loadSample() {
+            document.getElementById('markdownInput').value = sampleMarkdown;
+            updatePreview();
+            showToast('Đã tải văn bản mẫu thành công!');
+        }
+
+        function importFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('markdownInput').value = e.target.result;
+                updatePreview();
+                showToast(`Đã import file thành công: ${file.name}`);
+            };
+            reader.readAsText(file);
+        }
+
+        // Copy to Word qua Clipboard HTML
+        async function copyToWord() {
+            const previewEl = document.getElementById('preview');
+            const htmlContent = previewEl.innerHTML;
+            const textContent = previewEl.innerText;
+
+            try {
+                const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+                const textBlob = new Blob([textContent], { type: 'text/plain' });
+                const clipboardItem = new ClipboardItem({
+                    'text/html': htmlBlob,
+                    'text/plain': textBlob
+                });
+                await navigator.clipboard.write([clipboardItem]);
+                showToast('Đã copy vào Clipboard! Mở Word và nhấn Ctrl + V để dán.');
+            } catch (err) {
+                console.error('Lỗi sao chép:', err);
+                navigator.clipboard.writeText(textContent);
+                showToast('Đã sao chép nội dung dạng văn bản thuần.', 'info');
+            }
+        }
+
+        // Export to Word (.doc chuẩn XML/MathML)
+        function exportToWord() {
+            const previewContent = document.getElementById('preview').innerHTML;
+            
+            const wordDocumentHTML = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                      xmlns:w="urn:schemas-microsoft-com:office:word" 
+                      xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" 
+                      xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="utf-8">
+                    <title>Exported Math Document</title>
+                    <style>
+                        body { font-family: 'Times New Roman', Times, serif; font-size: 14pt; line-height: 1.6; color: #000; }
+                        h1 { font-size: 18pt; font-weight: bold; margin-top: 12pt; margin-bottom: 6pt; }
+                        h2 { font-size: 16pt; font-weight: bold; margin-top: 10pt; margin-bottom: 4pt; }
+                        p { margin-bottom: 8pt; }
+                        math { font-family: 'Cambria Math', 'Times New Roman', serif; }
+                    </style>
+                </head>
+                <body>
+                    ${previewContent}
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff' + wordDocumentHTML], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'tai_lieu_toan_hoc.doc';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Đã xuất file Word (.doc) thành công!');
+        }
+    </script>
+</body>
+</html>
