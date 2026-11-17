@@ -1,0 +1,783 @@
+﻿<!DOCTYPE html>
+
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Trích Xuất & Trình Chiếu Video YouTube từ AI</title>
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tải Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tải Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Hiệu ứng cuộn mượt và thanh cuộn tinh tế */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Tỷ lệ khung hình 16:9 chuẩn cho video */
+        .aspect-video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            background-color: #0f172a;
+        }
+        .aspect-video-container iframe,
+        .aspect-video-container .thumbnail-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-600 text-white p-2 rounded-xl shadow-sm flex items-center justify-center">
+                    <i data-lucide="youtube" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">AI Video Extractor</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">Trích xuất & trình chiếu video YouTube từ phản hồi ChatGPT, Gemini...</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="headerBadge" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Dành cho Giảng dạy & Học tập
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+            
+            <!-- Cột Trái: Khung nhập liệu Markdown -->
+            <section class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col lg:sticky lg:top-24">
+                <div class="flex items-center justify-between mb-3">
+                    <label for="markdownInput" class="font-semibold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-4 h-4 text-indigo-600"></i>
+                        Nội dung phản hồi từ AI
+                    </label>
+                    <span class="text-xs text-slate-400">Hỗ trợ Markdown / Text</span>
+                </div>
+
+                <textarea 
+                    id="markdownInput" 
+                    rows="12" 
+                    class="w-full rounded-xl border border-slate-300 bg-slate-50 p-3.5 text-sm text-slate-700 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none resize-y leading-relaxed"
+                    placeholder="Dán nội dung trả lời từ ChatGPT, Gemini, Claude... có chứa đường dẫn YouTube vào đây..."></textarea>
+
+                <!-- Các nút thao tác -->
+                <div class="grid grid-cols-2 gap-2.5 mt-4">
+                    <button 
+                        id="btnLoadSample" 
+                        type="button"
+                        class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 active:scale-[0.99] transition-all border border-indigo-200/60">
+                        <i data-lucide="wand-2" class="w-4 h-4"></i>
+                        Dữ liệu mẫu
+                    </button>
+                    <button 
+                        id="btnClear" 
+                        type="button"
+                        class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-[0.99] transition-all">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        Xóa trắng
+                    </button>
+                </div>
+
+                <button 
+                    id="btnExtract" 
+                    type="button"
+                    class="mt-2.5 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow active:scale-[0.99] transition-all">
+                    <i data-lucide="play-circle" class="w-4 h-4"></i>
+                    Trích xuất Video ngay
+                </button>
+
+                <!-- Hướng dẫn nhanh -->
+                <div class="mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500 space-y-1.5">
+                    <p class="font-medium text-slate-700 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-3.5 h-3.5 text-indigo-500"></i> Mẹo sử dụng:
+                    </p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>Tự động lọc sạch mã theo dõi (như <code class="bg-slate-100 px-1 rounded">utm_source</code>).</li>
+                        <li>Tự động nhận diện tiêu đề, tên kênh & mô tả nằm phía trên link.</li>
+                        <li>Dùng nút <strong>Chiếu toàn màn hình</strong> trên mỗi thẻ khi dạy học trên lớp.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Cột Phải: Khu vực hiển thị kết quả -->
+            <section class="lg:col-span-8 space-y-6">
+                
+                <!-- Thanh trạng thái & Bộ đếm -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <h2 class="font-bold text-slate-800 text-base sm:text-lg">Danh sách Video trích xuất</h2>
+                        <span id="videoCountBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                            0 video
+                        </span>
+                    </div>
+                    <div id="filterInfo" class="text-xs text-slate-500 hidden sm:block">
+                        Nhấp vào ảnh để phát trực tiếp hoặc mở Chế độ Rạp chiếu
+                    </div>
+                </div>
+
+                <!-- Trạng thái trống (Empty State) -->
+                <div id="emptyState" class="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 sm:p-14 text-center flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
+                        <i data-lucide="film" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-800 mb-1">Chưa tìm thấy video YouTube nào</h3>
+                    <p class="text-sm text-slate-500 max-w-md mb-5">
+                        Hãy dán văn bản phản hồi từ AI vào khung bên trái, hoặc bấm nút <strong>"Dữ liệu mẫu"</strong> để xem thử cách hoạt động.
+                    </p>
+                    <button 
+                        id="btnEmptySample"
+                        type="button" 
+                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        Thử ngay với bài giảng Sóng dừng
+                    </button>
+                </div>
+
+                <!-- Lưới hiển thị các thẻ Video -->
+                <div id="videoGrid" class="grid grid-cols-1 md:grid-cols-2 gap-5 hidden">
+                    <!-- Các thẻ Video sẽ được render bằng JS tại đây -->
+                </div>
+
+                <!-- Khu vực Gợi ý tìm kiếm bổ sung (YouTube Search Links) -->
+                <div id="searchSuggestionsSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hidden">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="p-1.5 rounded-lg bg-amber-100 text-amber-700">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm sm:text-base">Gợi ý tìm kiếm bổ sung trên YouTube</h3>
+                            <p class="text-xs text-slate-500">Các từ khóa tìm kiếm được AI đề xuất mở rộng thêm tư liệu</p>
+                        </div>
+                    </div>
+                    <div id="searchChipsContainer" class="flex flex-wrap gap-2.5 mt-3">
+                        <!-- Các nút tìm kiếm sẽ được render tại đây -->
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-5 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
+            Công cụ hỗ trợ trích xuất & trình chiếu học liệu số từ AI • Thiết kế tối ưu cho giáo viên và học sinh
+        </div>
+    </footer>
+
+    <!-- Modal Chế độ Rạp chiếu phim (Theater Mode) -->
+    <div id="theaterModal" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 transition-opacity">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col">
+            <!-- Header Modal -->
+            <div class="px-4 sm:px-6 py-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <span id="modalCategory" class="text-[11px] font-semibold uppercase tracking-wider text-indigo-400 block">Chế độ trình chiếu</span>
+                    <h3 id="modalTitle" class="text-white font-bold text-sm sm:text-base truncate">Tiêu đề video</h3>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <a id="modalExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-200 hover:bg-slate-700 transition-colors">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Mở trên YouTube</span>
+                    </a>
+                    <button id="btnCloseModal" type="button" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-red-600 hover:text-white transition-colors" title="Đóng (ESC)">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Khung phát Video lớn -->
+            <div class="aspect-video-container bg-black">
+                <iframe id="modalIframe" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+            <!-- Thông tin mô tả bên dưới -->
+            <div id="modalFooterInfo" class="px-4 sm:px-6 py-3.5 bg-slate-900/95 text-slate-300 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2 border-t border-slate-800">
+                <p id="modalDescription" class="text-slate-300"></p>
+                <span id="modalChannel" class="text-slate-400 font-medium"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Thông báo (thay thế hoàn toàn alert) -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2.5 text-sm font-medium">
+            <i id="toastIcon" data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+            <span id="toastMessage">Đã sao chép liên kết!</span>
+        </div>
+    </div>
+
+    <script>
+        // Dữ liệu mẫu mặc định theo yêu cầu (Bài giảng Sóng dừng - Vật lí 11)
+        const SAMPLE_MARKDOWN = `Dưới đây là một số video YouTube về **sóng dừng (Standing Waves)**, phù hợp để sử dụng minh họa khi giảng dạy Vật lí 11 – Kết nối tri thức.
+
+## **1. Video bài giảng tiếng Việt**
+
+[Sóng dừng – Khái niệm, tính chất, ứng dụng](https://images.openai.com/static-rsc-4/hwCS6VNZOL76hupNdOysP-sSRXXsoDmLfGifbm3d4E1Rr0f8Jcv3EnvQBR6yQOk4Gajtl8J3C89U7zd_gz68bqnAtg_qAyWB-rPkcwTcbeAqsPSaw3Ls7QcHrRDgxkDONWj1K4_NswfgPV0Do5GeOaQxLIn5nyPWuDrxigwK1hw?purpose=inline)
+
+**1. Sóng dừng (phần 1) – Vật lí 11**
+
+Kênh: Học trực tuyến OLM
+
+Nội dung: Thí nghiệm tạo sóng dừng, giải thích sự hình thành, điều kiện hai đầu cố định.
+
+[Xem video trên YouTube](https://www.youtube.com/watch?v=4Nn59MxA0WY\\&utm_source=chatgpt.com)
+
+[PPT - Waves on a string PowerPoint Presentation, free download - ID:6912128](https://images.openai.com/static-rsc-4/idCpWlps_HMc7GwQLt-Cxn20_3xhdkBc30rU5rljZm1cgEkpHHWvA_c1oFpcqKfBy_G7vMzGCx1uGdVDJNMydEH_ZklU70cRwrC7goMLiXbCDG-NM4UOygv9xHYM6iwBqE4W89FoXDAcKwKEHsF5evCKvvbfALugO3I3gXauobs?purpose=inline)
+
+**2. Sóng dừng – Vật lí 11**
+
+Kênh: Học trực tuyến OLM
+
+Nội dung: Bài học và các dạng bài tập về sóng dừng.
+
+[Xem video trên YouTube](https://www.youtube.com/watch?v=TmlpXzXkerE\\&utm_source=chatgpt.com)
+
+## **2. Video thí nghiệm trực quan**
+
+Đây là nhóm video nên ưu tiên chiếu trên lớp để học sinh quan sát hiện tượng thực tế.
+
+[弦振盪實驗組(駐波實驗) - 博揚儀器有限公司 BOYAN INSTRUMENT CO.](https://images.openai.com/static-rsc-4/nQ7DK0F4aOAFC6SYU1xm3j6wK2wEZ96-Owh5JofPwtXNMD7FbzQC-m4ib-KhVdHGjqgqLLkFxX9T8Q-DQs3-4CKpPTUgJOvwwDLTmX2FeGSjtDZ91mQC35n-W3_qwROcFJuI5Kp4fcvx_QSl3RQqETILkM6bChY1NvJAaIj3e_8?purpose=inline)
+
+**3. Thí nghiệm sóng dừng trên dây**
+
+Quan sát sóng tới, sóng phản xạ và sự hình thành các nút, bụng sóng.
+
+[Xem video thí nghiệm](https://www.youtube.com/watch?v=gbMCwntYCr4\\&utm_source=chatgpt.com)
+
+[10.1.1: String Resonance - Physics LibreTexts](https://images.openai.com/static-rsc-4/7FxKY9Eh7NwKX5h50EjetxLRPiqrtgLozhmuCy8TtsS7Bb129oKsJ30Q5wqV_ZQaXeNzNm1Zi9lrqBvKZg3CC681socEHJSdgVD0iL6I99Z1O2H4QXFab-A1QnL06CTWeKKr0eVaN5UAbFCJtvnR0S1lohGbjCRny7xG3q1ONM8?purpose=inline)
+
+**4. Standing Waves in a Stretched String**
+
+Quan sát các họa âm (harmonics), số bụng sóng thay đổi theo tần số.
+
+[Xem video thí nghiệm](https://www.youtube.com/watch?v=-gr7KmTOrx0\\&utm_source=chatgpt.com)
+
+[umdberg / Speech and the speed of sound](https://images.openai.com/static-rsc-4/IspsQxmCjThpJLfH_SlbXIKbvEK4O1Cyl9IzT43vuWZltuiMAnmF5KXpP5fItEvLxb_PynNfJOLkkq5kkbx85uXEuOKLzFJl8LPyyj9RiQwTlQY6QWisXCp4TYH5WXRZcT1BSn6sGJFjYbzA2q-JtccuPjsL086cHrs5K2inPz8?purpose=inline)
+
+**5. Standing Waves – Virtual Lab**
+
+Video thí nghiệm và mô phỏng sóng dừng trong phòng thí nghiệm vật lí.
+
+[Xem video](https://www.youtube.com/watch?v=CozFMPV3MTA\\&utm_source=chatgpt.com)
+
+## **3. Các đường tìm kiếm video bổ sung**
+
+- [Thí nghiệm sóng dừng trên dây](https://www.youtube.com/results?search_query=th%C3%AD+nghi%E1%BB%87m+s%C3%B3ng+d%E1%BB%ABng+tr%C3%AAn+d%C3%A2y\\&utm_source=chatgpt.com)
+- [Sóng dừng quay chậm (Slow Motion)](https://www.youtube.com/results?search_query=standing+waves+physics+experiment+slow+motion\\&utm_source=chatgpt.com)
+- [Sóng dừng trên tấm kim loại – hình Chladni](https://www.youtube.com/results?search_query=standing+waves+Chladni+plate\\&utm_source=chatgpt.com)
+- [Sóng dừng trong cột không khí](https://www.youtube.com/results?search_query=standing+wave+resonance+tube+experiment\\&utm_source=chatgpt.com)`;
+
+        // Các phần tử DOM chính
+        const markdownInput = document.getElementById('markdownInput');
+        const btnLoadSample = document.getElementById('btnLoadSample');
+        const btnEmptySample = document.getElementById('btnEmptySample');
+        const btnClear = document.getElementById('btnClear');
+        const btnExtract = document.getElementById('btnExtract');
+        const videoGrid = document.getElementById('videoGrid');
+        const emptyState = document.getElementById('emptyState');
+        const videoCountBadge = document.getElementById('videoCountBadge');
+        const searchSuggestionsSection = document.getElementById('searchSuggestionsSection');
+        const searchChipsContainer = document.getElementById('searchChipsContainer');
+
+        // DOM cho Modal Rạp chiếu phim
+        const theaterModal = document.getElementById('theaterModal');
+        const modalIframe = document.getElementById('modalIframe');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalCategory = document.getElementById('modalCategory');
+        const modalDescription = document.getElementById('modalDescription');
+        const modalChannel = document.getElementById('modalChannel');
+        const modalExternalLink = document.getElementById('modalExternalLink');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+
+        // Lưu trữ danh sách video đã trích xuất để truy xuất nhanh khi mở modal
+        let extractedVideosList = [];
+
+        /**
+         * Hàm hiển thị thông báo Toast góc dưới màn hình
+         */
+        let toastTimeout;
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = message;
+            if (isError) {
+                toastIcon.setAttribute('data-lucide', 'alert-circle');
+                toastIcon.className = 'w-4 h-4 text-amber-400';
+            } else {
+                toastIcon.setAttribute('data-lucide', 'check-circle-2');
+                toastIcon.className = 'w-4 h-4 text-emerald-400';
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2800);
+        }
+
+        /**
+         * Hàm sao chép văn bản vào clipboard tương thích mọi môi trường (kể cả iframe)
+         */
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Đã sao chép đường dẫn sạch!');
+            } catch (err) {
+                showToast('Không thể sao chép tự động.', true);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        /**
+         * Làm sạch văn bản Markdown cơ bản (bỏ dấu **, *, #, []...)
+         */
+        function cleanMarkdownText(str) {
+            return str
+                .replace(/^#+\s*/, '')
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .replace(/__/g, '')
+                .trim();
+        }
+
+        /**
+         * Trích xuất Video ID từ URL YouTube bất kỳ
+         */
+        function extractYouTubeId(rawUrl) {
+            // Xử lý ký tự escape \& hoặc dấu ngoặc đóng thừa
+            const cleanUrl = rawUrl.replace(/\\&/g, '&').replace(/[)\]]+$/, '');
+            const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const match = cleanUrl.match(regex);
+            return match ? match[1] : null;
+        }
+
+        /**
+         * Bộ phân tích (Parser) thông minh trích xuất Video & Ngữ cảnh xung quanh
+         */
+        function parseAIResponse(rawText) {
+            const videos = [];
+            const seenVideoIds = new Set();
+            const searchLinks = [];
+            const seenSearchQueries = new Set();
+
+            // Chuẩn hóa xuống dòng và xử lý escape \&
+            const normalizedText = rawText.replace(/\\&/g, '&');
+            const lines = normalizedText.split(/\r?\n/);
+
+            let currentSection = 'Video đề xuất';
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // Cập nhật tên đề mục lớn (ví dụ: ## **1. Video bài giảng tiếng Việt**)
+                if (line.startsWith('##')) {
+                    const cleanedHeading = cleanMarkdownText(line);
+                    if (cleanedHeading) {
+                        currentSection = cleanedHeading;
+                    }
+                    continue;
+                }
+
+                // 1. Kiểm tra liên kết tìm kiếm YouTube (youtube.com/results?search_query=...)
+                const searchRegex = /\[([^\]]+)\]\((https?:\/\/(?:www\.)?youtube\.com\/results\?[^\s)]+)\)|(https?:\/\/(?:www\.)?youtube\.com\/results\?[^\s)]+)/gi;
+                let sMatch;
+                while ((sMatch = searchRegex.exec(line)) !== null) {
+                    const label = sMatch[1] ? cleanMarkdownText(sMatch[1]) : null;
+                    const url = (sMatch[2] || sMatch[3]).replace(/[)\]]+$/, '');
+                    try {
+                        const urlObj = new URL(url);
+                        const queryParam = urlObj.searchParams.get('search_query') || '';
+                        const cleanSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(queryParam)}`;
+                        const displayTitle = label || decodeURIComponent(queryParam.replace(/\+/g, ' ')) || 'Tìm kiếm trên YouTube';
+
+                        if (!seenSearchQueries.has(displayTitle.toLowerCase())) {
+                            seenSearchQueries.add(displayTitle.toLowerCase());
+                            searchLinks.push({
+                                title: displayTitle,
+                                url: cleanSearchUrl
+                            });
+                        }
+                    } catch (e) {
+                        // Bỏ qua nếu URL lỗi
+                    }
+                }
+
+                // 2. Kiểm tra liên kết video YouTube trực tiếp
+                const videoUrlRegex = /(https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?[^\s)]+|embed\/[^\s)]+|shorts\/[^\s)]+)|youtu\.be\/[^\s)]+))/gi;
+                let vMatch;
+                while ((vMatch = videoUrlRegex.exec(line)) !== null) {
+                    const fullUrl = vMatch[1];
+                    const videoId = extractYouTubeId(fullUrl);
+
+                    if (videoId && !seenVideoIds.has(videoId)) {
+                        seenVideoIds.add(videoId);
+
+                        // Quét ngược tối đa 6 dòng phía trên để lấy ngữ cảnh (Tiêu đề, Kênh, Nội dung)
+                        let title = '';
+                        let channel = '';
+                        let descParts = [];
+
+                        for (let j = i - 1; j >= Math.max(0, i - 7); j--) {
+                            const prevLine = lines[j].trim();
+                            if (!prevLine) continue;
+
+                            // Dừng lại nếu gặp tiêu đề mục lớn hoặc một link YouTube của video trước đó
+                            if (prevLine.startsWith('##') || prevLine.includes('youtube.com/') || prevLine.includes('youtu.be/')) {
+                                break;
+                            }
+
+                            // Bỏ qua các dòng chỉ chứa link ảnh tham chiếu của ChatGPT (ví dụ: [PPT - Waves...](https://images.openai.com...))
+                            if (/^\[[^\]]+\]\(https?:\/\/images\.openai\.com[^\)]+\)$/.test(prevLine)) {
+                                continue;
+                            }
+
+                            const cleaned = cleanMarkdownText(prevLine);
+                            if (!cleaned) continue;
+
+                            // Nhận diện dòng Kênh
+                            if (/^kênh\s*:/i.test(cleaned)) {
+                                channel = cleaned.replace(/^kênh\s*:/i, '').trim();
+                            } 
+                            // Nhận diện dòng Nội dung / Mô tả
+                            else if (/^(nội dung|mô tả|tóm tắt)\s*:/i.test(cleaned)) {
+                                descParts.unshift(cleaned.replace(/^(nội dung|mô tả|tóm tắt)\s*:/i, '').trim());
+                            } 
+                            // Nhận diện dòng in đậm hoặc đánh số đầu dòng (thường là Tiêu đề video)
+                            else if ((prevLine.startsWith('**') && prevLine.endsWith('**')) || /^\d+\.\s+/.test(cleaned)) {
+                                if (!title) {
+                                    title = cleaned;
+                                } else {
+                                    descParts.unshift(cleaned);
+                                }
+                            } 
+                            // Các dòng văn bản mô tả thông thường nằm giữa tiêu đề và link
+                            else {
+                                descParts.unshift(cleaned);
+                            }
+                        }
+
+                        // Nếu vẫn chưa tìm thấy tiêu đề, thử lấy anchor text của link Markdown (nếu không phải từ chung chung)
+                        if (!title) {
+                            const mdLinkMatch = line.match(/\[([^\]]+)\]\(https?:\/\/[^\)]+\)/);
+                            if (mdLinkMatch) {
+                                const anchor = cleanMarkdownText(mdLinkMatch[1]);
+                                const genericLabels = ['xem video', 'xem video trên youtube', 'xem video thí nghiệm', 'tại đây', 'link', 'video'];
+                                if (!genericLabels.includes(anchor.toLowerCase())) {
+                                    title = anchor;
+                                }
+                            }
+                        }
+
+                        // Fallback tiêu đề mặc định nếu văn bản chỉ dán mỗi link trần
+                        if (!title) {
+                            title = `Video YouTube #${videos.length + 1} (${videoId})`;
+                        }
+
+                        videos.push({
+                            id: videoId,
+                            title: title,
+                            channel: channel,
+                            description: descParts.join(' • '),
+                            category: currentSection,
+                            cleanUrl: `https://www.youtube.com/watch?v=${videoId}`,
+                            embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`,
+                            thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                        });
+                    }
+                }
+            }
+
+            return { videos, searchLinks };
+        }
+
+        /**
+         * Hiển thị danh sách video và gợi ý tìm kiếm ra giao diện
+         */
+        function renderResults(parsedData) {
+            const { videos, searchLinks } = parsedData;
+            extractedVideosList = videos;
+
+            // Cập nhật bộ đếm
+            videoCountBadge.textContent = `${videos.length} video`;
+
+            // Xử lý hiển thị danh sách thẻ Video
+            if (videos.length === 0) {
+                videoGrid.classList.add('hidden');
+                videoGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                videoGrid.classList.remove('hidden');
+
+                videoGrid.innerHTML = videos.map((video, index) => `
+                    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group">
+                        <!-- Khung Video / Thumbnail -->
+                        <div class="aspect-video-container" id="player-box-${index}">
+                            <div class="thumbnail-wrapper cursor-pointer overflow-hidden" onclick="playInlineVideo(${index})">
+                                <img 
+                                    src="${video.thumbnailUrl}" 
+                                    alt="${escapeHtml(video.title)}" 
+                                    loading="lazy"
+                                    onerror="this.onerror=null; this.src='https://placehold.co/640x360/1e293b/ffffff?text=YouTube+Video';"
+                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <!-- Lớp phủ tối nhẹ & Nút Play trung tâm -->
+                                <div class="absolute inset-0 bg-slate-950/25 group-hover:bg-slate-950/40 transition-colors flex items-center justify-center">
+                                    <div class="w-14 h-14 rounded-full bg-red-600 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                                        <svg class="w-6 h-6 ml-0.5 fill-current" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <!-- Nhãn nhóm bài giảng góc trên -->
+                                <span class="absolute top-3 left-3 max-w-[80%] truncate px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-900/80 text-white backdrop-blur-sm">
+                                    ${escapeHtml(video.category)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Nội dung chi tiết thẻ -->
+                        <div class="p-4 sm:p-5 flex-grow flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base leading-snug mb-2 line-clamp-2" title="${escapeHtml(video.title)}">
+                                    ${escapeHtml(video.title)}
+                                </h3>
+
+                                ${video.channel ? `
+                                    <div class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md mb-2.5">
+                                        <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+                                        <span>${escapeHtml(video.channel)}</span>
+                                    </div>
+                                ` : ''}
+
+                                ${video.description ? `
+                                    <p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4 line-clamp-3">
+                                        ${escapeHtml(video.description)}
+                                    </p>
+                                ` : '<div class="mb-3"></div>'}
+                            </div>
+
+                            <!-- Thanh công cụ dưới cùng của thẻ -->
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                                <button 
+                                    type="button"
+                                    onclick="openTheaterModal(${index})"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white hover:bg-indigo-600 transition-colors">
+                                    <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                                    Chiếu toàn màn hình
+                                </button>
+
+                                <div class="flex items-center gap-1.5">
+                                    <button 
+                                        type="button"
+                                        onclick="copyToClipboard('${video.cleanUrl}')"
+                                        title="Sao chép link YouTube sạch"
+                                        class="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border border-slate-200">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <a 
+                                        href="${video.cleanUrl}" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        title="Mở trong tab YouTube mới"
+                                        class="p-2 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors border border-slate-200">
+                                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `).join('');
+            }
+
+            // Xử lý hiển thị khu vực Gợi ý tìm kiếm bổ sung
+            if (searchLinks.length > 0) {
+                searchSuggestionsSection.classList.remove('hidden');
+                searchChipsContainer.innerHTML = searchLinks.map(item => `
+                    <a 
+                        href="${item.url}" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-50 text-slate-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-slate-200 transition-all group">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-500"></i>
+                        <span>${escapeHtml(item.title)}</span>
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-500"></i>
+                    </a>
+                `).join('');
+            } else {
+                searchSuggestionsSection.classList.add('hidden');
+                searchChipsContainer.innerHTML = '';
+            }
+
+            // Khởi tạo lại các icon Lucide mới thêm vào DOM
+            lucide.createIcons();
+        }
+
+        /**
+         * Chuyển đổi thumbnail thành trình phát iframe nhúng trực tiếp ngay trong thẻ
+         */
+        function playInlineVideo(index) {
+            const video = extractedVideosList[index];
+            if (!video) return;
+            const playerBox = document.getElementById(`player-box-${index}`);
+            if (playerBox) {
+                playerBox.innerHTML = `
+                    <iframe 
+                        src="${video.embedUrl}" 
+                        title="${escapeHtml(video.title)}" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowfullscreen>
+                    </iframe>
+                `;
+            }
+        }
+
+        /**
+         * Mở chế độ Rạp chiếu phim (Modal phóng to tiện trình chiếu trên lớp)
+         */
+        function openTheaterModal(index) {
+            const video = extractedVideosList[index];
+            if (!video) return;
+
+            modalCategory.textContent = video.category || 'Trình chiếu Video';
+            modalTitle.textContent = video.title;
+            modalDescription.textContent = video.description || 'Đang phát video minh họa từ YouTube.';
+            modalChannel.textContent = video.channel ? `Kênh: ${video.channel}` : '';
+            modalExternalLink.href = video.cleanUrl;
+            modalIframe.src = video.embedUrl;
+
+            theaterModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            lucide.createIcons();
+        }
+
+        /**
+         * Đóng chế độ Rạp chiếu phim và dừng phát video
+         */
+        function closeTheaterModal() {
+            theaterModal.classList.add('hidden');
+            modalIframe.src = ''; // Dừng âm thanh/video ngay lập tức
+            document.body.style.overflow = '';
+        }
+
+        /**
+         * Escape HTML để tránh lỗi hiển thị ký tự đặc biệt
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * Thực thi quá trình phân tích và hiển thị
+         */
+        function handleExtract(notifyIfEmpty = false) {
+            const content = markdownInput.value.trim();
+            if (!content) {
+                renderResults({ videos: [], searchLinks: [] });
+                if (notifyIfEmpty) {
+                    showToast('Vui lòng dán nội dung văn bản vào khung trước.', true);
+                }
+                return;
+            }
+            const results = parseAIResponse(content);
+            renderResults(results);
+
+            if (notifyIfEmpty) {
+                if (results.videos.length > 0) {
+                    showToast(`Đã trích xuất thành công ${results.videos.length} video!`);
+                } else {
+                    showToast('Không tìm thấy liên kết video YouTube hợp lệ.', true);
+                }
+            }
+        }
+
+        /**
+         * Nạp dữ liệu mẫu và chạy trích xuất ngay
+         */
+        function loadSampleAndExtract() {
+            markdownInput.value = SAMPLE_MARKDOWN;
+            handleExtract(false);
+            showToast('Đã nạp dữ liệu mẫu bài giảng Sóng dừng!');
+        }
+
+        // Gắn sự kiện cho các nút điều khiển
+        btnLoadSample.addEventListener('click', loadSampleAndExtract);
+        btnEmptySample.addEventListener('click', loadSampleAndExtract);
+
+        btnClear.addEventListener('click', () => {
+            markdownInput.value = '';
+            renderResults({ videos: [], searchLinks: [] });
+            markdownInput.focus();
+            showToast('Đã xóa toàn bộ nội dung.');
+        });
+
+        btnExtract.addEventListener('click', () => handleExtract(true));
+
+        // Tự động trích xuất ngay khi người dùng dán (paste) nội dung vào textarea
+        markdownInput.addEventListener('paste', () => {
+            setTimeout(() => handleExtract(true), 50);
+        });
+
+        // Sự kiện đóng Modal Rạp chiếu phim
+        btnCloseModal.addEventListener('click', closeTheaterModal);
+        theaterModal.addEventListener('click', (e) => {
+            if (e.target === theaterModal) {
+                closeTheaterModal();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !theaterModal.classList.contains('hidden')) {
+                closeTheaterModal();
+            }
+        });
+
+        // Khởi tạo icon và nạp sẵn dữ liệu mẫu khi mở trang để người dùng trải nghiệm ngay
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            markdownInput.value = SAMPLE_MARKDOWN;
+            handleExtract(false);
+        });
+    </script>
+</body>
+</html>
