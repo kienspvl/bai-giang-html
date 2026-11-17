@@ -1,0 +1,3684 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson Viewer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\[', right: '\\]', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false}
+      ],
+      throwOnError: false
+    });"></script>
+  <style>
+    :root {
+      --base-font-size: 1.25rem;
+      --bg-color: #f4f7fb;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --accent: #0d9488;
+      --accent-light: #ccfbf1;
+      --border-color: #cbd5e1;
+      --highlight-bg: #fef9c3;
+      --highlight-border: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-size: var(--base-font-size);
+      line-height: 1.65;
+      padding-bottom: 120px;
+      transition: background-color 0.3s ease;
+    }
+
+    body.hide-captions .img-caption {
+      display: none !important;
+    }
+
+    /* Hide Import button & modal in Save As exported files */
+    body.is-saved-file #btn-import-modal,
+    body.is-saved-file #import-modal {
+      display: none !important;
+    }
+
+    /* Navigation & Control Bar - Optimized for space */
+    #control-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 8px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    body.hud-hidden #control-bar,
+    body.hud-hidden #bottom-nav,
+    body.hud-hidden #toc-drawer {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-20px);
+    }
+
+    body.hud-hidden #bottom-nav {
+      transform: translateY(20px);
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .header-author-info {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      background: var(--primary-light);
+      border: 1px solid #bae6fd;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      user-select: text;
+    }
+
+    .btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      color: #ffffff;
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .btn-accent:hover {
+      background: #0f766e;
+      color: #ffffff;
+    }
+
+    .btn-info {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      padding: 0;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .btn-info:hover {
+      background: #0f766e;
+      color: #ffffff;
+    }
+
+    .btn-copy-prompt {
+      background: #10b981;
+      border-color: #10b981;
+      color: #ffffff;
+    }
+
+    .btn-copy-prompt:hover {
+      background: #059669;
+      color: #ffffff;
+    }
+
+    /* Speed Select Dropdown */
+    .speed-select {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 8px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .speed-select:hover {
+      border-color: var(--primary);
+    }
+
+    /* Toggle Switch */
+    .switch-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 4px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 18px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1;
+      transition: .3s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(16px);
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+      z-index: 1001;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1080px;
+      margin: 80px auto 40px;
+      padding: 0 24px;
+      font-size: var(--base-font-size);
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #0369a1 0%, #0d9488 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2);
+    }
+
+    .hero-card h1 {
+      font-size: 1.8em;
+      line-height: 1.3;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-card .subtitle {
+      font-size: 1.35em;
+      font-weight: 700;
+      color: #fef08a;
+      margin-bottom: 16px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.18);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      backdrop-filter: blur(4px);
+    }
+
+    section.lesson-section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    h2 {
+      font-size: 1.45em;
+      color: var(--primary-dark);
+      border-bottom: 3px solid var(--primary-light);
+      padding-bottom: 10px;
+      margin-bottom: 22px;
+    }
+
+    h3 {
+      font-size: 1.22em;
+      color: var(--accent);
+      margin-top: 26px;
+      margin-bottom: 14px;
+    }
+
+    h4 {
+      font-size: 1.08em;
+      color: #0369a1;
+      margin-top: 18px;
+      margin-bottom: 10px;
+      padding-left: 10px;
+      border-left: 3px solid var(--accent);
+      font-weight: 700;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      margin-left: 28px;
+      margin-bottom: 18px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    /* Table Styling */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      font-size: var(--base-font-size);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+    }
+
+    th {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    tr:hover {
+      background: #f8fafc;
+    }
+
+    .callout {
+      background: var(--primary-light);
+      border-left: 5px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .callout-warn {
+      background: var(--highlight-bg);
+      border-left: 5px solid var(--highlight-border);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 18px 0;
+    }
+
+    .formula-box {
+      background: #f8fafc;
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin: 20px auto;
+      text-align: center;
+      font-size: 1.25em;
+      font-weight: 600;
+      color: var(--primary-dark);
+      max-width: 720px;
+      overflow-x: auto;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    }
+
+    /* KaTeX overflow safeguard */
+    .katex-display {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 4px 0;
+    }
+
+    /* Image Gallery Grid */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .img-card {
+      position: relative;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .img-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+    }
+
+    /* Delete Image Button (X icon on hover) */
+    .delete-img-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(239, 68, 68, 0.85);
+      color: #ffffff;
+      border: none;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transition: background 0.15s ease;
+    }
+
+    .delete-img-btn:hover {
+      background: #dc2626;
+    }
+
+    .img-card:hover .delete-img-btn {
+      display: flex;
+    }
+
+    .img-card img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: zoom-in;
+    }
+
+    /* External Source Link Card (for ?utm_source=chatgpt.com links) */
+    .img-card.external-source-card {
+      background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
+      border: 1.5px dashed var(--primary);
+      cursor: pointer;
+      padding: 18px 14px;
+      text-align: center;
+      min-height: 160px;
+    }
+
+    .img-card.external-source-card:hover {
+      background: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
+      border-style: solid;
+    }
+
+    .external-source-link {
+      text-decoration: none;
+      color: var(--primary-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .external-source-icon {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .external-source-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.78em;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+    }
+
+    .external-source-domain {
+      font-size: 0.78em;
+      color: var(--text-muted);
+      word-break: break-all;
+      max-width: 100%;
+    }
+
+    .img-caption {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Step-by-Step Reveal Mechanics */
+    .reveal-item {
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  background-color 0.6s ease;
+    }
+
+    body.step-mode .reveal-item.hidden-step {
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      height: 0;
+      overflow: hidden;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+    }
+
+    body.step-mode .reveal-item.active-step {
+      border-radius: 8px;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+      background-color: rgba(224, 242, 254, 0.35);
+    }
+
+    /* Bottom Floating Navigation (Glassmorphic) */
+    #bottom-nav {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    #bottom-nav button {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    #bottom-nav button:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    #step-counter {
+      font-size: 0.9rem;
+      font-weight: 600;
+      min-width: 80px;
+      text-align: center;
+      color: var(--primary-dark);
+    }
+
+    /* TOC Drawer */
+    #toc-drawer {
+      position: fixed;
+      top: 60px;
+      left: 16px;
+      width: 320px;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      z-index: 999;
+      display: none;
+    }
+
+    #toc-drawer.open {
+      display: block;
+    }
+
+    #toc-drawer h4 {
+      font-size: 1rem;
+      margin-top: 0;
+      margin-bottom: 10px;
+      padding-left: 0;
+      border-left: none;
+      color: var(--primary-dark);
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+
+    #toc-list {
+      list-style: none;
+      margin: 0;
+    }
+
+    #toc-list li {
+      margin-bottom: 6px;
+    }
+
+    #toc-list a {
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      display: block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    #toc-list a:hover {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Selection Popup Menu */
+    #selection-popup {
+      position: absolute;
+      display: none;
+      background: var(--card-bg);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 8px;
+      z-index: 4000;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    #selection-popup.open {
+      display: flex;
+    }
+
+    .popup-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    .popup-btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    /* Lightbox Modal */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.94);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 24px;
+    }
+
+    #lightbox.open {
+      display: flex;
+    }
+
+    #lightbox img {
+      max-width: 92vw;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transition: transform 0.2s ease;
+    }
+
+    #lightbox-caption {
+      color: #f1f5f9;
+      margin-top: 14px;
+      font-size: 1.05rem;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 28px;
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lightbox-close:hover {
+      background: #ef4444;
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      border: none;
+      font-size: 1.8rem;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .lightbox-nav:hover {
+      background: var(--primary);
+    }
+
+    #lb-prev { left: 24px; }
+    #lb-next { right: 24px; }
+
+    /* Modals - Theme-compatible styling */
+    .custom-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      padding: 20px;
+      font-size: 1rem !important;
+    }
+
+    .custom-modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      color: var(--text-main);
+      width: 100%;
+      max-width: 650px;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 90vh;
+      overflow-y: auto;
+      font-size: 1rem !important;
+    }
+
+    .modal-content h3 {
+      color: var(--primary-dark);
+      margin: 0;
+      font-size: 1.25rem !important;
+    }
+
+    .modal-content textarea,
+    .modal-content input,
+    .modal-content p,
+    .modal-content label,
+    .modal-content span,
+    .modal-content button {
+      font-size: 1rem !important;
+    }
+
+    .modal-content textarea {
+      width: 100%;
+      height: 200px;
+      padding: 12px;
+      background: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    .modal-content input[type="text"],
+    .modal-content input[type="number"] {
+      background: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .prompt-generator-box {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 14px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .form-row input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .form-row input[type="number"] {
+      width: 90px;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .info-box {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: 10px;
+      line-height: 1.6;
+    }
+
+    /* Shortcut list table inside modal */
+    .shortcut-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .shortcut-table th, .shortcut-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95rem;
+    }
+    .shortcut-table th {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    kbd {
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: 700;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+    }
+
+    @media (max-width: 768px) {
+      section.lesson-section { padding: 20px; }
+      .hero-card { padding: 24px; }
+      .header-author-info { display: none; }
+    }
+  </style>
+</head>
+<body class="step-mode is-saved-file">
+
+  <!-- Progress Bar -->
+  <div id="progress-container"><div id="progress-bar" style="width: 0.342466%;"></div></div>
+
+  <!-- Top Control Bar (Optimized & Minimized) -->
+  <header id="control-bar">
+    <div class="nav-group">
+      <button class="btn" id="btn-toc" title="Mục lục">☰</button>
+      
+      <button class="btn" id="btn-save" title="Lưu tệp">💾 Lưu</button>
+      <button class="btn btn-info" id="btn-info-modal" title="Thông tin tác giả (Key I)">ℹ</button>
+      <button class="btn" id="btn-shortcuts-modal" title="Phím tắt (Key G)">⌨️ Phím tắt</button>
+      <span class="header-author-info">はな One Day - 097 463 87 94</span>
+    </div>
+
+    <div class="nav-group">
+      <div class="switch-wrapper" title="Mở rộng toàn bộ nội dung (Expand) / Từng bước">
+        <span>Expand</span>
+        <label class="switch">
+          <input type="checkbox" id="mode-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-wrapper" title="Ẩn/Hiện Caption ảnh">
+        <span>Caption</span>
+        <label class="switch">
+          <input type="checkbox" id="caption-toggle" checked="">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="btn" id="btn-font-dec" title="Giảm cỡ chữ (Key -)">A-</button>
+      <span id="font-size-label" style="font-size: 0.85rem; font-weight: 700; min-width: 48px; text-align: center;">1.25rem</span>
+      <button class="btn" id="btn-font-inc" title="Tăng cỡ chữ (Key +)">A+</button>
+
+      <!-- Speech Speed Dropdown (Default 2x) -->
+      <select id="speech-speed" class="speed-select" title="Tốc độ đọc">
+        <option value="1">1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2" selected="">2x</option>
+        <option value="2.5">2.5x</option>
+        <option value="3">3x</option>
+        <option value="4">4x</option>
+      </select>
+
+      <div class="switch-wrapper" title="Bật/Tắt tiếng (Key M)">
+        <span>🔇</span>
+        <label class="switch">
+          <input type="checkbox" id="mute-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="btn" id="btn-hud" title="Ẩn/Hiện thanh điều khiển (Key H)">👁️</button>
+    </div>
+  </header>
+
+  <!-- Table of Contents Drawer -->
+  <nav id="toc-drawer">
+    <h4>Mục lục bài học</h4>
+    <ul id="toc-list"><li><a href="#heading-0">PHẦN I. TRẮC NGHIỆM (MULTIPLE CHOICE)</a></li><li><a href="#heading-1">A. Chương 1 – Tế bào (Cells)</a></li><li><a href="#heading-2">B. Chương 2 – Sự vận chuyển các chất qua màng tế bào</a></li><li><a href="#heading-3">C. Chương 3 – Các phân tử sinh học (Biological molecules)</a></li><li><a href="#heading-4">PHẦN II. GHÉP NỐI VÀ ĐIỀN TỪ (MATCHING &amp; FILL IN THE BLANKS)</a></li><li><a href="#heading-5">Bài 1. Ghép cấu trúc tế bào với chức năng</a></li><li><a href="#heading-6">Bài 2. Điền từ thích hợp vào chỗ trống</a></li><li><a href="#heading-7">Bài 3. Hoàn thành bảng thử nghiệm hóa học</a></li><li><a href="#heading-8">PHẦN III. BÀI TẬP TỰ LUẬN VÀ TÍNH TOÁN (STRUCTURED QUESTIONS)</a></li><li><a href="#heading-9">Bài 1. Tính độ phóng đại kính hiển vi</a></li><li><a href="#heading-10">Bài 2. Phân tích thí nghiệm thẩm thấu ở khoai tây</a></li><li><a href="#heading-11">Bài 3. Phân tích ảnh hưởng của nhiệt độ đến enzyme Catalase</a></li><li><a href="#heading-12">Bài 4. Nhận biết các chất dinh dưỡng</a></li><li><a href="#heading-13">PHẦN IV. BÀI TẬP VẬN DỤNG CAO (APPLICATION &amp; ANALYSIS)</a></li><li><a href="#heading-14">Bài 1. Tình huống về tế bào</a></li><li><a href="#heading-15">Bài 2. Thiết kế thí nghiệm khoa học</a></li><li><a href="#heading-16">Bài 3. Vận dụng kiến thức enzyme</a></li><li><a href="#heading-17">PHẦN V. THỬ THÁCH NHANH – KIỂM TRA KIẾN THỨC</a></li><li><a href="#heading-18">PHẦN VI. ĐÁP ÁN DÀNH CHO GIÁO VIÊN</a></li></ul>
+  </nav>
+
+  <!-- Selection Popup Menu -->
+  <div id="selection-popup">
+    <button class="popup-btn" id="popup-google-img">🖼️ Google Img</button>
+    <button class="popup-btn" id="popup-gif">🎬 GIF</button>
+    <button class="popup-btn" id="popup-google-search">🔍 Tìm kiếm</button>
+    <button class="popup-btn" id="popup-youtube">▶️ YouTube</button>
+    <div style="display: flex; align-items: center; gap: 4px; margin-left: 2px; border-left: 1px solid var(--border-color); padding-left: 6px;">
+      <input type="text" id="popup-url-input" placeholder="Dán URL ảnh (Ctrl+V)..." style="padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; width: 175px; background: var(--bg-color); color: var(--text-main);">
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main id="lesson-content">
+              <div class="hero-card" id="sec-intro">
+                <h1 class="reveal-item active-step" data-md-line="0"><strong>BỘ ĐỀ ÔN TẬP TỔNG HỢP SINH HỌC – CHƯƠNG 1, 2, 3</strong></h1>
+            <div class="hero-meta reveal-item hidden-step" data-md-line="2"><span class="badge">BIOLOGY REVISION – B1: CELLS | B2: MOVEMENT IN AND OUT OF CELLS | B3: BIOLOGICAL MOLECULES</span></div>
+<div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Biology diagram show structure of animal and plant cell](https://images.openai.com/static-rsc-4/VPe5sFADUATKIKaQjzOb25KEo2BzdqKgAdqur_F0xF9huTLy5hovKtDKnXV8Bd-zMBV9l_IWf0pkN_QofW0MCIb8m9Uil8q5jFpHiq2A0XsP8hRbHuTJEzehXHlg_2j6fzL0xFFrNB_QqGH96oxFc_uo-j5BeBWBbAKaxqH7fNlJ6AA1xHbjPaqKY2--e6Bc?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/VPe5sFADUATKIKaQjzOb25KEo2BzdqKgAdqur_F0xF9huTLy5hovKtDKnXV8Bd-zMBV9l_IWf0pkN_QofW0MCIb8m9Uil8q5jFpHiq2A0XsP8hRbHuTJEzehXHlg_2j6fzL0xFFrNB_QqGH96oxFc_uo-j5BeBWBbAKaxqH7fNlJ6AA1xHbjPaqKY2--e6Bc?purpose=inline" alt="Biology diagram show structure of animal and plant cell">
+            <div class="img-caption">Biology diagram show structure of animal and plant cell</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[PPT - Using a pot model to represent osmosis PowerPoint Presentation, free download - ID:1973866](https://images.openai.com/static-rsc-4/4bWKWQZZRDdCLUegLQRUycobj95A6e6KMgqwuJsf0aF2RgWm-wHE8ZzU1ag4H6dFmoKFYjPIDMv49WbcDr94-3Ed3FRydHJIFbWqpqo2iNnIKOQcFprc2tazTEHgEhYrhn304xkeqZq0nIG_Vv7wOG2onnbaKbWqWtwI8h-GW48?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/4bWKWQZZRDdCLUegLQRUycobj95A6e6KMgqwuJsf0aF2RgWm-wHE8ZzU1ag4H6dFmoKFYjPIDMv49WbcDr94-3Ed3FRydHJIFbWqpqo2iNnIKOQcFprc2tazTEHgEhYrhn304xkeqZq0nIG_Vv7wOG2onnbaKbWqWtwI8h-GW48?purpose=inline" alt="PPT - Using a pot model to represent osmosis PowerPoint Presentation, free download - ID:1973866">
+            <div class="img-caption">PPT - Using a pot model to represent osmosis PowerPoint Presentation, free download - ID:1973866</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity](https://images.openai.com/static-rsc-4/A39UbuoXIjRbrDcM3xPg4qX-wkPWhMT3e1KSxsvbfJNemKfgdZya4of62tAQzaEAbDwI4AyYWhABDHNqqxrZq7WUyuqLCiUMntiqdS1kDQ5XUUSHkzyqj5Jrzdk6sIdl9MtmPjPTNhBT_VgOWIaKf48WokUknteTS6D9KoUCZ_s?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/A39UbuoXIjRbrDcM3xPg4qX-wkPWhMT3e1KSxsvbfJNemKfgdZya4of62tAQzaEAbDwI4AyYWhABDHNqqxrZq7WUyuqLCiUMntiqdS1kDQ5XUUSHkzyqj5Jrzdk6sIdl9MtmPjPTNhBT_VgOWIaKf48WokUknteTS6D9KoUCZ_s?purpose=inline" alt="Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity">
+            <div class="img-caption">Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity</div>
+          </div></div><div class="subtitle reveal-item hidden-step" data-md-line="10">Bộ bài tập gồm <strong>40 câu</strong>, được thiết kế theo mức độ từ nhận biết, thông hiểu đến vận dụng và phân tích thí nghiệm. Câu hỏi sử dụng thuật ngữ tiếng Anh trong ngoặc để học sinh làm quen với dạng đề Sinh học quốc tế.</div>
+</div>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="12" id="heading-0"><strong>PHẦN I. TRẮC NGHIỆM (MULTIPLE CHOICE)</strong></h2>
+            <p class="reveal-item hidden-step" data-md-line="14"><em>Chọn một đáp án đúng nhất cho mỗi câu hỏi.</em></p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="16" id="heading-1"><strong>A. Chương 1 – Tế bào (Cells)</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Vector illustration of the Plant and Animal cell anatomy structure. Educational infographic](https://images.openai.com/static-rsc-4/TlaEe9mow-HbpsnJMftWLq59UY-bH4ox5ze9zVwTpjngmp5rps_INbOKPZ8RD_hT_2KOwmUra4GNFR8cz5duZ-1qW0yy-b0DRVpnA44UhqqBm8Zd9u-oY-7HNLRzXnHAFbxuhcl_4q_ijzMJ8FQrWwO0PIFEjbHAjn2_nSN-bex3y73gcV2sI_ml6c5Fpb4Y?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/TlaEe9mow-HbpsnJMftWLq59UY-bH4ox5ze9zVwTpjngmp5rps_INbOKPZ8RD_hT_2KOwmUra4GNFR8cz5duZ-1qW0yy-b0DRVpnA44UhqqBm8Zd9u-oY-7HNLRzXnHAFbxuhcl_4q_ijzMJ8FQrWwO0PIFEjbHAjn2_nSN-bex3y73gcV2sI_ml6c5Fpb4Y?purpose=inline" alt="Vector illustration of the Plant and Animal cell anatomy structure. Educational infographic">
+            <div class="img-caption">Vector illustration of the Plant and Animal cell anatomy structure. Educational infographic</div>
+          </div></div><p class="reveal-item hidden-step" data-md-line="20"><strong>Câu 1.</strong> Đơn vị cấu trúc và chức năng cơ bản của cơ thể sống là gì?</p>
+<p class="reveal-item hidden-step" data-md-line="22">A. Mô (Tissue).</p>
+<p class="reveal-item hidden-step" data-md-line="24">B. Cơ quan (Organ).</p>
+<p class="reveal-item hidden-step" data-md-line="26">C. Tế bào (Cell).</p>
+<p class="reveal-item hidden-step" data-md-line="28">D. Hệ cơ quan (Organ system).</p>
+<p class="reveal-item hidden-step" data-md-line="30"><strong>Câu 2.</strong> Bào quan nào chứa thông tin di truyền và điều khiển hoạt động của tế bào?</p>
+<p class="reveal-item hidden-step" data-md-line="32">A. Tế bào chất.</p>
+<p class="reveal-item hidden-step" data-md-line="34">B. Nhân tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="36">C. Màng tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="38">D. Không bào.</p>
+<p class="reveal-item hidden-step" data-md-line="40"><strong>Câu 3.</strong> Thành tế bào thực vật chủ yếu được cấu tạo từ chất nào?</p>
+<p class="reveal-item hidden-step" data-md-line="42">A. Protein.</p>
+<p class="reveal-item hidden-step" data-md-line="44">B. Lipid.</p>
+<p class="reveal-item hidden-step" data-md-line="46">C. Cellulose.</p>
+<p class="reveal-item hidden-step" data-md-line="48">D. Glycogen.</p>
+<p class="reveal-item hidden-step" data-md-line="50"><strong>Câu 4.</strong> Chức năng chính của lục lạp (Chloroplast) là gì?</p>
+<p class="reveal-item hidden-step" data-md-line="52">A. Hô hấp tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="54">B. Quang hợp.</p>
+<p class="reveal-item hidden-step" data-md-line="56">C. Điều khiển hoạt động tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="58">D. Tổng hợp chất béo.</p>
+<p class="reveal-item hidden-step" data-md-line="60"><strong>Câu 5.</strong> Đặc điểm thích nghi nổi bật của tế bào lông hút (Root hair cell) là:</p>
+<p class="reveal-item hidden-step" data-md-line="62">A. Có nhiều lục lạp.</p>
+<p class="reveal-item hidden-step" data-md-line="64">B. Có hình dạng dài, làm tăng diện tích hấp thụ.</p>
+<p class="reveal-item hidden-step" data-md-line="66">C. Có nhân rất lớn.</p>
+<p class="reveal-item hidden-step" data-md-line="68">D. Có nhiều lông rung.</p>
+<p class="reveal-item hidden-step" data-md-line="70"><strong>Câu 6.</strong> Một tế bào có kích thước thực tế 0,05 mm, được phóng đại 200 lần. Kích thước ảnh là:</p>
+<p class="reveal-item hidden-step" data-md-line="72">A. 0,25 mm.</p>
+<p class="reveal-item hidden-step" data-md-line="74">B. 1 mm.</p>
+<p class="reveal-item hidden-step" data-md-line="76">C. 10 mm.</p>
+<p class="reveal-item hidden-step" data-md-line="78">D. 100 mm.</p>
+<p class="reveal-item hidden-step" data-md-line="80"><strong>Câu 7.</strong> Cấu trúc nào có mặt ở cả tế bào động vật và tế bào thực vật?</p>
+<p class="reveal-item hidden-step" data-md-line="82">A. Thành tế bào và lục lạp.</p>
+<p class="reveal-item hidden-step" data-md-line="84">B. Màng tế bào và nhân tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="86">C. Lục lạp và không bào lớn.</p>
+<p class="reveal-item hidden-step" data-md-line="88">D. Thành tế bào và không bào.</p>
+<p class="reveal-item hidden-step" data-md-line="90"><strong>Câu 8.</strong> Chức năng chính của tế bào chất (Cytoplasm) là:</p>
+<p class="reveal-item hidden-step" data-md-line="92">A. Chứa ADN.</p>
+<p class="reveal-item hidden-step" data-md-line="94">B. Là nơi diễn ra nhiều phản ứng trao đổi chất.</p>
+<p class="reveal-item hidden-step" data-md-line="96">C. Bảo vệ tế bào khỏi tác động cơ học.</p>
+<p class="reveal-item hidden-step" data-md-line="98">D. Hấp thụ ánh sáng.</p>
+<p class="reveal-item hidden-step" data-md-line="100"><strong>Câu 9.</strong> Một kính hiển vi tạo ảnh của tế bào dài 40 mm, trong khi kích thước thực tế là 20 µm. Độ phóng đại là:</p>
+<p class="reveal-item hidden-step" data-md-line="102">A. ×200.</p>
+<p class="reveal-item hidden-step" data-md-line="104">B. ×500.</p>
+<p class="reveal-item hidden-step" data-md-line="106">C. ×1.000.</p>
+<p class="reveal-item hidden-step" data-md-line="108">D. ×2.000.</p>
+<p class="reveal-item hidden-step" data-md-line="110"><strong>Câu 10.</strong> Chức năng chính của tế bào hồng cầu (Red blood cell) là:</p>
+<p class="reveal-item hidden-step" data-md-line="112">A. Vận chuyển oxygen.</p>
+<p class="reveal-item hidden-step" data-md-line="114">B. Hấp thụ nước.</p>
+<p class="reveal-item hidden-step" data-md-line="116">C. Thực hiện quang hợp.</p>
+<p class="reveal-item hidden-step" data-md-line="118">D. Tiết enzyme tiêu hóa.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="120" id="heading-2"><strong>B. Chương 2 – Sự vận chuyển các chất qua màng tế bào</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Movement in &amp; Out Cell.ppt](https://images.openai.com/static-rsc-4/I-pch7KAziSWDgMNXmM4bwTSG63V5g-H9NFB9hcVy-oB4NebHPkFymNgMAloeVLgmYCcA8wbkVScXQqSHHiJR7wU03opiZ1B5wKQlQMK3cMWOrFnLJi7UC8-eyX-CqUjFi5bF5ZhGkFpICCsYoBBMI-ZAZQFGCJQ7DlrqNwyMks?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/I-pch7KAziSWDgMNXmM4bwTSG63V5g-H9NFB9hcVy-oB4NebHPkFymNgMAloeVLgmYCcA8wbkVScXQqSHHiJR7wU03opiZ1B5wKQlQMK3cMWOrFnLJi7UC8-eyX-CqUjFi5bF5ZhGkFpICCsYoBBMI-ZAZQFGCJQ7DlrqNwyMks?purpose=inline" alt="Movement in &amp; Out Cell.ppt">
+            <div class="img-caption">Movement in &amp; Out Cell.ppt</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[5.2: Passive Transport - Biology LibreTexts](https://images.openai.com/static-rsc-4/fpni7q1XgRUNDrS_tirPGEhaBBOKIAKRhixxMXIwXP5wkqMEdozk6ww1HHp7pNEksyYwj-EflJZZF2jUrcKg9D_4sAoZ9hbujPDXZJZJzEPfwAlaB_7hIYrZA7bNQpN9hWUirlgUfF3_WT20SSgBzoyR9BTQrGXtluioMLc6HKY?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/fpni7q1XgRUNDrS_tirPGEhaBBOKIAKRhixxMXIwXP5wkqMEdozk6ww1HHp7pNEksyYwj-EflJZZF2jUrcKg9D_4sAoZ9hbujPDXZJZJzEPfwAlaB_7hIYrZA7bNQpN9hWUirlgUfF3_WT20SSgBzoyR9BTQrGXtluioMLc6HKY?purpose=inline" alt="5.2: Passive Transport - Biology LibreTexts">
+            <div class="img-caption">5.2: Passive Transport - Biology LibreTexts</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[File:Turgor pressure on plant cells diagram.svg - Wikimedia Commons](https://images.openai.com/static-rsc-4/__Fgg6DfSHBzdj81JkURV9lRl7jMoZAMJ1DVISnQs1EzhcAWIVIc3FXYRCM2AtLGfeR8SZ-Nv1S7sn5-dEt4EjdKZxlff_JvefAs5Rf6i8Zct-9LJiwP3IWWWt8tpIbPyE_qCW-W0CTxXUw8Np-GTcCoS6pjee_NO3j3ggdUzro?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/__Fgg6DfSHBzdj81JkURV9lRl7jMoZAMJ1DVISnQs1EzhcAWIVIc3FXYRCM2AtLGfeR8SZ-Nv1S7sn5-dEt4EjdKZxlff_JvefAs5Rf6i8Zct-9LJiwP3IWWWt8tpIbPyE_qCW-W0CTxXUw8Np-GTcCoS6pjee_NO3j3ggdUzro?purpose=inline" alt="File:Turgor pressure on plant cells diagram.svg - Wikimedia Commons">
+            <div class="img-caption">File:Turgor pressure on plant cells diagram.svg - Wikimedia Commons</div>
+          </div></div><p class="reveal-item hidden-step" data-md-line="130"><strong>Câu 11.</strong> Khuếch tán (Diffusion) là quá trình các hạt di chuyển ròng:</p>
+<p class="reveal-item hidden-step" data-md-line="132">A. Từ nơi có nồng độ thấp đến cao.</p>
+<p class="reveal-item hidden-step" data-md-line="134">B. Từ nơi có nồng độ cao đến thấp.</p>
+<p class="reveal-item hidden-step" data-md-line="136">C. Chỉ xảy ra khi có enzyme.</p>
+<p class="reveal-item hidden-step" data-md-line="138">D. Chỉ xảy ra trong tế bào sống.</p>
+<p class="reveal-item hidden-step" data-md-line="140"><strong>Câu 12.</strong> Thẩm thấu (Osmosis) là sự di chuyển của:</p>
+<p class="reveal-item hidden-step" data-md-line="142">A. Các phân tử protein qua thành tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="144">B. Các phân tử nước qua màng thấm chọn lọc.</p>
+<p class="reveal-item hidden-step" data-md-line="146">C. Các phân tử đường từ thấp đến cao.</p>
+<p class="reveal-item hidden-step" data-md-line="148">D. Các ion khoáng qua thành tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="150"><strong>Câu 13.</strong> Khi đặt tế bào hồng cầu vào nước tinh khiết, hiện tượng nào xảy ra?</p>
+<p class="reveal-item hidden-step" data-md-line="152">A. Tế bào co lại.</p>
+<p class="reveal-item hidden-step" data-md-line="154">B. Tế bào không thay đổi.</p>
+<p class="reveal-item hidden-step" data-md-line="156">C. Tế bào hút nước và có thể bị vỡ.</p>
+<p class="reveal-item hidden-step" data-md-line="158">D. Tế bào xuất hiện thành cellulose.</p>
+<p class="reveal-item hidden-step" data-md-line="160"><strong>Câu 14.</strong> Khi tế bào thực vật hút nhiều nước, tế bào trở nên:</p>
+<p class="reveal-item hidden-step" data-md-line="162">A. Co nguyên sinh.</p>
+<p class="reveal-item hidden-step" data-md-line="164">B. Trương nước.</p>
+<p class="reveal-item hidden-step" data-md-line="166">C. Biến tính.</p>
+<p class="reveal-item hidden-step" data-md-line="168">D. Phân hủy.</p>
+<p class="reveal-item hidden-step" data-md-line="170"><strong>Câu 15.</strong> Hiện tượng co nguyên sinh (Plasmolysis) xảy ra khi:</p>
+<p class="reveal-item hidden-step" data-md-line="172">A. Nước đi vào tế bào quá nhiều.</p>
+<p class="reveal-item hidden-step" data-md-line="174">B. Nước đi ra khỏi tế bào thực vật.</p>
+<p class="reveal-item hidden-step" data-md-line="176">C. Tế bào hấp thụ nhiều glucose.</p>
+<p class="reveal-item hidden-step" data-md-line="178">D. Tế bào phân chia.</p>
+<p class="reveal-item hidden-step" data-md-line="180"><strong>Câu 16.</strong> Yếu tố nào sau đây làm tăng tốc độ khuếch tán?</p>
+<p class="reveal-item hidden-step" data-md-line="182">A. Giảm nhiệt độ.</p>
+<p class="reveal-item hidden-step" data-md-line="184">B. Giảm diện tích bề mặt.</p>
+<p class="reveal-item hidden-step" data-md-line="186">C. Tăng độ chênh lệch nồng độ.</p>
+<p class="reveal-item hidden-step" data-md-line="188">D. Tăng khoảng cách khuếch tán.</p>
+<p class="reveal-item hidden-step" data-md-line="190"><strong>Câu 17.</strong> Khi đặt tế bào thực vật trong dung dịch có nồng độ chất tan cao hơn dịch tế bào, nước sẽ:</p>
+<p class="reveal-item hidden-step" data-md-line="192">A. Đi vào tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="194">B. Đi ra khỏi tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="196">C. Không di chuyển.</p>
+<p class="reveal-item hidden-step" data-md-line="198">D. Biến thành chất tan.</p>
+<p class="reveal-item hidden-step" data-md-line="200"><strong>Câu 18.</strong> Một tế bào thực vật có sức trương lớn nhất khi đặt trong:</p>
+<p class="reveal-item hidden-step" data-md-line="202">A. Nước tinh khiết.</p>
+<p class="reveal-item hidden-step" data-md-line="204">B. Dung dịch đường đậm đặc.</p>
+<p class="reveal-item hidden-step" data-md-line="206">C. Dung dịch muối đậm đặc.</p>
+<p class="reveal-item hidden-step" data-md-line="208">D. Dung dịch có tiềm năng nước thấp.</p>
+<p class="reveal-item hidden-step" data-md-line="210"><strong>Câu 19.</strong> Trong thí nghiệm khoai tây, nồng độ sucrose nào được xem là đẳng trương gần đúng nếu chiều dài khoai tây không thay đổi?</p>
+<p class="reveal-item hidden-step" data-md-line="212">A. 0,0 mol/dm³.</p>
+<p class="reveal-item hidden-step" data-md-line="214">B. 0,2 mol/dm³.</p>
+<p class="reveal-item hidden-step" data-md-line="216">C. 0,4 mol/dm³.</p>
+<p class="reveal-item hidden-step" data-md-line="218">D. 0,8 mol/dm³.</p>
+<p class="reveal-item hidden-step" data-md-line="220"><strong>Câu 20.</strong> Phát biểu nào đúng về khuếch tán?</p>
+<p class="reveal-item hidden-step" data-md-line="222">A. Luôn cần ATP.</p>
+<p class="reveal-item hidden-step" data-md-line="224">B. Chỉ xảy ra qua màng tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="226">C. Là kết quả của chuyển động ngẫu nhiên của các hạt.</p>
+<p class="reveal-item hidden-step" data-md-line="228">D. Luôn làm tăng nồng độ ở nơi có nồng độ cao.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="230" id="heading-3"><strong>C. Chương 3 – Các phân tử sinh học (Biological molecules)</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Organic Compounds | BioNinja](https://images.openai.com/static-rsc-4/eWj1aMhayW-46xWQbd1hkVOEI7vxwaGe0Qh8cYIAGVfwKRyvDH0MOCyydNpa9Yc-jNdWa-EpWEBGJpQjaLZdtjUi_2CzqIAEADeHmUN3urda3avMYByvKdN4Gn1filSDK4li23ABx6yYQ2qEccGX_GOepCS5f06ZBYlXu_DvLSg?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/eWj1aMhayW-46xWQbd1hkVOEI7vxwaGe0Qh8cYIAGVfwKRyvDH0MOCyydNpa9Yc-jNdWa-EpWEBGJpQjaLZdtjUi_2CzqIAEADeHmUN3urda3avMYByvKdN4Gn1filSDK4li23ABx6yYQ2qEccGX_GOepCS5f06ZBYlXu_DvLSg?purpose=inline" alt="Organic Compounds | BioNinja">
+            <div class="img-caption">Organic Compounds | BioNinja</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[AQa Required Practical -  Food Tests | Teaching Resources](https://images.openai.com/static-rsc-4/cEcPudseht7DcZR39tytSdtxHhYYtm9a9btIfqTg1My59nzz0s5ykbimQKIiYqjxUAz80MdyvCQtmidepzI1piMoIZHlhV08-p-QgwY22YyK-aEaqgpO5PdrqSl2V0CqfKobcMQRv0ioYpBKPUPZt1VGyqLBw2JZFZ4uo0Hl_2M?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/cEcPudseht7DcZR39tytSdtxHhYYtm9a9btIfqTg1My59nzz0s5ykbimQKIiYqjxUAz80MdyvCQtmidepzI1piMoIZHlhV08-p-QgwY22YyK-aEaqgpO5PdrqSl2V0CqfKobcMQRv0ioYpBKPUPZt1VGyqLBw2JZFZ4uo0Hl_2M?purpose=inline" alt="AQa Required Practical -  Food Tests | Teaching Resources">
+            <div class="img-caption">AQa Required Practical -  Food Tests | Teaching Resources</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Food Tests – AQA GCSE Biology Revision Notes](https://images.openai.com/static-rsc-4/8GOKAGX6VIu3tPxBK4fbH2tKqBR0fO-NrM5lC0xl6rcetV2r8QojfiMKvSwY76xcLmXozeMhtfjWm3x2Axyj36U-hCV0_VOZKMKvJdLejQqOU1OZrvm0XtYvEnrI0UOZ4ttU5xTGccm2HvMg8a_BIX8HMs-0NG7rx5pRcL75AnI?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/8GOKAGX6VIu3tPxBK4fbH2tKqBR0fO-NrM5lC0xl6rcetV2r8QojfiMKvSwY76xcLmXozeMhtfjWm3x2Axyj36U-hCV0_VOZKMKvJdLejQqOU1OZrvm0XtYvEnrI0UOZ4ttU5xTGccm2HvMg8a_BIX8HMs-0NG7rx5pRcL75AnI?purpose=inline" alt="Food Tests – AQA GCSE Biology Revision Notes">
+            <div class="img-caption">Food Tests – AQA GCSE Biology Revision Notes</div>
+          </div></div><p class="reveal-item hidden-step" data-md-line="240"><strong>Câu 21.</strong> Đơn phân cấu tạo nên protein là:</p>
+<p class="reveal-item hidden-step" data-md-line="242">A. Glucose.</p>
+<p class="reveal-item hidden-step" data-md-line="244">B. Amino acid.</p>
+<p class="reveal-item hidden-step" data-md-line="246">C. Fatty acid.</p>
+<p class="reveal-item hidden-step" data-md-line="248">D. Glycerol.</p>
+<p class="reveal-item hidden-step" data-md-line="250"><strong>Câu 22.</strong> Chất dự trữ carbohydrate chủ yếu ở động vật là:</p>
+<p class="reveal-item hidden-step" data-md-line="252">A. Starch.</p>
+<p class="reveal-item hidden-step" data-md-line="254">B. Cellulose.</p>
+<p class="reveal-item hidden-step" data-md-line="256">C. Glycogen.</p>
+<p class="reveal-item hidden-step" data-md-line="258">D. Glucose.</p>
+<p class="reveal-item hidden-step" data-md-line="260"><strong>Câu 23.</strong> Thành tế bào thực vật chứa nhiều:</p>
+<p class="reveal-item hidden-step" data-md-line="262">A. Glycogen.</p>
+<p class="reveal-item hidden-step" data-md-line="264">B. Cellulose.</p>
+<p class="reveal-item hidden-step" data-md-line="266">C. Protein.</p>
+<p class="reveal-item hidden-step" data-md-line="268">D. Lipid.</p>
+<p class="reveal-item hidden-step" data-md-line="270"><strong>Câu 24.</strong> Thuốc thử dùng để nhận biết tinh bột là:</p>
+<p class="reveal-item hidden-step" data-md-line="272">A. Benedict.</p>
+<p class="reveal-item hidden-step" data-md-line="274">B. Biuret.</p>
+<p class="reveal-item hidden-step" data-md-line="276">C. Iodine.</p>
+<p class="reveal-item hidden-step" data-md-line="278">D. Ethanol.</p>
+<p class="reveal-item hidden-step" data-md-line="280"><strong>Câu 25.</strong> Khi thử đường giảm bằng Benedict và đun nóng, kết quả dương tính mạnh thường có màu:</p>
+<p class="reveal-item hidden-step" data-md-line="282">A. Xanh đen.</p>
+<p class="reveal-item hidden-step" data-md-line="284">B. Tím.</p>
+<p class="reveal-item hidden-step" data-md-line="286">C. Đỏ gạch.</p>
+<p class="reveal-item hidden-step" data-md-line="288">D. Trắng đục.</p>
+<p class="reveal-item hidden-step" data-md-line="290"><strong>Câu 26.</strong> Thuốc thử Biuret được sử dụng để nhận biết:</p>
+<p class="reveal-item hidden-step" data-md-line="292">A. Protein.</p>
+<p class="reveal-item hidden-step" data-md-line="294">B. Tinh bột.</p>
+<p class="reveal-item hidden-step" data-md-line="296">C. Lipid.</p>
+<p class="reveal-item hidden-step" data-md-line="298">D. Glucose.</p>
+<p class="reveal-item hidden-step" data-md-line="300"><strong>Câu 27.</strong> Khi thử lipid bằng ethanol, kết quả dương tính là:</p>
+<p class="reveal-item hidden-step" data-md-line="302">A. Xuất hiện màu xanh đen.</p>
+<p class="reveal-item hidden-step" data-md-line="304">B. Xuất hiện nhũ tương trắng đục.</p>
+<p class="reveal-item hidden-step" data-md-line="306">C. Xuất hiện kết tủa đỏ gạch.</p>
+<p class="reveal-item hidden-step" data-md-line="308">D. Xuất hiện màu tím.</p>
+<p class="reveal-item hidden-step" data-md-line="310"><strong>Câu 28.</strong> Enzyme có bản chất chủ yếu là:</p>
+<p class="reveal-item hidden-step" data-md-line="312">A. Carbohydrate.</p>
+<p class="reveal-item hidden-step" data-md-line="314">B. Protein.</p>
+<p class="reveal-item hidden-step" data-md-line="316">C. Lipid.</p>
+<p class="reveal-item hidden-step" data-md-line="318">D. Nước.</p>
+<p class="reveal-item hidden-step" data-md-line="320"><strong>Câu 29.</strong> Khi nhiệt độ vượt quá giới hạn thích hợp, enzyme có thể:</p>
+<p class="reveal-item hidden-step" data-md-line="322">A. Tăng hoạt động vô hạn.</p>
+<p class="reveal-item hidden-step" data-md-line="324">B. Bị biến tính.</p>
+<p class="reveal-item hidden-step" data-md-line="326">C. Chuyển thành carbohydrate.</p>
+<p class="reveal-item hidden-step" data-md-line="328">D. Tăng số lượng cơ chất.</p>
+<p class="reveal-item hidden-step" data-md-line="330"><strong>Câu 30.</strong> Vai trò chính của enzyme là:</p>
+<p class="reveal-item hidden-step" data-md-line="332">A. Làm tăng năng lượng hoạt hóa.</p>
+<p class="reveal-item hidden-step" data-md-line="334">B. Làm giảm tốc độ phản ứng.</p>
+<p class="reveal-item hidden-step" data-md-line="336">C. Xúc tác và làm tăng tốc độ phản ứng sinh hóa.</p>
+<p class="reveal-item hidden-step" data-md-line="338">D. Cung cấp trực tiếp oxygen cho tế bào.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="340" id="heading-4"><strong>PHẦN II. GHÉP NỐI VÀ ĐIỀN TỪ (MATCHING &amp; FILL IN THE BLANKS)</strong></h2>
+            </section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="342" id="heading-5"><strong>Bài 1. Ghép cấu trúc tế bào với chức năng</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Plant Cell Interactive Poster | Teaching Resources](https://images.openai.com/static-rsc-4/MqwsCRndGiELYWz65-o1NdOLsoEOkE44zhZZIDZnvX04u29XyW2aMJrs9kHoos1hfPERt9tSuCYQlIRBVSfvNGNZfaqI-o5q_CDEz1_9795kawWzHd3FZVuyPREoswjBBd8oJIwixKENOejSrxvc2P3pvE0iak8YC6isO3LH9K8?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/MqwsCRndGiELYWz65-o1NdOLsoEOkE44zhZZIDZnvX04u29XyW2aMJrs9kHoos1hfPERt9tSuCYQlIRBVSfvNGNZfaqI-o5q_CDEz1_9795kawWzHd3FZVuyPREoswjBBd8oJIwixKENOejSrxvc2P3pvE0iak8YC6isO3LH9K8?purpose=inline" alt="Plant Cell Interactive Poster | Teaching Resources">
+            <div class="img-caption">Plant Cell Interactive Poster | Teaching Resources</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://www.tes.com/en-us/teaching-resource/plant-cell-interactive-poster-12698429">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[tes.com](https://www.tes.com/en-us/teaching-resource/plant-cell-interactive-poster-12698429?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://www.tes.com/en-us/teaching-resource/plant-cell-interactive-poster-12698429" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">tes.com</div>
+              <span class="external-source-domain">www.tes.com</span>
+            </a>
+          </div></div><p class="reveal-item hidden-step" data-md-line="348">Ghép cột A với cột B.</p>
+<div class="table-container reveal-item hidden-step" data-md-line="350" data-md-line-end="356"><table><thead><tr><th>Cột A – Cấu trúc</th><th>Cột B – Chức năng</th></tr></thead><tbody><tr class="reveal-item hidden-step" data-md-line="352"><td>1. Nucleus</td><td>A. Hấp thụ ánh sáng để quang hợp</td></tr><tr class="reveal-item hidden-step" data-md-line="353"><td>2. Chloroplast</td><td>B. Kiểm soát chất đi vào và đi ra</td></tr><tr class="reveal-item hidden-step" data-md-line="354"><td>3. Cell membrane</td><td>C. Chứa thông tin di truyền</td></tr><tr class="reveal-item hidden-step" data-md-line="355"><td>4. Cell wall</td><td>D. Duy trì hình dạng tế bào</td></tr><tr class="reveal-item hidden-step" data-md-line="356"><td>5. Cytoplasm</td><td>E. Nơi diễn ra phản ứng trao đổi chất</td></tr></tbody></table></div>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="358" id="heading-6"><strong>Bài 2. Điền từ thích hợp vào chỗ trống</strong></h2>
+            <p class="reveal-item hidden-step" data-md-line="360">Sử dụng các từ: <em>Diffusion, Osmosis, Cellulose, Glycogen, Amino acid, Denaturation, Turgid, Plasmolysis.</em></p>
+<ol class="reveal-item hidden-step" data-md-line="362" data-md-line-end="369">
+<li class="reveal-item hidden-step" data-md-line="362">Sự di chuyển của các hạt từ nơi có nồng độ cao đến thấp là __________.</li>
+<li class="reveal-item hidden-step" data-md-line="363">Sự di chuyển của nước qua màng thấm chọn lọc là __________.</li>
+<li class="reveal-item hidden-step" data-md-line="364">Thành tế bào thực vật được cấu tạo chủ yếu từ __________.</li>
+<li class="reveal-item hidden-step" data-md-line="365">Chất dự trữ carbohydrate ở động vật là __________.</li>
+<li class="reveal-item hidden-step" data-md-line="366">Đơn phân cấu tạo nên protein là __________.</li>
+<li class="reveal-item hidden-step" data-md-line="367">Hiện tượng enzyme mất cấu trúc không gian tự nhiên gọi là __________.</li>
+<li class="reveal-item hidden-step" data-md-line="368">Tế bào thực vật hút nhiều nước và căng chắc được gọi là __________.</li>
+<li class="reveal-item hidden-step" data-md-line="369">Tế bào thực vật mất nước, màng tách khỏi thành tế bào là hiện tượng __________.</li>
+</ol>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="371" id="heading-7"><strong>Bài 3. Hoàn thành bảng thử nghiệm hóa học</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity](https://images.openai.com/static-rsc-4/A39UbuoXIjRbrDcM3xPg4qX-wkPWhMT3e1KSxsvbfJNemKfgdZya4of62tAQzaEAbDwI4AyYWhABDHNqqxrZq7WUyuqLCiUMntiqdS1kDQ5XUUSHkzyqj5Jrzdk6sIdl9MtmPjPTNhBT_VgOWIaKf48WokUknteTS6D9KoUCZ_s?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/A39UbuoXIjRbrDcM3xPg4qX-wkPWhMT3e1KSxsvbfJNemKfgdZya4of62tAQzaEAbDwI4AyYWhABDHNqqxrZq7WUyuqLCiUMntiqdS1kDQ5XUUSHkzyqj5Jrzdk6sIdl9MtmPjPTNhBT_VgOWIaKf48WokUknteTS6D9KoUCZ_s?purpose=inline" alt="Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity">
+            <div class="img-caption">Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://knowunity.co.uk/knows/biology-igcse-edexcel-biology-biological-molecules-and-enzymes-mind-maps-4690a259-699d-4fad-8b68-f3093763ba35">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[knowunity.co.uk](https://knowunity.co.uk/knows/biology-igcse-edexcel-biology-biological-molecules-and-enzymes-mind-maps-4690a259-699d-4fad-8b68-f3093763ba35?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://knowunity.co.uk/knows/biology-igcse-edexcel-biology-biological-molecules-and-enzymes-mind-maps-4690a259-699d-4fad-8b68-f3093763ba35" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">knowunity.co.uk</div>
+              <span class="external-source-domain">knowunity.co.uk</span>
+            </a>
+          </div></div><div class="table-container reveal-item hidden-step" data-md-line="377" data-md-line-end="382"><table><thead><tr><th>Chất cần nhận biết</th><th>Thuốc thử</th><th>Màu sắc/hiện tượng dương tính</th></tr></thead><tbody><tr class="reveal-item hidden-step" data-md-line="379"><td>Starch</td><td>Iodine</td><td>__________</td></tr><tr class="reveal-item hidden-step" data-md-line="380"><td>Reducing sugar</td><td>Benedict + đun nóng</td><td>__________</td></tr><tr class="reveal-item hidden-step" data-md-line="381"><td>Protein</td><td>Biuret</td><td>__________</td></tr><tr class="reveal-item hidden-step" data-md-line="382"><td>Lipid</td><td>Ethanol + nước</td><td>__________</td></tr></tbody></table></div>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="384" id="heading-8"><strong>PHẦN III. BÀI TẬP TỰ LUẬN VÀ TÍNH TOÁN (STRUCTURED QUESTIONS)</strong></h2>
+            </section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="386" id="heading-9"><strong>Bài 1. Tính độ phóng đại kính hiển vi</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Cytologie](https://images.openai.com/static-rsc-4/oP0qx1HnjEtJPUeSnM9Q_h48f1aKlDuwqgES4oI3uBPF5LggA_17Bbnve9_aVzYDyCvTB4KYeP2ofhHU8taYrwzSoens3wGO2o-Hi5lTN3N5lzp_xDU_g80KDUxHkMHf7mjJzb02wZ0el0A0BzG9Wc5KDYsTpAPfNcJXmbM-o2M?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/oP0qx1HnjEtJPUeSnM9Q_h48f1aKlDuwqgES4oI3uBPF5LggA_17Bbnve9_aVzYDyCvTB4KYeP2ofhHU8taYrwzSoens3wGO2o-Hi5lTN3N5lzp_xDU_g80KDUxHkMHf7mjJzb02wZ0el0A0BzG9Wc5KDYsTpAPfNcJXmbM-o2M?purpose=inline" alt="Cytologie">
+            <div class="img-caption">Cytologie</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://www.sci.muni.cz/~anatomy/cytology/html/allium_1.htm">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[sci.muni.cz](https://www.sci.muni.cz/~anatomy/cytology/html/allium_1.htm?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://www.sci.muni.cz/~anatomy/cytology/html/allium_1.htm" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">sci.muni.cz</div>
+              <span class="external-source-domain">www.sci.muni.cz</span>
+            </a>
+          </div></div><p class="reveal-item hidden-step" data-md-line="392">Một tế bào thực vật có kích thước thực tế 0,04 mm. Ảnh của tế bào trên giấy có chiều dài 80 mm.</p>
+<p class="reveal-item hidden-step" data-md-line="394">a) Viết công thức tính độ phóng đại.</p>
+<p class="reveal-item hidden-step" data-md-line="396">b) Tính độ phóng đại của ảnh.</p>
+<p class="reveal-item hidden-step" data-md-line="398">c) Đổi kích thước thực tế của tế bào sang µm.</p>
+<p class="reveal-item hidden-step" data-md-line="400">d) Nếu tăng độ phóng đại lên ×2.000, kích thước ảnh mới là bao nhiêu mm?</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="402" id="heading-10"><strong>Bài 2. Phân tích thí nghiệm thẩm thấu ở khoai tây</strong></h2>
+            <p class="reveal-item hidden-step" data-md-line="404">Một học sinh cắt các dải khoai tây có chiều dài ban đầu 60 mm và ngâm trong các dung dịch sucrose khác nhau.</p>
+<div class="table-container reveal-item hidden-step" data-md-line="406" data-md-line-end="412"><table><thead><tr><th>Nồng độ sucrose (mol/dm³)</th><th>Chiều dài ban đầu (mm)</th><th>Chiều dài sau thí nghiệm (mm)</th></tr></thead><tbody><tr class="reveal-item hidden-step" data-md-line="408"><td>0,0</td><td>60</td><td>66</td></tr><tr class="reveal-item hidden-step" data-md-line="409"><td>0,2</td><td>60</td><td>63</td></tr><tr class="reveal-item hidden-step" data-md-line="410"><td>0,4</td><td>60</td><td>60</td></tr><tr class="reveal-item hidden-step" data-md-line="411"><td>0,6</td><td>60</td><td>55</td></tr><tr class="reveal-item hidden-step" data-md-line="412"><td>0,8</td><td>60</td><td>50</td></tr></tbody></table></div>
+<div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Required practical 3 osmosis - AQA A-Level Biology](https://images.openai.com/static-rsc-4/VTdQy4xjOJ4oSvw4_fVebRTf-UHNl235vluOLPUVNi67P93s4UP8fOn47f_fRTunTook0FermSCZr5d-xZLcHMWy7CKp-ksH1cZJRa-o-CujAxdH2C6Ew-VB0HYaoH7U-LHpwmBNUVbG80N_KwnS8XMLa1ho5pk-Y5LIwJgJ818?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/VTdQy4xjOJ4oSvw4_fVebRTf-UHNl235vluOLPUVNi67P93s4UP8fOn47f_fRTunTook0FermSCZr5d-xZLcHMWy7CKp-ksH1cZJRa-o-CujAxdH2C6Ew-VB0HYaoH7U-LHpwmBNUVbG80N_KwnS8XMLa1ho5pk-Y5LIwJgJ818?purpose=inline" alt="Required practical 3 osmosis - AQA A-Level Biology">
+            <div class="img-caption">Required practical 3 osmosis - AQA A-Level Biology</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://myedspace.co.uk/myresources/a-level/biology/aqa/revision-notes/required-practical-3-osmosis">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[myedspace.co.uk](https://myedspace.co.uk/myresources/a-level/biology/aqa/revision-notes/required-practical-3-osmosis?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://myedspace.co.uk/myresources/a-level/biology/aqa/revision-notes/required-practical-3-osmosis" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">myedspace.co.uk</div>
+              <span class="external-source-domain">myedspace.co.uk</span>
+            </a>
+          </div></div><p class="reveal-item hidden-step" data-md-line="418">a) Tính sự thay đổi chiều dài của từng dải khoai tây.</p>
+<p class="reveal-item hidden-step" data-md-line="420">b) Xác định dung dịch làm khoai tây trương nước nhiều nhất.</p>
+<p class="reveal-item hidden-step" data-md-line="422">c) Xác định nồng độ sucrose đẳng trương gần đúng.</p>
+<p class="reveal-item hidden-step" data-md-line="424">d) Giải thích tại sao khoai tây trong dung dịch 0,8 mol/dm³ bị mềm và giảm chiều dài.</p>
+<p class="reveal-item hidden-step" data-md-line="426">e) Dự đoán hiện tượng xảy ra nếu ngâm khoai tây trong nước tinh khiết lâu hơn.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="428" id="heading-11"><strong>Bài 3. Phân tích ảnh hưởng của nhiệt độ đến enzyme Catalase</strong></h2>
+            <p class="reveal-item hidden-step" data-md-line="430">Thí nghiệm nghiên cứu khả năng phân hủy hydrogen peroxide của enzyme Catalase trong các điều kiện nhiệt độ khác nhau.</p>
+<div class="formula-box reveal-item hidden-step" data-md-line="432"><span><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mn>2</mn><msub><mi>H</mi><mn>2</mn></msub><msub><mi>O</mi><mn>2</mn></msub><mover><mo stretchy="true" minsize="3.0em">→</mo><mpadded width="+0.6em" lspace="0.3em"><mrow><mi>C</mi><mi>a</mi><mi>t</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>s</mi><mi>e</mi></mrow></mpadded></mover><mn>2</mn><msub><mi>H</mi><mn>2</mn></msub><mi>O</mi><mo>+</mo><msub><mi>O</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex"> 2H_2O_2 \xrightarrow{Catalase} 2H_2O+O_2 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1.2581em; vertical-align: -0.15em;"></span><span class="mord">2</span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0813em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0278em;">O</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0278em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel x-arrow"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.1081em;"><span class="" style="top: -3.322em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight x-arrow-pad"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right: 0.0715em;">C</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">t</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight" style="margin-right: 0.0197em;">l</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">se</span></span></span></span><span class="svg-align" style="top: -2.689em;"><span class="pstrut" style="height: 2.7em;"></span><span class="hide-tail" style="height: 0.522em; min-width: 1.469em;"><svg width="400em" height="0.522em" viewBox="0 0 400000 522" preserveAspectRatio="xMaxYMin slice"><path d="M0 241v40h399891c-47.3 35.3-84 78-110 128
+-16.7 32-27.7 63.7-33 95 0 1.3-.2 2.7-.5 4-.3 1.3-.5 2.3-.5 3 0 7.3 6.7 11 20
+ 11 8 0 13.2-.8 15.5-2.5 2.3-1.7 4.2-5.5 5.5-11.5 2-13.3 5.7-27 11-41 14.7-44.7
+ 39-84.5 73-119.5s73.7-60.2 119-75.5c6-2 9-5.7 9-11s-3-9-9-11c-45.3-15.3-85
+-40.5-119-75.5s-58.3-74.8-73-119.5c-4.7-14-8.3-27.3-11-40-1.3-6.7-3.2-10.8-5.5
+-12.5-2.3-1.7-7.5-2.5-15.5-2.5-14 0-21 3.7-21 11 0 2 2 10.3 6 25 20.7 83.3 67
+ 151.7 139 205zm0 0v40h399900v-40z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.011em;"><span class=""></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 0.8333em; vertical-align: -0.15em;"></span><span class="mord">2</span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0813em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mord mathnormal" style="margin-right: 0.0278em;">O</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 0.8333em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0278em;">O</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0278em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span></span></span></span></div>
+<div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[¿Por qué el agua oxigenada hace burbujas?](https://images.openai.com/static-rsc-4/40XNQxQNdVCT8vVqHfhvPiyUPhIwgVLcgv-Zm5hrL623copRDPrAvz27DwWoURn-cbfEB5QKpEdh89sE8d6-_sOsM4xuqFhAEVquVMxDk3JUqrPxtoUAzFSlPlvQ8u2kK4MOmJE0SUDOmkBFOijj31XhgEz6A3TFS3MkTiuK9og?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/40XNQxQNdVCT8vVqHfhvPiyUPhIwgVLcgv-Zm5hrL623copRDPrAvz27DwWoURn-cbfEB5QKpEdh89sE8d6-_sOsM4xuqFhAEVquVMxDk3JUqrPxtoUAzFSlPlvQ8u2kK4MOmJE0SUDOmkBFOijj31XhgEz6A3TFS3MkTiuK9og?purpose=inline" alt="¿Por qué el agua oxigenada hace burbujas?">
+            <div class="img-caption">¿Por qué el agua oxigenada hace burbujas?</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://www.rtve.es/play/audios/historia-y-ciencia-por-un-tubo/ciencia-tubo-agua-oxigenada-burbujas/6844483/">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[rtve.es](https://www.rtve.es/play/audios/historia-y-ciencia-por-un-tubo/ciencia-tubo-agua-oxigenada-burbujas/6844483/?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://www.rtve.es/play/audios/historia-y-ciencia-por-un-tubo/ciencia-tubo-agua-oxigenada-burbujas/6844483/" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">rtve.es</div>
+              <span class="external-source-domain">www.rtve.es</span>
+            </a>
+          </div></div><div class="table-container reveal-item hidden-step" data-md-line="438" data-md-line-end="446"><table><thead><tr><th>Nhiệt độ (°C)</th><th>Thể tích oxygen sau 2 phút (cm³)</th></tr></thead><tbody><tr class="reveal-item hidden-step" data-md-line="440"><td>10</td><td>5</td></tr><tr class="reveal-item hidden-step" data-md-line="441"><td>20</td><td>15</td></tr><tr class="reveal-item hidden-step" data-md-line="442"><td>30</td><td>30</td></tr><tr class="reveal-item hidden-step" data-md-line="443"><td>37</td><td>48</td></tr><tr class="reveal-item hidden-step" data-md-line="444"><td>50</td><td>12</td></tr><tr class="reveal-item hidden-step" data-md-line="445"><td>60</td><td>2</td></tr><tr class="reveal-item hidden-step" data-md-line="446"><td>70</td><td>0</td></tr></tbody></table></div>
+<p class="reveal-item hidden-step" data-md-line="448">a) Xác định nhiệt độ tối ưu của enzyme.</p>
+<p class="reveal-item hidden-step" data-md-line="450">b) Tính tốc độ tạo oxygen trung bình tại 37°C theo đơn vị cm³/phút.</p>
+<p class="reveal-item hidden-step" data-md-line="452">c) Giải thích tại sao thể tích oxygen tăng khi nhiệt độ tăng từ 10°C đến 37°C.</p>
+<p class="reveal-item hidden-step" data-md-line="454">d) Giải thích tại sao enzyme gần như mất hoạt tính ở 70°C.</p>
+<p class="reveal-item hidden-step" data-md-line="456">e) Nếu đun sôi enzyme Catalase trước khi tiến hành thí nghiệm, kết quả thu được sẽ như thế nào?</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="458" id="heading-12"><strong>Bài 4. Nhận biết các chất dinh dưỡng</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[- YouTube](https://images.openai.com/static-rsc-4/Qdto7pqQwVRwsJNlczTrwTo0lDMlrHQzuSKQODKTSpqhabpLjyx2JwL9_jpB7_lmfGxZVKEuAJptok5IZC-njaX7KzywveUq427C8h1jseTJTVIRY4yee0epOfsoHkxZxZUTioXZsP1M5zmFPdhAU7_9zORNI2Y58sDoP9MmzAs?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/Qdto7pqQwVRwsJNlczTrwTo0lDMlrHQzuSKQODKTSpqhabpLjyx2JwL9_jpB7_lmfGxZVKEuAJptok5IZC-njaX7KzywveUq427C8h1jseTJTVIRY4yee0epOfsoHkxZxZUTioXZsP1M5zmFPdhAU7_9zORNI2Y58sDoP9MmzAs?purpose=inline" alt="- YouTube">
+            <div class="img-caption">- YouTube</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Benedict’s Test: Objective, Principle, Reagents, Procedure and Result - Online Biology Notes](https://images.openai.com/static-rsc-4/TbNZI2sTBYp2AGvnOlbbJvFKEi5KLnbozNECEu8eFRok3QXl1tI1irkBegSo7iiSk9ois8xZ5UclfgmuFWQXhXZX-lSCX2crHCJRnhWvRsEU8ZhuzdBr8BOID3m1s-7DnaEenHrHhQAykAZmMah_Zkx5-42APLI6ds4ovA2YBzs?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/TbNZI2sTBYp2AGvnOlbbJvFKEi5KLnbozNECEu8eFRok3QXl1tI1irkBegSo7iiSk9ois8xZ5UclfgmuFWQXhXZX-lSCX2crHCJRnhWvRsEU8ZhuzdBr8BOID3m1s-7DnaEenHrHhQAykAZmMah_Zkx5-42APLI6ds4ovA2YBzs?purpose=inline" alt="Benedict’s Test: Objective, Principle, Reagents, Procedure and Result - Online Biology Notes">
+            <div class="img-caption">Benedict’s Test: Objective, Principle, Reagents, Procedure and Result - Online Biology Notes</div>
+          </div><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Biuret test - Definition and Examples - Biology Online Dictionary](https://images.openai.com/static-rsc-4/EW1B7mlf3zvbZjuTqEfr33Ioobd0wXlVG01YmGcWjIQPg4XkfBfhSf3ms58DVVc38-1boeuBrdWzeWPuX4jJm7mO-sdSAjqYy4nwHdzHtAtEwLhlbv18mA94ux8Zr6IJToNOdUDw6OSUe9gItM9GwzpKc5cqxREH9FGK-l9ZtN4?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/EW1B7mlf3zvbZjuTqEfr33Ioobd0wXlVG01YmGcWjIQPg4XkfBfhSf3ms58DVVc38-1boeuBrdWzeWPuX4jJm7mO-sdSAjqYy4nwHdzHtAtEwLhlbv18mA94ux8Zr6IJToNOdUDw6OSUe9gItM9GwzpKc5cqxREH9FGK-l9ZtN4?purpose=inline" alt="Biuret test - Definition and Examples - Biology Online Dictionary">
+            <div class="img-caption">Biuret test - Definition and Examples - Biology Online Dictionary</div>
+          </div></div><p class="reveal-item hidden-step" data-md-line="468">Một học sinh có bốn mẫu thực phẩm chưa biết thành phần. Tiến hành các phép thử và thu được kết quả:</p>
+<div class="table-container reveal-item hidden-step" data-md-line="470" data-md-line-end="475"><table><thead><tr><th>Mẫu</th><th>Iodine</th><th>Benedict (đun nóng)</th><th>Biuret</th><th>Ethanol</th></tr></thead><tbody><tr class="reveal-item hidden-step" data-md-line="472"><td>A</td><td>Xanh đen</td><td>Xanh lam</td><td>Xanh lam</td><td>Không đục</td></tr><tr class="reveal-item hidden-step" data-md-line="473"><td>B</td><td>Nâu cam</td><td>Đỏ gạch</td><td>Xanh lam</td><td>Không đục</td></tr><tr class="reveal-item hidden-step" data-md-line="474"><td>C</td><td>Nâu cam</td><td>Xanh lam</td><td>Tím</td><td>Không đục</td></tr><tr class="reveal-item hidden-step" data-md-line="475"><td>D</td><td>Nâu cam</td><td>Xanh lam</td><td>Xanh lam</td><td>Trắng đục</td></tr></tbody></table></div>
+<p class="reveal-item hidden-step" data-md-line="477">Trả lời:</p>
+<p class="reveal-item hidden-step" data-md-line="479">a) Mẫu nào chứa tinh bột?</p>
+<p class="reveal-item hidden-step" data-md-line="481">b) Mẫu nào chứa đường giảm?</p>
+<p class="reveal-item hidden-step" data-md-line="483">c) Mẫu nào chứa protein?</p>
+<p class="reveal-item hidden-step" data-md-line="485">d) Mẫu nào chứa lipid?</p>
+<p class="reveal-item hidden-step" data-md-line="487">e) Giải thích nguyên tắc của phép thử Benedict.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="489" id="heading-13"><strong>PHẦN IV. BÀI TẬP VẬN DỤNG CAO (APPLICATION &amp; ANALYSIS)</strong></h2>
+            </section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="491" id="heading-14"><strong>Bài 1. Tình huống về tế bào</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Verschil Osmose en Diffusie | Biologie | JoJoschool](https://images.openai.com/static-rsc-4/QuSUyV9ne9QXAQWEe-mGciaEfqBLlu9nLMh10EeihwRbl7OZxuyXBDB79ENExbnlKe8bUWfZCeR7v070ipIq50__yEwkrrGtExPkzUxs6ZsdcrATaosORGntZO96Y6y2-B6OCUcso0gIgQEg4WVRKXC-w_apDx9ICSRvhtmU9XA?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/QuSUyV9ne9QXAQWEe-mGciaEfqBLlu9nLMh10EeihwRbl7OZxuyXBDB79ENExbnlKe8bUWfZCeR7v070ipIq50__yEwkrrGtExPkzUxs6ZsdcrATaosORGntZO96Y6y2-B6OCUcso0gIgQEg4WVRKXC-w_apDx9ICSRvhtmU9XA?purpose=inline" alt="Verschil Osmose en Diffusie | Biologie | JoJoschool">
+            <div class="img-caption">Verschil Osmose en Diffusie | Biologie | JoJoschool</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://leren.jojoschool.nl/course/biologie/summary/osmose-en-diffusie">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[leren.jojoschool.nl](https://leren.jojoschool.nl/course/biologie/summary/osmose-en-diffusie?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://leren.jojoschool.nl/course/biologie/summary/osmose-en-diffusie" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">leren.jojoschool.nl</div>
+              <span class="external-source-domain">leren.jojoschool.nl</span>
+            </a>
+          </div></div><p class="reveal-item hidden-step" data-md-line="497">Một học sinh quan sát tế bào biểu bì hành dưới kính hiển vi. Ban đầu tế bào có hình dạng bình thường. Sau khi nhỏ dung dịch muối đậm đặc, phần tế bào chất co lại và màng tế bào tách khỏi thành tế bào.</p>
+<p class="reveal-item hidden-step" data-md-line="499">a) Hiện tượng trên có tên gọi là gì?</p>
+<p class="reveal-item hidden-step" data-md-line="501">b) Nước đã di chuyển theo chiều nào?</p>
+<p class="reveal-item hidden-step" data-md-line="503">c) Vì sao thành tế bào không co lại cùng màng tế bào?</p>
+<p class="reveal-item hidden-step" data-md-line="505">d) Nếu nhỏ nước tinh khiết vào mẫu vật, tế bào có thể phục hồi trạng thái ban đầu không? Giải thích.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="507" id="heading-15"><strong>Bài 2. Thiết kế thí nghiệm khoa học</strong></h2>
+            <div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Shrink a Potato with Osmosis! | STEM Activity](https://images.openai.com/static-rsc-4/Xs2XaaPTJOdUshHoH8920Xf9CFB424NzLPJ1hy78fbvBeHmJy5ZcpU6DpHniLqLTv1Ny5LAHTiZQ8duEbw1FtjUINmSse4-1iMUt8mWGfj1wWaThDo794hwpqlIOORwUyDEqtxtjdFzWNNfls53op3dJZNHSfS6rZ_NQz2SVMhw?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/Xs2XaaPTJOdUshHoH8920Xf9CFB424NzLPJ1hy78fbvBeHmJy5ZcpU6DpHniLqLTv1Ny5LAHTiZQ8duEbw1FtjUINmSse4-1iMUt8mWGfj1wWaThDo794hwpqlIOORwUyDEqtxtjdFzWNNfls53op3dJZNHSfS6rZ_NQz2SVMhw?purpose=inline" alt="Shrink a Potato with Osmosis! | STEM Activity">
+            <div class="img-caption">Shrink a Potato with Osmosis! | STEM Activity</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://www.sciencebuddies.org/stem-activities/potato-osmosis">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[sciencebuddies.org](https://www.sciencebuddies.org/stem-activities/potato-osmosis?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://www.sciencebuddies.org/stem-activities/potato-osmosis" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">sciencebuddies.org</div>
+              <span class="external-source-domain">www.sciencebuddies.org</span>
+            </a>
+          </div></div><p class="reveal-item hidden-step" data-md-line="513">Em được giao nhiệm vụ kiểm tra ảnh hưởng của nồng độ sucrose đến sự thay đổi khối lượng khoai tây.</p>
+<p class="reveal-item hidden-step" data-md-line="515">Hãy trình bày:</p>
+<p class="reveal-item hidden-step" data-md-line="517">a) Giả thuyết nghiên cứu.</p>
+<p class="reveal-item hidden-step" data-md-line="519">b) Biến độc lập (Independent variable).</p>
+<p class="reveal-item hidden-step" data-md-line="521">c) Biến phụ thuộc (Dependent variable).</p>
+<p class="reveal-item hidden-step" data-md-line="523">d) Ba biến cần kiểm soát (Control variables).</p>
+<p class="reveal-item hidden-step" data-md-line="525">e) Các bước tiến hành thí nghiệm.</p>
+<p class="reveal-item hidden-step" data-md-line="527">f) Cách xử lý số liệu và vẽ biểu đồ kết quả.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="529" id="heading-16"><strong>Bài 3. Vận dụng kiến thức enzyme</strong></h2>
+            <p class="reveal-item hidden-step" data-md-line="531">Một loại enzyme hoạt động tốt nhất ở 37°C và pH 7. Khi thay đổi pH xuống 2 hoặc tăng lên 12, tốc độ phản ứng giảm mạnh.</p>
+<div class="img-grid reveal-item hidden-step"><div class="img-card">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[Notes for B1.2.5 Effect of pH and temperature on protein structure - IB](https://images.openai.com/static-rsc-4/9vcH1g9wvPQ7GkiHCivoTLcOb8cJG60K7RluCCpgm-0zxBo-MLm9bQVR_68zqqgIJzgMD6jv-Ondm3ykWs1VV5VMtwJeiD3PXamr6Ba71KT6V-7T0VOPqnWbmU4W6WAV57yTiEpYLqteWrWPfEdOza6D2-oWIY0I1MiJvXxtPEw?purpose=inline)">✕</button>
+            <img src="https://images.openai.com/static-rsc-4/9vcH1g9wvPQ7GkiHCivoTLcOb8cJG60K7RluCCpgm-0zxBo-MLm9bQVR_68zqqgIJzgMD6jv-Ondm3ykWs1VV5VMtwJeiD3PXamr6Ba71KT6V-7T0VOPqnWbmU4W6WAV57yTiEpYLqteWrWPfEdOza6D2-oWIY0I1MiJvXxtPEw?purpose=inline" alt="Notes for B1.2.5 Effect of pH and temperature on protein structure - IB">
+            <div class="img-caption">Notes for B1.2.5 Effect of pH and temperature on protein structure - IB</div>
+          </div><div class="img-card external-source-card" title="Mở trang chứa ảnh trong cửa sổ mới: https://www.revisiondojo.com/ib/ib-biology-new/ib-biology-new-b125-effect-of-ph-and-temperature-on-protein-structure/notes">
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="[revisiondojo.com](https://www.revisiondojo.com/ib/ib-biology-new/ib-biology-new-b125-effect-of-ph-and-temperature-on-protein-structure/notes?utm_source=chatgpt.com)">✕</button>
+            <a class="external-source-link" href="https://www.revisiondojo.com/ib/ib-biology-new/ib-biology-new-b125-effect-of-ph-and-temperature-on-protein-structure/notes" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">revisiondojo.com</div>
+              <span class="external-source-domain">www.revisiondojo.com</span>
+            </a>
+          </div></div><p class="reveal-item hidden-step" data-md-line="537">a) Tại sao enzyme hoạt động tốt nhất ở điều kiện pH thích hợp?</p>
+<p class="reveal-item hidden-step" data-md-line="539">b) Sự thay đổi pH ảnh hưởng thế nào đến trung tâm hoạt động?</p>
+<p class="reveal-item hidden-step" data-md-line="541">c) Vì sao không thể kết luận rằng mọi enzyme đều có nhiệt độ tối ưu là 37°C?</p>
+<p class="reveal-item hidden-step" data-md-line="543">d) Đề xuất một thí nghiệm để xác định nhiệt độ tối ưu của một enzyme khác.</p>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="545" id="heading-17"><strong>PHẦN V. THỬ THÁCH NHANH – KIỂM TRA KIẾN THỨC</strong></h2>
+            <p class="reveal-item hidden-step" data-md-line="547">Mỗi câu trả lời đúng được 1 điểm.</p>
+<ol class="reveal-item hidden-step" data-md-line="549" data-md-line-end="558">
+<li class="reveal-item hidden-step" data-md-line="549">Tên tiếng Anh của hiện tượng khuếch tán là gì?</li>
+<li class="reveal-item hidden-step" data-md-line="550">Tế bào thực vật dự trữ carbohydrate dưới dạng nào?</li>
+<li class="reveal-item hidden-step" data-md-line="551">Đơn phân cấu tạo nên protein là gì?</li>
+<li class="reveal-item hidden-step" data-md-line="552">Thuốc thử nào nhận biết tinh bột?</li>
+<li class="reveal-item hidden-step" data-md-line="553">Enzyme có bị tiêu hao sau phản ứng không?</li>
+<li class="reveal-item hidden-step" data-md-line="554">Màng tế bào có tính chất thấm như thế nào?</li>
+<li class="reveal-item hidden-step" data-md-line="555">Tế bào thực vật trương nước gọi là gì?</li>
+<li class="reveal-item hidden-step" data-md-line="556">Chất nào tạo nhũ tương trắng đục khi thử bằng ethanol?</li>
+<li class="reveal-item hidden-step" data-md-line="557">Bào quan nào chứa diệp lục?</li>
+<li class="reveal-item hidden-step" data-md-line="558">Khi nhiệt độ quá cao, enzyme xảy ra hiện tượng gì?</li>
+</ol>
+</section>
+
+              <section class="lesson-section">
+                <h2 class="reveal-item hidden-step" data-md-line="560" id="heading-18"><strong>PHẦN VI. ĐÁP ÁN DÀNH CHO GIÁO VIÊN</strong></h2>
+            <p class="reveal-item hidden-step" data-md-line="562"><strong>Đáp án và hướng dẫn chấm</strong></p>
+<p class="reveal-item hidden-step" data-md-line="564">Giáo viên</p>
+<p class="reveal-item hidden-step" data-md-line="566">Phần I – Trắc nghiệmXem đáp án</p>
+<p class="reveal-item hidden-step" data-md-line="568">Phần II – Ghép nối và điền từXem đáp án</p>
+<p class="reveal-item hidden-step" data-md-line="570">Phần III – Bài tập tự luậnXem đáp án</p>
+<p class="reveal-item hidden-step" data-md-line="572">Phần IV – Vận dụng caoXem đáp án</p>
+<p class="reveal-item hidden-step" data-md-line="574">Phần V – Thử thách nhanhXem đáp án</p>
+<p class="reveal-item hidden-step" data-md-line="576">Hiện tất cả đáp án</p>
+<p class="reveal-item hidden-step" data-md-line="578"><strong>Gợi ý phân bổ điểm:</strong> Phần I: 30 điểm; Phần II: 20 điểm; Phần III: 30 điểm; Phần IV: 15 điểm; Phần V: 5 điểm. Tổng cộng 100 điểm.</p>
+<p class="reveal-item hidden-step" data-md-line="580">Bộ đề có thể sử dụng cho 2–3 tiết ôn tập hoặc chia thành nhiều phiếu học tập theo từng chương.</p>
+</section>
+</main>
+
+  <!-- Embedded Markdown Data Block -->
+  
+
+  <!-- Modal Import Markdown -->
+  
+
+  <!-- Modal Save Filename Prompt -->
+  <div id="save-modal" class="custom-modal">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3>Lưu tệp bài giảng</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Nhập tên tệp HTML muốn lưu:</p>
+      <input type="text" id="filename-input" value="bai-giang-lesson.html" style="width: 100%; padding: 10px; border-radius: 8px;">
+      <div class="modal-buttons">
+        <button class="btn" id="btn-close-save">Hủy</button>
+        <button class="btn btn-primary" id="btn-confirm-save">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Author Info & Donate -->
+  <div id="info-modal" class="custom-modal">
+    <div class="modal-content">
+      <h3>Thông tin tác giả &amp; Hỗ trợ</h3>
+      <div class="info-box">
+        <p><strong>Tác giả:</strong> Icarus</p>
+        <p><strong>Email:</strong> kienspvl@gmail.com</p>
+        <p><strong>Điện thoại:</strong> 097 463 8794</p>
+        <hr style="margin: 12px 0; border: none; border-top: 1px solid var(--border-color);">
+        <p><strong>Ủng hộ nhà phát triển:</strong></p>
+        <p>Ngân hàng Techcombank</p>
+        <p>Số tài khoản: <strong>1903 2723 2240 12</strong></p>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="btn-close-info">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Shortcuts & Update History -->
+  <div id="shortcuts-modal" class="custom-modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+        <h3 id="shortcuts-modal-title">⌨️ Hướng dẫn phím tắt</h3>
+        <button class="btn" id="btn-toggle-changelog" title="Xem lịch sử cập nhật (Key U)">🔄 Xem lịch sử cập nhật (U)</button>
+      </div>
+
+      <div id="shortcuts-view-content">
+        <table class="shortcut-table">
+          <thead>
+            <tr>
+              <th>Phím tắt</th>
+              <th>Chức năng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><kbd>→</kbd> / <kbd>↓</kbd></td><td>Chuyển bước tiếp theo</td></tr>
+            <tr><td><kbd>←</kbd> / <kbd>↑</kbd></td><td>Quay lại bước trước</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>V</kbd></td><td>Dán và chèn ngay URL ảnh tại đúng đoạn văn bản đang bôi đen</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td>Hoàn tác (Undo) chèn/xóa ảnh</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>Làm lại (Redo) chèn/xóa ảnh</td></tr>
+            <tr><td><kbd>Space</kbd></td><td>Xem ảnh ở mục hiện tại (hoặc mở trang chứa ảnh nếu là link nguồn)</td></tr>
+            <tr><td><kbd>P</kbd></td><td>Đọc lại (Replay) văn bản hiện tại</td></tr>
+            <tr><td><kbd>G</kbd></td><td>Mở/Đóng bảng phím tắt</td></tr>
+            <tr><td><kbd>U</kbd></td><td>Xem lịch sử cập nhật chương trình</td></tr>
+            <tr><td><kbd>I</kbd></td><td>Mở thông tin tác giả</td></tr>
+            <tr><td><kbd>M</kbd></td><td>Bật/Tắt tiếng (Mute)</td></tr>
+            <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Tăng / Giảm cỡ chữ toàn trang</td></tr>
+            <tr><td><kbd>H</kbd></td><td>Ẩn/Hiện thanh điều khiển (HUD)</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Đóng các bảng modal / lightbox</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="changelog-view-content" style="display: none;">
+        <div class="info-box" style="max-height: 350px; overflow-y: auto;">
+          <p><strong>v3.10 (Hiện tại):</strong> Ẩn hoàn toàn nút <code>📂 Import</code> và hộp thoại nhập liệu bằng <code>textarea</code> trên các tệp được xuất ra từ chức năng <strong>Save As / Lưu</strong>.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v3.9:</strong> Hiển thị email và số điện thoại tác giả trên header (<code>kienspvl@gmail.com - 097 463 87 94</code>) và thu gọn nút chế độ hiển thị thành <code>Expand</code>.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v3.8:</strong> Sửa triệt để lỗi ảnh chèn bị nhảy sai vị trí hoặc nhảy lên phần trên cùng bằng cách khóa trực tiếp phần tử DOM được bôi đen và ánh xạ chỉ số dòng Markdown gốc (<code>data-md-line</code>) để chèn ngay bên dưới đoạn văn bản chứa từ được chọn.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v3.7:</strong> Khi dán URL ảnh bằng <code>Ctrl + V</code> vào ô URL của popup bôi đen từ, hệ thống tự động nạp vào textarea và hiển thị tức thì mà không cần nhấn <code>Enter</code>.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v3.6:</strong> Chèn/xóa ảnh và Undo/Redo (<code>Ctrl+Z</code> / <code>Ctrl+Y</code>) cập nhật đồng thời textarea và hiển thị tức thời mà không gọi lại <code>renderMarkdown</code> hay reset vị trí đọc; bỏ nút đọc khỏi popup bôi đen từ.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v3.5:</strong> Bổ sung tính năng hoàn tác (<code>Ctrl + Z</code>) và làm lại (<code>Ctrl + Y</code> / <code>Ctrl + Shift + Z</code>) cho các thao tác chèn URL ảnh và xóa ảnh.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v3.4:</strong> Bỏ nút chèn URL thừa trong popup, thao tác nhập URL và nhấn <code>Enter</code> chèn ảnh trực tiếp; tối ưu thao tác xóa ảnh cập nhật tức thời trên giao diện mà không làm nhảy trang về đầu.</p>
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          <p><strong>v3.3:</strong> Thêm nút xóa (dấu <code>✕</code>) khi rê chuột vào ảnh để xóa ảnh và tự động loại bỏ dòng URL tương ứng trong văn bản gốc; bổ sung ô nhập URL ảnh trực tiếp từ bảng popup khi bôi đen văn bản; tự động lưu và đồng bộ dữ liệu với <code>localStorage</code>.</p>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="btn-close-shortcuts">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar (Glassmorphic) -->
+  <div id="bottom-nav">
+    <button id="btn-prev" title="Bước trước (Key Left)">◀ Trước</button>
+    <span id="step-counter">1 / 292</span>
+    <button id="btn-next" title="Bước tiếp theo (Key Right)">Tiếp ▶</button>
+    <button id="btn-reset" title="Chạy lại từ đầu">↺ Đầu</button>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox">
+    <button id="lightbox-close" title="Đóng (Esc)">✕</button>
+    <button class="lightbox-nav" id="lb-prev" title="Ảnh trước">❮</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-caption"></div>
+    <button class="lightbox-nav" id="lb-next" title="Ảnh sau">❯</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const body = document.body;
+      let revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+      const modeToggle = document.getElementById('mode-toggle');
+      const captionToggle = document.getElementById('caption-toggle');
+      const muteToggle = document.getElementById('mute-toggle');
+      const speechSpeedSelect = document.getElementById('speech-speed');
+      const stepCounter = document.getElementById('step-counter');
+      const progressBar = document.getElementById('progress-bar');
+      const btnNext = document.getElementById('btn-next');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnReset = document.getElementById('btn-reset');
+      const btnFontInc = document.getElementById('btn-font-inc');
+      const btnFontDec = document.getElementById('btn-font-dec');
+      const fontSizeLabel = document.getElementById('font-size-label');
+      const btnHud = document.getElementById('btn-hud');
+      const btnToc = document.getElementById('btn-toc');
+      const tocDrawer = document.getElementById('toc-drawer');
+      const tocList = document.getElementById('toc-list');
+      const selectionPopup = document.getElementById('selection-popup');
+
+      // Popup buttons & inputs
+      const popupGoogleImg = document.getElementById('popup-google-img');
+      const popupGif = document.getElementById('popup-gif');
+      const popupGoogleSearch = document.getElementById('popup-google-search');
+      const popupYoutube = document.getElementById('popup-youtube');
+      const popupUrlInput = document.getElementById('popup-url-input');
+
+      // Modal elements (may be null in Save As exported files)
+      const btnImportModal = document.getElementById('btn-import-modal');
+      const importModal = document.getElementById('import-modal');
+      const btnCloseModal = document.getElementById('btn-close-modal');
+      const btnConfirmImport = document.getElementById('btn-confirm-import');
+      const btnQuickSave = document.getElementById('btn-quick-save');
+      const markdownInput = document.getElementById('markdown-input');
+      const btnSave = document.getElementById('btn-save');
+
+      // Save Modal elements
+      const saveModal = document.getElementById('save-modal');
+      const btnCloseSave = document.getElementById('btn-close-save');
+      const btnConfirmSave = document.getElementById('btn-confirm-save');
+      const filenameInput = document.getElementById('filename-input');
+
+      // Prompt generator elements
+      const promptTopicInput = document.getElementById('prompt-topic-input');
+      const promptWordInput = document.getElementById('prompt-word-input');
+      const btnCopyPrompt = document.getElementById('btn-copy-prompt');
+
+      // Info Modal elements
+      const btnInfoModal = document.getElementById('btn-info-modal');
+      const infoModal = document.getElementById('info-modal');
+      const btnCloseInfo = document.getElementById('btn-close-info');
+
+      // Shortcuts & Changelog Modal elements
+      const btnShortcutsModal = document.getElementById('btn-shortcuts-modal');
+      const shortcutsModal = document.getElementById('shortcuts-modal');
+      const btnCloseShortcuts = document.getElementById('btn-close-shortcuts');
+      const btnToggleChangelog = document.getElementById('btn-toggle-changelog');
+      const shortcutsViewContent = document.getElementById('shortcuts-view-content');
+      const changelogViewContent = document.getElementById('changelog-view-content');
+      const shortcutsModalTitle = document.getElementById('shortcuts-modal-title');
+
+      // Lightbox elements
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxCaption = document.getElementById('lightbox-caption');
+      const lightboxClose = document.getElementById('lightbox-close');
+      const lbPrev = document.getElementById('lb-prev');
+      const lbNext = document.getElementById('lb-next');
+
+      let currentIndex = 0;
+      let isShowAll = false;
+      let currentFontSize = 1.25;
+      const MIN_FONT = 1.2;
+      const MAX_FONT = 2.6;
+      let rawMarkdownStorage = "";
+      let selectedTextCache = "";
+      let selectedAnchorElement = null;
+      let selectedMdLineIndex = -1;
+      let currentImgIdx = 0;
+
+      // Undo / Redo history stacks
+      let historyStack = [];
+      let redoStack = [];
+
+      function syncMarkdownState(newMarkdown) {
+        rawMarkdownStorage = newMarkdown;
+        if (markdownInput) {
+          markdownInput.value = rawMarkdownStorage;
+        }
+        localStorage.setItem('lesson_viewer_markdown', rawMarkdownStorage);
+      }
+
+      function refreshRevealItemsPreservingProgress() {
+        const prevActiveEl = revealItems[currentIndex] || null;
+        revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+        if (revealItems.length === 0) {
+          currentIndex = 0;
+          return;
+        }
+        if (prevActiveEl && document.body.contains(prevActiveEl)) {
+          const foundIdx = revealItems.indexOf(prevActiveEl);
+          if (foundIdx !== -1) {
+            currentIndex = foundIdx;
+          } else {
+            currentIndex = Math.min(currentIndex, revealItems.length - 1);
+          }
+        } else {
+          currentIndex = Math.min(currentIndex, revealItems.length - 1);
+        }
+      }
+
+      function parseImageMarkdownLine(rawLine) {
+        const match = String(rawLine).trim().match(/^!?\[([^\]]+)\]\(([^)]+)\)$/);
+        if (!match) return null;
+        return { alt: match[1], url: match[2], rawLine: String(rawLine).trim() };
+      }
+
+      function createImageCardElement(rawLine, alt, url) {
+        const inspected = inspectImageUrl(url);
+        const safeUrl = escapeHtmlAttr(inspected.url);
+        const safeAlt = escapeHtmlAttr(alt);
+        const rawLineAttr = escapeHtmlAttr(rawLine);
+
+        const card = document.createElement('div');
+        if (inspected.isExternalPage) {
+          let hostname = '';
+          try {
+            hostname = new URL(inspected.url).hostname;
+          } catch (e) {
+            hostname = inspected.url;
+          }
+          card.className = 'img-card external-source-card';
+          card.title = `Mở trang chứa ảnh trong cửa sổ mới: ${safeUrl}`;
+          card.innerHTML = `
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="${rawLineAttr}">✕</button>
+            <a class="external-source-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">
+              <span class="external-source-icon">🔗🖼️</span>
+              <span class="external-source-badge">Mở trang chứa ảnh ↗</span>
+              <div class="img-caption" style="font-style: normal; font-weight: 600; color: var(--primary-dark);">${alt}</div>
+              <span class="external-source-domain">${escapeHtmlAttr(hostname)}</span>
+            </a>
+          `;
+        } else {
+          card.className = 'img-card';
+          card.innerHTML = `
+            <button class="delete-img-btn" title="Xóa ảnh và URL trong văn bản" data-raw-line="${rawLineAttr}">✕</button>
+            <img src="${safeUrl}" alt="${safeAlt}">
+            <div class="img-caption">${alt}</div>
+          `;
+        }
+        return card;
+      }
+
+      function resolveSelectionAnchorBlock(node) {
+        const mainContainer = document.getElementById('lesson-content');
+        if (!mainContainer || !node) return null;
+        let el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+        if (!el || !mainContainer.contains(el)) return null;
+
+        const blockEl = el.closest('p, ul, ol, h1, h2, h3, h4, .table-container, .formula-box, .hero-meta, .subtitle, .callout, .callout-warn');
+        if (blockEl && mainContainer.contains(blockEl)) {
+          return blockEl;
+        }
+        return null;
+      }
+
+      function getMarkdownInsertLineIndex(anchorEl, rawMd) {
+        const lines = rawMd.split('\n');
+        if (!anchorEl) return lines.length;
+
+        const lineEndAttr = anchorEl.getAttribute('data-md-line-end');
+        const lineAttr = anchorEl.getAttribute('data-md-line');
+        const targetLineStr = lineEndAttr !== null ? lineEndAttr : lineAttr;
+
+        if (targetLineStr !== null) {
+          const parsedIdx = parseInt(targetLineStr, 10);
+          if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < lines.length) {
+            let insertAt = parsedIdx + 1;
+            while (insertAt < lines.length && /^!?\[([^\]]+)\]\(([^)]+)\)$/.test(lines[insertAt].trim())) {
+              insertAt++;
+            }
+            return insertAt;
+          }
+        }
+
+        const blockText = (anchorEl.innerText || anchorEl.textContent || '').replace(/\s+/g, ' ').trim();
+        if (blockText) {
+          for (let i = 0; i < lines.length; i++) {
+            const strippedLine = lines[i]
+              .replace(/^#{1,6}\s+/, '')
+              .replace(/^[-*]\s+/, '')
+              .replace(/^\d+\.\s+/, '')
+              .replace(/\*\*(.+?)\*\*/g, '$1')
+              .replace(/\*(.+?)\*/g, '$1')
+              .replace(/`([^`]+)`/g, '$1')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (strippedLine && (strippedLine === blockText || blockText.includes(strippedLine))) {
+              let insertAt = i + 1;
+              while (insertAt < lines.length && /^!?\[([^\]]+)\]\(([^)]+)\)$/.test(lines[insertAt].trim())) {
+                insertAt++;
+              }
+              return insertAt;
+            }
+          }
+        }
+
+        return lines.length;
+      }
+
+      function shiftDomMarkdownLineIndices(fromLineIdx, delta) {
+        const mainContainer = document.getElementById('lesson-content');
+        if (!mainContainer || delta === 0) return;
+        mainContainer.querySelectorAll('[data-md-line]').forEach(el => {
+          const val = parseInt(el.getAttribute('data-md-line'), 10);
+          if (!isNaN(val) && val >= fromLineIdx) {
+            el.setAttribute('data-md-line', String(val + delta));
+          }
+        });
+        mainContainer.querySelectorAll('[data-md-line-end]').forEach(el => {
+          const val = parseInt(el.getAttribute('data-md-line-end'), 10);
+          if (!isNaN(val) && val >= fromLineIdx) {
+            el.setAttribute('data-md-line-end', String(val + delta));
+          }
+        });
+      }
+
+      function insertImageIntoDOM(rawLine, alt, url, anchorEl = null) {
+        const mainContainer = document.getElementById('lesson-content');
+        if (!mainContainer) return;
+
+        const existingBtn = Array.from(mainContainer.querySelectorAll('.delete-img-btn')).find(
+          btn => btn.getAttribute('data-raw-line') === rawLine
+        );
+        if (existingBtn) {
+          refreshRevealItemsPreservingProgress();
+          updateUI();
+          return;
+        }
+
+        const card = createImageCardElement(rawLine, alt, url);
+
+        if (anchorEl && anchorEl.parentNode && mainContainer.contains(anchorEl)) {
+          const nextSib = anchorEl.nextElementSibling;
+          if (nextSib && nextSib.classList.contains('img-grid')) {
+            nextSib.appendChild(card);
+          } else {
+            const grid = document.createElement('div');
+            grid.className = 'img-grid reveal-item';
+            grid.appendChild(card);
+            anchorEl.parentNode.insertBefore(grid, anchorEl.nextSibling);
+          }
+        } else {
+          const sections = mainContainer.querySelectorAll('section.lesson-section');
+          const targetContainer = sections.length > 0 ? sections[sections.length - 1] : mainContainer;
+          const existingGrids = targetContainer.querySelectorAll('.img-grid');
+          if (existingGrids.length > 0) {
+            existingGrids[existingGrids.length - 1].appendChild(card);
+          } else {
+            const grid = document.createElement('div');
+            grid.className = 'img-grid reveal-item';
+            grid.appendChild(card);
+            targetContainer.appendChild(grid);
+          }
+        }
+
+        refreshRevealItemsPreservingProgress();
+        updateUI();
+      }
+
+      function removeImageFromDOM(rawLine) {
+        const mainContainer = document.getElementById('lesson-content');
+        if (!mainContainer) return;
+
+        const btn = Array.from(mainContainer.querySelectorAll('.delete-img-btn')).find(
+          b => b.getAttribute('data-raw-line') === rawLine
+        );
+        if (!btn) return;
+
+        const imgCard = btn.closest('.img-card');
+        if (imgCard) {
+          const imgGrid = imgCard.closest('.img-grid');
+          imgCard.remove();
+          if (imgGrid && imgGrid.querySelectorAll('.img-card').length === 0) {
+            imgGrid.remove();
+          }
+        }
+
+        refreshRevealItemsPreservingProgress();
+        updateUI();
+      }
+
+      function applyOperationToDOM(op, isUndo) {
+        if (!op) return;
+        if (op.type === 'insert') {
+          if (isUndo) {
+            removeImageFromDOM(op.rawLine);
+            if (typeof op.insertedLineIdx === 'number') {
+              shiftDomMarkdownLineIndices(op.insertedLineIdx + 1, -1);
+            }
+          } else {
+            if (typeof op.insertedLineIdx === 'number') {
+              shiftDomMarkdownLineIndices(op.insertedLineIdx, 1);
+            }
+            insertImageIntoDOM(op.rawLine, op.alt, op.url, op.anchorEl);
+          }
+        } else if (op.type === 'delete') {
+          if (isUndo) {
+            if (typeof op.deletedLineIdx === 'number' && op.deletedLineIdx >= 0) {
+              shiftDomMarkdownLineIndices(op.deletedLineIdx, 1);
+            }
+            insertImageIntoDOM(op.rawLine, op.alt, op.url, op.anchorEl);
+          } else {
+            removeImageFromDOM(op.rawLine);
+            if (typeof op.deletedLineIdx === 'number' && op.deletedLineIdx >= 0) {
+              shiftDomMarkdownLineIndices(op.deletedLineIdx + 1, -1);
+            }
+          }
+        }
+      }
+
+      function pushHistoryOperation(op) {
+        historyStack.push(op);
+        redoStack = [];
+      }
+
+      function undoAction() {
+        if (historyStack.length > 0) {
+          const op = historyStack.pop();
+          redoStack.push(op);
+          syncMarkdownState(op.prevMarkdown);
+          applyOperationToDOM(op, true);
+        }
+      }
+
+      function redoAction() {
+        if (redoStack.length > 0) {
+          const op = redoStack.pop();
+          historyStack.push(op);
+          syncMarkdownState(op.nextMarkdown);
+          applyOperationToDOM(op, false);
+        }
+      }
+
+      const DEFAULT_SAMPLE_MARKDOWN = `# CÁC VÒNG CUNG DÃY NÚI Ở PHÍA BẮC VIỆT NAM
+Đặc điểm địa hình vùng núi Đông Bắc và Tây Bắc
+- Vùng núi Đông Bắc tập trung các dãy núi hình vòng cung lớn hướng về phía Đông và Đông Nam.
+- Các cánh cung lớn tiêu biểu: Sông Gâm, Ngân Sơn, Bắc Sơn, Đông Triều.
+
+## 1. Cánh cung Sông Gâm
+- Là cánh cung nằm ở phía Tây, bao bọc lấy thung lũng sông Gâm.
+- Địa hình hiểm trở, cấu tạo chủ yếu bằng đá vôi và đá granit.
+- **English keywords**: Sông Gâm arc, limestone mountains.
+
+### 1.1. Đặc điểm địa chất
+#### 1.1.1. Cấu tạo đá trầm tích và biến chất
+- Hệ thống núi đá vôi cổ phân bố dọc hai bờ sông Gâm.
+
+## 2. Cánh cung Ngân Sơn
+- Nằm nối tiếp phía Đông cánh cung Sông Gâm.
+- Nơi bắt nguồn của nhiều hệ thống suối và sông nhỏ đổ về phía hạ lưu.
+- **English keywords**: Ngân Sơn arc, watershed region.
+
+## 3. Công thức minh họa KaTeX / LaTeX
+- Tích phân xác định có cận dưới và khoảng trắng \`\\,\`: $\\int_{a}^{b} f(x)\\,dx = F(b) - F(a)$
+$$I = \int_{0}^{\pi} \sin(x)\,dx = \Big[-\cos(x)\Big]_{0}^{\pi} = 2$$
+
+| Tên cánh cung | Hướng chính | Đặc điểm khoáng sản |
+|---|---|---|
+| Sông Gâm | Vòng cung | Đá vôi, kim loại màu |
+| Ngân Sơn | Vòng cung | Sắt, vật liệu xây dựng |
+| Bắc Sơn | Vòng cung | Đá vôi, nông nghiệp |
+| Đông Triều | Vòng cung | Than đá |`.trim();
+
+      const embeddedScriptTag = document.getElementById('embedded-markdown-data');
+      let initialMarkdown = '';
+      const isSavedFile = body.classList.contains('is-saved-file');
+      const localSaved = localStorage.getItem('lesson_viewer_markdown');
+
+      if (embeddedScriptTag) {
+        const embeddedText = embeddedScriptTag.textContent.trim();
+        if (isSavedFile && embeddedText) {
+          initialMarkdown = embeddedText;
+        } else if (!embeddedText || embeddedText === DEFAULT_SAMPLE_MARKDOWN || embeddedText.includes("CÁC VÒNG CUNG DÃY NÚI Ở PHÍA BẮC VIỆT NAM")) {
+          if (localSaved) {
+            initialMarkdown = localSaved;
+          } else {
+            initialMarkdown = embeddedText || DEFAULT_SAMPLE_MARKDOWN;
+          }
+        } else {
+          initialMarkdown = embeddedText;
+        }
+      } else {
+        initialMarkdown = localSaved || DEFAULT_SAMPLE_MARKDOWN;
+      }
+
+      rawMarkdownStorage = initialMarkdown;
+      if (markdownInput) {
+        markdownInput.value = rawMarkdownStorage;
+      }
+      renderMarkdown(rawMarkdownStorage);
+
+      function slugifyFilename(text) {
+        if (!text || !text.trim()) return 'bai-giang-lesson.html';
+        const slug = text
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd')
+          .replace(/Đ/g, 'D')
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-');
+        return (slug || 'bai-giang-lesson') + '.html';
+      }
+
+      function inspectImageUrl(rawUrl) {
+        let url = rawUrl.trim();
+        let hasChatGptUtm = false;
+        let cleanUrl = url;
+
+        try {
+          const parsed = new URL(url);
+          if (parsed.searchParams.get('utm_source') === 'chatgpt.com') {
+            hasChatGptUtm = true;
+            parsed.searchParams.delete('utm_source');
+            cleanUrl = parsed.toString();
+          }
+        } catch (e) {
+          if (/([?&])utm_source=chatgpt\.com(&|$)/i.test(url)) {
+            hasChatGptUtm = true;
+            cleanUrl = url
+              .replace(/([?&])utm_source=chatgpt\.com(&|$)/i, (match, p1, p2) => {
+                if (p1 === '?' && p2 === '&') return '?';
+                if (p1 === '&' && p2 === '&') return '&';
+                return '';
+              })
+              .replace(/[?&]$/, '');
+          }
+        }
+
+        if (hasChatGptUtm) {
+          return { isExternalPage: true, url: cleanUrl };
+        }
+
+        try {
+          const parsed = new URL(cleanUrl);
+          if (parsed.hostname.endsWith('wikimedia.org') || parsed.hostname.endsWith('wikipedia.org')) {
+            const decodedPath = decodeURIComponent(parsed.pathname);
+            const fileMatch = decodedPath.match(/\/wiki\/(?:File|Tập_tin):(.+)$/i);
+            if (fileMatch && fileMatch[1]) {
+              const fileName = fileMatch[1].replace(/\s+/g, '_');
+              return {
+                isExternalPage: false,
+                url: `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`
+              };
+            }
+          }
+        } catch (e) {}
+
+        return { isExternalPage: false, url: cleanUrl };
+      }
+
+      function initTOC() {
+        tocList.innerHTML = '';
+        const headings = document.querySelectorAll('main h2, main h3, main h4');
+        headings.forEach((h, idx) => {
+          if (!h.id) h.id = 'heading-' + idx;
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = '#' + h.id;
+          a.textContent = h.textContent;
+          if (h.tagName === 'H3') {
+            a.style.paddingLeft = '22px';
+            a.style.fontSize = '0.88rem';
+          } else if (h.tagName === 'H4') {
+            a.style.paddingLeft = '36px';
+            a.style.fontSize = '0.84rem';
+            a.style.color = 'var(--text-muted)';
+          }
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetIdx = revealItems.indexOf(h);
+            if (!isShowAll && targetIdx !== -1 && targetIdx > currentIndex) {
+              revealUpTo(targetIdx, false);
+            }
+            h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            tocDrawer.classList.remove('open');
+          });
+          li.appendChild(a);
+          tocList.appendChild(li);
+        });
+      }
+
+      initTOC();
+
+      btnToc.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tocDrawer.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!tocDrawer.contains(e.target) && e.target !== btnToc) {
+          tocDrawer.classList.remove('open');
+        }
+      });
+
+      document.addEventListener('mouseup', (e) => {
+        if (selectionPopup.contains(e.target)) return;
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+        if (text.length > 0 && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const anchorBlock = resolveSelectionAnchorBlock(range.commonAncestorContainer);
+          if (!anchorBlock) return;
+
+          selectedTextCache = text;
+          selectedAnchorElement = anchorBlock;
+          selectedMdLineIndex = getMarkdownInsertLineIndex(anchorBlock, rawMarkdownStorage);
+
+          const rect = range.getBoundingClientRect();
+          selectionPopup.style.top = (window.scrollY + rect.top - 55) + 'px';
+          selectionPopup.style.left = Math.max(12, window.scrollX + rect.left + (rect.width / 2) - 160) + 'px';
+          selectionPopup.classList.add('open');
+        } else {
+          selectionPopup.classList.remove('open');
+        }
+      });
+
+      document.addEventListener('mousedown', (e) => {
+        if (!selectionPopup.contains(e.target)) {
+          selectionPopup.classList.remove('open');
+        }
+      });
+
+      popupGoogleImg.addEventListener('click', () => {
+        if (selectedTextCache) {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTextCache)}&tbm=isch`, '_blank');
+        }
+      });
+
+      popupGif.addEventListener('click', () => {
+        if (selectedTextCache) {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTextCache + ' gif')}&tbm=isch`, '_blank');
+        }
+      });
+
+      popupGoogleSearch.addEventListener('click', () => {
+        if (selectedTextCache) {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTextCache)}`, '_blank');
+        }
+      });
+
+      popupYoutube.addEventListener('click', () => {
+        if (selectedTextCache) {
+          window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(selectedTextCache)}`, '_blank');
+        }
+      });
+
+      function handlePopupInsert(providedUrl = null) {
+        const url = (providedUrl !== null ? providedUrl : popupUrlInput.value).trim();
+        if (!url) {
+          alert('Vui lòng nhập URL ảnh!');
+          popupUrlInput.focus();
+          return;
+        }
+        const alt = selectedTextCache || 'Minh họa';
+        const imageMarkdown = `![${alt}](${url})`;
+        const prevMarkdown = rawMarkdownStorage;
+        const targetAnchorEl = selectedAnchorElement;
+
+        let lines = rawMarkdownStorage.split('\n');
+        let insertIdx = getMarkdownInsertLineIndex(targetAnchorEl, rawMarkdownStorage);
+        if (insertIdx < 0 || insertIdx > lines.length) {
+          insertIdx = lines.length;
+        }
+
+        lines.splice(insertIdx, 0, imageMarkdown);
+        const nextMarkdown = lines.join('\n');
+
+        shiftDomMarkdownLineIndices(insertIdx, 1);
+
+        pushHistoryOperation({
+          type: 'insert',
+          rawLine: imageMarkdown,
+          alt,
+          url,
+          anchorEl: targetAnchorEl,
+          insertedLineIdx: insertIdx,
+          prevMarkdown,
+          nextMarkdown
+        });
+
+        syncMarkdownState(nextMarkdown);
+        insertImageIntoDOM(imageMarkdown, alt, url, targetAnchorEl);
+
+        selectionPopup.classList.remove('open');
+        popupUrlInput.value = '';
+      }
+
+      popupUrlInput.addEventListener('paste', (e) => {
+        const pastedText = (e.clipboardData || window.clipboardData)?.getData('text');
+        if (pastedText && pastedText.trim()) {
+          e.preventDefault();
+          popupUrlInput.value = pastedText.trim();
+          handlePopupInsert(pastedText.trim());
+        } else {
+          setTimeout(() => {
+            if (popupUrlInput.value.trim()) {
+              handlePopupInsert(popupUrlInput.value.trim());
+            }
+          }, 0);
+        }
+      });
+
+      popupUrlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handlePopupInsert();
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (e.target.matches('.delete-img-btn')) {
+          e.stopPropagation();
+          e.preventDefault();
+          const rawLine = e.target.getAttribute('data-raw-line');
+          if (!rawLine) return;
+
+          const parsedImg = parseImageMarkdownLine(rawLine);
+          const imgCard = e.target.closest('.img-card');
+          const grid = imgCard ? imgCard.closest('.img-grid') : null;
+          const anchorEl = grid ? grid.previousElementSibling : null;
+
+          const prevMarkdown = rawMarkdownStorage;
+          let lines = rawMarkdownStorage.split('\n');
+          let lineIdx = -1;
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].trim() === rawLine.trim()) {
+              lineIdx = i;
+              break;
+            }
+          }
+          if (lineIdx !== -1) {
+            lines.splice(lineIdx, 1);
+            shiftDomMarkdownLineIndices(lineIdx + 1, -1);
+          }
+          const nextMarkdown = lineIdx !== -1 ? lines.join('\n') : rawMarkdownStorage.replace(rawLine, '');
+
+          pushHistoryOperation({
+            type: 'delete',
+            rawLine,
+            alt: parsedImg ? parsedImg.alt : 'Minh họa',
+            url: parsedImg ? parsedImg.url : '',
+            anchorEl,
+            deletedLineIdx: lineIdx,
+            prevMarkdown,
+            nextMarkdown
+          });
+
+          syncMarkdownState(nextMarkdown);
+          removeImageFromDOM(rawLine);
+        }
+      });
+
+      if (btnImportModal && importModal) {
+        btnImportModal.addEventListener('click', () => {
+          if (markdownInput) markdownInput.value = rawMarkdownStorage;
+          importModal.classList.add('open');
+          setTimeout(() => {
+            if (promptTopicInput) {
+              promptTopicInput.focus();
+              promptTopicInput.select();
+            }
+          }, 100);
+        });
+      }
+
+      if (btnCloseModal && importModal) {
+        btnCloseModal.addEventListener('click', () => {
+          importModal.classList.remove('open');
+        });
+
+        importModal.addEventListener('click', (e) => {
+          if (e.target === importModal) importModal.classList.remove('open');
+        });
+      }
+
+      function openSaveModal(defaultName = "bai-giang-lesson.html") {
+        filenameInput.value = defaultName;
+        saveModal.classList.add('open');
+        setTimeout(() => {
+          filenameInput.focus();
+          filenameInput.select();
+        }, 100);
+      }
+
+      btnSave.addEventListener('click', () => {
+        openSaveModal("bai-giang-lesson.html");
+        btnSave.blur();
+      });
+
+      btnCloseSave.addEventListener('click', () => {
+        saveModal.classList.remove('open');
+      });
+
+      saveModal.addEventListener('click', (e) => {
+        if (e.target === saveModal) saveModal.classList.remove('open');
+      });
+
+      function executeSaveFile() {
+        let filename = filenameInput.value.trim() || 'bai-giang-lesson.html';
+        if (!filename.endsWith('.html')) filename += '.html';
+
+        if (importModal) importModal.classList.remove('open');
+        saveModal.classList.remove('open');
+        infoModal.classList.remove('open');
+        shortcutsModal.classList.remove('open');
+        tocDrawer.classList.remove('open');
+        selectionPopup.classList.remove('open');
+
+        let cloneDoc = document.documentElement.cloneNode(true);
+
+        // Mark exported Save As file & strip Import button + textarea modal
+        const clonedBody = cloneDoc.querySelector('body');
+        if (clonedBody) {
+          clonedBody.classList.add('is-saved-file');
+        }
+        const clonedImportBtn = cloneDoc.querySelector('#btn-import-modal');
+        if (clonedImportBtn) {
+          clonedImportBtn.remove();
+        }
+        const clonedImportModal = cloneDoc.querySelector('#import-modal');
+        if (clonedImportModal) {
+          clonedImportModal.remove();
+        }
+
+        const oldEmbedded = cloneDoc.querySelector('#embedded-markdown-data');
+        if (oldEmbedded) {
+          oldEmbedded.remove();
+        }
+
+        const newScript = document.createElement('script');
+        newScript.id = 'embedded-markdown-data';
+        newScript.type = 'text/markdown';
+        newScript.textContent = '\n' + rawMarkdownStorage + '\n';
+        if (clonedBody) {
+          clonedBody.appendChild(newScript);
+        }
+
+        const fullHTML = '<!DOCTYPE html>\n' + cloneDoc.outerHTML;
+
+        const blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        saveModal.classList.remove('open');
+      }
+
+      btnConfirmSave.addEventListener('click', executeSaveFile);
+
+      filenameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeSaveFile();
+        }
+      });
+
+      if (btnCopyPrompt) {
+        btnCopyPrompt.addEventListener('click', () => {
+          const topic = (promptTopicInput ? promptTopicInput.value.trim() : '') || 'chủ đề bài học';
+          const words = (promptWordInput ? promptWordInput.value.trim() : '') || '500';
+          const generatedPrompt = `Tạo bài giảng khoảng ${words} từ về chủ đề ${topic}, kèm nhiều ảnh minh họa cho từng mục, từng phần, phân cấp thông tin rõ ràng, in đậm từ khóa kèm từ khóa tiếng anh. Lưu ý không lấy những url ảnh mà phải thêm ?utm_source=chatgpt.com mới xem được. Lưu ý, chỉ lấy url dẫn trực tiếp tới ảnh, không chơi kiểu url dẫn tới web chứa ảnh mà không phải trực tiếp ảnh.`;
+
+          navigator.clipboard.writeText(generatedPrompt).then(() => {
+            const originalText = btnCopyPrompt.textContent;
+            btnCopyPrompt.textContent = '✅ Copied!';
+            setTimeout(() => {
+              btnCopyPrompt.textContent = originalText;
+            }, 2000);
+          }).catch(err => {
+            alert('Không thể copy prompt tự động!');
+          });
+        });
+      }
+
+      btnInfoModal.addEventListener('click', () => {
+        infoModal.classList.add('open');
+      });
+
+      btnCloseInfo.addEventListener('click', () => {
+        infoModal.classList.remove('open');
+      });
+
+      infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) infoModal.classList.remove('open');
+      });
+
+      function openShortcutsModal(showChangelog = false) {
+        if (showChangelog) {
+          shortcutsViewContent.style.display = 'none';
+          changelogViewContent.style.display = 'block';
+          shortcutsModalTitle.textContent = '🔄 Lịch sử cập nhật';
+          btnToggleChangelog.textContent = '⌨️ Xem phím tắt (G)';
+        } else {
+          shortcutsViewContent.style.display = 'block';
+          changelogViewContent.style.display = 'none';
+          shortcutsModalTitle.textContent = '⌨️ Hướng dẫn phím tắt';
+          btnToggleChangelog.textContent = '🔄 Xem lịch sử cập nhật (U)';
+        }
+        shortcutsModal.classList.add('open');
+      }
+
+      btnShortcutsModal.addEventListener('click', () => {
+        openShortcutsModal(false);
+      });
+
+      btnCloseShortcuts.addEventListener('click', () => {
+        shortcutsModal.classList.remove('open');
+      });
+
+      shortcutsModal.addEventListener('click', (e) => {
+        if (e.target === shortcutsModal) shortcutsModal.classList.remove('open');
+      });
+
+      btnToggleChangelog.addEventListener('click', () => {
+        const isChangelogVisible = changelogViewContent.style.display === 'block';
+        openShortcutsModal(!isChangelogVisible);
+      });
+
+      captionToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          body.classList.remove('hide-captions');
+        } else {
+          body.classList.add('hide-captions');
+        }
+        e.target.blur();
+      });
+
+      muteToggle.addEventListener('change', (e) => {
+        if (!e.target.checked) {
+          stopSpeech();
+        } else {
+          speakCurrentItem();
+        }
+        e.target.blur();
+      });
+
+      speechSpeedSelect.addEventListener('change', (e) => {
+        e.target.blur();
+        if (muteToggle.checked) {
+          speakCurrentItem();
+        }
+      });
+
+      function sanitizeMathContent(rawMath) {
+        let cleaned = rawMath
+          .replace(/\\\\([()\[\],;:!])/g, '\\$1')
+          .replace(/\\\\([a-zA-Z]+)/g, '\\$1')
+          .replace(/\\_/g, '_')
+          .replace(/\\\*/g, '*')
+          .replace(/\\,\s*,+/g, '\\,');
+        return cleaned;
+      }
+
+      function protectMathExpressions(text) {
+        const mathStore = [];
+        const addPlaceholder = (raw, isDisplay) => {
+          const sanitized = sanitizeMathContent(raw);
+          const id = `@@MATHTOKEN${mathStore.length}ENDMATH@@`;
+          mathStore.push({ id, content: sanitized, isDisplay });
+          return id;
+        };
+
+        text = text.replace(/\$\$([\s\S]*?)\$\$/g, (match) => addPlaceholder(match, true));
+        text = text.replace(/\\{1,2}\[([\s\S]*?)\\{1,2}\]/g, (match, inner) => addPlaceholder(`\\[${inner}\\]`, true));
+        text = text.replace(/\\{1,2}\(([\s\S]*?)\\{1,2}\)/g, (match, inner) => addPlaceholder(`\\(${inner}\\)`, false));
+        text = text.replace(/(?<!\\)\$([^\$\n]+?)(?<!\\)\$/g, (match, inner) => {
+          if (/^\s*\d+([.,]\d+)?\s*$/.test(inner)) return match;
+          return addPlaceholder(`$${inner}$`, false);
+        });
+
+        return { protectedText: text, mathStore };
+      }
+
+      function restoreMathExpressions(html, mathStore) {
+        for (let i = 0; i < mathStore.length; i++) {
+          const token = mathStore[i];
+          html = html.split(token.id).join(token.content);
+        }
+        return html;
+      }
+
+      function escapeHtmlAttr(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function parseInlineMarkdown(text) {
+        text = text.replace(/\\,/g, ' ');
+        text = text.replace(/\\_/g, '_');
+        text = text.replace(/\\\*/g, '*');
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+        text = text.replace(/`([^`]+)`/g, '<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>');
+        return text;
+      }
+
+      function parseMarkdownToHTML(mdText) {
+        const { protectedText, mathStore } = protectMathExpressions(mdText);
+        const rawLines = protectedText.split('\n');
+        let html = '';
+
+        let inList = false;
+        let listType = null;
+        let inTable = false;
+        let currentSectionOpened = false;
+        let heroCardOpened = false;
+        let pendingImages = [];
+        let firstHeadingProcessed = false;
+
+        function flushImages() {
+          if (pendingImages.length === 0) return '';
+          let gridHtml = '<div class="img-grid reveal-item">';
+          pendingImages.forEach(img => {
+            const cardEl = createImageCardElement(img.rawLine, img.alt, img.url);
+            gridHtml += cardEl.outerHTML;
+          });
+          gridHtml += '</div>';
+          pendingImages = [];
+          return gridHtml;
+        }
+
+        function closeListIfNeeded(endLineIdx) {
+          if (inList) {
+            html = html.replace(/<(ul|ol) class="reveal-item" data-md-line="(\d+)">(?![\s\S]*<(ul|ol) class="reveal-item")/, `<$1 class="reveal-item" data-md-line="$2" data-md-line-end="${endLineIdx}">`);
+            html += `</${listType}>\n`;
+            inList = false;
+            listType = null;
+          }
+        }
+
+        function closeTableIfNeeded(endLineIdx) {
+          if (inTable) {
+            html = html.replace(/<div class="table-container reveal-item" data-md-line="(\d+)">(?![\s\S]*<div class="table-container reveal-item")/, `<div class="table-container reveal-item" data-md-line="$1" data-md-line-end="${endLineIdx}">`);
+            html += `</tbody></table></div>\n`;
+            inTable = false;
+          }
+        }
+
+        for (let i = 0; i < rawLines.length; i++) {
+          let line = rawLines[i].trim();
+
+          const imgMatch = line.match(/^!?\[([^\]]+)\]\(([^)]+)\)$/);
+          if (imgMatch) {
+            closeTableIfNeeded(i - 1);
+            pendingImages.push({ alt: imgMatch[1], url: imgMatch[2], rawLine: line });
+            continue;
+          }
+
+          if (/^\d+$/.test(line) && pendingImages.length > 0) {
+            continue;
+          }
+
+          if (line.startsWith('|') && line.endsWith('|')) {
+            closeListIfNeeded(i - 1);
+            html += flushImages();
+            let cells = line.split('|').map(c => c.trim()).filter((c, idx, arr) => idx > 0 && idx < arr.length - 1);
+
+            if (cells.every(c => /^[:-]+$/.test(c))) continue;
+
+            if (!inTable) {
+              inTable = true;
+              html += `<div class="table-container reveal-item" data-md-line="${i}"><table><thead><tr>`;
+              cells.forEach(c => { html += `<th>${parseInlineMarkdown(c)}</th>`; });
+              html += '</tr></thead><tbody>';
+            } else {
+              html += `<tr class="reveal-item" data-md-line="${i}">`;
+              cells.forEach(c => { html += `<td>${parseInlineMarkdown(c)}</td>`; });
+              html += '</tr>';
+            }
+            continue;
+          } else {
+            closeTableIfNeeded(i - 1);
+          }
+
+          if (line.startsWith('# ') && !firstHeadingProcessed) {
+            closeListIfNeeded(i - 1);
+            if (currentSectionOpened) {
+              html += '</section>\n';
+              currentSectionOpened = false;
+            }
+            html += flushImages();
+            const title = parseInlineMarkdown(line.replace(/^#\s+/, ''));
+            firstHeadingProcessed = true;
+            heroCardOpened = true;
+            html += `
+              <div class="hero-card" id="sec-intro">
+                <h1 class="reveal-item" data-md-line="${i}">${title}</h1>
+            `;
+            continue;
+          }
+
+          if (
+            heroCardOpened &&
+            !currentSectionOpened &&
+            !line.startsWith('## ') &&
+            !line.startsWith('### ') &&
+            !line.startsWith('#### ') &&
+            !line.startsWith('# ')
+          ) {
+            if (line !== '') {
+              html += flushImages();
+              if (!html.includes('hero-meta')) {
+                html += `<div class="hero-meta reveal-item" data-md-line="${i}"><span class="badge">${parseInlineMarkdown(line)}</span></div>\n`;
+              } else {
+                html += `<div class="subtitle reveal-item" data-md-line="${i}">${parseInlineMarkdown(line)}</div>\n`;
+              }
+            }
+            continue;
+          }
+
+          if (line.startsWith('# ') && firstHeadingProcessed) {
+            closeListIfNeeded(i - 1);
+            html += flushImages();
+            if (heroCardOpened && !currentSectionOpened) {
+              html += '</div>\n';
+              heroCardOpened = false;
+            }
+            if (currentSectionOpened) {
+              html += '</section>\n';
+            }
+            const secTitle = parseInlineMarkdown(line.replace(/^#\s+/, ''));
+            html += `
+              <section class="lesson-section">
+                <h2 class="reveal-item" data-md-line="${i}">${secTitle}</h2>
+            `;
+            currentSectionOpened = true;
+            continue;
+          }
+
+          if (line.startsWith('## ')) {
+            closeListIfNeeded(i - 1);
+            html += flushImages();
+            if (heroCardOpened && !currentSectionOpened) {
+              html += '</div>\n';
+              heroCardOpened = false;
+            }
+            if (currentSectionOpened) {
+              html += '</section>\n';
+            }
+            const secTitle = parseInlineMarkdown(line.replace(/^##\s+/, ''));
+            html += `
+              <section class="lesson-section">
+                <h2 class="reveal-item" data-md-line="${i}">${secTitle}</h2>
+            `;
+            currentSectionOpened = true;
+            continue;
+          }
+
+          if (line.startsWith('### ')) {
+            closeListIfNeeded(i - 1);
+            html += flushImages();
+            if (heroCardOpened && !currentSectionOpened) {
+              html += '</div>\n<section class="lesson-section">\n';
+              heroCardOpened = false;
+              currentSectionOpened = true;
+            }
+            const h3Title = parseInlineMarkdown(line.replace(/^###\s+/, ''));
+            html += `<h3 class="reveal-item" data-md-line="${i}">${h3Title}</h3>\n`;
+            continue;
+          }
+
+          if (line.startsWith('#### ')) {
+            closeListIfNeeded(i - 1);
+            html += flushImages();
+            if (heroCardOpened && !currentSectionOpened) {
+              html += '</div>\n<section class="lesson-section">\n';
+              heroCardOpened = false;
+              currentSectionOpened = true;
+            }
+            const h4Title = parseInlineMarkdown(line.replace(/^####\s+/, ''));
+            html += `<h4 class="reveal-item" data-md-line="${i}">${h4Title}</h4>\n`;
+            continue;
+          }
+
+          if (/^[-*]\s+/.test(line)) {
+            html += flushImages();
+            if (!inList || listType !== 'ul') {
+              closeListIfNeeded(i - 1);
+              html += `<ul class="reveal-item" data-md-line="${i}">\n`;
+              inList = true;
+              listType = 'ul';
+            }
+            let itemText = parseInlineMarkdown(line.replace(/^[-*]\s+/, ''));
+            html += `<li class="reveal-item" data-md-line="${i}">${itemText}</li>\n`;
+            continue;
+          }
+
+          const olMatch = line.match(/^\d+\.\s+(.+)$/);
+          if (olMatch) {
+            html += flushImages();
+            if (!inList || listType !== 'ol') {
+              closeListIfNeeded(i - 1);
+              html += `<ol class="reveal-item" data-md-line="${i}">\n`;
+              inList = true;
+              listType = 'ol';
+            }
+            let itemText = parseInlineMarkdown(olMatch[1]);
+            html += `<li class="reveal-item" data-md-line="${i}">${itemText}</li>\n`;
+            continue;
+          }
+
+          closeListIfNeeded(i - 1);
+
+          let cleanLine = line.replace(/[,\.;]+$/, '').trim();
+          const standaloneMathMatch = cleanLine.match(/^@@MATHTOKEN(\d+)ENDMATH@@$/);
+          if (standaloneMathMatch) {
+            const tokenObj = mathStore[parseInt(standaloneMathMatch[1], 10)];
+            if (tokenObj && tokenObj.isDisplay) {
+              html += flushImages();
+              html += `<div class="formula-box reveal-item" data-md-line="${i}">${tokenObj.id}</div>\n`;
+              continue;
+            }
+          }
+
+          if (line === '') continue;
+
+          html += flushImages();
+          html += `<p class="reveal-item" data-md-line="${i}">${parseInlineMarkdown(line)}</p>\n`;
+        }
+
+        closeListIfNeeded(rawLines.length - 1);
+        closeTableIfNeeded(rawLines.length - 1);
+        html += flushImages();
+        if (heroCardOpened && !currentSectionOpened) html += '</div>\n';
+        if (currentSectionOpened) html += '</section>\n';
+
+        html = restoreMathExpressions(html, mathStore);
+        return html;
+      }
+
+      function renderMarkdown(text) {
+        rawMarkdownStorage = text;
+        if (markdownInput) {
+          markdownInput.value = rawMarkdownStorage;
+        }
+        const parsedHTML = parseMarkdownToHTML(text);
+        const mainContainer = document.getElementById('lesson-content');
+        mainContainer.innerHTML = parsedHTML;
+
+        revealItems = Array.from(document.querySelectorAll('.reveal-item'));
+        currentIndex = 0;
+        updateUI();
+        initTOC();
+
+        if (window.renderMathInElement) {
+          renderMathInElement(document.body, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '\\[', right: '\\]', display: true},
+              {left: '$', right: '$', display: false},
+              {left: '\\(', right: '\\)', display: false}
+            ],
+            throwOnError: false
+          });
+        }
+      }
+
+      function applyImportMarkdown() {
+        if (!markdownInput) return false;
+        const text = markdownInput.value.trim();
+        if (!text) {
+          alert('Vui lòng dán nội dung Markdown!');
+          return false;
+        }
+        historyStack = [];
+        redoStack = [];
+        renderMarkdown(text);
+        localStorage.setItem('lesson_viewer_markdown', text);
+        if (importModal) importModal.classList.remove('open');
+        return true;
+      }
+
+      if (btnConfirmImport) {
+        btnConfirmImport.addEventListener('click', () => {
+          if (applyImportMarkdown()) btnConfirmImport.blur();
+        });
+      }
+
+      if (btnQuickSave) {
+        btnQuickSave.addEventListener('click', () => {
+          if (applyImportMarkdown()) {
+            btnQuickSave.blur();
+            const defaultFileName = slugifyFilename(promptTopicInput ? promptTopicInput.value : '');
+            openSaveModal(defaultFileName);
+          }
+        });
+      }
+
+      function stopSpeech() {
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      }
+
+      function speakCurrentItem() {
+        if (!muteToggle.checked) return;
+        if (!('speechSynthesis' in window)) return;
+
+        stopSpeech();
+        const targetEl = revealItems[currentIndex];
+        if (!targetEl) return;
+
+        const clone = targetEl.cloneNode(true);
+        clone.querySelectorAll('.katex-mathml, .img-caption').forEach(el => el.remove());
+        let text = clone.innerText.replace(/\s+/g, ' ').trim();
+        if (!text) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'vi-VN';
+        utterance.rate = parseFloat(speechSpeedSelect.value) || 2.0;
+        window.speechSynthesis.speak(utterance);
+      }
+
+      function updateUI() {
+        const total = revealItems.length;
+        revealItems.forEach((item, idx) => {
+          item.classList.remove('hidden-step', 'active-step');
+          if (!isShowAll) {
+            if (idx > currentIndex) {
+              item.classList.add('hidden-step');
+            } else if (idx === currentIndex) {
+              item.classList.add('active-step');
+            }
+          }
+        });
+
+        if (isShowAll) {
+          stepCounter.textContent = `Tất cả (${total})`;
+          progressBar.style.width = '100%';
+        } else {
+          stepCounter.textContent = `${currentIndex + 1} / ${total}`;
+          const pct = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
+          progressBar.style.width = pct + '%';
+        }
+      }
+
+      function scrollToCenter(el) {
+        if (!el) return;
+        requestAnimationFrame(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        });
+      }
+
+      function revealUpTo(index, shouldScroll = true) {
+        if (revealItems.length === 0) return;
+        if (index < 0) index = 0;
+        if (index >= revealItems.length) index = revealItems.length - 1;
+        currentIndex = index;
+        updateUI();
+        speakCurrentItem();
+        if (shouldScroll && !isShowAll) scrollToCenter(revealItems[currentIndex]);
+      }
+
+      function nextStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex < revealItems.length - 1) revealUpTo(currentIndex + 1, true);
+      }
+
+      function prevStep() {
+        if (isShowAll) {
+          window.scrollBy({ top: -window.innerHeight * 0.6, behavior: 'smooth' });
+          return;
+        }
+        if (currentIndex > 0) revealUpTo(currentIndex - 1, true);
+      }
+
+      btnNext.addEventListener('click', nextStep);
+      btnPrev.addEventListener('click', prevStep);
+      btnReset.addEventListener('click', () => {
+        stopSpeech();
+        if (isShowAll) {
+          modeToggle.checked = false;
+          isShowAll = false;
+          body.classList.add('step-mode');
+        }
+        revealUpTo(0, true);
+        btnReset.blur();
+      });
+
+      modeToggle.addEventListener('change', (e) => {
+        isShowAll = e.target.checked;
+        if (isShowAll) {
+          body.classList.remove('step-mode');
+          stopSpeech();
+        } else {
+          body.classList.add('step-mode');
+          speakCurrentItem();
+        }
+        updateUI();
+        if (!isShowAll && revealItems.length > 0) scrollToCenter(revealItems[currentIndex]);
+        e.target.blur();
+      });
+
+      function setFontSize(size) {
+        currentFontSize = Math.min(MAX_FONT, Math.max(MIN_FONT, Number(size.toFixed(2))));
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'rem');
+        fontSizeLabel.textContent = currentFontSize.toFixed(2) + 'rem';
+      }
+
+      btnFontInc.addEventListener('click', () => { setFontSize(currentFontSize + 0.1); btnFontInc.blur(); });
+      btnFontDec.addEventListener('click', () => { setFontSize(currentFontSize - 0.1); btnFontDec.blur(); });
+
+      function toggleHud() { body.classList.toggle('hud-hidden'); }
+      btnHud.addEventListener('click', () => { toggleHud(); btnHud.blur(); });
+
+      function getAllImages() { return Array.from(document.querySelectorAll('.img-card img')); }
+
+      function openLightbox(idx) {
+        const allImages = getAllImages();
+        if (allImages.length === 0) return;
+        currentImgIdx = (idx + allImages.length) % allImages.length;
+        const img = allImages[currentImgIdx];
+        lightboxImg.src = img.src;
+        lightboxCaption.textContent = img.alt || '';
+        lightbox.classList.add('open');
+      }
+
+      function closeLightbox() { lightbox.classList.remove('open'); }
+
+      function openImageAtCurrentSelection() {
+        const currentEl = revealItems[currentIndex];
+        if (currentEl) {
+          const extLink = currentEl.querySelector('a.external-source-link');
+          if (extLink && extLink.href) {
+            window.open(extLink.href, '_blank', 'noopener,noreferrer');
+            return;
+          }
+
+          let img = currentEl.querySelector('img');
+          if (!img && currentEl.matches('img')) img = currentEl;
+          if (img) {
+            const allImages = getAllImages();
+            const idx = allImages.indexOf(img);
+            if (idx !== -1) {
+              openLightbox(idx);
+              return;
+            }
+          }
+        }
+        const allImages = getAllImages();
+        if (allImages.length > 0) openLightbox(0);
+      }
+
+      document.addEventListener('click', (e) => {
+        if (e.target.matches('.img-card img')) {
+          const allImages = getAllImages();
+          const idx = allImages.indexOf(e.target);
+          if (idx !== -1) openLightbox(idx);
+        }
+      });
+
+      lightboxClose.addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+
+      lbPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const allImages = getAllImages();
+        openLightbox((currentImgIdx - 1 + allImages.length) % allImages.length);
+      });
+
+      lbNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const allImages = getAllImages();
+        openLightbox((currentImgIdx + 1) % allImages.length);
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey)) {
+          const activeTag = document.activeElement ? document.activeElement.tagName : '';
+          const isInTextarea = activeTag === 'TEXTAREA';
+          if (e.key.toLowerCase() === 'z') {
+            if (!isInTextarea || historyStack.length > 0) {
+              e.preventDefault();
+              if (e.shiftKey) {
+                redoAction();
+              } else {
+                undoAction();
+              }
+              return;
+            }
+          } else if (e.key.toLowerCase() === 'y') {
+            if (!isInTextarea || redoStack.length > 0) {
+              e.preventDefault();
+              redoAction();
+              return;
+            }
+          }
+        }
+
+        if (e.key === 'Escape') {
+          if (lightbox.classList.contains('open')) { closeLightbox(); return; }
+          if (importModal && importModal.classList.contains('open')) { importModal.classList.remove('open'); return; }
+          if (saveModal.classList.contains('open')) { saveModal.classList.remove('open'); return; }
+          if (infoModal.classList.contains('open')) { infoModal.classList.remove('open'); return; }
+          if (shortcutsModal.classList.contains('open')) { shortcutsModal.classList.remove('open'); return; }
+          if (tocDrawer.classList.contains('open')) { tocDrawer.classList.remove('open'); return; }
+          return;
+        }
+
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        if (lightbox.classList.contains('open')) {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            openLightbox(currentImgIdx + 1);
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            openLightbox(currentImgIdx - 1);
+          } else if (e.key === ' ' || e.code === 'Space') {
+            e.preventDefault();
+            openLightbox(currentImgIdx + 1);
+          }
+          return;
+        }
+
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          nextStep();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          prevStep();
+        } else if (e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          openImageAtCurrentSelection();
+        } else if (e.key === 'p' || e.key === 'P') {
+          e.preventDefault();
+          speakCurrentItem();
+        } else if (e.key === 'g' || e.key === 'G') {
+          e.preventDefault();
+          if (shortcutsModal.classList.contains('open')) shortcutsModal.classList.remove('open');
+          else openShortcutsModal(false);
+        } else if (e.key === 'u' || e.key === 'U') {
+          e.preventDefault();
+          if (shortcutsModal.classList.contains('open') && changelogViewContent.style.display === 'block') shortcutsModal.classList.remove('open');
+          else openShortcutsModal(true);
+        } else if (e.key === 'i' || e.key === 'I') {
+          e.preventDefault();
+          if (infoModal.classList.contains('open')) infoModal.classList.remove('open');
+          else infoModal.classList.add('open');
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          muteToggle.checked = !muteToggle.checked;
+          if (!muteToggle.checked) stopSpeech();
+          else speakCurrentItem();
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          setFontSize(currentFontSize + 0.1);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          setFontSize(currentFontSize - 0.1);
+        } else if (e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          toggleHud();
+        }
+      });
+    });
+  </script>
+
+<span data-test-id="pinterest-save-button" style="border-radius:10px !important;text-indent:12px !important;width:auto !important;height:20px !important;padding:0px 8px !important;text-align:center !important;vertical-align:middle !important;font:bold 11px / 20px &quot;Helvetica Neue&quot;, Helvetica, sans-serif !important;color:rgb(255, 255, 255) !important;background:url(&quot;data:image/svg+xml;base64,PHN2ZyBpZD0ic291cmNlIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNiIgY3k9IjYiIHI9IjYiIGZpbGw9IiNFNjAwMjMiPjwvY2lyY2xlPgo8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTAgNkMwIDguNTYxNSAxLjYwNTUgMTAuNzQ4NSAzLjg2NSAxMS42MDlDMy44MSAxMS4xNDA1IDMuNzUxNSAxMC4zNjggMy44Nzc1IDkuODI2QzMuOTg2IDkuMzYgNC41NzggNi44NTcgNC41NzggNi44NTdDNC41NzggNi44NTcgNC4zOTk1IDYuNDk5NSA0LjM5OTUgNS45N0M0LjM5OTUgNS4xNCA0Ljg4MDUgNC41MiA1LjQ4IDQuNTJDNS45OSA0LjUyIDYuMjM2IDQuOTAyNSA2LjIzNiA1LjM2MUM2LjIzNiA1Ljg3MzUgNS45MDk1IDYuNjM5NSA1Ljc0MSA3LjM1QzUuNjAwNSA3Ljk0NDUgNi4wMzk1IDguNDI5NSA2LjYyNTUgOC40Mjk1QzcuNjg3IDguNDI5NSA4LjUwMzUgNy4zMSA4LjUwMzUgNS42OTRDOC41MDM1IDQuMjYzNSA3LjQ3NTUgMy4yNjQgNi4wMDggMy4yNjRDNC4zMDkgMy4yNjQgMy4zMTE1IDQuNTM4NSAzLjMxMTUgNS44NTZDMy4zMTE1IDYuMzY5NSAzLjUwOSA2LjkxOTUgMy43NTYgNy4yMTlDMy44MDQ1IDcuMjc4NSAzLjgxMiA3LjMzIDMuNzk3NSA3LjM5MDVDMy43NTIgNy41Nzk1IDMuNjUxIDcuOTg1IDMuNjMxNSA4LjA2OEMzLjYwNSA4LjE3NyAzLjU0NSA4LjIwMDUgMy40MzE1IDguMTQ3NUMyLjY4NTUgNy44MDA1IDIuMjE5NSA2LjcxIDIuMjE5NSA1LjgzNEMyLjIxOTUgMy45NDk1IDMuNTg4IDIuMjE5NSA2LjE2NTUgMi4yMTk1QzguMjM3NSAyLjIxOTUgOS44NDggMy42OTYgOS44NDggNS42NjlDOS44NDggNy43Mjc1IDguNTUwNSA5LjM4NDUgNi43NDg1IDkuMzg0NUM2LjE0MyA5LjM4NDUgNS41NzQ1IDkuMDY5NSA1LjM3OTUgOC42OThDNS4zNzk1IDguNjk4IDUuMDggOS44MzkgNS4wMDc1IDEwLjExOEM0Ljg2NjUgMTAuNjYgNC40NzU1IDExLjM0NiA0LjIzMyAxMS43MzU1QzQuNzkyIDExLjkwNzUgNS4zODUgMTIgNiAxMkM5LjMxMzUgMTIgMTIgOS4zMTM1IDEyIDZDMTIgMi42ODY1IDkuMzEzNSAwIDYgMEMyLjY4NjUgMCAwIDIuNjg2NSAwIDZaIiBmaWxsPSJ3aGl0ZSI+PC9wYXRoPgo8L3N2Zz4=&quot;) 4px 50% / 12px 12px no-repeat rgb(230, 0, 35) !important;position:absolute !important;opacity:1 !important;z-index:9007199254740990 !important;display:none !important;cursor:pointer !important;border:none !important;-webkit-font-smoothing:antialiased !important;top:0 !important;left:0 !important;display:none !important;top:13682px !important;left:542px !important">Lưu</span><script id="embedded-markdown-data" type="text/markdown">
+# **BỘ ĐỀ ÔN TẬP TỔNG HỢP SINH HỌC – CHƯƠNG 1, 2, 3**
+
+BIOLOGY REVISION – B1: CELLS | B2: MOVEMENT IN AND OUT OF CELLS | B3: BIOLOGICAL MOLECULES
+
+[Biology diagram show structure of animal and plant cell](https://images.openai.com/static-rsc-4/VPe5sFADUATKIKaQjzOb25KEo2BzdqKgAdqur_F0xF9huTLy5hovKtDKnXV8Bd-zMBV9l_IWf0pkN_QofW0MCIb8m9Uil8q5jFpHiq2A0XsP8hRbHuTJEzehXHlg_2j6fzL0xFFrNB_QqGH96oxFc_uo-j5BeBWBbAKaxqH7fNlJ6AA1xHbjPaqKY2--e6Bc?purpose=inline)
+
+[PPT - Using a pot model to represent osmosis PowerPoint Presentation, free download - ID:1973866](https://images.openai.com/static-rsc-4/4bWKWQZZRDdCLUegLQRUycobj95A6e6KMgqwuJsf0aF2RgWm-wHE8ZzU1ag4H6dFmoKFYjPIDMv49WbcDr94-3Ed3FRydHJIFbWqpqo2iNnIKOQcFprc2tazTEHgEhYrhn304xkeqZq0nIG_Vv7wOG2onnbaKbWqWtwI8h-GW48?purpose=inline)
+
+[Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity](https://images.openai.com/static-rsc-4/A39UbuoXIjRbrDcM3xPg4qX-wkPWhMT3e1KSxsvbfJNemKfgdZya4of62tAQzaEAbDwI4AyYWhABDHNqqxrZq7WUyuqLCiUMntiqdS1kDQ5XUUSHkzyqj5Jrzdk6sIdl9MtmPjPTNhBT_VgOWIaKf48WokUknteTS6D9KoUCZ_s?purpose=inline)
+
+Bộ bài tập gồm **40 câu**, được thiết kế theo mức độ từ nhận biết, thông hiểu đến vận dụng và phân tích thí nghiệm. Câu hỏi sử dụng thuật ngữ tiếng Anh trong ngoặc để học sinh làm quen với dạng đề Sinh học quốc tế.
+
+# **PHẦN I. TRẮC NGHIỆM (MULTIPLE CHOICE)**
+
+*Chọn một đáp án đúng nhất cho mỗi câu hỏi.*
+
+## **A. Chương 1 – Tế bào (Cells)**
+
+[Vector illustration of the Plant and Animal cell anatomy structure. Educational infographic](https://images.openai.com/static-rsc-4/TlaEe9mow-HbpsnJMftWLq59UY-bH4ox5ze9zVwTpjngmp5rps_INbOKPZ8RD_hT_2KOwmUra4GNFR8cz5duZ-1qW0yy-b0DRVpnA44UhqqBm8Zd9u-oY-7HNLRzXnHAFbxuhcl_4q_ijzMJ8FQrWwO0PIFEjbHAjn2_nSN-bex3y73gcV2sI_ml6c5Fpb4Y?purpose=inline)
+
+**Câu 1.** Đơn vị cấu trúc và chức năng cơ bản của cơ thể sống là gì?
+
+A. Mô (Tissue).
+
+B. Cơ quan (Organ).
+
+C. Tế bào (Cell).
+
+D. Hệ cơ quan (Organ system).
+
+**Câu 2.** Bào quan nào chứa thông tin di truyền và điều khiển hoạt động của tế bào?
+
+A. Tế bào chất.
+
+B. Nhân tế bào.
+
+C. Màng tế bào.
+
+D. Không bào.
+
+**Câu 3.** Thành tế bào thực vật chủ yếu được cấu tạo từ chất nào?
+
+A. Protein.
+
+B. Lipid.
+
+C. Cellulose.
+
+D. Glycogen.
+
+**Câu 4.** Chức năng chính của lục lạp (Chloroplast) là gì?
+
+A. Hô hấp tế bào.
+
+B. Quang hợp.
+
+C. Điều khiển hoạt động tế bào.
+
+D. Tổng hợp chất béo.
+
+**Câu 5.** Đặc điểm thích nghi nổi bật của tế bào lông hút (Root hair cell) là:
+
+A. Có nhiều lục lạp.
+
+B. Có hình dạng dài, làm tăng diện tích hấp thụ.
+
+C. Có nhân rất lớn.
+
+D. Có nhiều lông rung.
+
+**Câu 6.** Một tế bào có kích thước thực tế 0,05 mm, được phóng đại 200 lần. Kích thước ảnh là:
+
+A. 0,25 mm.
+
+B. 1 mm.
+
+C. 10 mm.
+
+D. 100 mm.
+
+**Câu 7.** Cấu trúc nào có mặt ở cả tế bào động vật và tế bào thực vật?
+
+A. Thành tế bào và lục lạp.
+
+B. Màng tế bào và nhân tế bào.
+
+C. Lục lạp và không bào lớn.
+
+D. Thành tế bào và không bào.
+
+**Câu 8.** Chức năng chính của tế bào chất (Cytoplasm) là:
+
+A. Chứa ADN.
+
+B. Là nơi diễn ra nhiều phản ứng trao đổi chất.
+
+C. Bảo vệ tế bào khỏi tác động cơ học.
+
+D. Hấp thụ ánh sáng.
+
+**Câu 9.** Một kính hiển vi tạo ảnh của tế bào dài 40 mm, trong khi kích thước thực tế là 20 µm. Độ phóng đại là:
+
+A. ×200.
+
+B. ×500.
+
+C. ×1.000.
+
+D. ×2.000.
+
+**Câu 10.** Chức năng chính của tế bào hồng cầu (Red blood cell) là:
+
+A. Vận chuyển oxygen.
+
+B. Hấp thụ nước.
+
+C. Thực hiện quang hợp.
+
+D. Tiết enzyme tiêu hóa.
+
+## **B. Chương 2 – Sự vận chuyển các chất qua màng tế bào**
+
+[Movement in & Out Cell.ppt](https://images.openai.com/static-rsc-4/I-pch7KAziSWDgMNXmM4bwTSG63V5g-H9NFB9hcVy-oB4NebHPkFymNgMAloeVLgmYCcA8wbkVScXQqSHHiJR7wU03opiZ1B5wKQlQMK3cMWOrFnLJi7UC8-eyX-CqUjFi5bF5ZhGkFpICCsYoBBMI-ZAZQFGCJQ7DlrqNwyMks?purpose=inline)
+
+[5.2: Passive Transport - Biology LibreTexts](https://images.openai.com/static-rsc-4/fpni7q1XgRUNDrS_tirPGEhaBBOKIAKRhixxMXIwXP5wkqMEdozk6ww1HHp7pNEksyYwj-EflJZZF2jUrcKg9D_4sAoZ9hbujPDXZJZJzEPfwAlaB_7hIYrZA7bNQpN9hWUirlgUfF3_WT20SSgBzoyR9BTQrGXtluioMLc6HKY?purpose=inline)
+
+[File:Turgor pressure on plant cells diagram.svg - Wikimedia Commons](https://images.openai.com/static-rsc-4/__Fgg6DfSHBzdj81JkURV9lRl7jMoZAMJ1DVISnQs1EzhcAWIVIc3FXYRCM2AtLGfeR8SZ-Nv1S7sn5-dEt4EjdKZxlff_JvefAs5Rf6i8Zct-9LJiwP3IWWWt8tpIbPyE_qCW-W0CTxXUw8Np-GTcCoS6pjee_NO3j3ggdUzro?purpose=inline)
+
+4
+
+**Câu 11.** Khuếch tán (Diffusion) là quá trình các hạt di chuyển ròng:
+
+A. Từ nơi có nồng độ thấp đến cao.
+
+B. Từ nơi có nồng độ cao đến thấp.
+
+C. Chỉ xảy ra khi có enzyme.
+
+D. Chỉ xảy ra trong tế bào sống.
+
+**Câu 12.** Thẩm thấu (Osmosis) là sự di chuyển của:
+
+A. Các phân tử protein qua thành tế bào.
+
+B. Các phân tử nước qua màng thấm chọn lọc.
+
+C. Các phân tử đường từ thấp đến cao.
+
+D. Các ion khoáng qua thành tế bào.
+
+**Câu 13.** Khi đặt tế bào hồng cầu vào nước tinh khiết, hiện tượng nào xảy ra?
+
+A. Tế bào co lại.
+
+B. Tế bào không thay đổi.
+
+C. Tế bào hút nước và có thể bị vỡ.
+
+D. Tế bào xuất hiện thành cellulose.
+
+**Câu 14.** Khi tế bào thực vật hút nhiều nước, tế bào trở nên:
+
+A. Co nguyên sinh.
+
+B. Trương nước.
+
+C. Biến tính.
+
+D. Phân hủy.
+
+**Câu 15.** Hiện tượng co nguyên sinh (Plasmolysis) xảy ra khi:
+
+A. Nước đi vào tế bào quá nhiều.
+
+B. Nước đi ra khỏi tế bào thực vật.
+
+C. Tế bào hấp thụ nhiều glucose.
+
+D. Tế bào phân chia.
+
+**Câu 16.** Yếu tố nào sau đây làm tăng tốc độ khuếch tán?
+
+A. Giảm nhiệt độ.
+
+B. Giảm diện tích bề mặt.
+
+C. Tăng độ chênh lệch nồng độ.
+
+D. Tăng khoảng cách khuếch tán.
+
+**Câu 17.** Khi đặt tế bào thực vật trong dung dịch có nồng độ chất tan cao hơn dịch tế bào, nước sẽ:
+
+A. Đi vào tế bào.
+
+B. Đi ra khỏi tế bào.
+
+C. Không di chuyển.
+
+D. Biến thành chất tan.
+
+**Câu 18.** Một tế bào thực vật có sức trương lớn nhất khi đặt trong:
+
+A. Nước tinh khiết.
+
+B. Dung dịch đường đậm đặc.
+
+C. Dung dịch muối đậm đặc.
+
+D. Dung dịch có tiềm năng nước thấp.
+
+**Câu 19.** Trong thí nghiệm khoai tây, nồng độ sucrose nào được xem là đẳng trương gần đúng nếu chiều dài khoai tây không thay đổi?
+
+A. 0,0 mol/dm³.
+
+B. 0,2 mol/dm³.
+
+C. 0,4 mol/dm³.
+
+D. 0,8 mol/dm³.
+
+**Câu 20.** Phát biểu nào đúng về khuếch tán?
+
+A. Luôn cần ATP.
+
+B. Chỉ xảy ra qua màng tế bào.
+
+C. Là kết quả của chuyển động ngẫu nhiên của các hạt.
+
+D. Luôn làm tăng nồng độ ở nơi có nồng độ cao.
+
+## **C. Chương 3 – Các phân tử sinh học (Biological molecules)**
+
+[Organic Compounds | BioNinja](https://images.openai.com/static-rsc-4/eWj1aMhayW-46xWQbd1hkVOEI7vxwaGe0Qh8cYIAGVfwKRyvDH0MOCyydNpa9Yc-jNdWa-EpWEBGJpQjaLZdtjUi_2CzqIAEADeHmUN3urda3avMYByvKdN4Gn1filSDK4li23ABx6yYQ2qEccGX_GOepCS5f06ZBYlXu_DvLSg?purpose=inline)
+
+[AQa Required Practical -  Food Tests | Teaching Resources](https://images.openai.com/static-rsc-4/cEcPudseht7DcZR39tytSdtxHhYYtm9a9btIfqTg1My59nzz0s5ykbimQKIiYqjxUAz80MdyvCQtmidepzI1piMoIZHlhV08-p-QgwY22YyK-aEaqgpO5PdrqSl2V0CqfKobcMQRv0ioYpBKPUPZt1VGyqLBw2JZFZ4uo0Hl_2M?purpose=inline)
+
+[Food Tests – AQA GCSE Biology Revision Notes](https://images.openai.com/static-rsc-4/8GOKAGX6VIu3tPxBK4fbH2tKqBR0fO-NrM5lC0xl6rcetV2r8QojfiMKvSwY76xcLmXozeMhtfjWm3x2Axyj36U-hCV0_VOZKMKvJdLejQqOU1OZrvm0XtYvEnrI0UOZ4ttU5xTGccm2HvMg8a_BIX8HMs-0NG7rx5pRcL75AnI?purpose=inline)
+
+6
+
+**Câu 21.** Đơn phân cấu tạo nên protein là:
+
+A. Glucose.
+
+B. Amino acid.
+
+C. Fatty acid.
+
+D. Glycerol.
+
+**Câu 22.** Chất dự trữ carbohydrate chủ yếu ở động vật là:
+
+A. Starch.
+
+B. Cellulose.
+
+C. Glycogen.
+
+D. Glucose.
+
+**Câu 23.** Thành tế bào thực vật chứa nhiều:
+
+A. Glycogen.
+
+B. Cellulose.
+
+C. Protein.
+
+D. Lipid.
+
+**Câu 24.** Thuốc thử dùng để nhận biết tinh bột là:
+
+A. Benedict.
+
+B. Biuret.
+
+C. Iodine.
+
+D. Ethanol.
+
+**Câu 25.** Khi thử đường giảm bằng Benedict và đun nóng, kết quả dương tính mạnh thường có màu:
+
+A. Xanh đen.
+
+B. Tím.
+
+C. Đỏ gạch.
+
+D. Trắng đục.
+
+**Câu 26.** Thuốc thử Biuret được sử dụng để nhận biết:
+
+A. Protein.
+
+B. Tinh bột.
+
+C. Lipid.
+
+D. Glucose.
+
+**Câu 27.** Khi thử lipid bằng ethanol, kết quả dương tính là:
+
+A. Xuất hiện màu xanh đen.
+
+B. Xuất hiện nhũ tương trắng đục.
+
+C. Xuất hiện kết tủa đỏ gạch.
+
+D. Xuất hiện màu tím.
+
+**Câu 28.** Enzyme có bản chất chủ yếu là:
+
+A. Carbohydrate.
+
+B. Protein.
+
+C. Lipid.
+
+D. Nước.
+
+**Câu 29.** Khi nhiệt độ vượt quá giới hạn thích hợp, enzyme có thể:
+
+A. Tăng hoạt động vô hạn.
+
+B. Bị biến tính.
+
+C. Chuyển thành carbohydrate.
+
+D. Tăng số lượng cơ chất.
+
+**Câu 30.** Vai trò chính của enzyme là:
+
+A. Làm tăng năng lượng hoạt hóa.
+
+B. Làm giảm tốc độ phản ứng.
+
+C. Xúc tác và làm tăng tốc độ phản ứng sinh hóa.
+
+D. Cung cấp trực tiếp oxygen cho tế bào.
+
+# **PHẦN II. GHÉP NỐI VÀ ĐIỀN TỪ (MATCHING & FILL IN THE BLANKS)**
+
+## **Bài 1. Ghép cấu trúc tế bào với chức năng**
+
+[Plant Cell Interactive Poster | Teaching Resources](https://images.openai.com/static-rsc-4/MqwsCRndGiELYWz65-o1NdOLsoEOkE44zhZZIDZnvX04u29XyW2aMJrs9kHoos1hfPERt9tSuCYQlIRBVSfvNGNZfaqI-o5q_CDEz1_9795kawWzHd3FZVuyPREoswjBBd8oJIwixKENOejSrxvc2P3pvE0iak8YC6isO3LH9K8?purpose=inline)
+
+[tes.com](https://www.tes.com/en-us/teaching-resource/plant-cell-interactive-poster-12698429?utm_source=chatgpt.com)
+
+Ghép cột A với cột B.
+
+| Cột A – Cấu trúc | Cột B – Chức năng                     |
+| ---------------- | ------------------------------------- |
+| 1. Nucleus       | A. Hấp thụ ánh sáng để quang hợp      |
+| 2. Chloroplast   | B. Kiểm soát chất đi vào và đi ra     |
+| 3. Cell membrane | C. Chứa thông tin di truyền           |
+| 4. Cell wall     | D. Duy trì hình dạng tế bào           |
+| 5. Cytoplasm     | E. Nơi diễn ra phản ứng trao đổi chất |
+
+## **Bài 2. Điền từ thích hợp vào chỗ trống**
+
+Sử dụng các từ: *Diffusion, Osmosis, Cellulose, Glycogen, Amino acid, Denaturation, Turgid, Plasmolysis.*
+
+1. Sự di chuyển của các hạt từ nơi có nồng độ cao đến thấp là \_\_\_\_\_\_\_\_\_\_.
+2. Sự di chuyển của nước qua màng thấm chọn lọc là \_\_\_\_\_\_\_\_\_\_.
+3. Thành tế bào thực vật được cấu tạo chủ yếu từ \_\_\_\_\_\_\_\_\_\_.
+4. Chất dự trữ carbohydrate ở động vật là \_\_\_\_\_\_\_\_\_\_.
+5. Đơn phân cấu tạo nên protein là \_\_\_\_\_\_\_\_\_\_.
+6. Hiện tượng enzyme mất cấu trúc không gian tự nhiên gọi là \_\_\_\_\_\_\_\_\_\_.
+7. Tế bào thực vật hút nhiều nước và căng chắc được gọi là \_\_\_\_\_\_\_\_\_\_.
+8. Tế bào thực vật mất nước, màng tách khỏi thành tế bào là hiện tượng \_\_\_\_\_\_\_\_\_\_.
+
+## **Bài 3. Hoàn thành bảng thử nghiệm hóa học**
+
+[Comprehensive Biology Mind Maps: Biological Molecules and Enzymes for IGCSE Edexcel (Biology) as PDF - Knowunity](https://images.openai.com/static-rsc-4/A39UbuoXIjRbrDcM3xPg4qX-wkPWhMT3e1KSxsvbfJNemKfgdZya4of62tAQzaEAbDwI4AyYWhABDHNqqxrZq7WUyuqLCiUMntiqdS1kDQ5XUUSHkzyqj5Jrzdk6sIdl9MtmPjPTNhBT_VgOWIaKf48WokUknteTS6D9KoUCZ_s?purpose=inline)
+
+[knowunity.co.uk](https://knowunity.co.uk/knows/biology-igcse-edexcel-biology-biological-molecules-and-enzymes-mind-maps-4690a259-699d-4fad-8b68-f3093763ba35?utm_source=chatgpt.com)
+
+| Chất cần nhận biết | Thuốc thử           | Màu sắc/hiện tượng dương tính |
+| ------------------ | ------------------- | ----------------------------- |
+| Starch             | Iodine              | \_\_\_\_\_\_\_\_\_\_          |
+| Reducing sugar     | Benedict + đun nóng | \_\_\_\_\_\_\_\_\_\_          |
+| Protein            | Biuret              | \_\_\_\_\_\_\_\_\_\_          |
+| Lipid              | Ethanol + nước      | \_\_\_\_\_\_\_\_\_\_          |
+
+# **PHẦN III. BÀI TẬP TỰ LUẬN VÀ TÍNH TOÁN (STRUCTURED QUESTIONS)**
+
+## **Bài 1. Tính độ phóng đại kính hiển vi**
+
+[Cytologie](https://images.openai.com/static-rsc-4/oP0qx1HnjEtJPUeSnM9Q_h48f1aKlDuwqgES4oI3uBPF5LggA_17Bbnve9_aVzYDyCvTB4KYeP2ofhHU8taYrwzSoens3wGO2o-Hi5lTN3N5lzp_xDU_g80KDUxHkMHf7mjJzb02wZ0el0A0BzG9Wc5KDYsTpAPfNcJXmbM-o2M?purpose=inline)
+
+[sci.muni.cz](https://www.sci.muni.cz/~anatomy/cytology/html/allium_1.htm?utm_source=chatgpt.com)
+
+Một tế bào thực vật có kích thước thực tế 0,04 mm. Ảnh của tế bào trên giấy có chiều dài 80 mm.
+
+a) Viết công thức tính độ phóng đại.
+
+b) Tính độ phóng đại của ảnh.
+
+c) Đổi kích thước thực tế của tế bào sang µm.
+
+d) Nếu tăng độ phóng đại lên ×2.000, kích thước ảnh mới là bao nhiêu mm?
+
+## **Bài 2. Phân tích thí nghiệm thẩm thấu ở khoai tây**
+
+Một học sinh cắt các dải khoai tây có chiều dài ban đầu 60 mm và ngâm trong các dung dịch sucrose khác nhau.
+
+| Nồng độ sucrose (mol/dm³) | Chiều dài ban đầu (mm) | Chiều dài sau thí nghiệm (mm) |
+| ------------------------- | ---------------------- | ----------------------------- |
+| 0,0                       | 60                     | 66                            |
+| 0,2                       | 60                     | 63                            |
+| 0,4                       | 60                     | 60                            |
+| 0,6                       | 60                     | 55                            |
+| 0,8                       | 60                     | 50                            |
+
+[Required practical 3 osmosis - AQA A-Level Biology](https://images.openai.com/static-rsc-4/VTdQy4xjOJ4oSvw4_fVebRTf-UHNl235vluOLPUVNi67P93s4UP8fOn47f_fRTunTook0FermSCZr5d-xZLcHMWy7CKp-ksH1cZJRa-o-CujAxdH2C6Ew-VB0HYaoH7U-LHpwmBNUVbG80N_KwnS8XMLa1ho5pk-Y5LIwJgJ818?purpose=inline)
+
+[myedspace.co.uk](https://myedspace.co.uk/myresources/a-level/biology/aqa/revision-notes/required-practical-3-osmosis?utm_source=chatgpt.com)
+
+a) Tính sự thay đổi chiều dài của từng dải khoai tây.
+
+b) Xác định dung dịch làm khoai tây trương nước nhiều nhất.
+
+c) Xác định nồng độ sucrose đẳng trương gần đúng.
+
+d) Giải thích tại sao khoai tây trong dung dịch 0,8 mol/dm³ bị mềm và giảm chiều dài.
+
+e) Dự đoán hiện tượng xảy ra nếu ngâm khoai tây trong nước tinh khiết lâu hơn.
+
+## **Bài 3. Phân tích ảnh hưởng của nhiệt độ đến enzyme Catalase**
+
+Thí nghiệm nghiên cứu khả năng phân hủy hydrogen peroxide của enzyme Catalase trong các điều kiện nhiệt độ khác nhau.
+
+\\[ 2H_2O_2 \xrightarrow{Catalase} 2H_2O+O_2 \\]
+
+[¿Por qué el agua oxigenada hace burbujas?](https://images.openai.com/static-rsc-4/40XNQxQNdVCT8vVqHfhvPiyUPhIwgVLcgv-Zm5hrL623copRDPrAvz27DwWoURn-cbfEB5QKpEdh89sE8d6-_sOsM4xuqFhAEVquVMxDk3JUqrPxtoUAzFSlPlvQ8u2kK4MOmJE0SUDOmkBFOijj31XhgEz6A3TFS3MkTiuK9og?purpose=inline)
+
+[rtve.es](https://www.rtve.es/play/audios/historia-y-ciencia-por-un-tubo/ciencia-tubo-agua-oxigenada-burbujas/6844483/?utm_source=chatgpt.com)
+
+| Nhiệt độ (°C) | Thể tích oxygen sau 2 phút (cm³) |
+| ------------- | -------------------------------- |
+| 10            | 5                                |
+| 20            | 15                               |
+| 30            | 30                               |
+| 37            | 48                               |
+| 50            | 12                               |
+| 60            | 2                                |
+| 70            | 0                                |
+
+a) Xác định nhiệt độ tối ưu của enzyme.
+
+b) Tính tốc độ tạo oxygen trung bình tại 37°C theo đơn vị cm³/phút.
+
+c) Giải thích tại sao thể tích oxygen tăng khi nhiệt độ tăng từ 10°C đến 37°C.
+
+d) Giải thích tại sao enzyme gần như mất hoạt tính ở 70°C.
+
+e) Nếu đun sôi enzyme Catalase trước khi tiến hành thí nghiệm, kết quả thu được sẽ như thế nào?
+
+## **Bài 4. Nhận biết các chất dinh dưỡng**
+
+[- YouTube](https://images.openai.com/static-rsc-4/Qdto7pqQwVRwsJNlczTrwTo0lDMlrHQzuSKQODKTSpqhabpLjyx2JwL9_jpB7_lmfGxZVKEuAJptok5IZC-njaX7KzywveUq427C8h1jseTJTVIRY4yee0epOfsoHkxZxZUTioXZsP1M5zmFPdhAU7_9zORNI2Y58sDoP9MmzAs?purpose=inline)
+
+[Benedict’s Test: Objective, Principle, Reagents, Procedure and Result - Online Biology Notes](https://images.openai.com/static-rsc-4/TbNZI2sTBYp2AGvnOlbbJvFKEi5KLnbozNECEu8eFRok3QXl1tI1irkBegSo7iiSk9ois8xZ5UclfgmuFWQXhXZX-lSCX2crHCJRnhWvRsEU8ZhuzdBr8BOID3m1s-7DnaEenHrHhQAykAZmMah_Zkx5-42APLI6ds4ovA2YBzs?purpose=inline)
+
+[Biuret test - Definition and Examples - Biology Online Dictionary](https://images.openai.com/static-rsc-4/EW1B7mlf3zvbZjuTqEfr33Ioobd0wXlVG01YmGcWjIQPg4XkfBfhSf3ms58DVVc38-1boeuBrdWzeWPuX4jJm7mO-sdSAjqYy4nwHdzHtAtEwLhlbv18mA94ux8Zr6IJToNOdUDw6OSUe9gItM9GwzpKc5cqxREH9FGK-l9ZtN4?purpose=inline)
+
+4
+
+Một học sinh có bốn mẫu thực phẩm chưa biết thành phần. Tiến hành các phép thử và thu được kết quả:
+
+| Mẫu | Iodine   | Benedict (đun nóng) | Biuret   | Ethanol   |
+| --- | -------- | ------------------- | -------- | --------- |
+| A   | Xanh đen | Xanh lam            | Xanh lam | Không đục |
+| B   | Nâu cam  | Đỏ gạch             | Xanh lam | Không đục |
+| C   | Nâu cam  | Xanh lam            | Tím      | Không đục |
+| D   | Nâu cam  | Xanh lam            | Xanh lam | Trắng đục |
+
+Trả lời:
+
+a) Mẫu nào chứa tinh bột?
+
+b) Mẫu nào chứa đường giảm?
+
+c) Mẫu nào chứa protein?
+
+d) Mẫu nào chứa lipid?
+
+e) Giải thích nguyên tắc của phép thử Benedict.
+
+# **PHẦN IV. BÀI TẬP VẬN DỤNG CAO (APPLICATION & ANALYSIS)**
+
+## **Bài 1. Tình huống về tế bào**
+
+[Verschil Osmose en Diffusie | Biologie | JoJoschool](https://images.openai.com/static-rsc-4/QuSUyV9ne9QXAQWEe-mGciaEfqBLlu9nLMh10EeihwRbl7OZxuyXBDB79ENExbnlKe8bUWfZCeR7v070ipIq50__yEwkrrGtExPkzUxs6ZsdcrATaosORGntZO96Y6y2-B6OCUcso0gIgQEg4WVRKXC-w_apDx9ICSRvhtmU9XA?purpose=inline)
+
+[leren.jojoschool.nl](https://leren.jojoschool.nl/course/biologie/summary/osmose-en-diffusie?utm_source=chatgpt.com)
+
+Một học sinh quan sát tế bào biểu bì hành dưới kính hiển vi. Ban đầu tế bào có hình dạng bình thường. Sau khi nhỏ dung dịch muối đậm đặc, phần tế bào chất co lại và màng tế bào tách khỏi thành tế bào.
+
+a) Hiện tượng trên có tên gọi là gì?
+
+b) Nước đã di chuyển theo chiều nào?
+
+c) Vì sao thành tế bào không co lại cùng màng tế bào?
+
+d) Nếu nhỏ nước tinh khiết vào mẫu vật, tế bào có thể phục hồi trạng thái ban đầu không? Giải thích.
+
+## **Bài 2. Thiết kế thí nghiệm khoa học**
+
+[Shrink a Potato with Osmosis! | STEM Activity](https://images.openai.com/static-rsc-4/Xs2XaaPTJOdUshHoH8920Xf9CFB424NzLPJ1hy78fbvBeHmJy5ZcpU6DpHniLqLTv1Ny5LAHTiZQ8duEbw1FtjUINmSse4-1iMUt8mWGfj1wWaThDo794hwpqlIOORwUyDEqtxtjdFzWNNfls53op3dJZNHSfS6rZ_NQz2SVMhw?purpose=inline)
+
+[sciencebuddies.org](https://www.sciencebuddies.org/stem-activities/potato-osmosis?utm_source=chatgpt.com)
+
+Em được giao nhiệm vụ kiểm tra ảnh hưởng của nồng độ sucrose đến sự thay đổi khối lượng khoai tây.
+
+Hãy trình bày:
+
+a) Giả thuyết nghiên cứu.
+
+b) Biến độc lập (Independent variable).
+
+c) Biến phụ thuộc (Dependent variable).
+
+d) Ba biến cần kiểm soát (Control variables).
+
+e) Các bước tiến hành thí nghiệm.
+
+f) Cách xử lý số liệu và vẽ biểu đồ kết quả.
+
+## **Bài 3. Vận dụng kiến thức enzyme**
+
+Một loại enzyme hoạt động tốt nhất ở 37°C và pH 7. Khi thay đổi pH xuống 2 hoặc tăng lên 12, tốc độ phản ứng giảm mạnh.
+
+[Notes for B1.2.5 Effect of pH and temperature on protein structure - IB](https://images.openai.com/static-rsc-4/9vcH1g9wvPQ7GkiHCivoTLcOb8cJG60K7RluCCpgm-0zxBo-MLm9bQVR_68zqqgIJzgMD6jv-Ondm3ykWs1VV5VMtwJeiD3PXamr6Ba71KT6V-7T0VOPqnWbmU4W6WAV57yTiEpYLqteWrWPfEdOza6D2-oWIY0I1MiJvXxtPEw?purpose=inline)
+
+[revisiondojo.com](https://www.revisiondojo.com/ib/ib-biology-new/ib-biology-new-b125-effect-of-ph-and-temperature-on-protein-structure/notes?utm_source=chatgpt.com)
+
+a) Tại sao enzyme hoạt động tốt nhất ở điều kiện pH thích hợp?
+
+b) Sự thay đổi pH ảnh hưởng thế nào đến trung tâm hoạt động?
+
+c) Vì sao không thể kết luận rằng mọi enzyme đều có nhiệt độ tối ưu là 37°C?
+
+d) Đề xuất một thí nghiệm để xác định nhiệt độ tối ưu của một enzyme khác.
+
+# **PHẦN V. THỬ THÁCH NHANH – KIỂM TRA KIẾN THỨC**
+
+Mỗi câu trả lời đúng được 1 điểm.
+
+1. Tên tiếng Anh của hiện tượng khuếch tán là gì?
+2. Tế bào thực vật dự trữ carbohydrate dưới dạng nào?
+3. Đơn phân cấu tạo nên protein là gì?
+4. Thuốc thử nào nhận biết tinh bột?
+5. Enzyme có bị tiêu hao sau phản ứng không?
+6. Màng tế bào có tính chất thấm như thế nào?
+7. Tế bào thực vật trương nước gọi là gì?
+8. Chất nào tạo nhũ tương trắng đục khi thử bằng ethanol?
+9. Bào quan nào chứa diệp lục?
+10. Khi nhiệt độ quá cao, enzyme xảy ra hiện tượng gì?
+
+# **PHẦN VI. ĐÁP ÁN DÀNH CHO GIÁO VIÊN**
+
+**Đáp án và hướng dẫn chấm**
+
+Giáo viên
+
+Phần I – Trắc nghiệmXem đáp án
+
+Phần II – Ghép nối và điền từXem đáp án
+
+Phần III – Bài tập tự luậnXem đáp án
+
+Phần IV – Vận dụng caoXem đáp án
+
+Phần V – Thử thách nhanhXem đáp án
+
+Hiện tất cả đáp án
+
+**Gợi ý phân bổ điểm:** Phần I: 30 điểm; Phần II: 20 điểm; Phần III: 30 điểm; Phần IV: 15 điểm; Phần V: 5 điểm. Tổng cộng 100 điểm.
+
+Bộ đề có thể sử dụng cho 2–3 tiết ôn tập hoặc chia thành nhiều phiếu học tập theo từng chương.
+</script></body></html>
