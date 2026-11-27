@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
+
 <html lang="vi" data-theme="vintage" style="--wallpaper-url: url(&quot;https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=1600&q=75&quot;); --wallpaper-opacity: 0.22;">
 <head>
     <meta charset="UTF-8">
@@ -1889,46 +1890,6 @@ D. Tây Á
 
     window.addEventListener('resize', applyFontSize);
 
-    // Tiến 1 bước (Space hoặc ArrowRight): Hiện A -> B -> C -> D -> Hiện đáp án -> Next câu
-    function stepForward() {
-        if (questions.length === 0) return;
-        const state = gameState[currentQuestionIndex];
-        if (!isAnsweringBlocked) {
-            const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
-            if (currentRevealed < 4) {
-                revealNextOption();
-            } else {
-                revealAnswer();
-            }
-        } else {
-            nextQuestion();
-        }
-    }
-
-    // Lùi 1 bước (ArrowLeft): Ẩn đáp án đúng -> Ẩn D -> C -> B -> A -> Về câu trước
-    function stepBackward() {
-        if (questions.length === 0) return;
-        const state = gameState[currentQuestionIndex];
-        if (state.isAnswered) {
-            state.isAnswered = false;
-            state.selectedKey = null;
-            state.isCorrect = null;
-            state.showKeywords = false;
-            state.revealedCount = 4;
-            playSound('click');
-            showQuestion();
-            return;
-        }
-
-        const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
-        if (currentRevealed > 0) {
-            hideLastOption();
-            return;
-        }
-
-        prevQuestion();
-    }
-
     document.addEventListener('keydown', function(e) {
         if (document.querySelector('.modal-overlay.active')) {
             if (e.key === 'Escape') {
@@ -1944,19 +1905,29 @@ D. Tây Á
         if (e.key.toLowerCase() === 'w') { cycleWidthLevel(); return; }
         if (e.key.toLowerCase() === 'm') { toggleMute(); return; }
 
-        if (e.code === 'Space' || e.key === 'ArrowRight') {
+        if (e.code === 'Space') {
             if (questions.length === 0) return;
             e.preventDefault();
-            stepForward();
-            return;
+            const state = gameState[currentQuestionIndex];
+            if (!isAnsweringBlocked) {
+                const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
+                if (currentRevealed < 4) {
+                    revealNextOption();
+                } else {
+                    revealAnswer();
+                }
+                return;
+            } else {
+                const btnNext = document.getElementById('btnNext');
+                if (btnNext.style.display === 'block') {
+                    nextQuestion();
+                    return;
+                }
+            }
         }
 
-        if (e.key === 'ArrowLeft') {
-            if (questions.length === 0) return;
-            e.preventDefault();
-            stepBackward();
-            return;
-        }
+        if (e.key === 'ArrowRight') { nextQuestion(); return; }
+        if (e.key === 'ArrowLeft') { prevQuestion(); return; }
 
         if (isAnsweringBlocked || questions.length === 0) return;
 
@@ -2112,7 +2083,7 @@ D. Thành phố Cần Thơ
 
             return {
                 optionsLayout: currentOptions,
-                revealedCount: 0, // Ban đầu ẩn cả 4 đáp án A, B, C, D; ấn Space hoặc Right hiện lần lượt từng đáp án
+                revealedCount: 0, // Ban đầu ẩn cả 4 đáp án A, B, C, D; ấn Space hiện lần lượt từng đáp án
                 isAnswered: false,
                 selectedKey: null,
                 isCorrect: null,
@@ -2146,22 +2117,6 @@ D. Thành phố Cần Thơ
         const btn = document.getElementById(`btn${key}`);
         if (btn) {
             btn.classList.remove('unrevealed');
-        }
-        playSound('click');
-        saveFullGameProgress();
-    }
-
-    function hideLastOption() {
-        const state = gameState[currentQuestionIndex];
-        if (!state || isAnsweringBlocked) return;
-        const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
-        if (currentRevealed <= 0) return;
-
-        const key = OPTION_KEYS[currentRevealed - 1];
-        state.revealedCount = currentRevealed - 1;
-        const btn = document.getElementById(`btn${key}`);
-        if (btn) {
-            btn.classList.add('unrevealed');
         }
         playSound('click');
         saveFullGameProgress();
