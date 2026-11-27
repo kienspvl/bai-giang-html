@@ -31,8 +31,9 @@
             --wallpaper-url: none;
             --wallpaper-opacity: 0.22;
             --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            --question-size: 1.3rem;
-            --answer-size: 1.1rem;
+            /* Mặc định đã cộng thêm 10 lần ấn + (1.3 + 10*0.14 = 2.70rem; 1.1 + 10*0.11 = 2.20rem) */
+            --question-size: 2.70rem;
+            --answer-size: 2.20rem;
         }
 
         /* THEME: VINTAGE (LIGHT PARCHMENT & WARM SEPIA) */
@@ -638,7 +639,7 @@
             text-align: left;
             cursor: pointer;
             font-size: var(--answer-size);
-            transition: font-size 0.2s ease, background-color 0.2s, border-color 0.2s, transform 0.1s;
+            transition: font-size 0.2s ease, background-color 0.2s, border-color 0.2s, transform 0.2s, opacity 0.22s ease;
             position: relative;
             display: flex;
             align-items: center;
@@ -647,6 +648,13 @@
             word-break: break-word;
             white-space: normal;
             min-height: 54px;
+        }
+
+        .answer-btn.unrevealed {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(6px);
         }
 
         .answer-btn:active:not(:disabled) {
@@ -1060,8 +1068,9 @@
 
         @media (max-width: 600px) {
             :root {
-                --question-size: 1.08rem;
-                --answer-size: 0.98rem;
+                /* Mặc định mobile + 10 lần ấn + (1.08 + 10*0.14 = 2.48rem; 0.98 + 10*0.11 = 2.08rem) */
+                --question-size: 2.48rem;
+                --answer-size: 2.08rem;
             }
 
             .answers-grid {
@@ -1437,6 +1446,9 @@ B. Nam Á
 D. Tây Á
 # Southeast Asia, ASEAN Map, Vietnam Location`;
 
+    const OPTION_KEYS = ['A', 'B', 'C', 'D'];
+    const DEFAULT_FONT_STEP = 10; // Mặc định bằng cỡ gốc + 10 lần ấn +
+
     let questions = [];
     let currentQuestionIndex = 0;
     let isAnsweringBlocked = false;
@@ -1448,7 +1460,7 @@ D. Tây Á
     let wallpaperUrl = wallpaperPresets.easteurope;
     let wallpaperOpacity = 22;
     let widthLevel = 1; // 0: Chuẩn (920px), 1: Vừa (1180px), 2: Rộng tối đa (100%)
-    let fontSizeStep = 0;
+    let fontSizeStep = DEFAULT_FONT_STEP;
     let isMuted = false;
     let isLadderVisible = true;
     let savedFileName = "ai-la-trieu-phu";
@@ -1777,11 +1789,13 @@ D. Tây Á
             document.getElementById('stripBackslashToggle').checked = stripBackslash;
         }
 
-        const savedFontSize = localStorage.getItem('altp_font_step');
+        const savedFontSize = localStorage.getItem('altp_font_step_v2');
         if (savedFontSize !== null) {
             fontSizeStep = parseInt(savedFontSize, 10);
-            applyFontSize();
+        } else {
+            fontSizeStep = DEFAULT_FONT_STEP;
         }
+        applyFontSize();
 
         const importArea = document.getElementById('importArea');
         if (importArea) {
@@ -1812,7 +1826,10 @@ D. Tây Á
                     const data = JSON.parse(savedProgress);
                     if (data.questions && data.questions.length > 0 && data.gameState) {
                         questions = data.questions;
-                        gameState = data.gameState;
+                        gameState = data.gameState.map(s => ({
+                            ...s,
+                            revealedCount: typeof s.revealedCount === 'number' ? s.revealedCount : (s.isAnswered ? 4 : 0)
+                        }));
                         currentQuestionIndex = data.currentQuestionIndex || 0;
                         showQuestion();
                         return;
@@ -1856,7 +1873,7 @@ D. Tây Á
     function changeFontSize(delta) {
         fontSizeStep += delta;
         if (fontSizeStep < -3) fontSizeStep = -3;
-        localStorage.setItem('altp_font_step', fontSizeStep);
+        localStorage.setItem('altp_font_step_v2', fontSizeStep);
         applyFontSize();
     }
 
@@ -1871,6 +1888,46 @@ D. Tây Á
     }
 
     window.addEventListener('resize', applyFontSize);
+
+    // Tiến 1 bước (Space hoặc ArrowRight): Hiện A -> B -> C -> D -> Hiện đáp án -> Next câu
+    function stepForward() {
+        if (questions.length === 0) return;
+        const state = gameState[currentQuestionIndex];
+        if (!isAnsweringBlocked) {
+            const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
+            if (currentRevealed < 4) {
+                revealNextOption();
+            } else {
+                revealAnswer();
+            }
+        } else {
+            nextQuestion();
+        }
+    }
+
+    // Lùi 1 bước (ArrowLeft): Ẩn đáp án đúng -> Ẩn D -> C -> B -> A -> Về câu trước
+    function stepBackward() {
+        if (questions.length === 0) return;
+        const state = gameState[currentQuestionIndex];
+        if (state.isAnswered) {
+            state.isAnswered = false;
+            state.selectedKey = null;
+            state.isCorrect = null;
+            state.showKeywords = false;
+            state.revealedCount = 4;
+            playSound('click');
+            showQuestion();
+            return;
+        }
+
+        const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
+        if (currentRevealed > 0) {
+            hideLastOption();
+            return;
+        }
+
+        prevQuestion();
+    }
 
     document.addEventListener('keydown', function(e) {
         if (document.querySelector('.modal-overlay.active')) {
@@ -1887,28 +1944,24 @@ D. Tây Á
         if (e.key.toLowerCase() === 'w') { cycleWidthLevel(); return; }
         if (e.key.toLowerCase() === 'm') { toggleMute(); return; }
 
-        if (e.code === 'Space') {
-            if (!isAnsweringBlocked) {
-                revealAnswer();
-                e.preventDefault();
-                return;
-            } else {
-                const btnNext = document.getElementById('btnNext');
-                if (btnNext.style.display === 'block') {
-                    nextQuestion();
-                    e.preventDefault();
-                    return;
-                }
-            }
+        if (e.code === 'Space' || e.key === 'ArrowRight') {
+            if (questions.length === 0) return;
+            e.preventDefault();
+            stepForward();
+            return;
         }
 
-        if (e.key === 'ArrowRight') { nextQuestion(); return; }
-        if (e.key === 'ArrowLeft') { prevQuestion(); return; }
+        if (e.key === 'ArrowLeft') {
+            if (questions.length === 0) return;
+            e.preventDefault();
+            stepBackward();
+            return;
+        }
 
         if (isAnsweringBlocked || questions.length === 0) return;
 
         const key = e.key.toUpperCase();
-        if (['A', 'B', 'C', 'D'].includes(key)) {
+        if (OPTION_KEYS.includes(key)) {
             checkAnswer(key);
         }
     });
@@ -2053,12 +2106,13 @@ D. Thành phố Cần Thơ
             if (shuffleAnswers) opts = shuffleArray(opts);
 
             let currentOptions = {};
-            ['A', 'B', 'C', 'D'].forEach((key, idx) => {
+            OPTION_KEYS.forEach((key, idx) => {
                 currentOptions[key] = opts[idx];
             });
 
             return {
                 optionsLayout: currentOptions,
+                revealedCount: 0, // Ban đầu ẩn cả 4 đáp án A, B, C, D; ấn Space hoặc Right hiện lần lượt từng đáp án
                 isAnswered: false,
                 selectedKey: null,
                 isCorrect: null,
@@ -2081,11 +2135,50 @@ D. Thành phố Cần Thơ
         return arr;
     }
 
+    function revealNextOption() {
+        const state = gameState[currentQuestionIndex];
+        if (!state || isAnsweringBlocked) return;
+        const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
+        if (currentRevealed >= 4) return;
+
+        state.revealedCount = currentRevealed + 1;
+        const key = OPTION_KEYS[state.revealedCount - 1];
+        const btn = document.getElementById(`btn${key}`);
+        if (btn) {
+            btn.classList.remove('unrevealed');
+        }
+        playSound('click');
+        saveFullGameProgress();
+    }
+
+    function hideLastOption() {
+        const state = gameState[currentQuestionIndex];
+        if (!state || isAnsweringBlocked) return;
+        const currentRevealed = typeof state.revealedCount === 'number' ? state.revealedCount : 0;
+        if (currentRevealed <= 0) return;
+
+        const key = OPTION_KEYS[currentRevealed - 1];
+        state.revealedCount = currentRevealed - 1;
+        const btn = document.getElementById(`btn${key}`);
+        if (btn) {
+            btn.classList.add('unrevealed');
+        }
+        playSound('click');
+        saveFullGameProgress();
+    }
+
     function showQuestion() {
         resetButtonStyles();
 
         const q = questions[currentQuestionIndex];
         const state = gameState[currentQuestionIndex];
+
+        if (typeof state.revealedCount !== 'number') {
+            state.revealedCount = state.isAnswered ? 4 : 0;
+        }
+        if (state.isAnswered) {
+            state.revealedCount = 4;
+        }
 
         document.getElementById('questionText').innerText = `Câu ${currentQuestionIndex + 1}: ${q.question}`;
 
@@ -2095,8 +2188,12 @@ D. Thành phố Cần Thơ
             mobilePill.innerText = `🏆 Câu ${currentQuestionIndex + 1}/${questions.length} • ${currentMoney}`;
         }
 
-        ['A', 'B', 'C', 'D'].forEach(key => {
+        OPTION_KEYS.forEach((key, idx) => {
+            const btn = document.getElementById(`btn${key}`);
             document.getElementById(`text${key}`).innerText = state.optionsLayout[key].text;
+            if (idx >= state.revealedCount) {
+                btn.classList.add('unrevealed');
+            }
         });
 
         const btn5050 = document.getElementById('btn5050');
@@ -2127,12 +2224,12 @@ D. Thành phố Cần Thơ
         if (state.isAnswered) {
             isAnsweringBlocked = true;
 
-            ['A', 'B', 'C', 'D'].forEach(key => {
+            OPTION_KEYS.forEach(key => {
                 document.getElementById(`btn${key}`).disabled = true;
             });
 
             let correctKey = '';
-            ['A', 'B', 'C', 'D'].forEach(k => {
+            OPTION_KEYS.forEach(k => {
                 if (state.optionsLayout[k].isCorrect) correctKey = k;
             });
 
@@ -2164,7 +2261,7 @@ D. Thành phố Cần Thơ
     }
 
     function resetButtonStyles() {
-        ['A', 'B', 'C', 'D'].forEach(key => {
+        OPTION_KEYS.forEach(key => {
             const btn = document.getElementById(`btn${key}`);
             btn.className = 'answer-btn';
             btn.disabled = false;
@@ -2175,8 +2272,14 @@ D. Thành phố Cần Thơ
         const state = gameState[currentQuestionIndex];
         if (state.is5050Used || isAnsweringBlocked) return;
 
+        // Nếu đang ẩn bớt đáp án thì cho hiện toàn bộ trước khi áp dụng 50:50
+        state.revealedCount = 4;
+        OPTION_KEYS.forEach(key => {
+            document.getElementById(`btn${key}`).classList.remove('unrevealed');
+        });
+
         let wrongKeys = [];
-        ['A', 'B', 'C', 'D'].forEach(k => {
+        OPTION_KEYS.forEach(k => {
             if (!state.optionsLayout[k].isCorrect) wrongKeys.push(k);
         });
 
@@ -2201,6 +2304,7 @@ D. Thành phố Cần Thơ
         const state = gameState[currentQuestionIndex];
         const selectedOpt = state.optionsLayout[selectedKey];
 
+        state.revealedCount = 4;
         state.isAnswered = true;
         state.selectedKey = selectedKey;
         state.isCorrect = selectedOpt.isCorrect;
@@ -2226,6 +2330,7 @@ D. Thành phố Cần Thơ
         playSound('reveal');
 
         const state = gameState[currentQuestionIndex];
+        state.revealedCount = 4;
         state.isAnswered = true;
         state.selectedKey = null;
         state.isCorrect = null;
